@@ -11,6 +11,7 @@ import {
   Award,
   ChevronRight,
 } from 'lucide-react'
+import { useTimeGreeting } from '../utils/timeGreeting.js'
 
 export default function TeacherOverview({
   subjects,
@@ -19,6 +20,7 @@ export default function TeacherOverview({
   studentsCount,
   onSwitchToTable,
 }) {
+  const greeting = useTimeGreeting()
   return (
     <div className="mm-teacher-overview">
       {/* Welcome Banner */}
@@ -28,7 +30,7 @@ export default function TeacherOverview({
             <Sparkles size={14} />
             <span>Faculty Workspace · School of Computing</span>
           </div>
-          <h2>Good Morning, Teacher 👋</h2>
+          <h2>{greeting}, Teacher 👋</h2>
           <p>
             Welcome to the Central Marks Management Portal. Manage all 6 internal subjects,
             enter marks, finalize continuous assessment records, and track class analytics.

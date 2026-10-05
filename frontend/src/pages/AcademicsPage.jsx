@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BookOpen,
   ChevronDown,
@@ -8,8 +8,18 @@ import {
   FileText,
   GraduationCap,
   Star,
+  UploadCloud,
+  Eye,
+  CheckCircle2,
+  ShieldCheck,
+  Calendar,
+  User,
+  Plus,
+  Info,
+  X
 } from 'lucide-react'
 import { downloadSyllabusPdf } from '../utils/pdfGenerator'
+import { notesApi } from '../services/notesApi'
 import './AcademicsPage.css'
 
 const semesters = [
@@ -49,46 +59,143 @@ const semesters = [
   },
 ]
 
-const gradePoints = {
-  'O': 10, 'A+': 9, 'A': 8.5, 'B+': 7.5, 'B': 7, 'C': 6, 'D': 5, 'F': 0,
-}
-
 export default function AcademicsPage() {
   const [openSemester, setOpenSemester] = useState(0)
   const [activeTab, setActiveTab] = useState('subjects')
+  const [classNotes, setClassNotes] = useState([])
+
+  // Quick Upload Notes Modal in Academics
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [selectedSubjectName, setSelectedSubjectName] = useState('Operating Systems')
+  const [uploadForm, setUploadForm] = useState({
+    topic: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0]
+  })
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [filePreview, setFilePreview] = useState('')
+  const [toastMsg, setToastMsg] = useState('')
+  const [viewingNote, setViewingNote] = useState(null)
 
   const cgpa = 8.42
 
+  useEffect(() => {
+    loadClassNotes()
+  }, [])
+
+  const loadClassNotes = async () => {
+    const list = await notesApi.getClassNotes({ subject: 'ALL' })
+    if (list) setClassNotes(list)
+  }
+
+  const showToast = (msg) => {
+    setToastMsg(msg)
+    setTimeout(() => setToastMsg(''), 3500)
+  }
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setSelectedFile(file)
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (evt) => setFilePreview(evt.target.result)
+      reader.readAsDataURL(file)
+    } else {
+      setFilePreview('PDF')
+    }
+  }
+
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault()
+    if (!uploadForm.topic.trim()) {
+      showToast('Please enter the topic covered.')
+      return
+    }
+    if (!selectedFile) {
+      showToast('Please select a handwritten note image or PDF file.')
+      return
+    }
+
+    const payload = {
+      subject: selectedSubjectName,
+      date: uploadForm.date,
+      topic: uploadForm.topic.trim(),
+      description: uploadForm.description.trim(),
+      previewUrl: filePreview,
+      fileName: selectedFile.name,
+      fileType: selectedFile.type,
+      studentName: 'Rakesh Das',
+      rollNumber: '2305201001'
+    }
+
+    const res = await notesApi.uploadClassNotes(payload)
+    if (res && res.success) {
+      showToast('Class notes uploaded successfully!')
+      setShowUploadModal(false)
+      setSelectedFile(null)
+      setFilePreview('')
+      setUploadForm({ topic: '', description: '', date: new Date().toISOString().split('T')[0] })
+      await loadClassNotes()
+    }
+  }
+
   return (
     <div className="academics-page">
+      {toastMsg && (
+        <div className="academics-toast">
+          <CheckCircle2 size={16} color="#34d399" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
+
       <div className="academics-header">
         <div className="academics-header-left">
-          <p className="academics-kicker"><BookOpen size={13} /> ACADEMIC RECORD</p>
+          <p className="academics-kicker"><BookOpen size={13} /> ACADEMIC RECORD & CLASS STUDY MATERIALS</p>
           <h2>Academics</h2>
-          <p className="academics-caption">Courses, syllabus and academic performance across all semesters.</p>
+          <p className="academics-caption">Courses, syllabus, academic performance & peer-shared class notes.</p>
         </div>
-        <div className="academics-cgpa-badge">
-          <Star size={14} />
-          <span>CGPA</span>
-          <strong>{cgpa}</strong>
-          <small>/ 10.0</small>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button 
+            type="button" 
+            className="btn-academic-upload-notes"
+            onClick={() => {
+              setSelectedSubjectName('Operating Systems')
+              setShowUploadModal(true)
+            }}
+          >
+            <UploadCloud size={16} /> Upload Notes
+          </button>
+          <div className="academics-cgpa-badge">
+            <Star size={14} />
+            <span>CGPA</span>
+            <strong>{cgpa}</strong>
+            <small>/ 10.0</small>
+          </div>
         </div>
       </div>
 
+      {/* Tab Navigation */}
       <div className="academics-tabs" role="tablist">
-        {['subjects', 'results', 'syllabus'].map((tab) => (
+        {[
+          { id: 'subjects', label: 'Enrolled Subjects' },
+          { id: 'results', label: 'Results & Grades' },
+          { id: 'syllabus', label: 'Syllabus' },
+          { id: 'notes', label: `Class Notes & Materials (${classNotes.length})` }
+        ].map((tab) => (
           <button
-            key={tab}
-            className={activeTab === tab ? 'active' : ''}
+            key={tab.id}
+            className={activeTab === tab.id ? 'active' : ''}
             role="tab"
-            aria-selected={activeTab === tab}
-            onClick={() => setActiveTab(tab)}
+            aria-selected={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
           >
-            {tab === 'subjects' ? 'Enrolled Subjects' : tab === 'results' ? 'Results & Grades' : 'Syllabus'}
+            {tab.label}
           </button>
         ))}
       </div>
 
+      {/* TAB 1: ENROLLED SUBJECTS + INTEGRATED SUBJECT-WISE NOTES */}
       {activeTab === 'subjects' && (
         <div className="academics-semester-list">
           {semesters.map((sem, index) => (
@@ -116,33 +223,71 @@ export default function AcademicsPage() {
                           <th>Type</th>
                           <th>Credits</th>
                           <th>Faculty</th>
+                          <th>Class Notes</th>
                           {!sem.current && <th>Grade</th>}
                           {sem.current && <th>Syllabus</th>}
                         </tr>
                       </thead>
                       <tbody>
-                        {sem.subjects.map((sub) => (
-                          <tr key={sub.code}>
-                            <td><code>{sub.code}</code></td>
-                            <td><strong>{sub.name}</strong></td>
-                            <td><span className={`subject-type-tag ${sub.type.toLowerCase()}`}>{sub.type}</span></td>
-                            <td>{sub.credits}</td>
-                            <td>{sub.faculty}</td>
-                            {!sem.current && (
+                        {sem.subjects.map((sub) => {
+                          const matchingNotes = classNotes.filter(
+                            (n) => n.subject.toLowerCase() === sub.name.toLowerCase() || n.subject.toLowerCase().includes(sub.name.toLowerCase().split(' ')[0])
+                          )
+                          const verifiedCount = matchingNotes.filter((n) => n.isFacultyVerified).length
+
+                          return (
+                            <tr key={sub.code}>
+                              <td><code>{sub.code}</code></td>
+                              <td><strong>{sub.name}</strong></td>
+                              <td><span className={`subject-type-tag ${sub.type.toLowerCase()}`}>{sub.type}</span></td>
+                              <td>{sub.credits}</td>
+                              <td>{sub.faculty}</td>
+
+                              {/* NEW: Upload & Verified Notes column for each subject */}
                               <td>
-                                <span className={`grade-pill grade-${sub.grade?.replace('+', 'p')}`}>{sub.grade}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {verifiedCount > 0 ? (
+                                    <span style={{ fontSize: '0.72rem', background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '10px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                      <ShieldCheck size={12} /> {verifiedCount} Verified
+                                    </span>
+                                  ) : matchingNotes.length > 0 ? (
+                                    <span style={{ fontSize: '0.72rem', background: '#e0e7ff', color: '#3730a3', padding: '2px 6px', borderRadius: '10px', fontWeight: 600 }}>
+                                      {matchingNotes.length} Notes
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>No notes</span>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    className="btn-sub-notes-upload"
+                                    title="Upload Class Notes for this Subject"
+                                    onClick={() => {
+                                      setSelectedSubjectName(sub.name)
+                                      setShowUploadModal(true)
+                                    }}
+                                  >
+                                    <Plus size={12} /> Upload
+                                  </button>
+                                </div>
                               </td>
-                            )}
-                            {sem.current && (
-                              <td>
-                                {sub.syllabus
-                                  ? <button className="syllabus-link" onClick={() => downloadSyllabusPdf(sub)}><Download size={12} />PDF</button>
-                                  : <span className="no-syllabus">—</span>
-                                }
-                              </td>
-                            )}
-                          </tr>
-                        ))}
+
+                              {!sem.current && (
+                                <td>
+                                  <span className={`grade-pill grade-${sub.grade?.replace('+', 'p')}`}>{sub.grade}</span>
+                                </td>
+                              )}
+                              {sem.current && (
+                                <td>
+                                  {sub.syllabus
+                                    ? <button className="syllabus-link" onClick={() => downloadSyllabusPdf(sub)}><Download size={12} />PDF</button>
+                                    : <span className="no-syllabus">—</span>
+                                  }
+                                </td>
+                              )}
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -153,6 +298,112 @@ export default function AcademicsPage() {
         </div>
       )}
 
+      {/* TAB 4: CLASS NOTES & VERIFIED MATERIALS */}
+      {activeTab === 'notes' && (
+        <div className="academics-notes-container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Class Notes & Verified Peer Study Materials</h3>
+              <p style={{ margin: '2px 0 0', fontSize: '0.84rem', color: '#64748b' }}>
+                Handwritten notes, lecture diagrams & board photos shared by students. Verified by course faculty.
+              </p>
+            </div>
+            <button 
+              type="button"
+              className="btn-academic-upload-notes"
+              onClick={() => {
+                setSelectedSubjectName('Operating Systems')
+                setShowUploadModal(true)
+              }}
+            >
+              <UploadCloud size={16} /> Upload Notes
+            </button>
+          </div>
+
+          {/* Verified Notes appear first with a banner */}
+          {classNotes.some((n) => n.isFacultyVerified) && (
+            <div style={{ background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', border: '1.5px solid #6ee7b7', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <ShieldCheck size={20} color="#059669" />
+              <div>
+                <strong style={{ fontSize: '0.88rem', color: '#065f46' }}>Faculty Verified Notes Available</strong>
+                <div style={{ fontSize: '0.78rem', color: '#047857' }}>Notes marked with ✓ have been reviewed and approved by your subject faculty.</div>
+              </div>
+            </div>
+          )}
+
+          <div className="academic-notes-grid">
+            {/* Sort: verified notes appear first */}
+            {[...classNotes]
+              .sort((a, b) => (b.isFacultyVerified ? 1 : 0) - (a.isFacultyVerified ? 1 : 0))
+              .map((note) => {
+                const isImage = note.fileType && note.fileType.startsWith('image/')
+                const isBase64Image = note.fileUrl && note.fileUrl.startsWith('data:image')
+                const showThumbnail = isImage || isBase64Image
+
+                return (
+                  <div key={note.id} className={`academic-note-card ${note.isFacultyVerified ? 'note-card-verified' : ''}`}>
+                    {/* Image Thumbnail Preview */}
+                    {showThumbnail && (
+                      <div style={{ borderRadius: '8px', overflow: 'hidden', marginBottom: '10px', background: '#0f172a', maxHeight: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img
+                          src={note.fileUrl}
+                          alt={note.topic}
+                          style={{ width: '100%', maxHeight: '130px', objectFit: 'cover', display: 'block', opacity: 0.95 }}
+                          onError={(e) => { e.target.style.display = 'none' }}
+                        />
+                      </div>
+                    )}
+                    {!showThumbnail && note.fileType === 'application/pdf' && (
+                      <div style={{ background: '#e0e7ff', borderRadius: '8px', padding: '14px', textAlign: 'center', marginBottom: '10px', color: '#4338ca' }}>
+                        <FileText size={32} />
+                        <div style={{ fontSize: '0.75rem', marginTop: '4px', fontWeight: 600 }}>{note.fileName || 'PDF Document'}</div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                      <span className="note-subject-tag">{note.subject}</span>
+                      {note.isFacultyVerified ? (
+                        <span className="academic-badge-verified">
+                          <ShieldCheck size={13} /> ✓ Faculty Verified
+                        </span>
+                      ) : (
+                        <span className="academic-badge-pending">Student Uploaded</span>
+                      )}
+                    </div>
+
+                    <h4 style={{ margin: '4px 0', fontSize: '1rem', color: '#0f172a' }}>{note.topic}</h4>
+                    <p style={{ fontSize: '0.84rem', color: '#475569', margin: '0 0 12px', lineHeight: 1.4 }}>{note.description}</p>
+
+                    <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#64748b' }}>
+                      <div>
+                        <span><Calendar size={12} /> {note.date}</span> · 
+                        <span> By: <strong>{note.uploadedBy?.name}</strong></span>
+                      </div>
+                      <button 
+                        type="button" 
+                        className="btn-view-academic-note"
+                        onClick={() => setViewingNote(note)}
+                      >
+                        <Eye size={13} /> View Note
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            }
+          </div>
+
+          {classNotes.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
+              <BookOpen size={40} style={{ marginBottom: '12px', opacity: 0.4 }} />
+              <h4 style={{ margin: '0 0 6px', color: '#64748b' }}>No class notes yet</h4>
+              <p style={{ margin: 0, fontSize: '0.84rem' }}>Be the first to share handwritten notes for your class!</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: RESULTS */}
       {activeTab === 'results' && (
         <div className="academics-results">
           <div className="results-summary-grid">
@@ -220,6 +471,7 @@ export default function AcademicsPage() {
         </div>
       )}
 
+      {/* TAB 3: SYLLABUS */}
       {activeTab === 'syllabus' && (
         <div className="syllabus-grid">
           {[
@@ -239,6 +491,157 @@ export default function AcademicsPage() {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* MODAL 1: UPLOAD NOTES FROM ACADEMICS PAGE */}
+      {showUploadModal && (
+        <div className="academics-modal-backdrop" onClick={() => setShowUploadModal(false)}>
+          <div className="academics-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button className="academics-modal-close" onClick={() => setShowUploadModal(false)}>×</button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ width: '40px', height: '40px', background: '#e0e7ff', color: '#4338ca', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <UploadCloud size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>Upload Class Notes</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>Share handwritten notes for {selectedSubjectName}</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleUploadSubmit}>
+              <div style={{ marginBottom: '12px' }}>
+                <label className="academic-form-label">Selected Subject</label>
+                <select
+                  className="academic-form-input"
+                  value={selectedSubjectName}
+                  onChange={(e) => setSelectedSubjectName(e.target.value)}
+                >
+                  <option value="Artificial Intelligence">Artificial Intelligence (CS501)</option>
+                  <option value="Machine Learning">Machine Learning (CS502)</option>
+                  <option value="Cloud Computing">Cloud Computing (CS503)</option>
+                  <option value="Compiler Design">Compiler Design (CS504)</option>
+                  <option value="Operating Systems">Operating Systems (CS401)</option>
+                  <option value="Data Structures">Data Structures (CS302)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label className="academic-form-label">Lecture Date <span style={{ color: '#dc2626' }}>*</span></label>
+                  <input
+                    type="date"
+                    className="academic-form-input"
+                    value={uploadForm.date}
+                    onChange={(e) => setUploadForm({ ...uploadForm, date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="academic-form-label">Topic / Unit Covered <span style={{ color: '#dc2626' }}>*</span></label>
+                  <input
+                    type="text"
+                    className="academic-form-input"
+                    value={uploadForm.topic}
+                    onChange={(e) => setUploadForm({ ...uploadForm, topic: e.target.value })}
+                    placeholder="e.g. Heuristic Search & A* Algorithm"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label className="academic-form-label">Notes Summary / Remarks</label>
+                <textarea
+                  className="academic-form-input"
+                  rows={2}
+                  value={uploadForm.description}
+                  onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
+                  placeholder="e.g. Class lecture diagrams and step-by-step solved examples..."
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label className="academic-form-label">Attach File / Photo Screenshot <span style={{ color: '#dc2626' }}>*</span></label>
+                <div style={{ border: '2px dashed #cbd5e1', borderRadius: '10px', padding: '16px', textAlign: 'center', background: '#f8fafc', cursor: 'pointer' }}>
+                  <input
+                    type="file"
+                    id="acad-note-file"
+                    accept=".jpg,.jpeg,.png,.webp,.pdf"
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                  />
+                  <label htmlFor="acad-note-file" style={{ cursor: 'pointer', display: 'block' }}>
+                    <UploadCloud size={30} style={{ color: '#4338ca', marginBottom: '4px' }} />
+                    <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
+                      {selectedFile ? selectedFile.name : 'Click to select class notes file'}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+                      Supported formats: JPG, PNG, WEBP, PDF · Max 10MB
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                <button type="button" className="btn-academic-secondary" onClick={() => setShowUploadModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-academic-primary">
+                  Upload Notes ✓
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: VIEW SINGLE NOTE */}
+      {viewingNote && (
+        <div className="academics-modal-backdrop" onClick={() => setViewingNote(null)}>
+          <div className="academics-modal-card" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+            <button className="academics-modal-close" onClick={() => setViewingNote(null)}>×</button>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+              <div>
+                <span className="note-subject-tag">{viewingNote.subject}</span>
+                <h3 style={{ margin: '4px 0 0', fontSize: '1.2rem', color: '#0f172a' }}>{viewingNote.topic}</h3>
+                <small style={{ color: '#64748b' }}>Date: {viewingNote.date} · Uploaded by {viewingNote.uploadedBy?.name}</small>
+              </div>
+              {viewingNote.isFacultyVerified ? (
+                <span className="academic-badge-verified"><ShieldCheck size={13} /> ✓ Faculty Verified</span>
+              ) : (
+                <span className="academic-badge-pending">Student Uploaded</span>
+              )}
+            </div>
+
+            <div style={{ background: '#0f172a', borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '12px', maxHeight: '300px', overflowY: 'auto' }}>
+              {viewingNote.fileType === 'application/pdf' ? (
+                <div style={{ padding: '24px', color: '#ffffff' }}>
+                  <FileText size={48} style={{ color: '#818cf8', marginBottom: '8px' }} />
+                  <div><strong>{viewingNote.fileName || 'Class_Notes.pdf'}</strong></div>
+                  <a href={viewingNote.fileUrl} target="_blank" rel="noreferrer" style={{ color: '#38bdf8', fontSize: '0.8rem', marginTop: '6px', display: 'inline-block' }}>Open PDF in New Window ↗</a>
+                </div>
+              ) : (
+                <img
+                  src={viewingNote.fileUrl}
+                  alt="Class Note"
+                  style={{ width: '100%', maxHeight: '280px', objectFit: 'contain', borderRadius: '6px' }}
+                />
+              )}
+            </div>
+
+            <p style={{ fontSize: '0.86rem', color: '#334155', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
+              {viewingNote.description}
+            </p>
+
+            <div style={{ textAlign: 'right' }}>
+              <button type="button" className="btn-academic-secondary" onClick={() => setViewingNote(null)}>
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

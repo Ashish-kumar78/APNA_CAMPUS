@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   ArrowLeft,
   Award,
@@ -20,6 +20,9 @@ import {
   UserRound,
   UsersRound,
   Utensils,
+  X,
+  Plus,
+  UploadCloud,
 } from 'lucide-react'
 import './StudentProfile.css'
 import './ProfileModern.css'
@@ -31,6 +34,8 @@ import BiometricPage from './pages/BiometricPage.jsx'
 import CanteenPage from './pages/CanteenPage.jsx'
 import HealthPage from './pages/HealthPage.jsx'
 import UniversityMarksView from './components/UniversityMarksView.jsx'
+
+import { findStudentByQuery, defaultDemoStudent, getStudentDocuments, addStudentDocument } from './services/studentStore.js'
 
 const profileTabs = [
   { label: 'Personal', icon: UserRound },
@@ -48,24 +53,111 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
   const [activeTab, setActiveTab] = useState(initialTab || 'Personal')
   const [activeQuickView, setActiveQuickView] = useState(initialQuickView || '')
   const [message, setMessage] = useState('')
-  const firstName = account.name.split(' ')[0]
-  const lastName = account.name.split(' ').slice(1).join(' ')
-  const emailName = account.name.toLowerCase().replaceAll(' ', '.')
+  const [selectedDocView, setSelectedDocView] = useState(null)
+  const [isAddDocModalOpen, setIsAddDocModalOpen] = useState(false)
+
+  // Merge account prop with complete student store record if available
+  const student = useMemo(() => {
+    const matched = findStudentByQuery(account?.registrationNumber || account?.rollNumber || account?.name)
+    return { ...defaultDemoStudent, ...account, ...(matched || {}) }
+  }, [account])
+
+  // Dynamic student documents list
+  const [studentDocs, setStudentDocs] = useState(() =>
+    getStudentDocuments(student.id || student.registrationNumber || student.name)
+  )
+
+  useEffect(() => {
+    const refreshDocs = () => {
+      setStudentDocs(getStudentDocuments(student.id || student.registrationNumber || student.name))
+    }
+    refreshDocs()
+    window.addEventListener('cms_student_documents_changed', refreshDocs)
+    return () => window.removeEventListener('cms_student_documents_changed', refreshDocs)
+  }, [student])
+
+  // Add document form state
+  const [newDocForm, setNewDocForm] = useState({
+    docPreset: 'Migration Certificate',
+    customName: '',
+    category: 'Academic',
+    file: null,
+    fileName: '',
+    fileSize: '',
+    fileType: 'PDF',
+    fileDataUrl: null,
+    remarks: ''
+  })
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const isImg = file.type.startsWith('image/')
+    const reader = new FileReader()
+    reader.onload = () => {
+      setNewDocForm(prev => ({
+        ...prev,
+        file,
+        fileName: file.name,
+        fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+        fileType: isImg ? 'IMAGE' : 'PDF',
+        fileDataUrl: reader.result
+      }))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleAddDocumentSubmit = (e) => {
+    e.preventDefault()
+    const docTitle = newDocForm.docPreset === 'Other / Custom Document'
+      ? (newDocForm.customName.trim() || 'Custom Student Certificate')
+      : newDocForm.docPreset
+
+    addStudentDocument(student.id || student.registrationNumber || student.name, {
+      name: docTitle,
+      category: newDocForm.category,
+      fileName: newDocForm.fileName || `${docTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
+      fileType: newDocForm.fileType,
+      fileSize: newDocForm.fileSize || '1.2 MB',
+      fileUrl: newDocForm.fileDataUrl,
+      remarks: newDocForm.remarks
+    })
+
+    setStudentDocs(getStudentDocuments(student.id || student.registrationNumber || student.name))
+    setIsAddDocModalOpen(false)
+    setNewDocForm({
+      docPreset: 'Migration Certificate',
+      customName: '',
+      category: 'Academic',
+      file: null,
+      fileName: '',
+      fileSize: '',
+      fileType: 'PDF',
+      fileDataUrl: null,
+      remarks: ''
+    })
+    setMessage(`Document "${docTitle}" uploaded and verified for ${student.name}. Visible to Admin, Faculty & HOD.`)
+    setTimeout(() => setMessage(''), 4500)
+  }
+
+  const firstName = student.firstName || student.name.split(' ')[0]
+  const lastName = student.lastName || student.name.split(' ').slice(1).join(' ') || ''
+  const emailName = student.name.toLowerCase().replaceAll(' ', '.')
   const summaryRows = [
     ['Last Date of Class Attendance', '01/10/2026'],
-    ['Registration No.', account.registrationNumber],
-    ['Serial No.', '16'],
-    ['Name', account.name.toUpperCase()],
-    ['Mentor', 'Dr. Pratyush Mohapatra'],
-    ['Course', 'B.Tech'],
-    ['Batch', 'BTECH 2023–P'],
-    ['Branch', account.department],
-    ['Section', 'CSE (AI) · Genius'],
-    ['Domain Email ID', `${emailName}@gift.edu.in`],
-    ['Email ID', `${emailName}@gmail.com`],
-    ['Mobile No.', '+91 98610 23010'],
-    ['WhatsApp No.', '+91 98610 23010'],
-    ['Aadhaar No.', 'XXXX XXXX 2341'],
+    ['Registration No.', student.registrationNumber || account.registrationNumber],
+    ['Serial No.', student.rollNumber || '16'],
+    ['Name', student.name.toUpperCase()],
+    ['Mentor', student.mentor || 'Dr. Pratyush Mohapatra'],
+    ['Course', student.course || 'Bachelor of Technology'],
+    ['Batch', student.batch || 'BTECH 2023–2027'],
+    ['Branch', student.department || student.branch || account.department],
+    ['Section', student.academicSection || student.section || 'CSE · Section A'],
+    ['Domain Email ID', student.email || `${emailName}@gift.edu.in`],
+    ['Email ID', student.personalEmail || `${emailName}@gmail.com`],
+    ['Mobile No.', student.phone || '+91 98610 23010'],
+    ['WhatsApp No.', student.phone || '+91 98610 23010'],
+    ['Aadhaar No.', student.govtIdNumber || 'XXXX XXXX 2341'],
     ['Voter ID', 'Not provided'],
     ['PAN No.', 'Not provided'],
     ['Driving License No.', 'Not provided'],
@@ -74,38 +166,38 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
 
   const details = {
     Personal: [
-      [{ label: 'Admission Category', value: 'General', wide: true }],
-      [{ label: 'Title', value: 'Ms.', wide: true }],
+      [{ label: 'Admission Category', value: student.admissionCategory || 'General', wide: true }],
+      [{ label: 'Title', value: student.title || 'Ms.', wide: true }],
       [{ label: 'First Name', value: firstName }, { label: 'Last Name', value: lastName }],
-      [{ label: 'Middle Name', value: 'Not provided' }, { label: 'Gender', value: 'Female' }],
-      [{ label: 'Date of Birth', value: '15-03-2005' }, { label: 'Nationality', value: 'Indian' }],
-      [{ label: 'Caste', value: 'General' }, { label: 'Religion', value: 'Hindu' }],
-      [{ label: 'Blood Group', value: 'O+' }, { label: 'Birthplace', value: 'Bhubaneswar, Odisha' }],
-      [{ label: 'Identification Mark', value: 'Not provided', wide: true }],
-      [{ label: 'Thumb ID', value: `GFT${account.registrationNumber}`, wide: true }],
-      [{ label: 'Hostel', value: 'No' }, { label: 'Transport', value: 'No' }],
-      [{ label: 'Lunch', value: 'No' }, { label: 'NSS', value: 'No' }],
-      [{ label: 'Languages Known', value: 'Odia, English, Hindi', wide: true }],
-      [{ label: 'Hobbies', value: 'Not provided', wide: true }],
+      [{ label: 'Middle Name', value: student.middleName || 'Not provided' }, { label: 'Gender', value: student.gender || 'Female' }],
+      [{ label: 'Date of Birth', value: student.dobFormatted || student.dob || '15-03-2005' }, { label: 'Nationality', value: student.nationality || 'Indian' }],
+      [{ label: 'Caste', value: student.caste || 'General' }, { label: 'Religion', value: student.religion || 'Hindu' }],
+      [{ label: 'Blood Group', value: student.bloodGroup || 'O+' }, { label: 'Birthplace', value: student.birthplace || 'Bhubaneswar, Odisha' }],
+      [{ label: 'Identification Mark', value: student.identificationMark || 'Not provided', wide: true }],
+      [{ label: 'Thumb ID', value: student.thumbId || `GFT${student.registrationNumber || account.registrationNumber || '2305201001'}`, wide: true }],
+      [{ label: 'Hostel', value: student.hostel || 'No' }, { label: 'Transport', value: student.transport || 'No' }],
+      [{ label: 'Lunch', value: student.lunch || 'No' }, { label: 'NSS', value: student.nss || 'No' }],
+      [{ label: 'Languages Known', value: student.languagesKnown || 'Odia, English, Hindi', wide: true }],
+      [{ label: 'Hobbies', value: student.hobbies || 'Not provided', wide: true }],
     ],
     Guardians: [
-      [{ label: 'Father / Guardian', value: 'Sanjay Das' }, { label: 'Relationship', value: 'Father' }],
-      [{ label: 'Contact Number', value: '+91 94370 10001' }, { label: 'Email', value: 'sanjay.das@example.com' }],
-      [{ label: 'Mother / Guardian', value: 'Madhuri Das' }, { label: 'Relationship', value: 'Mother' }],
-      [{ label: 'Contact Number', value: '+91 94370 10002' }, { label: 'Email', value: 'madhuri.das@example.com' }],
+      [{ label: 'Father / Guardian', value: student.fatherName || 'Sanjay Das' }, { label: 'Relationship', value: student.fatherRelationship || 'Father' }],
+      [{ label: 'Contact Number', value: student.fatherPhone || '+91 94370 10001' }, { label: 'Email', value: student.fatherEmail || 'sanjay.das@example.com' }],
+      [{ label: 'Mother / Guardian', value: student.motherName || 'Madhuri Das' }, { label: 'Relationship', value: student.motherRelationship || 'Mother' }],
+      [{ label: 'Contact Number', value: student.motherPhone || '+91 94370 10002' }, { label: 'Email', value: student.motherEmail || 'madhuri.das@example.com' }],
     ],
     Address: [
       [{ label: 'Address Type', value: 'Permanent', wide: true }],
-      [{ label: 'Address', value: 'Plot 18, Unit 4', wide: true }],
-      [{ label: 'City', value: 'Bhubaneswar' }, { label: 'State', value: 'Odisha' }],
-      [{ label: 'Country', value: 'India' }, { label: 'PIN Code', value: '751001' }],
+      [{ label: 'Address', value: student.permAddress || 'Plot 18, Unit 4', wide: true }],
+      [{ label: 'City', value: student.permCity || 'Bhubaneswar' }, { label: 'State', value: student.permState || 'Odisha' }],
+      [{ label: 'Country', value: student.permCountry || 'India' }, { label: 'PIN Code', value: student.permPin || '751001' }],
       [{ label: 'Address Type', value: 'Current', wide: true }],
-      [{ label: 'Address', value: 'GIFT Campus Residence', wide: true }],
-      [{ label: 'City', value: 'Bhubaneswar' }, { label: 'State', value: 'Odisha' }],
+      [{ label: 'Address', value: student.currAddress || 'GIFT Campus Residence', wide: true }],
+      [{ label: 'City', value: student.currCity || 'Bhubaneswar' }, { label: 'State', value: student.currState || 'Odisha' }],
     ],
     Health: [
-      [{ label: 'Blood Group', value: 'O+' }, { label: 'Known Allergies', value: 'None reported' }],
-      [{ label: 'Emergency Contact', value: 'Sanjay Das' }, { label: 'Contact Number', value: '+91 94370 10001' }],
+      [{ label: 'Blood Group', value: student.bloodGroup || 'O+' }, { label: 'Known Allergies', value: student.allergies || 'None reported' }],
+      [{ label: 'Emergency Contact', value: student.fatherName || 'Sanjay Das' }, { label: 'Contact Number', value: student.fatherPhone || '+91 94370 10001' }],
       [{ label: 'Medical Notes', value: 'No notes on file', wide: true }],
     ],
   }
@@ -128,7 +220,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
       <div className="profile-breadcrumb">
         <button type="button" onClick={onBack}>Home</button>
         <span>/</span><span>Student</span><span>/</span><span>Manage Students</span><span>/</span>
-        <strong>{account.name}</strong>
+        <strong>{account?.name || 'Student'}</strong>
       </div>
 
       <div className="profile-title-row">
@@ -138,15 +230,15 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
 
       <section className="profile-overview-strip" aria-label="Student identity summary">
         <div className="profile-photo" style={{ padding: 0, overflow: 'hidden', border: '2px solid #ffffff' }}>
-          <img src={studentPhoto} alt={account.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={studentPhoto} alt={account?.name || 'Student'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
         <div className="profile-overview-copy">
           <span className="profile-overview-label">STUDENT RECORD · ACTIVE</span>
-          <h2>{account.name}</h2>
-          <p>{account.department}</p>
+          <h2>{account?.name || 'Student'}</h2>
+          <p>{account?.department || 'Computer Science & Engineering'}</p>
         </div>
         <div className="profile-overview-facts">
-          <span><small>Registration number</small><strong>{account.registrationNumber}</strong></span>
+          <span><small>Registration number</small><strong>{account?.registrationNumber || '—'}</strong></span>
           <span><small>Program</small><strong>B.Tech · 2023–2027</strong></span>
           <span><small>Current section</small><strong>CSE · Section A</strong></span>
         </div>
@@ -209,7 +301,40 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
 
             return (
               <section className={`profile-detail-panel ${isEmbeddedPage ? 'has-embedded-page' : ''}`} role="tabpanel" aria-label={`${activeTab} details`}>
-                {!isEmbeddedPage && activeQuickView !== 'University Marks' && <h2><ShieldCheck size={15} />{panelTitle}</h2>}
+                {!isEmbeddedPage && activeQuickView !== 'University Marks' && (
+                  activeTab === 'Documents' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '10px' }}>
+                      <h2 style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <ShieldCheck size={18} color="#2563eb" /> Documents Details
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddDocModalOpen(true)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '7px 16px',
+                          background: '#2563eb',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.background = '#1d4ed8'}
+                        onMouseOut={(e) => e.currentTarget.style.background = '#2563eb'}
+                      >
+                        <Plus size={16} /> Add Document
+                      </button>
+                    </div>
+                  ) : (
+                    <h2><ShieldCheck size={15} />{panelTitle}</h2>
+                  )
+                )}
                 {activeQuickView ? (
                   activeQuickView === 'College Marks' ? (
                     <div className="profile-embedded-marks-wrap">
@@ -247,26 +372,37 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
             ) : activeTab === 'Health & Medical' || activeTab === 'Health' ? (
               <HealthPage />
             ) : activeTab === 'Academic' ? (
-              <AcademicDetails account={account} />
+              <AcademicDetails student={student} />
             ) : activeTab === 'Documents' ? (
               <div className="profile-documents">
-                {['Passport-size photograph', 'Government ID proof', 'Class 10 certificate', 'Class 12 certificate'].map((document) => (
-                  <div className="profile-document-row" key={document}>
-                    <span><FileText size={15} />{document}</span>
-                    <button type="button" onClick={() => setMessage(`${document}: no file is attached in this demo.`)}>View</button>
-                  </div>
-                ))}
+                {studentDocs.map((docItem) => {
+                  const docName = docItem.name || docItem;
+                  return (
+                    <div className="profile-document-row" key={docItem.id || docName}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <FileText size={15} />
+                        <span>{docName}</span>
+                        {docItem.category && (
+                          <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: '#eff6ff', color: '#1e40af', borderRadius: '12px', fontWeight: 600, border: '1px solid #dbeafe' }}>
+                            {docItem.category}
+                          </span>
+                        )}
+                      </span>
+                      <button type="button" onClick={() => setSelectedDocView({ document: docName, docObj: docItem, student })}>View</button>
+                    </div>
+                  );
+                })}
               </div>
             ) : activeTab === 'ID Card' ? (
               <div className="profile-id-card">
                 <span className="profile-id-mark">G</span>
                 <span className="profile-id-copy"><strong>GIFT AUTONOMOUS</strong><small>BHUBANESWAR · STUDENT ID</small></span>
                 <span className="profile-id-avatar" style={{ padding: 0, overflow: 'hidden' }}>
-                  <img src={studentPhoto} alt={account.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={studentPhoto} alt={student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </span>
-                <strong className="profile-id-name">{account.name}</strong>
-                <span>Registration No. {account.registrationNumber}</span>
-                <span>B.Tech · CSE · 2023–2027</span>
+                <strong className="profile-id-name">{student.name}</strong>
+                <span>Registration No. {student.registrationNumber}</span>
+                <span>{student.course || 'B.Tech'} · {student.deptCode || 'CSE'} · {student.batch || '2023–2027'}</span>
               </div>
             ) : (
               <div className="profile-data-table">
@@ -289,6 +425,203 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
           <div className="profile-extra-links"><span><Award size={13} />Academic records</span><span><CalendarDays size={13} />Updated 02 Oct 2026</span></div>
         </div>
       </div>
+
+      {/* Official Document Preview Modal */}
+      {selectedDocView && (
+        <div className="admin-modal-backdrop" style={{ zIndex: 1000 }}>
+          <div className="admin-modal-card" style={{ maxWidth: '540px' }}>
+            <div className="admin-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldCheck size={18} color="#2563eb" />
+                Verified Student Document
+              </h3>
+              <button className="admin-table-action-btn" type="button" onClick={() => setSelectedDocView(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="admin-modal-body" style={{ textAlign: 'center', padding: '1.5rem' }}>
+              <div style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem' }}>
+                {selectedDocView.document === 'Passport-size photograph' ? (
+                  <img
+                    src={studentPhoto}
+                    alt="Passport photo"
+                    style={{ width: '120px', height: '140px', objectFit: 'cover', borderRadius: '8px', border: '2px solid #2563eb', margin: '0 auto', display: 'block' }}
+                  />
+                ) : selectedDocView.docObj?.fileUrl && (selectedDocView.docObj.fileType === 'IMAGE' || selectedDocView.docObj.fileUrl.startsWith('data:image')) ? (
+                  <img
+                    src={selectedDocView.docObj.fileUrl}
+                    alt={selectedDocView.document}
+                    style={{ maxWidth: '100%', maxHeight: '240px', objectFit: 'contain', borderRadius: '8px', margin: '0 auto', display: 'block', border: '1px solid #e2e8f0' }}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#eff6ff', display: 'grid', placeItems: 'center', color: '#2563eb' }}>
+                      <FileText size={28} />
+                    </div>
+                    <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{selectedDocView.document}</strong>
+                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                      Verified Official Document on File {selectedDocView.docObj?.fileName ? `(${selectedDocView.docObj.fileName})` : ''}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div style={{ textAlign: 'left', background: '#f1f5f9', padding: '0.85rem', borderRadius: '8px', fontSize: '0.85rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Student Name</span><div><strong>{selectedDocView.student.name}</strong></div></div>
+                <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Registration No.</span><div><strong>{selectedDocView.student.registrationNumber}</strong></div></div>
+                <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Verification Seal</span><div><strong style={{ color: '#059669' }}>Autonomous Cell Verified ✓</strong></div></div>
+                <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Department / Batch</span><div><strong>{selectedDocView.student.deptCode || 'CSE'} · {selectedDocView.student.batch || '2023-2027'}</strong></div></div>
+              </div>
+            </div>
+            <div className="admin-modal-footer" style={{ justifyContent: 'flex-end' }}>
+              <button className="admin-action-btn-primary" type="button" onClick={() => setSelectedDocView(null)}>
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Document Modal */}
+      {isAddDocModalOpen && (
+        <div className="admin-modal-backdrop" style={{ zIndex: 1000 }}>
+          <div className="admin-modal-card" style={{ maxWidth: '520px' }}>
+            <div className="admin-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <UploadCloud size={20} color="#2563eb" />
+                Upload New Document
+              </h3>
+              <button className="admin-table-action-btn" type="button" onClick={() => setIsAddDocModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleAddDocumentSubmit}>
+              <div className="admin-modal-body" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.82rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ShieldCheck size={16} color="#16a34a" />
+                  <span>Document will be automatically verified and synced to <strong>Admin</strong>, <strong>Faculty</strong>, and <strong>HOD</strong> portals.</span>
+                </div>
+
+                <div className="admin-form-group">
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Select Document Type *</label>
+                  <select
+                    className="admin-form-select"
+                    value={newDocForm.docPreset}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      let cat = 'Academic';
+                      if (val.includes('Income') || val.includes('Fee')) cat = 'Financial';
+                      else if (val.includes('Caste') || val.includes('ID')) cat = 'Identification';
+                      else if (val.includes('Medical')) cat = 'Medical';
+                      else if (val.includes('Internship')) cat = 'Training';
+                      setNewDocForm(prev => ({ ...prev, docPreset: val, category: cat }));
+                    }}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                    required
+                  >
+                    <option value="Migration Certificate">Migration Certificate</option>
+                    <option value="Income Certificate">Income Certificate</option>
+                    <option value="Caste / Category Certificate">Caste / Category Certificate</option>
+                    <option value="Character / Conduct Certificate">Character / Conduct Certificate</option>
+                    <option value="Transfer Certificate (TC)">Transfer Certificate (TC)</option>
+                    <option value="Internship Offer / Completion Letter">Internship Offer / Completion Letter</option>
+                    <option value="Medical Fitness Certificate">Medical Fitness Certificate</option>
+                    <option value="Autonomous Grade Sheet">Autonomous Grade Sheet</option>
+                    <option value="Other / Custom Document">Other / Custom Document</option>
+                  </select>
+                </div>
+
+                {newDocForm.docPreset === 'Other / Custom Document' && (
+                  <div className="admin-form-group">
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Custom Document Title *</label>
+                    <input
+                      type="text"
+                      className="admin-form-input"
+                      placeholder="e.g. Sports National Certificate, NPTEL Scorecard"
+                      value={newDocForm.customName}
+                      onChange={(e) => setNewDocForm(prev => ({ ...prev, customName: e.target.value }))}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                      required
+                    />
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="admin-form-group">
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Category</label>
+                    <select
+                      className="admin-form-select"
+                      value={newDocForm.category}
+                      onChange={(e) => setNewDocForm(prev => ({ ...prev, category: e.target.value }))}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                    >
+                      <option value="Academic">Academic</option>
+                      <option value="Identification">Identification</option>
+                      <option value="Financial">Financial</option>
+                      <option value="Medical">Medical</option>
+                      <option value="Training">Training &amp; Internship</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div className="admin-form-group">
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Target Authority</label>
+                    <input
+                      type="text"
+                      disabled
+                      value="Admin · Faculty · HOD"
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="admin-form-group">
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Upload File (PDF / Image) *</label>
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.webp"
+                    onChange={handleFileChange}
+                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                    required
+                  />
+                  {newDocForm.fileName && (
+                    <div style={{ marginTop: '6px', fontSize: '0.78rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle2 size={13} /> Selected: <strong>{newDocForm.fileName}</strong> ({newDocForm.fileSize})
+                    </div>
+                  )}
+                </div>
+
+                <div className="admin-form-group">
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Remarks / Certificate No. (Optional)</label>
+                  <input
+                    type="text"
+                    className="admin-form-input"
+                    placeholder="e.g. Issue date 2026, Certificate Serial No. 1294"
+                    value={newDocForm.remarks}
+                    onChange={(e) => setNewDocForm(prev => ({ ...prev, remarks: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                  />
+                </div>
+              </div>
+              <div className="admin-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '1rem 1.5rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  type="button"
+                  className="admin-action-btn-secondary"
+                  onClick={() => setIsAddDocModalOpen(false)}
+                  style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="admin-action-btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 18px', borderRadius: '8px', background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+                >
+                  <Plus size={16} /> Upload &amp; Submit Document
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
@@ -539,33 +872,36 @@ function AttendanceDetails() {
   )
 }
 
-function AcademicDetails({ account }) {
+function AcademicDetails({ student }) {
+  const s = student || {}
   const fields = [
-    ['Course', 'Bachelor of Technology'],
-    ['Batch', 'BTECH 2023–2027'],
-    ['Branch', account.department],
-    ['Section', 'CSE · Section A'],
-    ['House', 'Not assigned'],
-    ['Lab Group', '1'],
-    ['Honors', 'No'],
-    ['Minor', 'No'],
-    ['Value added course-1', 'Not selected'],
-    ['Value added course-2', 'Not selected'],
-    ['Value added course-3', 'Not selected'],
-    ['Admission Date', '05-08-2023'],
-    ['Entrance Examination', 'JEE (Main)'],
-    ['Rank', 'Not provided'],
+    ['Course', s.course || 'Bachelor of Technology'],
+    ['Batch', s.batch || 'BTECH 2023–2027'],
+    ['Branch', s.branch || s.department || 'Computer Science & Engineering'],
+    ['Section', s.academicSection || s.section || 'CSE · Section A'],
+    ['House', s.house || 'Not assigned'],
+    ['Lab Group', s.labGroup || '1'],
+    ['Honors', s.honors || 'No'],
+    ['Minor', s.minor || 'No'],
+    ['Value added course-1', s.valueAdded1 || 'Not selected'],
+    ['Value added course-2', s.valueAdded2 || 'Not selected'],
+    ['Value added course-3', s.valueAdded3 || 'Not selected'],
+    ['Admission Date', s.admissionDateFormatted || s.admissionDate || '05-08-2023'],
+    ['Entrance Examination', s.entranceExam || 'JEE (Main)'],
+    ['Rank', s.rank || 'Not provided'],
   ]
-  const qualifications = [
-    ['10th', 'Demo Secondary School', '2021', '82.00%'],
-    ['12th', 'Demo Senior Secondary School', '2023', '86.00%'],
-    ['ITI', 'Not applicable', '—', '—'],
-    ['Diploma', 'Not applicable', '—', '—'],
-    ['+3', 'Not applicable', '—', '—'],
-    ['BCA', 'Not applicable', '—', '—'],
-    ['BBA', 'Not applicable', '—', '—'],
-    ['BTECH', 'GIFT Autonomous, Bhubaneswar', '2027', 'In progress'],
-  ]
+  const qualifications = (s.qualifications && s.qualifications.length > 0)
+    ? s.qualifications.map(q => [q.qualification, q.institute, q.year, q.marks])
+    : [
+        ['10th', s.qual10thInstitute || 'Demo Secondary School', s.qual10thYear || '2021', s.qual10thMarks || '82.00%'],
+        ['12th', s.qual12thInstitute || 'Demo Senior Secondary School', s.qual12thYear || '2023', s.qual12thMarks || '86.00%'],
+        ['ITI', s.qualItiInstitute || 'Not applicable', s.qualItiYear || '—', s.qualItiMarks || '—'],
+        ['Diploma', s.qualDiplomaInstitute || 'Not applicable', s.qualDiplomaYear || '—', s.qualDiplomaMarks || '—'],
+        ['+3', s.qualPlus3Institute || 'Not applicable', s.qualPlus3Year || '—', s.qualPlus3Marks || '—'],
+        ['BCA', s.qualBcaInstitute || 'Not applicable', s.qualBcaYear || '—', s.qualBcaMarks || '—'],
+        ['BBA', s.qualBbaInstitute || 'Not applicable', s.qualBbaYear || '—', s.qualBbaMarks || '—'],
+        ['BTECH', s.qualBtechInstitute || 'GIFT Autonomous, Bhubaneswar', s.qualBtechYear || '2027', s.qualBtechMarks || 'In progress'],
+      ]
 
   return (
     <div className="academic-details">
@@ -589,8 +925,8 @@ function AcademicDetails({ account }) {
         </table>
       </div>
       <div className="profile-data-table academic-status-table">
-        <div className="profile-data-row wide-row"><div className="profile-data-field"><span>Student Status</span><strong>Active</strong></div></div>
-        <div className="profile-data-row wide-row"><div className="profile-data-field"><span>Active/Inactive</span><strong>Active</strong></div></div>
+        <div className="profile-data-row wide-row"><div className="profile-data-field"><span>Student Status</span><strong>{s.studentStatus || s.status || 'Active'}</strong></div></div>
+        <div className="profile-data-row wide-row"><div className="profile-data-field"><span>Active/Inactive</span><strong>{s.activeStatus || s.status || 'Active'}</strong></div></div>
       </div>
     </div>
   )

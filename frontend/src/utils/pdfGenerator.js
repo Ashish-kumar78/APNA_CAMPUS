@@ -1235,3 +1235,537 @@ export function downloadAdminReportPdf(reportType = 'College-wide Performance Re
 
   doc.save(`${reportType.replace(/\s+/g, '_')}.pdf`);
 }
+
+// -------------------------------------------------------------
+// 12. Student Uploaded Document PDF Verification Certificate
+// -------------------------------------------------------------
+export function downloadStudentDocumentPdf(record) {
+  const dName = (record.docName || '').toLowerCase();
+  const cleanName = (record.docName || 'document').toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const cleanId = (record.studentId || record.rollNumber || 'std').toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+  // ── BRANCH 1: AADHAAR CARD (UIDAI) ──
+  if (dName.includes('aadhaar')) {
+    const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Top Tricolor Bar
+    doc.setFillColor(255, 153, 51); // Saffron
+    doc.rect(14, 16, (pageWidth - 28) / 3, 3, 'F');
+    doc.setFillColor(255, 255, 255); // White
+    doc.rect(14 + (pageWidth - 28) / 3, 16, (pageWidth - 28) / 3, 3, 'F');
+    doc.setFillColor(19, 136, 8); // Green
+    doc.rect(14 + ((pageWidth - 28) / 3) * 2, 16, (pageWidth - 28) / 3, 3, 'F');
+
+    // Header UIDAI
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(...PRIMARY_COLOR);
+    doc.text('GOVERNMENT OF INDIA / भारत सरकार', pageWidth / 2, 28, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT_MUTED);
+    doc.text('UNIQUE IDENTIFICATION AUTHORITY OF INDIA / भारतीय विशिष्ट पहचान प्राधिकरण', pageWidth / 2, 34, { align: 'center' });
+
+    doc.setDrawColor(203, 213, 225);
+    doc.line(14, 38, pageWidth - 14, 38);
+
+    // Aadhaar Card Box
+    const cardX = 20;
+    const cardY = 46;
+    const cardW = pageWidth - 40;
+    const cardH = 100;
+
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(1);
+    doc.roundedRect(cardX, cardY, cardW, cardH, 4, 4, 'FD');
+
+    // Photo Box
+    doc.setFillColor(241, 245, 249);
+    doc.roundedRect(cardX + 8, cardY + 12, 32, 40, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(37, 99, 235);
+    doc.text(record.studentName.charAt(0), cardX + 24, cardY + 34, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setTextColor(...TEXT_MUTED);
+    doc.text('STUDENT PHOTO', cardX + 24, cardY + 48, { align: 'center' });
+
+    // Details
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...TEXT_DARK);
+    doc.text(`Name: ${record.studentName}`, cardX + 46, cardY + 20);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT_DARK);
+    doc.text('DOB / जन्म तिथि: 15/03/2005', cardX + 46, cardY + 28);
+    doc.text(`Gender / लिंग: ${record.sex === 'Female' ? 'FEMALE / महिला' : 'MALE / पुरुष'}`, cardX + 46, cardY + 36);
+    doc.text('Address: Plot 18, Unit 4, Bhubaneswar, Khordha, Odisha - 751001', cardX + 46, cardY + 44);
+
+    // QR & Barcode Simulation
+    doc.setDrawColor(...PRIMARY_COLOR);
+    doc.rect(cardX + cardW - 32, cardY + 14, 24, 24);
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(...PRIMARY_COLOR);
+    doc.text('[UIDAI QR]', cardX + cardW - 20, cardY + 27, { align: 'center' });
+
+    // Aadhaar Number Row
+    doc.setFillColor(248, 250, 252);
+    doc.rect(cardX, cardY + cardH - 30, cardW, 30, 'F');
+    doc.line(cardX, cardY + cardH - 30, cardX + cardW, cardY + cardH - 30);
+
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(...PRIMARY_COLOR);
+    const lastDigits = String(record.registrationNumber || '2305').slice(-4);
+    doc.text(`4821  9081  ${lastDigits}`, cardX + cardW / 2, cardY + cardH - 16, { align: 'center' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(220, 38, 38);
+    doc.text('मेरा आधार, मेरी पहचान (Mera Aadhaar, Meri Pehchan)', cardX + cardW / 2, cardY + cardH - 8, { align: 'center' });
+
+    // Institutional Verification Seal
+    drawOfficialSeal(doc, 20, 160, 'UIDAI VERIFIED ERP');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...PRIMARY_COLOR);
+    doc.text('Verified via Central Campus ERP Database', 75, 168);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...TEXT_MUTED);
+    doc.text(`Student: ${record.studentName} | Reg No: ${record.registrationNumber} | Sec: ${record.section}`, 75, 174);
+
+    addInstitutionalFooter(doc, 1, 1);
+    doc.save(`${cleanId}_aadhaar_card.pdf`);
+    return;
+  }
+
+  // ── BRANCH 2: PAN CARD (INCOME TAX DEPT) ──
+  if (dName.includes('pan')) {
+    const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    addInstitutionalHeader(doc, 'INCOME TAX DEPARTMENT · PAN CARD CREDENTIAL', 'Government of India / भारत सरकार');
+
+    const cardX = 20;
+    const cardY = 56;
+    const cardW = pageWidth - 40;
+    const cardH = 90;
+
+    // Card background
+    doc.setFillColor(240, 249, 255);
+    doc.setDrawColor(2, 132, 199);
+    doc.setLineWidth(1.2);
+    doc.roundedRect(cardX, cardY, cardW, cardH, 4, 4, 'FD');
+
+    // Header band
+    doc.setFillColor(2, 132, 199);
+    doc.roundedRect(cardX, cardY, cardW, 16, 4, 4, 'F');
+    doc.rect(cardX, cardY + 12, cardW, 4, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text('INCOME TAX DEPARTMENT / आयकर विभाग', cardX + 10, cardY + 10);
+    doc.text('GOVT. OF INDIA / भारत सरकार', cardX + cardW - 10, cardY + 10, { align: 'right' });
+
+    // Photo Box
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(cardX + 8, cardY + 22, 28, 34, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(...PRIMARY_COLOR);
+    doc.text(record.studentName.charAt(0), cardX + 22, cardY + 41, { align: 'center' });
+
+    // Details
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...TEXT_MUTED);
+    doc.text('Name / नाम:', cardX + 42, cardY + 26);
+    doc.setFontSize(10);
+    doc.setTextColor(...TEXT_DARK);
+    doc.text(record.studentName.toUpperCase(), cardX + 42, cardY + 31);
+
+    doc.setFontSize(8);
+    doc.setTextColor(...TEXT_MUTED);
+    doc.text("Father's Name / पिता का नाम:", cardX + 42, cardY + 38);
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT_DARK);
+    const fName = record.studentObj?.fatherName?.toUpperCase() || `${record.studentName.split(' ')[1] || 'KUMAR'} SENIOR`;
+    doc.text(fName, cardX + 42, cardY + 43);
+
+    doc.setFontSize(8);
+    doc.setTextColor(...TEXT_MUTED);
+    doc.text('Date of Birth / जन्म तिथि:', cardX + 42, cardY + 50);
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT_DARK);
+    doc.text('15/03/2005', cardX + 42, cardY + 55);
+
+    // PAN Number
+    doc.setFillColor(254, 243, 199);
+    doc.roundedRect(cardX + 42, cardY + 62, 70, 14, 2, 2, 'F');
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(146, 64, 14);
+    const panNum = `BPKPD${String(record.rollNumber || '01').padStart(3, '0')}7K`;
+    doc.text(panNum, cardX + 77, cardY + 71, { align: 'center' });
+
+    // Footer of Card
+    doc.setFillColor(2, 132, 199);
+    doc.roundedRect(cardX, cardY + cardH - 10, cardW, 10, 0, 0, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text('PERMANENT ACCOUNT NUMBER CARD / स्थायी लेखा संख्या कार्ड', cardX + cardW / 2, cardY + cardH - 4, { align: 'center' });
+
+    drawOfficialSeal(doc, 20, 160, 'INCOME TAX VERIFIED');
+    addInstitutionalFooter(doc, 1, 1);
+    doc.save(`${cleanId}_pan_card.pdf`);
+    return;
+  }
+
+  // ── BRANCH 3: NPTEL ONLINE CERTIFICATION (IIT MADRAS / MOE) ──
+  if (dName.includes('nptel')) {
+    const doc = createPdfDoc({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Ornate Border
+    doc.setDrawColor(30, 58, 138);
+    doc.setLineWidth(2);
+    doc.rect(12, 12, pageWidth - 24, pageHeight - 24);
+    doc.setDrawColor(217, 119, 6);
+    doc.setLineWidth(0.8);
+    doc.rect(15, 15, pageWidth - 30, pageHeight - 30);
+
+    // NPTEL Header
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(30, 58, 138);
+    doc.text('NPTEL Online Certification', pageWidth / 2, 32, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...TEXT_MUTED);
+    doc.text('(Funded by the MoE, Government of India)', pageWidth / 2, 38, { align: 'center' });
+
+    doc.setFontSize(11);
+    doc.text('This certificate is computer verified and awarded to', pageWidth / 2, 50, { align: 'center' });
+
+    // Recipient Name
+    doc.setFont('times', 'bold');
+    doc.setFontSize(26);
+    doc.setTextColor(15, 43, 72);
+    doc.text(record.studentName, pageWidth / 2, 63, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(...TEXT_MUTED);
+    doc.text('for successfully completing the 12-week online course', pageWidth / 2, 73, { align: 'center' });
+
+    // Course Title
+    const courseTitle = record.docName.replace(/NPTEL Certificate\s*\(/i, '').replace(/\)/, '') || 'Cloud Computing and Distributed Systems';
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(37, 99, 235);
+    doc.text(courseTitle, pageWidth / 2, 83, { align: 'center' });
+
+    // Score Table
+    renderTable(doc, {
+      startY: 92,
+      margin: { left: 45, right: 45 },
+      head: [['Online Assignments Score', 'Proctored Exam Score', 'Consolidated Score', 'Certification Status']],
+      body: [['24.25 / 25', '63.75 / 75', '88%', 'Elite + Silver Medal']],
+      theme: 'grid',
+      headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+      bodyStyles: { fontStyle: 'bold', halign: 'center', fontSize: 10 }
+    });
+
+    // Signatures
+    const signY = 145;
+    doc.setFont('times', 'italic');
+    doc.setFontSize(14);
+    doc.setTextColor(30, 58, 138);
+    doc.text('Prof. Andrew Thangaraj', 45, signY);
+    doc.text('Prof. V. Jagadeesh Kumar', pageWidth - 45, signY, { align: 'right' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...TEXT_MUTED);
+    doc.text('NPTEL Coordinator, IIT Madras', 45, signY + 6);
+    doc.text('Dean, Continuing Education, IIT Madras', pageWidth - 45, signY + 6, { align: 'right' });
+
+    // QR Verification
+    doc.rect(pageWidth / 2 - 14, signY - 10, 28, 20);
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(30, 58, 138);
+    doc.text('[IITM QR]', pageWidth / 2, signY - 1, { align: 'center' });
+    doc.text(`NPTEL24CS${String(record.registrationNumber || '2305').slice(-6)}`, pageWidth / 2, signY + 5, { align: 'center' });
+
+    doc.save(`${cleanId}_nptel_certificate.pdf`);
+    return;
+  }
+
+  // ── BRANCH 4 & 5: CLASS 10 & 12 BOARD CERTIFICATES ──
+  if (dName.includes('10') || dName.includes('12')) {
+    const is10 = dName.includes('10');
+    const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Ornate Double Border
+    const borderCol = is10 ? [180, 83, 9] : [30, 64, 175];
+    doc.setDrawColor(...borderCol);
+    doc.setLineWidth(2);
+    doc.rect(14, 14, pageWidth - 28, 269);
+    doc.setLineWidth(0.6);
+    doc.rect(17, 17, pageWidth - 34, 263);
+
+    // Authority Header
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(...borderCol);
+    doc.text(
+      is10 ? 'BOARD OF SECONDARY EDUCATION, ODISHA / CBSE' : 'COUNCIL OF HIGHER SECONDARY EDUCATION, ODISHA',
+      pageWidth / 2,
+      28,
+      { align: 'center' }
+    );
+
+    doc.setFontSize(16);
+    doc.setTextColor(...PRIMARY_COLOR);
+    doc.text(
+      is10 ? 'HIGH SCHOOL CERTIFICATE EXAMINATION' : 'HIGHER SECONDARY EXAMINATION CERTIFICATE',
+      pageWidth / 2,
+      38,
+      { align: 'center' }
+    );
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT_MUTED);
+    doc.text(
+      is10 ? 'Annual Secondary School Passing Certificate' : 'Annual Higher Secondary Science Examination',
+      pageWidth / 2,
+      44,
+      { align: 'center' }
+    );
+
+    // Certification Statement
+    doc.setFontSize(10);
+    doc.setTextColor(...TEXT_DARK);
+    const stmt = `This is to certify that ${record.studentName}, Roll No: ${is10 ? '21-104-' : '23-SC-'}${String(record.rollNumber || '01').padStart(4, '0')}, Registration No: ${record.registrationNumber}, has passed the examination and secured:`;
+    doc.text(stmt, pageWidth / 2, 58, { align: 'center', maxWidth: pageWidth - 50 });
+
+    // Division Banner
+    doc.setFillColor(is10 ? 254 : 239, is10 ? 243 : 246, is10 ? 199 : 255);
+    doc.roundedRect(pageWidth / 2 - 50, 70, 100, 12, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...borderCol);
+    doc.text(is10 ? 'FIRST DIVISION (82.00%)' : 'FIRST DIVISION (86.00%)', pageWidth / 2, 78, { align: 'center' });
+
+    // Subject Breakdown Table
+    const rows = is10
+      ? [
+          ['First Language (Odia / Hindi)', '100', '84', 'A1'],
+          ['Second Language (English)', '100', '82', 'A1'],
+          ['Mathematics', '100', '88', 'A1'],
+          ['General Science', '100', '80', 'A2'],
+          ['Social Science', '100', '76', 'B1']
+        ]
+      : [
+          ['Physics', '100', '86 (Theory 58 + Practical 28)', 'A1'],
+          ['Chemistry', '100', '84 (Theory 56 + Practical 28)', 'A1'],
+          ['Mathematics', '100', '92', 'A1'],
+          ['English', '100', '82', 'A1'],
+          ['Computer Science', '100', '88 (Theory 60 + Practical 28)', 'A1']
+        ];
+
+    renderTable(doc, {
+      startY: 90,
+      margin: { left: 25, right: 25 },
+      head: [['Subject Name', 'Maximum Marks', 'Marks Obtained', 'Grade']],
+      body: rows,
+      theme: 'grid',
+      headStyles: { fillColor: borderCol, textColor: [255, 255, 255], fontStyle: 'bold' }
+    });
+
+    // Seal and Signatures
+    const signY = 220;
+    drawOfficialSeal(doc, 25, signY, is10 ? 'BSE OFFICIAL' : 'CHSE OFFICIAL');
+
+    doc.setFont('times', 'italic');
+    doc.setFontSize(12);
+    doc.setTextColor(...PRIMARY_COLOR);
+    doc.text('Controller of Examinations', pageWidth - 25, signY + 6, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...TEXT_MUTED);
+    doc.text('Authenticated Copy · BPUT ERP Gateway', pageWidth - 25, signY + 12, { align: 'right' });
+
+    addInstitutionalFooter(doc, 1, 1);
+    doc.save(`${cleanId}_${is10 ? 'class_10' : 'class_12'}_certificate.pdf`);
+    return;
+  }
+
+  // ── BRANCH 6: STANDARD VERIFIED ACADEMIC DOCUMENT ──
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  addInstitutionalHeader(doc, 'VERIFIED STUDENT DOCUMENT RECORD', `Document: ${record.docName} | ERP Archive`);
+
+  // Document Badge Header
+  doc.setFillColor(241, 245, 249);
+  doc.roundedRect(14, 52, pageWidth - 28, 22, 3, 3, 'F');
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(14, 52, pageWidth - 28, 22, 3, 3, 'S');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text(record.docName.toUpperCase(), 20, 62);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text(`Category: ${record.category || 'Academic'} | Format: ${record.fileType || 'PDF'} | Status: VERIFIED & AUTHENTICATED`, 20, 69);
+
+  // Student Particulars Table
+  const particulars = [
+    ['Student Full Name', record.studentName || 'Student', 'Student ID', record.studentId || 'GIFT-2023-XXXX'],
+    ['Registration Number', record.registrationNumber || '230520XXXX', 'Roll Number', record.rollNumber || '01'],
+    ['Gender / Sex', record.sex || record.gender || 'Male', 'Department', record.department || 'Computer Science & Engineering'],
+    ['Current Semester', record.semester || 'Semester 5', 'Section', record.section || 'Section A'],
+    ['Document Type', record.docName, 'Upload Date', record.uploadedAt || '15 Aug 2023'],
+    ['Verification Status', 'AUTHENTICATED BY GIFT ERP', 'Archived File Size', record.fileSize || '1.2 MB']
+  ];
+
+  renderTable(doc, {
+    startY: 80,
+    head: [['Field', 'Student Record Details', 'Field', 'Academic Registry Info']],
+    body: particulars,
+    theme: 'striped',
+    headStyles: {
+      fillColor: PRIMARY_COLOR,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8.5
+    },
+    bodyStyles: {
+      fontSize: 8.5,
+      textColor: TEXT_DARK,
+      cellPadding: 3.5
+    },
+    columnStyles: {
+      0: { cellWidth: 42, fontStyle: 'bold', textColor: [71, 85, 105] },
+      1: { cellWidth: 50 },
+      2: { cellWidth: 42, fontStyle: 'bold', textColor: [71, 85, 105] },
+      3: { cellWidth: 48 }
+    }
+  });
+
+  const nextY = (doc.lastAutoTable?.finalY || 150) + 10;
+
+  // Document Content / Authenticity Notice Box
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(14, nextY, pageWidth - 28, 48, 3, 3, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(14, nextY, pageWidth - 28, 48, 3, 3, 'S');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('OFFICIAL VERIFICATION STATEMENT & DIGITAL COMPLIANCE', 20, nextY + 8);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...TEXT_DARK);
+  const noticeLines = [
+    `1. This document (${record.docName}) was submitted by ${record.studentName} (${record.studentId}) via the student portal.`,
+    `2. Verified by Department Faculty, Head of Department (HOD), Accounts, and Campus Academic Administration.`,
+    `3. Validated for autonomous academic compliance, semester registration, scholarship auditing, and hostel admission.`,
+    `4. Digital Hash: SHA256-${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+  ];
+  noticeLines.forEach((line, idx) => {
+    doc.text(line, 20, nextY + 16 + (idx * 6.5));
+  });
+
+  const stampY = nextY + 56;
+  drawOfficialSeal(doc, 20, stampY, 'ERP ARCHIVE VERIFIED');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Academic Registrar & Controller', 125, stampY + 10);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text('GIFT Autonomous College, Bhubaneswar', 125, stampY + 15);
+  doc.text('Authenticated Electronic Document Archive', 125, stampY + 19);
+
+  addInstitutionalFooter(doc, 1, 1);
+  doc.save(`${cleanId}_${cleanName}.pdf`);
+}
+
+
+// -------------------------------------------------------------
+// 13. Student Documents Registry Table Export PDF
+// -------------------------------------------------------------
+export function downloadStudentDocumentsRegisterPdf(records = [], filterInfo = {}) {
+  const doc = createPdfDoc({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  const filterSummary = `Section: ${filterInfo.section || 'All'} | Semester: ${filterInfo.semester || 'All'} | Sex: ${filterInfo.gender || 'All'} | Count: ${records.length}`;
+  addInstitutionalHeader(doc, 'STUDENT UPLOADED DOCUMENTS REGISTRY', filterSummary);
+
+  const tableRows = records.map((r, i) => [
+    i + 1,
+    r.studentId,
+    r.studentName,
+    r.sex || r.gender,
+    r.section,
+    r.semester,
+    r.docName,
+    r.fileType || 'PDF',
+    r.uploadedAt || '—'
+  ]);
+
+  renderTable(doc, {
+    startY: 52,
+    head: [['SL No', 'Student ID', 'Student Name', 'Sex', 'Section', 'Semester', 'Document Name', 'Format', 'Uploaded Date']],
+    body: tableRows,
+    theme: 'grid',
+    headStyles: {
+      fillColor: PRIMARY_COLOR,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8
+    },
+    bodyStyles: {
+      fontSize: 7.5,
+      textColor: TEXT_DARK,
+      cellPadding: 2.2
+    },
+    columnStyles: {
+      0: { cellWidth: 14, halign: 'center' },
+      1: { cellWidth: 32, fontStyle: 'bold' },
+      2: { cellWidth: 45 },
+      3: { cellWidth: 18, halign: 'center' },
+      4: { cellWidth: 26, halign: 'center' },
+      5: { cellWidth: 26, halign: 'center' },
+      6: { cellWidth: 55 },
+      7: { cellWidth: 18, halign: 'center' },
+      8: { cellWidth: 26, halign: 'center' }
+    }
+  });
+
+  addInstitutionalFooter(doc, 1, 1);
+  doc.save('GIFT_Student_Documents_Registry.pdf');
+}
+

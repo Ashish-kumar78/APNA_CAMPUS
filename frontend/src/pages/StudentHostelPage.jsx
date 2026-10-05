@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Home,
   Bed,
@@ -14,12 +14,33 @@ import {
   Upload,
   Image,
   FileText,
-  Trash2
+  Trash2,
+  ShieldCheck
 } from 'lucide-react';
 import './StudentHostelPage.css';
 import { initialStudentHostelDetail, initialHostelComplaints } from '../data/collegeData.js';
+import StudentGatePassSection from '../components/StudentGatePassSection.jsx';
+import { getStudentGatePasses } from '../services/gatePassStore.js';
 
-export default function StudentHostelPage() {
+export default function StudentHostelPage({ defaultTab = 'overview' }) {
+  const [activeSubTab, setActiveSubTab] = useState(defaultTab);
+  const [pendingGatePassCount, setPendingGatePassCount] = useState(0);
+
+  useEffect(() => {
+    setActiveSubTab(defaultTab);
+  }, [defaultTab]);
+
+  useEffect(() => {
+    const updateCount = () => {
+      const passes = getStudentGatePasses();
+      const p = passes.filter(x => x.status === 'Pending Warden Approval').length;
+      setPendingGatePassCount(p);
+    };
+    updateCount();
+    window.addEventListener('bput_gate_passes_changed', updateCount);
+    return () => window.removeEventListener('bput_gate_passes_changed', updateCount);
+  }, []);
+
   const [hostelDetail] = useState(initialStudentHostelDetail);
   const [complaints, setComplaints] = useState(
     initialHostelComplaints.filter(c => c.rollNumber === '01').map(c => ({
@@ -90,23 +111,87 @@ export default function StudentHostelPage() {
 
   return (
     <div className="student-hostel-page">
-      {/* Header */}
-      <div className="student-hostel-header">
-        <div>
-          <h1>My Hostel Residence &amp; Accommodation</h1>
-          <p>Room allocation, roommates, hostel guidelines, and 24/7 maintenance desk</p>
-        </div>
+      {/* Sub Tabs */}
+      <div style={{ display: 'flex', gap: '0.75rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         <button
-          className="admin-action-btn-primary"
-          style={{ background: '#7c3aed' }}
-          onClick={() => setIsLodgeModalOpen(true)}
+          type="button"
+          onClick={() => setActiveSubTab('overview')}
+          style={{
+            padding: '0.6rem 1.2rem',
+            borderRadius: '10px',
+            border: 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: activeSubTab === 'overview' ? '#7c3aed' : '#f1f5f9',
+            color: activeSubTab === 'overview' ? '#ffffff' : '#475569',
+            boxShadow: activeSubTab === 'overview' ? '0 4px 12px rgba(124, 58, 237, 0.25)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
         >
-          <Plus size={15} /> Lodge Maintenance Request
+          <Home size={16} /> Room Allocation &amp; Maintenance
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('gate-pass')}
+          style={{
+            padding: '0.6rem 1.2rem',
+            borderRadius: '10px',
+            border: 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: activeSubTab === 'gate-pass' ? '#4338ca' : '#f1f5f9',
+            color: activeSubTab === 'gate-pass' ? '#ffffff' : '#475569',
+            boxShadow: activeSubTab === 'gate-pass' ? '0 4px 12px rgba(67, 56, 202, 0.25)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <ShieldCheck size={17} /> Hostel Gate Pass (Outing / Home Visit)
+          {pendingGatePassCount > 0 && (
+            <span style={{
+              background: activeSubTab === 'gate-pass' ? '#fde047' : '#f59e0b',
+              color: '#0f172a',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              padding: '2px 7px',
+              borderRadius: '9999px',
+              marginLeft: '4px'
+            }}>
+              {pendingGatePassCount} Pending
+            </span>
+          )}
         </button>
       </div>
 
-      {/* Info Cards */}
-      <div className="hostel-info-grid">
+      {activeSubTab === 'gate-pass' ? (
+        <StudentGatePassSection />
+      ) : (
+        <>
+          {/* Header */}
+          <div className="student-hostel-header">
+            <div>
+              <h1>My Hostel Residence &amp; Accommodation</h1>
+              <p>Room allocation, roommates, hostel guidelines, and 24/7 maintenance desk</p>
+            </div>
+            <button
+              className="admin-action-btn-primary"
+              style={{ background: '#7c3aed' }}
+              onClick={() => setIsLodgeModalOpen(true)}
+            >
+              <Plus size={15} /> Lodge Maintenance Request
+            </button>
+          </div>
+
+          {/* Info Cards */}
+          <div className="hostel-info-grid">
         <div className="hostel-info-card">
           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Allocated Room
@@ -409,6 +494,8 @@ export default function StudentHostelPage() {
             />
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

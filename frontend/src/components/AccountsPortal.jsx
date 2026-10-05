@@ -30,8 +30,11 @@ import {
 import { api } from '../services/api.js';
 import { feesApi } from '../services/feesApi.js';
 import { Eye, ShieldCheck, Check, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { useTimeGreeting } from '../utils/timeGreeting.js';
+import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 
 export default function AccountsPortal({ account, onLogout }) {
+  const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [feeStructures, setFeeStructures] = useState(initialFeeStructures);
   const [transactions, setTransactions] = useState(initialFeeTransactions);
@@ -238,6 +241,12 @@ export default function AccountsPortal({ account, onLogout }) {
           >
             <FileText size={17} /> Financial Reports
           </button>
+          <button
+            className={`accounts-nav-btn ${activeTab === 'documents' ? 'active' : ''}`}
+            onClick={() => setActiveTab('documents')}
+          >
+            <Download size={17} /> Student Documents
+          </button>
         </aside>
 
         {/* Dynamic Content Pane */}
@@ -247,8 +256,8 @@ export default function AccountsPortal({ account, onLogout }) {
             <div>
               <div className="admin-view-header">
                 <div>
-                  <h2>Institutional Fee & Accounts Dashboard</h2>
-                  <p>Real-time financial status, semester fee collections, dues, and scholarship disbursements.</p>
+                  <h2>{greeting}, {account?.name || 'Accounts Officer'}</h2>
+                  <p>Institutional Fee &amp; Accounts Dashboard · Real-time financial status &amp; fee collections.</p>
                 </div>
                 <button className="admin-action-btn-primary" onClick={() => setIsRecordPaymentOpen(true)}>
                   <Plus size={15} /> Record Student Payment
@@ -725,6 +734,11 @@ export default function AccountsPortal({ account, onLogout }) {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* TAB: STUDENT DOCUMENTS */}
+          {activeTab === 'documents' && (
+            <StudentDocumentsTable portalRole="accounts" />
           )}
         </main>
       </div>

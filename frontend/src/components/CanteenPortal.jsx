@@ -22,8 +22,10 @@ import '../components/AdminPortal.css';
 import { downloadCanteenStatementPdf } from '../utils/pdfGenerator';
 import { initialFoodItems, initialCanteenOrders } from '../data/collegeData.js';
 import { api } from '../services/api.js';
+import { useTimeGreeting } from '../utils/timeGreeting.js';
 
 export default function CanteenPortal({ account, onLogout }) {
+  const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [foodItems, setFoodItems] = useState(initialFoodItems);
   const [orders, setOrders] = useState(initialCanteenOrders);
@@ -189,8 +191,8 @@ export default function CanteenPortal({ account, onLogout }) {
             <div>
               <div className="admin-view-header">
                 <div>
-                  <h2>Central Kitchen & Canteen Operations</h2>
-                  <p>Smart token counter, order status pipeline, and daily campus meal statistics.</p>
+                  <h2>{greeting}, {account?.name || 'Canteen Manager'}</h2>
+                  <p>Central Kitchen &amp; Smart Canteen Operations · Daily campus meal statistics &amp; orders pipeline.</p>
                 </div>
                 <button className="admin-action-btn-primary" onClick={() => setIsAddItemModalOpen(true)}>
                   <Plus size={15} /> Add Food Item

@@ -127,3 +127,328 @@
   overflow-y: auto;
   max-width: 1400px;
 }
+
+/* Interactive Hostel Cards */
+.hostel-card-interactive {
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid transparent;
+  position: relative;
+}
+
+.hostel-card-interactive:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(124, 58, 237, 0.12);
+  border-color: #c4b5fd;
+}
+
+.hostel-card-interactive.selected {
+  border-color: #7c3aed;
+  background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.16);
+  transform: translateY(-2px);
+}
+
+.hostel-selected-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #7c3aed;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Detailed Hostel Panel */
+.hostel-details-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.hostel-details-header-card {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  color: #ffffff;
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.hostel-switcher-bar {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.hostel-switcher-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hostel-switcher-tab:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.hostel-switcher-tab.active {
+  background: #7c3aed;
+  color: #ffffff;
+  border-color: #7c3aed;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+}
+
+/* Room Accordion / Dropdown */
+.hostel-room-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 0.9rem;
+  overflow: hidden;
+  background: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.hostel-room-card:hover {
+  border-color: #c4b5fd;
+}
+
+.hostel-room-card.expanded {
+  border-color: #8b5cf6;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.1);
+}
+
+.hostel-room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  background: #ffffff;
+  transition: background-color 0.15s ease;
+  user-select: none;
+}
+
+.hostel-room-card.expanded .hostel-room-header {
+  background: #faf5ff;
+  border-bottom: 1px solid #ede9fe;
+}
+
+.hostel-room-header:hover {
+  background: #f8fafc;
+}
+
+.hostel-room-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.hostel-room-num-badge {
+  background: #7c3aed;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 8px;
+  letter-spacing: -0.01em;
+}
+
+.hostel-room-meta {
+  font-size: 0.82rem;
+  color: #64748b;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hostel-room-dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  color: #7c3aed;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hostel-room-dropdown-btn:hover {
+  background: #7c3aed;
+  color: #ffffff;
+  border-color: #7c3aed;
+}
+
+/* Resident List Inside Dropdown */
+.hostel-residents-pane {
+  padding: 1.15rem 1.25rem;
+  background: #ffffff;
+  animation: slideDownFade 0.2s ease-out;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hostel-residents-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.hostel-residents-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 2px solid #e2e8f0;
+  text-align: left;
+}
+
+.hostel-residents-table td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.hostel-residents-table tr:hover {
+  background: #faf5ff;
+}
+
+.hostel-bed-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.76rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.hostel-view-student-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.38rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hostel-view-student-btn:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+/* Warden Gate Pass Management Styles */
+.hostel-badge-count {
+  margin-left: auto;
+  background: #f59e0b;
+  color: #ffffff;
+  border-radius: 9999px;
+  padding: 2px 7px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+}
+
+.hostel-quick-approve-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hostel-quick-approve-btn:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.hostel-quick-reject-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hostel-quick-reject-btn:hover {
+  background: #fee2e2;
+}
+
+.hostel-dossier-cert {
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hostel-stamp-approved-box {
+  border: 2px solid #16a34a;
+  background: #f0fdf4;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  color: #15803d;
+}
+
+

@@ -61,6 +61,7 @@ import CanteenPage from './pages/CanteenPage.jsx'
 import StudentHostelPage from './pages/StudentHostelPage.jsx'
 import ClassNotesPage from './pages/ClassNotesPage.jsx'
 import { api } from './services/api.js'
+import { getActiveStudent, setActiveStudent, getAllStudents, findStudentByQuery } from './services/studentStore.js'
 
 const profilePageTabMap = {
   attendance: 'Attendance Dashboard',
@@ -327,7 +328,8 @@ function StudentPortal({ account, onLogout }) {
     return !query || `${notice.title} ${notice.detail} ${notice.tag}`.toLowerCase().includes(query)
   }), [noticeList, noticeQuery])
   const calendarDays = createCalendarDays(currentMonth, today)
-  const initials = account.name.split(' ').map((part) => part[0]).slice(0, 2).join('')
+  const studentDisplayName = account?.name || 'Student'
+  const initials = studentDisplayName.split(' ').filter(Boolean).map((part) => part[0]).slice(0, 2).join('') || 'ST'
   const holidayItems = useMemo(() => {
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
     return holidays.map(([raw, name]) => {
@@ -436,7 +438,7 @@ function StudentPortal({ account, onLogout }) {
               <div>
                 <p className="campus-header-kicker">OVERVIEW</p>
                 <h1 className="campus-header-title">{activeLink === 'Dashboard' ? 'Student dashboard' : activeLink}</h1>
-                <p className="campus-header-subtitle">Welcome back, {account.name}</p>
+                <p className="campus-header-subtitle">{timeGreeting.wish}, {account?.name || 'Student'}</p>
               </div>
             </div>
 
@@ -551,7 +553,8 @@ function StudentPortal({ account, onLogout }) {
               </div>
               {activePage === 'class-notes' && <ClassNotesPage account={account} />}
               {activePage === 'marks' && <MarksPage initialRole="student" />}
-              {activePage === 'hostel' && <StudentHostelPage />}
+              {activePage === 'hostel' && <StudentHostelPage defaultTab="overview" />}
+              {activePage === 'gate-pass' && <StudentHostelPage defaultTab="gate-pass" />}
               {activePage === 'fees' && <FeesPage />}
               {activePage === 'canteen' && <CanteenPage />}
               {activePage === 'attendance' && <AttendancePage />}
@@ -586,7 +589,7 @@ function StudentPortal({ account, onLogout }) {
             <div className="dash-hero-glow" aria-hidden="true" />
             <div className="dash-hero-main">
               <p className="dash-hero-kicker"><Sparkles size={13} /> Student workspace · Semester 5</p>
-              <h2 className="dash-hero-title">{timeGreeting.wish}, {account.name.split(' ')[0]} {timeGreeting.emoji}</h2>
+              <h2 className="dash-hero-title">{timeGreeting.wish}, {(account?.name || 'Student').split(' ')[0]} {timeGreeting.emoji}</h2>
               <p className="dash-hero-caption">{timeGreeting.caption}</p>
               <div className="dash-motd" role="note" aria-label="Message of the day">
                 <span className="dash-motd-icon"><Megaphone size={14} /></span>
@@ -608,21 +611,21 @@ function StudentPortal({ account, onLogout }) {
             {/* 1st Image: Student Profile Card placed on LEFT SIDE with strict Passport Size Photo */}
             <aside className="dash-card dash-info dash-info-hero" id="student-information" aria-label="Student account information">
               <div className="dash-info-cover">
-                <div className="dash-passport-photo-frame" title={`${account.name} Passport Photograph (Official 35mm x 45mm)`}>
-                  <img src={studentPhoto} alt={account.name} className="dash-passport-img" />
+                <div className="dash-passport-photo-frame" title={`${account?.name || 'Student'} Passport Photograph (Official 35mm x 45mm)`}>
+                  <img src={studentPhoto} alt={account?.name || 'Student'} className="dash-passport-img" />
                 </div>
                 <div>
-                  <strong>{account.name}</strong>
-                  <small>{account.registrationNumber}</small>
+                  <strong>{account?.name || 'Student'}</strong>
+                  <small>{account?.registrationNumber || '—'}</small>
                 </div>
                 <span className="dash-status"><i /> Active</span>
               </div>
               <dl className="dash-info-list">
-                <DetailRow label="Registration No." value={account.registrationNumber} />
-                <DetailRow label="Name" value={account.name} />
+                <DetailRow label="Registration No." value={account?.registrationNumber || '—'} />
+                <DetailRow label="Name" value={account?.name || 'Student'} />
                 <DetailRow label="Course" value="B.Tech" />
                 <DetailRow label="Batch" value="2023–2027" />
-                <DetailRow label="Branch" value={account.department} />
+                <DetailRow label="Branch" value={account?.department || 'Computer Science & Engineering'} />
                 <DetailRow label="Section" value="CSE · Section A" />
                 <DetailRow label="Email ID" value="rakesh.das@student.gift.edu.in" />
                 <DetailRow label="Mobile No." value="+91 98610 23010" />

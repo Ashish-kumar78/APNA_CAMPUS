@@ -28,6 +28,8 @@ import AccountsPortal from './components/AccountsPortal.jsx'
 import HostelPortal from './components/HostelPortal.jsx'
 import CanteenPortal from './components/CanteenPortal.jsx'
 import { api } from './services/api.js'
+import { getActiveStudent, setActiveStudent, findStudentByQuery } from './services/studentStore.js'
+import { getTimeGreeting } from './utils/timeGreeting.js'
 
 const accounts = {
   '2305201001': {
@@ -195,13 +197,30 @@ function App() {
     }
 
     const key = identifier.trim().toLowerCase()
+    
+    // Check if entered identifier matches any registered or newly added student
+    const studentMatch = findStudentByQuery(key)
+    if (studentMatch && (password === 'gift123' || password === 'password123')) {
+      setActiveStudent(studentMatch.id)
+      setAccount({
+        role: 'student',
+        ...studentMatch
+      })
+      return
+    }
+
     const matchedAccount = accounts[key]
     if (!matchedAccount || (password !== 'gift123' && password !== 'password123')) {
       setError('We could not verify those sign-in details. Please check your College ID and password.')
       return
     }
 
-    setAccount(matchedAccount)
+    if (matchedAccount.role === 'student') {
+      const activeStd = findStudentByQuery(matchedAccount.registrationNumber) || getActiveStudent()
+      setAccount({ ...matchedAccount, ...(activeStd || {}) })
+    } else {
+      setAccount(matchedAccount)
+    }
   }
 
   async function handleQuickLogin(roleKey) {
@@ -209,6 +228,17 @@ function App() {
     setResetRequested(false)
     setIdentifier(roleKey)
     setPassword('gift123')
+
+    if (roleKey === 'student') {
+      const activeStd = getActiveStudent()
+      if (activeStd) {
+        setAccount({
+          role: 'student',
+          ...activeStd
+        })
+        return
+      }
+    }
 
     try {
       const res = await api.login(roleKey, 'gift123')
@@ -533,7 +563,7 @@ function Dashboard({ account, onLogout }) {
             <div>
               <p className="eyebrow"><RoleIcon size={15} />{label}</p>
               <h1>{account.role === 'admin' ? 'Campus overview' : 'Faculty Workspace'}</h1>
-              <p className="welcome-detail">Welcome back, {account.name.split(' ')[0]}. Manage student continuous evaluation & assessments.</p>
+              <p className="welcome-detail">{getTimeGreeting()}, {account.name.split(' ')[0]}. Manage student continuous evaluation & assessments.</p>
             </div>
             <div className="today-chip"><CalendarDays size={15} /> Friday, 02 October 2026</div>
           </div>

@@ -1,0 +1,633 @@
+/* =====================================================
+   Management Portal — Professional White Theme
+   Matches the global CMS design system exactly
+   ===================================================== */
+
+.mgmt-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f8faff;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #0f172a;
+}
+
+/* ─── Sidebar ─────────────────────────────────────── */
+.mgmt-sidebar {
+  width: 265px;
+  background: #ffffff;
+  border-right: 1px solid rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 40;
+  box-shadow: 2px 0 12px rgba(15, 23, 42, 0.04);
+}
+
+.mgmt-brand {
+  padding: 1.5rem 1.25rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+.mgmt-brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+.mgmt-brand-text h2 {
+  font-size: 0.88rem;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.mgmt-brand-text span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #2563eb;
+  letter-spacing: 0.03em;
+}
+
+.mgmt-user-card {
+  margin: 1rem 1rem 0;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+
+.mgmt-user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.mgmt-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.mgmt-user-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  display: block;
+  line-height: 1.2;
+}
+
+.mgmt-user-role {
+  font-size: 0.7rem;
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.mgmt-nav {
+  flex: 1;
+  padding: 1rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.mgmt-nav-section {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #cbd5e1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.85rem 0.5rem 0.35rem;
+}
+
+.mgmt-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer !important;
+  width: 100%;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.mgmt-nav-item:hover {
+  background: #eff6ff;
+  color: #2563eb;
+  cursor: pointer !important;
+}
+
+.mgmt-nav-item.active {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45) !important;
+  border-radius: 14px !important;
+}
+
+.mgmt-nav-item.active svg {
+  color: #ffffff !important;
+}
+
+.mgmt-sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+/* ─── Main Content ────────────────────────────────── */
+.mgmt-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.mgmt-header {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 1.1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  box-shadow: 0 1px 8px rgba(15, 23, 42, 0.04);
+}
+
+.mgmt-header-left h1 {
+  font-size: 1.1rem;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin: 0 0 2px;
+}
+
+.mgmt-header-left p {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}
+
+.mgmt-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mgmt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.mgmt-badge-warning {
+  background: #fefce8;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.mgmt-body {
+  flex: 1;
+  padding: 2rem;
+  animation: fade-in 0.2s ease;
+}
+
+/* ─── KPI Grid ────────────────────────────────────── */
+.mgmt-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.mgmt-kpi {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 1.2rem 1.25rem;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.mgmt-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+  border-color: #bfdbfe;
+}
+
+.mgmt-kpi-top-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 12px 12px 0 0;
+}
+
+.mgmt-kpi-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.6rem;
+}
+
+.mgmt-kpi-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mgmt-kpi-label {
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+}
+
+.mgmt-kpi-value {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  margin-bottom: 0.4rem;
+}
+
+.mgmt-kpi-trend {
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mgmt-kpi-trend.up { color: #059669; }
+.mgmt-kpi-trend.neutral { color: #64748b; }
+.mgmt-kpi-trend.warn { color: #d97706; }
+
+/* ─── Panel / Card ────────────────────────────────── */
+.mgmt-panel {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.mgmt-panel-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mgmt-panel-title h3 {
+  font-size: 0.98rem;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin: 0 0 2px;
+}
+
+.mgmt-panel-title p {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.mgmt-panel-body {
+  padding: 1.5rem;
+}
+
+/* ─── Table ───────────────────────────────────────── */
+.mgmt-table-wrap {
+  overflow-x: auto;
+}
+
+.mgmt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.mgmt-table thead tr {
+  background: #f8faff;
+  border-bottom: 2px solid rgba(15, 23, 42, 0.08);
+}
+
+.mgmt-table th {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.mgmt-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+  color: #334155;
+  font-weight: 500;
+}
+
+.mgmt-table tbody tr:hover {
+  background: #f8faff;
+}
+
+.mgmt-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ─── Progress Bar ────────────────────────────────── */
+.mgmt-progress-wrap {
+  margin-top: 4px;
+}
+
+.mgmt-progress-bg {
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mgmt-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+/* ─── Buttons ─────────────────────────────────────── */
+.mgmt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.mgmt-btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+.mgmt-btn-primary:hover { background: #1d4ed8; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35); }
+
+.mgmt-btn-secondary {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+}
+.mgmt-btn-secondary:hover { background: #e2e8f0; }
+
+.mgmt-btn-success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+.mgmt-btn-success:hover { background: #d1fae5; }
+
+.mgmt-btn-danger {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+.mgmt-btn-danger:hover { background: #fee2e2; }
+
+.mgmt-btn-outline {
+  background: transparent;
+  color: #2563eb;
+  border: 1.5px solid #93c5fd;
+}
+.mgmt-btn-outline:hover { background: #eff6ff; }
+
+/* ─── Status Badge ────────────────────────────────── */
+.mgmt-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.mgmt-status-success { background: #ecfdf5; color: #065f46; }
+.mgmt-status-warning { background: #fefce8; color: #92400e; }
+.mgmt-status-danger  { background: #fef2f2; color: #991b1b; }
+.mgmt-status-info    { background: #eff6ff; color: #1e40af; }
+.mgmt-status-neutral { background: #f1f5f9; color: #1e293b; }
+
+/* ─── Priority Badge ──────────────────────────────── */
+.mgmt-priority-high   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.mgmt-priority-medium { background: #fefce8; color: #92400e; border: 1px solid #fde68a; }
+.mgmt-priority-low    { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+
+/* ─── Section Divider ─────────────────────────────── */
+.mgmt-section-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 1.75rem 0 0.85rem;
+}
+
+/* ─── Dept Card Row ───────────────────────────────── */
+.mgmt-dept-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .mgmt-dept-row { grid-template-columns: 1fr; }
+  .mgmt-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ─── Stat mini tiles ─────────────────────────────── */
+.mgmt-mini-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  background: #f8faff;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 10px;
+  margin-bottom: 0.6rem;
+}
+
+.mgmt-mini-stat-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mgmt-mini-stat-label {
+  font-size: 0.76rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.mgmt-mini-stat-val {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+/* ─── Toast ───────────────────────────────────────── */
+.mgmt-toast {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: #065f46;
+  color: #ffffff;
+  padding: 0.8rem 1.25rem;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  animation: fade-in 0.2s ease;
+}
+
+/* ─── Two-col Grid ────────────────────────────────── */
+.mgmt-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .mgmt-grid-2 { grid-template-columns: 1fr; }
+}
+
+/* ─── Metric Bar ──────────────────────────────────── */
+.mgmt-metric-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+}
+.mgmt-metric-bar:last-child { border-bottom: none; }
+.mgmt-metric-bar-label { flex: 1; font-size: 0.83rem; font-weight: 600; color: #334155; }
+.mgmt-metric-bar-val { font-size: 0.83rem; font-weight: 800; color: #0f172a; width: 48px; text-align: right; }
+.mgmt-metric-bar-track { width: 100px; }
+
+/* ─── Empty State ─────────────────────────────────── */
+.mgmt-empty {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #94a3b8;
+}
+
+.mgmt-empty-icon {
+  width: 56px;
+  height: 56px;
+  background: #f1f5f9;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+/* ─── Placement timeline ──────────────────────────── */
+.mgmt-timeline {
+  position: relative;
+  padding-left: 1.75rem;
+}
+
+.mgmt-timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.mgmt-timeline-item {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+
+.mgmt-timeline-dot {
+  position: absolute;
+  left: -1.45rem;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px currentColor;
+}
+
+/* ─── Fade-in animation ───────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

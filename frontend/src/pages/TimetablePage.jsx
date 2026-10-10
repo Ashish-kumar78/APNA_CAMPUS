@@ -5,6 +5,7 @@ import {
   Clock,
   FileText,
   Filter,
+  MessageSquare,
 } from 'lucide-react'
 import { downloadTimetablePdf } from '../utils/pdfGenerator'
 import './TimetablePage.css'
@@ -161,6 +162,41 @@ export default function TimetablePage() {
                         {entry.code && <code className="tg-code">{entry.code}</code>}
                         {entry.room && <span className="tg-room">{entry.room}</span>}
                         {entry.faculty && <span className="tg-faculty">{entry.faculty}</span>}
+                        {entry.code && (
+                          <button
+                            type="button"
+                            style={{
+                              marginTop: '4px',
+                              background: 'rgba(37, 99, 235, 0.12)',
+                              border: '1px solid rgba(37, 99, 235, 0.3)',
+                              color: '#1d4ed8',
+                              fontSize: '9.5px',
+                              fontWeight: 700,
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              alignSelf: 'flex-start'
+                            }}
+                            title="Open Campus Connect chat for this class"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const convMap = {
+                                'CS501': 'conv-cse-ai',
+                                'CS502': 'conv-dbms',
+                                'CS503': 'conv-cn',
+                                'CS504': 'conv-os',
+                                'CS505': 'conv-ds',
+                                'CS506': 'conv-ds'
+                              };
+                              window.dispatchEvent(new CustomEvent('cms_navigate_chat', { detail: { convId: convMap[entry.code] || 'conv-ds' } }));
+                            }}
+                          >
+                            <MessageSquare size={10} /> Class Chat
+                          </button>
+                        )}
                       </>
                     )}
                   </div>

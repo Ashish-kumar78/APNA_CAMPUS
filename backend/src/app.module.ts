@@ -11,10 +11,25 @@ import { CanteenModule } from './canteen/canteen.module';
 import { CmsModule } from './cms/cms.module';
 import { AdminModule } from './admin/admin.module';
 import { ChatbotModule } from './chatbot/chatbot.module';
+import { EnterpriseModule } from './enterprise/enterprise.module';
+import { ExamsModule } from './exams/exams.module';
+import { FacultyModule } from './faculty/faculty.module';
+import { HodModule } from './hod/hod.module';
+import { ReportsModule } from './reports/reports.module';
+
+import * as path from 'path';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [
+        path.resolve(process.cwd(), '.env'),
+        path.resolve(process.cwd(), 'backend', '.env'),
+        path.resolve(__dirname, '..', '.env'),
+        path.resolve(__dirname, '..', '..', '.env'),
+      ],
+    }),
     PrismaModule,
     AuthModule,
     StudentsModule,
@@ -26,6 +41,11 @@ import { ChatbotModule } from './chatbot/chatbot.module';
     CmsModule,
     AdminModule,
     ChatbotModule,
+    EnterpriseModule,
+    ExamsModule,
+    FacultyModule,
+    HodModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}

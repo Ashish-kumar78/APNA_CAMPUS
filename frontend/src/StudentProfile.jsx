@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import {
   ArrowLeft,
   Award,
@@ -55,6 +55,23 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
   const [message, setMessage] = useState('')
   const [selectedDocView, setSelectedDocView] = useState(null)
   const [isAddDocModalOpen, setIsAddDocModalOpen] = useState(false)
+  const profileRootRef = useRef(null)
+
+  // Always reset scroll to the beginning when StudentProfile mounts or student changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+
+    const osShell = document.querySelector('.campus-os-shell')
+    if (osShell) osShell.scrollTop = 0
+    const osMain = document.querySelector('.campus-os-main')
+    if (osMain) osMain.scrollTop = 0
+
+    if (profileRootRef.current) {
+      profileRootRef.current.scrollIntoView({ behavior: 'instant', block: 'start' })
+    }
+  }, [account?.registrationNumber, account?.name])
 
   // Merge account prop with complete student store record if available
   const student = useMemo(() => {
@@ -153,7 +170,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
     ['Batch', student.batch || 'BTECH 2023–2027'],
     ['Branch', student.department || student.branch || account.department],
     ['Section', student.academicSection || student.section || 'CSE · Section A'],
-    ['Domain Email ID', student.email || `${emailName}@gift.edu.in`],
+    ['Domain Email ID', student.email || `${emailName}@apnacampus.edu.in`],
     ['Email ID', student.personalEmail || `${emailName}@gmail.com`],
     ['Mobile No.', student.phone || '+91 98610 23010'],
     ['WhatsApp No.', student.phone || '+91 98610 23010'],
@@ -209,14 +226,14 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
 
   const studentPhoto = useMemo(() => {
     if (account?.photo) return account.photo
-    if (/Aarav|Rohan|Vikram|Siddharth|Rahul|Amit|Rajesh|Pradeep|Debasish|Bishnu|Manoj/i.test(account?.name || '')) {
-      return '/passport_photo_male.svg'
+    if (account?.gender === 'Female' || /Priya|Sneha|Puja|Swati|Monika|Ipsita|Smruti|Lipika|Archana|Sonali|Niharika|Ananya|Pooja|Shreya|Ankita|Divya/i.test(account?.name || '')) {
+      return '/passport_photo_female.svg'
     }
-    return '/passport_photo.svg'
+    return '/passport_photo_male.svg'
   }, [account])
 
   return (
-    <section className="student-profile-page sp-modern" id="student-profile">
+    <section className="student-profile-page sp-modern" id="student-profile" ref={profileRootRef}>
       <div className="profile-breadcrumb">
         <button type="button" onClick={onBack}>Home</button>
         <span>/</span><span>Student</span><span>/</span><span>Manage Students</span><span>/</span>
@@ -395,8 +412,10 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
               </div>
             ) : activeTab === 'ID Card' ? (
               <div className="profile-id-card">
-                <span className="profile-id-mark">G</span>
-                <span className="profile-id-copy"><strong>GIFT AUTONOMOUS</strong><small>BHUBANESWAR · STUDENT ID</small></span>
+                <span className="profile-id-mark" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: 'transparent' }}>
+                  <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '26px', width: 'auto', objectFit: 'contain' }} />
+                </span>
+                <span className="profile-id-copy"><strong>APNA CAMPUS</strong><small>STUDENT IDENTITY CARD</small></span>
                 <span className="profile-id-avatar" style={{ padding: 0, overflow: 'hidden' }}>
                   <img src={studentPhoto} alt={student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </span>
@@ -716,7 +735,7 @@ function FeesDetails() {
       </section>
 
       <aside className="fee-notice">
-        <strong>Important:</strong> If you notice a discrepancy in your fee statement, contact the Accounts Office at <a href="mailto:info@gift.edu.in">info@gift.edu.in</a> with your registration number.
+        <strong>Important:</strong> If you notice a discrepancy in your fee statement, contact the Accounts Office at <a href="mailto:info@apnacampus.edu.in">info@apnacampus.edu.in</a> with your registration number.
       </aside>
 
       <FeeTableSection title="Fee Details" className="fee-demand-section">
@@ -900,7 +919,7 @@ function AcademicDetails({ student }) {
         ['+3', s.qualPlus3Institute || 'Not applicable', s.qualPlus3Year || '—', s.qualPlus3Marks || '—'],
         ['BCA', s.qualBcaInstitute || 'Not applicable', s.qualBcaYear || '—', s.qualBcaMarks || '—'],
         ['BBA', s.qualBbaInstitute || 'Not applicable', s.qualBbaYear || '—', s.qualBbaMarks || '—'],
-        ['BTECH', s.qualBtechInstitute || 'GIFT Autonomous, Bhubaneswar', s.qualBtechYear || '2027', s.qualBtechMarks || 'In progress'],
+        ['BTECH', s.qualBtechInstitute || 'Apna Campus', s.qualBtechYear || '2027', s.qualBtechMarks || 'In progress'],
       ]
 
   return (

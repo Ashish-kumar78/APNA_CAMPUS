@@ -58,10 +58,13 @@ export default function IDCardPage() {
 
       <div className="idcard-wrapper">
         <div className="idcard-badge-container">
-          <div className="idcard-top-bar">
-            <div>
-              <div className="idcard-inst-name">GIFT AUTONOMOUS COLLEGE</div>
-              <small style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>Affiliated to BPUT, Odisha | NAAC 'A' Grade</small>
+          <div className="idcard-top-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', background: '#ffffff', borderRadius: '4px', padding: '2px' }} />
+              <div>
+                <div className="idcard-inst-name">APNA CAMPUS</div>
+                <small style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>Affiliated to BPUT, Odisha | NAAC 'A' Grade</small>
+              </div>
             </div>
             <span className="idcard-validity">VALID: 2023 - 2027</span>
           </div>

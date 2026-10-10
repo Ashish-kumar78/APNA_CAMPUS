@@ -420,7 +420,7 @@ export default function StudentDocumentsTable({ portalRole = 'faculty', titleOve
       <div className="std-docs-header">
         <div>
           <div className="std-docs-header-badge">
-            <ShieldCheck size={14} /> GIFT AUTONOMOUS ERP · 5-DOCUMENT REPOSITORY
+            <ShieldCheck size={14} /> APNA CAMPUS ERP · 5-DOCUMENT REPOSITORY
           </div>
           <h2 className="std-docs-title">{titleOverride || activeHeader.title}</h2>
           <p className="std-docs-subtitle">{subtitleOverride || activeHeader.subtitle}</p>
@@ -841,7 +841,7 @@ export default function StudentDocumentsTable({ portalRole = 'faculty', titleOve
                 <div>
                   <h3 className="std-docs-modal-title">Original Authentic Document Viewer</h3>
                   <p className="std-docs-modal-sub">
-                    Live Digital Credential · GIFT Autonomous BPUT Verification Repository
+                    Live Digital Credential · Apna Campus Verification Repository
                   </p>
                 </div>
               </div>
@@ -1253,8 +1253,11 @@ export default function StudentDocumentsTable({ portalRole = 'faculty', titleOve
                 /* ── FALLBACK / PASSPORT PHOTO / CUSTOM DOC ── */
                 <div className="std-docs-preview-sheet">
                   <div className="std-docs-sheet-header">
-                    <div className="std-docs-sheet-college">
-                      GANDHI INSTITUTE FOR TECHNOLOGY (GIFT AUTONOMOUS)
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '28px', width: 'auto' }} />
+                      <div className="std-docs-sheet-college" style={{ margin: 0 }}>
+                        APNA CAMPUS
+                      </div>
                     </div>
                     <div className="std-docs-sheet-tagline">
                       Affiliated to BPUT, Rourkela | Approved by AICTE, New Delhi | NAAC "A" Grade
@@ -1304,7 +1307,7 @@ export default function StudentDocumentsTable({ portalRole = 'faculty', titleOve
                   </div>
 
                   <div className="std-docs-watermark-box">
-                    <div className="std-docs-watermark-text">GIFT AUTONOMOUS VERIFIED</div>
+                    <div className="std-docs-watermark-text">APNA CAMPUS VERIFIED</div>
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#334155', fontSize: '0.85rem' }}>
                         Certified Digital Copy on Record:

@@ -16,7 +16,8 @@ import {
   User,
   Plus,
   Info,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react'
 import { downloadSyllabusPdf } from '../utils/pdfGenerator'
 import { notesApi } from '../services/notesApi'
@@ -268,6 +269,36 @@ export default function AcademicsPage() {
                                     }}
                                   >
                                     <Plus size={12} /> Upload
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    style={{
+                                      background: 'rgba(59, 130, 246, 0.1)',
+                                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                                      color: '#2563eb',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 700,
+                                      padding: '4px 8px',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                    title="Open Campus Connect Discussion for this Subject"
+                                    onClick={() => {
+                                      const convMap = {
+                                        'Data Structures': 'conv-ds',
+                                        'Artificial Intelligence': 'conv-cse-ai',
+                                        'Database Systems': 'conv-dbms',
+                                        'Operating Systems': 'conv-os',
+                                        'Computer Networks': 'conv-cn'
+                                      };
+                                      window.dispatchEvent(new CustomEvent('cms_navigate_chat', { detail: { convId: convMap[sub.name] || 'conv-ds' } }));
+                                    }}
+                                  >
+                                    <MessageSquare size={12} /> Chat
                                   </button>
                                 </div>
                               </td>

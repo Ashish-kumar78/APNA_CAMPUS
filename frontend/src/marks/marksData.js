@@ -443,7 +443,7 @@ export function generateStudents() {
       name,
       section: i <= 46 ? 'A' : 'B',
       semester: '5th',
-      email: `${fn.toLowerCase()}.${ln.toLowerCase()}@student.gift.edu.in`,
+      email: `${fn.toLowerCase()}.${ln.toLowerCase()}@student.apnacampus.edu.in`,
     })
   }
   return students

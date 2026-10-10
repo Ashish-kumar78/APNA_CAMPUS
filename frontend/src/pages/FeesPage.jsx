@@ -21,9 +21,10 @@ import {
   Award,
   ShieldCheck,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react'
-import { downloadFeeReceiptPdf } from '../utils/pdfGenerator'
+import { downloadFeeReceiptPdf, openFeeReceiptPdf, openPaymentProofPdf, downloadPaymentProofPdf } from '../utils/pdfGenerator'
 import { feesApi } from '../services/feesApi'
 import './FeesPage.css'
 
@@ -162,13 +163,9 @@ export default function FeesPage() {
     }
 
     setSelectedFile(file)
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader()
-      reader.onload = (evt) => setFilePreviewUrl(evt.target.result)
-      reader.readAsDataURL(file)
-    } else {
-      setFilePreviewUrl('PDF_FILE')
-    }
+    const reader = new FileReader()
+    reader.onload = (evt) => setFilePreviewUrl(evt.target.result)
+    reader.readAsDataURL(file)
   }
 
   // Form Validation & Proceed to Preview
@@ -846,7 +843,7 @@ export default function FeesPage() {
 
                   {/* Image / File Display */}
                   <div style={{ textAlign: 'center', background: '#ffffff', borderRadius: '8px', padding: '10px', border: '1px solid #e2e8f0', marginBottom: '12px', maxHeight: '200px', overflow: 'hidden' }}>
-                    {filePreviewUrl === 'PDF_FILE' ? (
+                    {(selectedFile?.type === 'application/pdf' || (typeof filePreviewUrl === 'string' && filePreviewUrl.startsWith('data:application/pdf'))) ? (
                       <div style={{ padding: '20px', color: '#4338ca' }}>
                         <FileText size={48} style={{ margin: '0 auto 8px', display: 'block' }} />
                         <strong>{selectedFile?.name || 'Document.pdf'}</strong>
@@ -909,10 +906,52 @@ export default function FeesPage() {
             
             <div style={{ textAlign: 'center', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '14px', maxHeight: '300px', overflowY: 'auto' }}>
               {selectedProofView.fileType === 'application/pdf' ? (
-                <div style={{ padding: '30px' }}>
-                  <FileText size={56} style={{ color: '#4338ca', marginBottom: '8px' }} />
+                <div style={{ padding: '24px', textAlign: 'center' }}>
+                  <div style={{ width: '52px', height: '52px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+                    <FileText size={30} style={{ color: '#ef4444' }} />
+                  </div>
                   <div><strong>{selectedProofView.fileName || 'Payment_Proof.pdf'}</strong></div>
-                  <a href={selectedProofView.proofUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.82rem', color: '#2563eb', marginTop: '6px', display: 'inline-block' }}>Open PDF in New Window ↗</a>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>Bank Transfer Counterfoil &bull; Ref: {selectedProofView.transactionId}</div>
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => openPaymentProofPdf(selectedProofView)}
+                      style={{
+                        background: '#2563eb',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '7px 14px',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <ExternalLink size={14} /> Open PDF in New Window ↗
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadPaymentProofPdf(selectedProofView)}
+                      style={{
+                        background: '#f1f5f9',
+                        color: '#334155',
+                        border: '1px solid #cbd5e1',
+                        padding: '7px 12px',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <Download size={14} /> Download PDF
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <img 

@@ -1,434 +1,642 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  MANAGEMENT
+  PRINCIPAL
+  ADMIN
+  HOD
+  FACULTY
+  STUDENT
+  EXAM_CELL
+  ACCOUNTS
+  LIBRARY
+  PLACEMENT
+  TRANSPORT
+  HOSTEL
+  STAFF
+  WARDEN
+  CANTEEN
+}
+
 model User {
-  id                  String        @id @default(cuid())
-  email               String        @unique
-  passwordHash        String
-  firstName           String
-  lastName            String
-  role                Role          @relation(fields: [roleId], references: [id])
-  roleId              String
-  isActive            Boolean       @default(true)
-  emailVerified       Boolean       @default(false)
-  twoFactorEnabled    Boolean       @default(false)
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  lastLoginAt         DateTime?
-  student             Student?
-  faculty             Faculty?
-  auditLogs           AuditLog[]
-  notifications       Notification[]
-}
+  id           String    @id @default(cuid())
+  email        String    @unique
+  identifier   String    @unique
+  passwordHash String
+  name         String
+  role         Role
+  department   String?
+  designation  String?
+  phone        String?
+  detail       String?
+  permissions  String[]  @default([])
+  lastLogin    DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-model Role {
-  id          String        @id @default(cuid())
-  name        String        @unique
-  permissions Permission[]
-  users       User[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-}
+  student      Student?
+  faculty      Faculty?
+  hod          Hod?
 
-model Permission {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  roles       Role[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  @@index([identifier])
+  @@index([email])
 }
 
 model Student {
-  id                 String          @id @default(cuid())
-  user               User            @relation(fields: [userId], references: [id])
-  userId             String          @unique
-  studentId          String          @unique
-  registrationNumber String          @unique
-  gender             String?
-  dateOfBirth        DateTime?
-  nationality        String?
-  bloodGroup         String?
-  category           String?
-  religion           String?
-  birthplace         String?
-  identificationMark String?
-  languagesKnown     String[]
-  hobbies            String[]
-  status             String          @default("Active")
-  courseId           String?
-  branchId           String?
-  batchId            String?
-  sectionId          String?
-  semesterId         String?
-  mentorId           String?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
-}
+  id                 String             @id @default(cuid())
+  userId             String?            @unique
+  user               User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  studentId          String             @unique
+  rollNumber         String             @unique
+  name               String
+  email              String             @unique
+  phone              String?
+  gender             String?            @default("Female")
+  dob                String?            @default("15-03-2005")
+  bloodGroup         String?            @default("O+")
+  category           String?            @default("General")
+  religion           String?            @default("Hindu")
+  department         String             @default("Computer Science & Engineering")
+  deptCode           String             @default("CSE")
+  semester           String             @default("Semester 5")
+  section            String             @default("Section A")
+  academicYear       String             @default("2026-27")
+  status             String             @default("Active")
+  cgpa               Float              @default(8.42)
+  attendance         Int                @default(92)
+  walletBalance      Float              @default(1450.0)
+  hostelName         String?            @default("Sarojini Girls Residence (Block A)")
+  roomNumber         String?            @default("204")
+  bedNumber          String?            @default("Bed 01 (Window Side)")
+  floor              String?            @default("Floor 2")
+  wardenName         String?            @default("Mrs. Nibedita Das")
+  wardenContact      String?            @default("+91 94370 33445")
+  transferConfirmed  Boolean            @default(false)
+  transferCampus     String?
+  transferCity       String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
-model Faculty {
-  id          String    @id @default(cuid())
-  user        User      @relation(fields: [userId], references: [id])
-  userId      String    @unique
-  employeeId  String    @unique
-  department  String?
-  designation String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
+  guardians          Guardian[]
+  addresses          Address[]
+  documents          Document[]
+  marks              AssessmentMark[]
+  attendanceRecords  AttendanceRecord[]
+  biometrics         BiometricLog[]
+  complaints         HostelComplaint[]
+  orders             CanteenOrder[]
 
-model Course {
-  id        String   @id @default(cuid())
-  name      String
-  code      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Department {
-  id        String   @id @default(cuid())
-  name      String
-  code      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Batch {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  year      Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Section {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Semester {
-  id        String   @id @default(cuid())
-  number    Int      @unique
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Subject {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  name      String
-  credits   Int
-  type      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Attendance {
-  id            String   @id @default(cuid())
-  studentId     String
-  subjectId     String
-  semesterId    String
-  totalClasses  Int      @default(0)
-  attended      Int      @default(0)
-  percentage    Float    @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model InternalMark {
-  id            String   @id @default(cuid())
-  studentId     String
-  subjectId     String
-  semesterId    String
-  assessment    Float    @default(0)
-  quiz          Float    @default(0)
-  assignment    Float    @default(0)
-  practical     Float    @default(0)
-  total         Float    @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model UniversityResult {
-  id            String   @id @default(cuid())
-  studentId     String
-  semesterId    String
-  subjectId     String
-  grade         String
-  gradePoints   Float
-  status        String
-  credits       Int
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model Fee {
-  id             String   @id @default(cuid())
-  studentId      String
-  totalAmount    Decimal
-  paidAmount     Decimal
-  outstanding    Decimal
-  dueDate        DateTime
-  status         String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
-
-model Payment {
-  id          String   @id @default(cuid())
-  studentId   String
-  receiptNo   String   @unique
-  paymentDate DateTime
-  mode        String
-  bank        String?
-  amount      Decimal
-  category    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  @@index([rollNumber])
+  @@index([studentId])
 }
 
 model Guardian {
-  id              String   @id @default(cuid())
-  studentId       String
-  name            String
-  relationship    String
-  occupation      String?
-  mobileNo        String?
-  email           String?
-  qualification   String?
-  emergencyContact Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(cuid())
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  name          String
+  relationship  String
+  contactNumber String?
+  email         String?
 }
 
 model Address {
   id          String   @id @default(cuid())
   studentId   String
-  type        String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type        String   @default("Permanent")
   addressLine String
   city        String
   state       String
-  country     String
+  country     String   @default("India")
   pincode     String
-  phone       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 model Document {
   id              String   @id @default(cuid())
   studentId       String
+  student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   category        String
   fileName        String
-  fileType        String
-  sizeInBytes     Int
-  storageKey      String
-  status          String   @default("pending")
-  verifiedByAdmin Boolean  @default(false)
+  fileUrl         String
+  status          String   @default("Verified")
+  verifiedByAdmin Boolean  @default(true)
+  uploadedAt      DateTime @default(now())
+}
+
+model Faculty {
+  id               String   @id @default(cuid())
+  userId           String?  @unique
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  employeeId       String   @unique
+  name             String
+  email            String   @unique
+  phone            String?
+  department       String   @default("Computer Science & Engineering")
+  designation      String   @default("Associate Professor")
+  assignedSubjects String[]
+  assignedSections String[]
+  status           String   @default("Active")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Hod {
+  id            String   @id @default(cuid())
+  userId        String?  @unique
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  employeeId    String   @unique
+  name          String
+  email         String   @unique
+  phone         String?
+  department    String   @default("Computer Science & Engineering")
+  deptCode      String   @default("CSE")
+  experience    String   @default("18 Years")
+  qualification String   @default("Ph.D in AI & Systems")
+  status        String   @default("Active")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Department {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  hod           String
+  hodEmail      String
+  studentsCount Int      @default(0)
+  facultyCount  Int      @default(0)
+  subjectsCount Int      @default(0)
+  status        String   @default("Active")
+}
+
+model Semester {
+  id            String   @id @default(cuid())
+  number        Int      @unique
+  label         String
+  year          String
+  academicYear  String   @default("2026-27")
+  status        String   @default("Active")
+  subjectsCount Int      @default(6)
+  studentsCount Int      @default(540)
+}
+
+model Section {
+  id                  String   @id @default(cuid())
+  semester            String
+  section             String
+  department          String
+  studentsCount       Int      @default(0)
+  classRepresentative String?
+  room                String?
+  facultyCoordinator  String?
+}
+
+model Subject {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  department      String   @default("CSE")
+  semester        String   @default("Semester 5")
+  credits         Int      @default(4)
+  type            String   @default("Theory + Lab")
+  assignedFaculty String?
+  status          String   @default("Active")
+}
+
+model MarkingScheme {
+  id             String  @id @default(cuid())
+  assessmentType String
+  count          Int
+  maxMarks       Float
+  weightage      Float
+  formula        String
+  status         String  @default("Active")
+}
+
+model AssessmentMark {
+  id             String   @id @default(cuid())
+  studentId      String
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  rollNumber     String
+  studentName    String
+  subjectCode    String
+  subjectName    String
+  semester       String   @default("Semester 5")
+  section        String   @default("Section A")
+  modular1       Float    @default(0)
+  modular2       Float    @default(0)
+  quiz1          Float    @default(0)
+  quiz2          Float    @default(0)
+  quiz3          Float    @default(0)
+  quiz4          Float    @default(0)
+  quiz5          Float    @default(0)
+  quiz6          Float    @default(0)
+  assignment1    Float    @default(0)
+  assignment2    Float    @default(0)
+  surpriseTest1  Float    @default(0)
+  surpriseTest2  Float    @default(0)
+  labWork        Float    @default(0)
+  totalMarks     Float    @default(0)
+  finalWeightage Float    @default(0)
+  updatedAt      DateTime @updatedAt
+
+  @@unique([studentId, subjectCode])
+}
+
+model ApprovalQueue {
+  id            String    @id @default(cuid())
+  subjectCode   String
+  subject       String
+  faculty       String
+  semester      String
+  section       String
+  submittedDate String
+  status        String    @default("Pending")
+  hodRemarks    String?
+  reviewedAt    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  user          String
+  role          String
+  targetStudent String?
+  subject       String?
+  assessment    String?
+  oldMark       String?
+  newMark       String?
+  changedAt     String
+  reason        String
+  createdAt     DateTime @default(now())
+}
+
+model AttendanceRecord {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectCode String
+  subjectName String
+  faculty     String
+  type        String   @default("Theory")
+  held        Int      @default(0)
+  attended    Int      @default(0)
+  percentage  Float    @default(0)
+}
+
+model BiometricLog {
+  id         String   @id @default(cuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  rollNumber String
+  date       String
+  time       String
+  point      String
+  mode       String
+  direction  String
+  status     String
+}
+
+model FeeStructure {
+  id             String @id @default(cuid())
+  term           String
+  program        String
+  tuitionFee     Float
+  developmentFee Float
+  labLibraryFee  Float
+  examinationFee Float
+  hostelMessFee  Float
+  total          Float
+}
+
+model FeeTransaction {
+  id          String   @id @default(cuid())
+  studentName String
+  rollNumber  String
+  semester    String
+  head        String
+  amount      Float
+  dueAmount   Float?   @default(0)
+  mode        String
+  date        String
+  status      String   @default("Verified")
+  receiptNo   String   @unique
+  createdAt   DateTime @default(now())
+}
+
+model Scholarship {
+  id            String @id @default(cuid())
+  name          String
+  authority     String
+  benefit       String
+  beneficiaries Int
+  status        String @default("Active")
+}
+
+model Hostel {
+  id            String @id @default(cuid())
+  name          String
+  type          String
+  totalFloors   Int
+  totalRooms    Int
+  totalBeds     Int
+  occupiedBeds  Int
+  availableBeds Int
+  warden        String
+  contact       String
+}
+
+model HostelRoom {
+  id         String @id @default(cuid())
+  hostelId   String
+  hostelName String
+  floor      String
+  roomNumber String
+  capacity   Int
+  occupied   Int
+  type       String
+}
+
+model HostelComplaint {
+  id              String   @id @default(cuid())
+  studentId       String?
+  student         Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  studentName     String
+  rollNumber      String
+  hostel          String
+  roomNumber      String
+  category        String
+  title           String
+  priority        String   @default("Medium")
+  status          String   @default("Pending")
+  filedDate       String
+  resolutionNotes String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model HostelVisitor {
+  id          String   @id @default(cuid())
+  visitorName String
+  relation    String
+  studentName String
+  rollNumber  String
+  inTime      String
+  outTime     String?  @default("Pending Sign-out")
+  passNumber  String   @unique
+  purpose     String
+  createdAt   DateTime @default(now())
+}
+
+model FoodItem {
+  id          String  @id @default(cuid())
+  name        String
+  category    String
+  price       Float
+  isAvailable Boolean @default(true)
+  prepTime    String
+  calories    String
+}
+
+model CanteenOrder {
+  id          String   @id @default(cuid())
+  studentId   String?
+  student     Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  studentName String
+  rollNumber  String
+  items       Json
+  totalAmount Float
+  status      String   @default("Pending")
+  paymentMode String   @default("RFID Smart Card")
+  orderedAt   String
+  token       String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StaffRoster {
+  id                  String   @id @default(cuid())
+  staffType           String   // WARDEN, SECURITY, CANTEEN, SUPPORT
+  name                String
+  gender              String?
+  roleOrCategory      String?
+  outletOrZone        String?
+  assignedHostelOrPost String?
+  roomOffice          String?
+  phone               String
+  email               String?
+  shift               String
+  badgeNumber         String?
+  fssaiLicense        String?
+  emergencyContact    String?
+  speciality          String?
+  qualification       String?
+  assignedAgency      String?
+  bloodGroup          String?
+  residentsCount      Int?
+  totalBeds           Int?
+  status              String   @default("Active")
+  joiningYear         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model Notice {
   id         String   @id @default(cuid())
   title      String
-  body       String
-  category   String
-  date       DateTime
-  expiryDate DateTime?
-  priority   String   @default("normal")
+  tag        String
+  date       String
+  publisher  String
   pinned     Boolean  @default(false)
+  summary    String
+  content    String
+  attachment String?
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 }
 
-model CalendarEvent {
-  id        String   @id @default(cuid())
-  title     String
-  start     DateTime
-  end       DateTime?
-  type      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model BlogPost {
+  id         String   @id @default(cuid())
+  author     String
+  dept       String
+  initials   String
+  date       String
+  tag        String
+  title      String
+  body       String
+  likes      Int      @default(0)
+  comments   Int      @default(0)
+  bookmarked Boolean  @default(false)
+  liked      Boolean  @default(false)
+  createdAt  DateTime @default(now())
 }
 
-model Holiday {
-  id        String   @id @default(cuid())
-  title     String
-  date      DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model LibraryBook {
+model FeedbackSurvey {
   id          String   @id @default(cuid())
-  title       String
-  author      String
-  category    String
-  available   Boolean  @default(true)
-  totalCopies Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model LibraryTransaction {
-  id          String    @id @default(cuid())
-  studentId   String
-  bookId      String
-  issuedAt    DateTime
-  dueDate     DateTime
-  returnedAt  DateTime?
-  fineAmount  Decimal?
-  status      String    @default("issued")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Internship {
-  id          String   @id @default(cuid())
-  title       String
-  companyName String
-  status      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model PlacementCompany {
-  id        String   @id @default(cuid())
-  name      String
-  location  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Job {
-  id          String   @id @default(cuid())
-  companyId   String
-  title       String
-  location    String
-  package     String?
-  description String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model JobApplication {
-  id          String   @id @default(cuid())
-  studentId   String
-  jobId       String
-  status      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Exam {
-  id          String   @id @default(cuid())
-  title       String
-  courseId    String
-  durationMin Int
-  publishDate DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Question {
-  id        String   @id @default(cuid())
-  examId    String
-  text      String
-  type      String
-  options   Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model ExamAttempt {
-  id        String   @id @default(cuid())
-  studentId String
-  examId    String
-  score     Float?
-  status    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Feedback {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String
-  rating    Int?
-  comment   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model HealthRecord {
-  id              String   @id @default(cuid())
-  studentId       String
-  bloodGroup      String?
-  allergies       String[]
-  medicalHistory  String[]
-  emergencyContact String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-model IdCard {
-  id          String   @id @default(cuid())
-  studentId   String
-  qrCode      String
-  validUntil  DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model BiometricRecord {
-  id            String   @id @default(cuid())
-  studentId     String
-  date          DateTime
-  entryTime     DateTime?
-  exitTime      DateTime?
-  attendanceStatus String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model CanteenTransaction {
-  id          String   @id @default(cuid())
-  studentId   String
-  mealType    String
-  amount      Decimal
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  formType    String
+  targetId    String?
+  targetName  String?
+  rating      Int
+  comments    String?
+  studentId   String?
+  submittedAt DateTime @default(now())
 }
 
 model Notification {
   id        String   @id @default(cuid())
-  userId    String?
+  role      String
   title     String
   message   String
-  readAt    DateTime?
-  type      String
+  time      String
+  unread    Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+model Holiday {
+  id        String @id @default(cuid())
+  rawDate   String
+  name      String
+  daysLeft  Int?
+}
+
+model ExamSchedule {
+  id              String   @id @default(cuid())
+  examCode        String   @unique
+  title           String
+  semester        String
+  department      String   @default("All Departments")
+  session         String   @default("Morning (10:00 AM - 01:00 PM)")
+  startDate       String
+  endDate         String
+  status          String   @default("Scheduled")
+  totalAppeared   Int      @default(0)
+  passPercentage  Float    @default(0)
+  hallTicketLive  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model LibraryBook {
+  id              String   @id @default(cuid())
+  isbn            String   @unique
+  title           String
+  author          String
+  department      String   @default("General")
+  category        String   @default("Textbook")
+  totalCopies     Int      @default(5)
+  availableCopies Int      @default(5)
+  shelfLocation   String   @default("Stack A-1")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model LibraryTransaction {
+  id          String   @id @default(cuid())
+  bookId      String
+  bookTitle   String
+  studentRoll String
+  studentName String
+  issueDate   String
+  dueDate     String
+  returnDate  String?
+  fineAmount  Float    @default(0)
+  status      String   @default("Issued")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PlacementDrive {
+  id               String   @id @default(cuid())
+  companyName      String
+  roleTitle        String
+  packageLPA       Float
+  minCgpa          Float    @default(6.5)
+  eligibleBranches String[]
+  driveDate        String
+  venue            String   @default("Auditorium / Online")
+  registeredCount  Int      @default(0)
+  shortlistedCount Int      @default(0)
+  selectedCount    Int      @default(0)
+  status           String   @default("Open")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model PlacementApplication {
+  id          String   @id @default(cuid())
+  driveId     String
+  companyName String
+  studentRoll String
+  studentName String
+  cgpa        Float
+  status      String   @default("Applied")
+  appliedAt   DateTime @default(now())
+}
+
+model TransportRoute {
+  id             String   @id @default(cuid())
+  routeNumber    String   @unique
+  routeName      String
+  busNumber      String
+  driverName     String
+  driverContact  String
+  totalCapacity  Int      @default(45)
+  allocatedCount Int      @default(0)
+  departureTime  String   @default("07:15 AM")
+  stops          String[]
+  status         String   @default("Active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model LabEquipment {
+  id            String   @id @default(cuid())
+  equipmentCode String   @unique
+  equipmentName String
+  labName       String
+  department    String
+  condition     String   @default("Operational")
+  lastServiced  String
+  inCharge      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  category  String   @default("General")
+  updatedBy String?
   updatedAt DateTime @updatedAt
 }
 
-model AuditLog {
-  id         String   @id @default(cuid())
-  userId     String?
-  action     String
-  entityType String
-  entityId   String?
-  timestamp  DateTime @default(now())
-  ipAddress  String?
-  oldValue   Json?
-  newValue   Json?
+model WorkflowRequest {
+  id             String   @id @default(cuid())
+  workflowType   String
+  title          String
+  requesterId    String
+  requesterName  String
+  requesterRole  String
+  department     String?
+  details        Json
+  currentStage   String
+  status         String   @default("Pending")
+  approverId     String?
+  approverName   String?
+  approvalNotes  String?
+  history        Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
+

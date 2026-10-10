@@ -8,11 +8,20 @@ generator client {
 }
 
 enum Role {
-  STUDENT
-  FACULTY
-  HOD
+  SUPER_ADMIN
+  MANAGEMENT
+  PRINCIPAL
   ADMIN
+  HOD
+  FACULTY
+  STUDENT
+  EXAM_CELL
   ACCOUNTS
+  LIBRARY
+  PLACEMENT
+  TRANSPORT
+  HOSTEL
+  STAFF
   WARDEN
   CANTEEN
 }
@@ -25,7 +34,11 @@ model User {
   name         String
   role         Role
   department   String?
+  designation  String?
+  phone        String?
   detail       String?
+  permissions  String[]  @default([])
+  lastLogin    DateTime?
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -495,3 +508,135 @@ model Holiday {
   name      String
   daysLeft  Int?
 }
+
+model ExamSchedule {
+  id              String   @id @default(cuid())
+  examCode        String   @unique
+  title           String
+  semester        String
+  department      String   @default("All Departments")
+  session         String   @default("Morning (10:00 AM - 01:00 PM)")
+  startDate       String
+  endDate         String
+  status          String   @default("Scheduled")
+  totalAppeared   Int      @default(0)
+  passPercentage  Float    @default(0)
+  hallTicketLive  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model LibraryBook {
+  id              String   @id @default(cuid())
+  isbn            String   @unique
+  title           String
+  author          String
+  department      String   @default("General")
+  category        String   @default("Textbook")
+  totalCopies     Int      @default(5)
+  availableCopies Int      @default(5)
+  shelfLocation   String   @default("Stack A-1")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model LibraryTransaction {
+  id          String   @id @default(cuid())
+  bookId      String
+  bookTitle   String
+  studentRoll String
+  studentName String
+  issueDate   String
+  dueDate     String
+  returnDate  String?
+  fineAmount  Float    @default(0)
+  status      String   @default("Issued")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PlacementDrive {
+  id               String   @id @default(cuid())
+  companyName      String
+  roleTitle        String
+  packageLPA       Float
+  minCgpa          Float    @default(6.5)
+  eligibleBranches String[]
+  driveDate        String
+  venue            String   @default("Auditorium / Online")
+  registeredCount  Int      @default(0)
+  shortlistedCount Int      @default(0)
+  selectedCount    Int      @default(0)
+  status           String   @default("Open")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model PlacementApplication {
+  id          String   @id @default(cuid())
+  driveId     String
+  companyName String
+  studentRoll String
+  studentName String
+  cgpa        Float
+  status      String   @default("Applied")
+  appliedAt   DateTime @default(now())
+}
+
+model TransportRoute {
+  id             String   @id @default(cuid())
+  routeNumber    String   @unique
+  routeName      String
+  busNumber      String
+  driverName     String
+  driverContact  String
+  totalCapacity  Int      @default(45)
+  allocatedCount Int      @default(0)
+  departureTime  String   @default("07:15 AM")
+  stops          String[]
+  status         String   @default("Active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model LabEquipment {
+  id            String   @id @default(cuid())
+  equipmentCode String   @unique
+  equipmentName String
+  labName       String
+  department    String
+  condition     String   @default("Operational")
+  lastServiced  String
+  inCharge      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  category  String   @default("General")
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}
+
+model WorkflowRequest {
+  id             String   @id @default(cuid())
+  workflowType   String
+  title          String
+  requesterId    String
+  requesterName  String
+  requesterRole  String
+  department     String?
+  details        Json
+  currentStage   String
+  status         String   @default("Pending")
+  approverId     String?
+  approverName   String?
+  approvalNotes  String?
+  history        Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+

@@ -53,8 +53,8 @@ const posts = [
     initials: 'AS',
     date: '22 Sep 2026',
     tag: 'CAMPUS LIFE',
-    title: "Why GIFT's campus culture makes the college experience truly memorable",
-    body: "When people ask me what I love most about GIFT Autonomous, it's not just the academics — it's the people, the festivals, the late-night study sessions in the library, and the sense of community. The college has a unique way of bringing students together through events, clubs, and the mentorship culture that faculty bring...",
+    title: "Why Apna Campus culture makes the college experience truly memorable",
+    body: "When people ask me what I love most about Apna Campus, it's not just the academics — it's the people, the festivals, the late-night study sessions in the library, and the sense of community. The college has a unique way of bringing students together through events, clubs, and the mentorship culture that faculty bring...",
     likes: 88,
     comments: 22,
     bookmarked: false,
@@ -135,7 +135,7 @@ export default function BloggingPage() {
         <div>
           <p className="blogging-kicker"><Rss size={13} />STUDENT BLOGGING</p>
           <h2>Campus Blog</h2>
-          <p className="blogging-caption">Share experiences, ideas and knowledge with the GIFT Autonomous community.</p>
+          <p className="blogging-caption">Share experiences, ideas and knowledge with the Apna Campus community.</p>
         </div>
         <button className="compose-btn" onClick={() => setComposing(true)}>
           <PenLine size={14} />Write a Post

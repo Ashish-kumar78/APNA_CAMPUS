@@ -47,7 +47,7 @@ export function DashboardShell({ title, subtitle, user, children }: {
           <div className="flex items-center gap-3 border-b border-white/10 pb-5">
             <div className="rounded-xl bg-blue-600 p-2.5 text-white shadow-md shadow-blue-500/30"><GraduationCap size={22} /></div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400">GIFT AUTONOMOUS</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400">APNA CAMPUS</p>
               <p className="text-lg font-bold text-white">College Library</p>
             </div>
           </div>

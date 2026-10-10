@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   AlertCircle,
   BookMarked,
@@ -11,56 +11,133 @@ import {
   Search,
   Star,
   User,
+  RotateCcw,
+  ShieldCheck,
 } from 'lucide-react'
 import { downloadLibraryBookPdf } from '../utils/pdfGenerator'
 import './LibraryPage.css'
+import api from '../services/api'
+import { erpStore } from '../services/erpStore'
 
-const catalog = [
-  { id: 'BK001', title: 'Artificial Intelligence: A Modern Approach', author: 'Russell & Norvig', edition: '4th', available: 3, total: 5, category: 'AI/ML' },
-  { id: 'BK002', title: 'Pattern Recognition and Machine Learning', author: 'Bishop', edition: '1st', available: 1, total: 3, category: 'AI/ML' },
-  { id: 'BK003', title: 'Introduction to Algorithms', author: 'Cormen et al.', edition: '3rd', available: 2, total: 6, category: 'CS Theory' },
-  { id: 'BK004', title: 'Computer Networks', author: 'Tanenbaum & Wetherall', edition: '5th', available: 0, total: 4, category: 'Networking' },
-  { id: 'BK005', title: 'Operating Systems: Three Easy Pieces', author: 'Arpaci-Dusseau', edition: '1.10', available: 4, total: 4, category: 'Systems' },
-  { id: 'BK006', title: 'Cloud Computing: Concepts, Technology & Architecture', author: 'Erl et al.', edition: '1st', available: 2, total: 3, category: 'Cloud' },
-  { id: 'BK007', title: 'Compilers: Principles, Techniques and Tools', author: 'Aho et al.', edition: '2nd', available: 1, total: 4, category: 'Compilers' },
-  { id: 'BK008', title: 'Deep Learning', author: 'Goodfellow, Bengio & Courville', edition: '1st', available: 2, total: 3, category: 'AI/ML' },
-]
-
-const issuedBooks = [
-  { id: 'ISS001', bookId: 'BK003', title: 'Introduction to Algorithms', issueDate: '20 Sep 2026', dueDate: '10 Oct 2026', status: 'overdue', fine: 40 },
-  { id: 'ISS002', bookId: 'BK007', title: 'Compilers: Principles, Techniques and Tools', issueDate: '25 Sep 2026', dueDate: '15 Oct 2026', status: 'issued', fine: 0 },
-]
-
-const categories = ['All', 'AI/ML', 'CS Theory', 'Networking', 'Systems', 'Cloud', 'Compilers']
+const categories = ['All', 'Algorithms', 'Systems', 'Databases', 'AI/ML', 'Networks', 'Software Engineering']
 
 export default function LibraryPage() {
   const [activeTab, setActiveTab] = useState('catalog')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
+  const [catalog, setCatalog] = useState(() => erpStore.getBooksCatalog())
+  const [myLoans, setMyLoans] = useState([])
   const [reservedBooks, setReservedBooks] = useState({})
   const [reserveMsg, setReserveMsg] = useState('')
 
-  const filteredBooks = catalog.filter((book) => {
-    const q = searchQuery.toLowerCase()
-    const matchQuery = !q || book.title.toLowerCase().includes(q) || book.author.toLowerCase().includes(q) || book.category.toLowerCase().includes(q)
-    const matchCat = selectedCategory === 'All' || book.category === selectedCategory
-    return matchQuery && matchCat
-  })
+  const studentRoll = '2305201001'
+  const studentName = 'Rakesh Das'
 
-  function reserveBook(book) {
-    if (book.available === 0) return
-    setReservedBooks((prev) => ({ ...prev, [book.id]: true }))
-    setReserveMsg(`"${book.title}" has been reserved. Please collect it from the library counter within 24 hours.`)
-    setTimeout(() => setReserveMsg(''), 5000)
+  useEffect(() => {
+    async function fetchLibraryData() {
+      try {
+        const [booksRes, txnsRes] = await Promise.allSettled([
+          api.getLibraryBooks(),
+          api.getLibraryTransactions(studentRoll),
+        ])
+
+        if (booksRes.status === 'fulfilled' && booksRes.value?.data?.length > 0) {
+          setCatalog(booksRes.value.data)
+        } else {
+          setCatalog(erpStore.getBooksCatalog())
+        }
+
+        if (txnsRes.status === 'fulfilled' && txnsRes.value?.data) {
+          setMyLoans(txnsRes.value.data)
+        } else {
+          const localCircs = erpStore.getCirculationRecords().filter(
+            (c) => c.borrowerRegNo === studentRoll || c.studentRoll === studentRoll
+          )
+          setMyLoans(localCircs)
+        }
+      } catch (err) {
+        console.warn('Student Library page sync fallback:', err)
+      }
+    }
+
+    fetchLibraryData()
+  }, [])
+
+  const filteredBooks = useMemo(() => {
+    return catalog.filter((book) => {
+      const q = searchQuery.toLowerCase()
+      const matchQuery =
+        !q ||
+        book.title.toLowerCase().includes(q) ||
+        (book.author && book.author.toLowerCase().includes(q)) ||
+        (book.isbn && book.isbn.includes(q))
+      const matchCat =
+        selectedCategory === 'All' ||
+        (book.category && book.category.toLowerCase() === selectedCategory.toLowerCase())
+      return matchQuery && matchCat
+    })
+  }, [catalog, searchQuery, selectedCategory])
+
+  const activeIssuedBooks = useMemo(() => {
+    return myLoans.filter((l) => l.status !== 'Returned')
+  }, [myLoans])
+
+  const returnedHistory = useMemo(() => {
+    return myLoans.filter((l) => l.status === 'Returned')
+  }, [myLoans])
+
+  const totalFinePending = useMemo(() => {
+    return activeIssuedBooks.reduce((sum, item) => sum + (Number(item.fineAmount) || 0), 0)
+  }, [activeIssuedBooks])
+
+  async function handleReserveBook(book) {
+    if (book.availableCopies === 0) return
+    try {
+      await api.createLibraryReservation({
+        bookTitle: book.title,
+        isbn: book.isbn,
+        studentName,
+        studentRoll,
+      }).catch(() => null)
+
+      erpStore.addLibraryReservation({
+        bookTitle: book.title,
+        isbn: book.isbn,
+        studentName,
+        studentRoll,
+      })
+
+      setReservedBooks((prev) => ({ ...prev, [book.id]: true }))
+      setReserveMsg(`"${book.title}" reserved! Please collect it from Central Library Counter within 48 hours.`)
+      setTimeout(() => setReserveMsg(''), 6000)
+    } catch {
+      setReserveMsg('Failed to process reservation.')
+    }
+  }
+
+  async function handleRenewBook(issue) {
+    try {
+      const res = await api.renewLibraryBook(issue.id).catch(() => null)
+      if (res?.success) {
+        setReserveMsg(`Loan renewed for "${issue.bookTitle}"! New due date assigned.`)
+      } else {
+        erpStore.renewBook(issue.id)
+        setReserveMsg(`Loan renewed for "${issue.bookTitle}"! Extended by 21 days.`)
+      }
+      setTimeout(() => setReserveMsg(''), 5000)
+    } catch {
+      setReserveMsg('Cannot renew: Overdue fine pending or reservation exists on this title.')
+      setTimeout(() => setReserveMsg(''), 5000)
+    }
   }
 
   return (
     <div className="library-page">
       <div className="library-header">
         <div>
-          <p className="library-kicker"><LibraryBig size={13} />CAMPUS LIBRARY</p>
-          <h2>Library</h2>
-          <p className="library-caption">Search catalog, manage issue history and reserve books online.</p>
+          <p className="library-kicker"><LibraryBig size={13} />CAMPUS CENTRAL LIBRARY</p>
+          <h2>Central Library & Learning Resources</h2>
+          <p className="library-caption">Search bibliographic catalog, manage active borrowings, reserve physical copies, and access e-books.</p>
         </div>
         <div className="library-hours">
           <Clock size={13} />
@@ -71,18 +148,46 @@ export default function LibraryPage() {
         </div>
       </div>
 
+      {/* Official Central Library Channel Banner */}
+      <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '12px', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', color: '#fff' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <LibraryBig size={18} />
+          </div>
+          <div>
+            <strong style={{ fontSize: '0.88rem', color: '#fff', display: 'block' }}>📢 Central Library Official Broadcast Channel</strong>
+            <span style={{ fontSize: '0.76rem', color: '#94a3b8' }}>Book return grace period reminders, IEEE digital subscriptions, and extended reading room hours are updated live in Campus Connect.</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('cms_navigate_chat', { detail: { convId: 'conv-library' } }))
+          }}
+        >
+          Open Library Channel →
+        </button>
+      </div>
+
       <div className="library-summary-strip">
-        <div><BookOpen size={16} /><strong>2</strong><small>Books Issued</small></div>
-        <div><AlertCircle size={16} /><strong style={{ color: '#c0392b' }}>₹40</strong><small>Fine Pending</small></div>
+        <div><BookOpen size={16} /><strong>{activeIssuedBooks.length}</strong><small>Books Issued</small></div>
+        <div>
+          <AlertCircle size={16} />
+          <strong style={{ color: totalFinePending > 0 ? '#c0392b' : '#16a34a' }}>
+            ₹{totalFinePending}
+          </strong>
+          <small>Fine Pending</small>
+        </div>
         <div><BookMarked size={16} /><strong>{Object.keys(reservedBooks).length}</strong><small>Reserved</small></div>
-        <div><Star size={16} /><strong>24</strong><small>Wishlist</small></div>
+        <div><ShieldCheck size={16} /><strong style={{ color: '#059669' }}>Eligible</strong><small>Quota: 3 Books</small></div>
       </div>
 
       <div className="library-tabs" role="tablist">
         {[
           { key: 'catalog', label: 'Book Catalog' },
-          { key: 'issued', label: 'My Books' },
-          { key: 'history', label: 'Borrow History' },
+          { key: 'issued', label: `My Issued Books (${activeIssuedBooks.length})` },
+          { key: 'history', label: 'Borrowing History' },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -110,7 +215,7 @@ export default function LibraryPage() {
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by title, author or subject..."
+                placeholder="Search catalog by title, author, or ISBN..."
               />
             </label>
             <div className="catalog-filters">
@@ -127,41 +232,47 @@ export default function LibraryPage() {
           </div>
 
           <div className="book-grid">
-            {filteredBooks.map((book) => (
-              <div key={book.id} className={`book-card ${book.available === 0 ? 'unavailable' : ''}`}>
-                <div className="book-card-icon">
-                  <BookOpen size={28} />
-                </div>
-                <div className="book-card-body">
-                  <span className="book-category">{book.category}</span>
-                  <h3>{book.title}</h3>
-                  <p className="book-author"><User size={11} />{book.author} · {book.edition} Edition</p>
-                  <div className="book-availability">
-                    <span className={book.available > 0 ? 'available' : 'not-available'}>
-                      {book.available > 0 ? `${book.available} available` : 'Not available'}
-                    </span>
-                    <small>({book.total} total)</small>
+            {filteredBooks.map((book) => {
+              const isAvailable = (book.availableCopies !== undefined ? book.availableCopies : (book.available || 0)) > 0
+              const availCount = book.availableCopies !== undefined ? book.availableCopies : (book.available || 0)
+              const totalCount = book.totalCopies !== undefined ? book.totalCopies : (book.total || 5)
+
+              return (
+                <div key={book.id} className={`book-card ${!isAvailable ? 'unavailable' : ''}`}>
+                  <div className="book-card-icon">
+                    <BookOpen size={28} />
+                  </div>
+                  <div className="book-card-body">
+                    <span className="book-category">{book.category || 'General'}</span>
+                    <h3>{book.title}</h3>
+                    <p className="book-author"><User size={11} />{book.author} · {book.edition || '1st'} Edition</p>
+                    <div className="book-availability">
+                      <span className={isAvailable ? 'available' : 'not-available'}>
+                        {isAvailable ? `${availCount} available` : 'Stack Out of Stock'}
+                      </span>
+                      <small>({totalCount} in stack · {book.shelfLocation || 'Stack 1'})</small>
+                    </div>
+                  </div>
+                  <div className="book-card-actions">
+                    {reservedBooks[book.id] ? (
+                      <span className="book-reserved"><Check size={12} />Reserved</span>
+                    ) : (
+                      <button
+                        className="book-reserve-btn"
+                        disabled={!isAvailable}
+                        onClick={() => handleReserveBook(book)}
+                      >
+                        {!isAvailable ? 'Unavailable' : 'Reserve'}
+                        {isAvailable && <ChevronRight size={12} />}
+                      </button>
+                    )}
+                    <button className="book-detail-btn" onClick={() => downloadLibraryBookPdf(book)}>
+                      <Download size={12} />E-Copy
+                    </button>
                   </div>
                 </div>
-                <div className="book-card-actions">
-                  {reservedBooks[book.id] ? (
-                    <span className="book-reserved"><Check size={12} />Reserved</span>
-                  ) : (
-                    <button
-                      className="book-reserve-btn"
-                      disabled={book.available === 0}
-                      onClick={() => reserveBook(book)}
-                    >
-                      {book.available === 0 ? 'Unavailable' : 'Reserve'}
-                      {book.available > 0 && <ChevronRight size={12} />}
-                    </button>
-                  )}
-                  <button className="book-detail-btn" onClick={() => downloadLibraryBookPdf(book)}>
-                    <Download size={12} />E-Copy
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
             {filteredBooks.length === 0 && (
               <p className="library-empty">No books match your search or filter.</p>
             )}
@@ -171,40 +282,65 @@ export default function LibraryPage() {
 
       {activeTab === 'issued' && (
         <div className="library-issued">
-          {issuedBooks.length === 0 ? (
+          {activeIssuedBooks.length === 0 ? (
             <div className="library-empty-state">
               <BookOpen size={32} />
               <strong>No books currently issued</strong>
-              <p>Browse the catalog to reserve books for pickup.</p>
+              <p>Browse the catalog to borrow or reserve books from the counter.</p>
             </div>
           ) : (
             <div className="issued-list">
-              {issuedBooks.map((issue) => (
-                <div key={issue.id} className={`issued-card ${issue.status}`}>
-                  <div className="issued-icon"><BookOpen size={22} /></div>
-                  <div className="issued-body">
-                    <h3>{issue.title}</h3>
-                    <div className="issued-meta">
-                      <span><strong>Issued:</strong> {issue.issueDate}</span>
-                      <span><strong>Due:</strong> {issue.dueDate}</span>
-                    </div>
-                    {issue.fine > 0 && (
-                      <div className="issued-fine">
-                        <AlertCircle size={12} />
-                        Fine pending: <strong>₹{issue.fine}</strong>
+              {activeIssuedBooks.map((issue) => {
+                const isOverdue = issue.status === 'Overdue' || (Number(issue.fineAmount) > 0)
+                return (
+                  <div key={issue.id} className={`issued-card ${isOverdue ? 'overdue' : 'issued'}`}>
+                    <div className="issued-icon"><BookOpen size={22} /></div>
+                    <div className="issued-body">
+                      <h3>{issue.bookTitle}</h3>
+                      <div className="issued-meta">
+                        <span><strong>Issued:</strong> {issue.issueDate}</span>
+                        <span><strong>Due Date:</strong> {issue.dueDate}</span>
                       </div>
-                    )}
+                      {Number(issue.fineAmount) > 0 && (
+                        <div className="issued-fine">
+                          <AlertCircle size={12} />
+                          Overdue Fine: <strong>₹{issue.fineAmount}.00</strong> (Chargeable at ₹2/day)
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                      <span className={`issued-status-tag ${isOverdue ? 'overdue' : 'issued'}`}>
+                        {isOverdue ? 'Overdue' : 'Issued'}
+                      </span>
+                      {!isOverdue && (
+                        <button
+                          type="button"
+                          className="book-detail-btn"
+                          style={{ padding: '4px 10px', fontSize: '0.74rem' }}
+                          onClick={() => handleRenewBook(issue)}
+                        >
+                          <RotateCcw size={12} style={{ display: 'inline', marginRight: 4 }} /> Renew (21d)
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <span className={`issued-status-tag ${issue.status}`}>
-                    {issue.status === 'overdue' ? 'Overdue' : 'Issued'}
-                  </span>
+                )
+              })}
+
+              {totalFinePending > 0 && (
+                <div className="issued-total-fine">
+                  <AlertCircle size={14} />
+                  <span>Total late fine pending: <strong>₹{totalFinePending}.00</strong></span>
+                  <button
+                    className="pay-fine-btn"
+                    onClick={() => {
+                      alert(`Please visit the Central Library Circulation Counter or use Campus Smart Wallet to clear outstanding balance of ₹${totalFinePending}.00.`)
+                    }}
+                  >
+                    Clear Fine
+                  </button>
                 </div>
-              ))}
-              <div className="issued-total-fine">
-                <AlertCircle size={14} />
-                <span>Total fine pending: <strong>₹40.00</strong></span>
-                <button className="pay-fine-btn">Pay Fine</button>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -220,25 +356,38 @@ export default function LibraryPage() {
                   <th>Book Title</th>
                   <th>Issue Date</th>
                   <th>Return Date</th>
-                  <th>Fine Paid</th>
+                  <th>Fine Assessed</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {[
-                  ['BK001', 'Introduction to Algorithms', '01 Aug 2026', '22 Aug 2026', '₹0', 'Returned'],
-                  ['BK002', 'Computer Networks', '10 Jul 2026', '02 Aug 2026', '₹20', 'Returned'],
-                  ['BK003', 'Operating Systems: Three Easy Pieces', '15 Jun 2026', '06 Jul 2026', '₹0', 'Returned'],
-                ].map(([id, title, issue, ret, fine, status], idx) => (
-                  <tr key={id}>
-                    <td>{idx + 1}</td>
-                    <td><strong>{title}</strong></td>
-                    <td>{issue}</td>
-                    <td>{ret}</td>
-                    <td>{fine}</td>
-                    <td><span className="history-status returned">{status}</span></td>
-                  </tr>
-                ))}
+                {returnedHistory.length > 0 ? (
+                  returnedHistory.map((item, idx) => (
+                    <tr key={item.id}>
+                      <td>{idx + 1}</td>
+                      <td><strong>{item.bookTitle}</strong></td>
+                      <td>{item.issueDate}</td>
+                      <td>{item.returnDate || 'Returned'}</td>
+                      <td>₹{item.fineAmount || 0}</td>
+                      <td><span className="history-status returned">Returned</span></td>
+                    </tr>
+                  ))
+                ) : (
+                  [
+                    ['BK001', 'Introduction to Algorithms (CLRS)', '01 Aug 2026', '22 Aug 2026', '₹0', 'Returned'],
+                    ['BK002', 'Computer Networks (Tanenbaum)', '10 Jul 2026', '02 Aug 2026', '₹0', 'Returned'],
+                    ['BK003', 'Database System Concepts (Silberschatz)', '15 Jun 2026', '06 Jul 2026', '₹0', 'Returned'],
+                  ].map(([id, title, issue, ret, fine, status], idx) => (
+                    <tr key={id}>
+                      <td>{idx + 1}</td>
+                      <td><strong>{title}</strong></td>
+                      <td>{issue}</td>
+                      <td>{ret}</td>
+                      <td>{fine}</td>
+                      <td><span className="history-status returned">{status}</span></td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

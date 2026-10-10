@@ -27,6 +27,17 @@ import FacultyPortal from './components/FacultyPortal.jsx'
 import AccountsPortal from './components/AccountsPortal.jsx'
 import HostelPortal from './components/HostelPortal.jsx'
 import CanteenPortal from './components/CanteenPortal.jsx'
+import SuperAdminPortal from './components/SuperAdminPortal.jsx'
+import ManagementPortal from './components/ManagementPortal.jsx'
+import PrincipalPortal from './components/PrincipalPortal.jsx'
+import ExamCellPortal from './components/ExamCellPortal.jsx'
+import LibraryPortal from './components/LibraryPortal.jsx'
+import TransportPortal from './components/TransportPortal.jsx'
+import PlacementPortal from './components/PlacementPortal.jsx'
+import StaffPortal from './components/StaffPortal.jsx'
+import UniversalWhatsAppLauncher from './components/CampusConnect/UniversalWhatsAppLauncher.jsx'
+import ApnaAIChatbot from './components/Chatbot/ApnaAIChatbot.jsx'
+import MarksManagementModule from './marks/MarksManagementModule.jsx'
 import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, findStudentByQuery } from './services/studentStore.js'
 import { getTimeGreeting } from './utils/timeGreeting.js'
@@ -46,19 +57,40 @@ const accounts = {
     department: 'Computer Science & Engineering',
     detail: 'Semester 5 · Section A',
   },
-  'student@gift.edu.in': {
-    role: 'student',
-    name: 'Rakesh Das',
-    registrationNumber: '2305201001',
-    department: 'Computer Science & Engineering',
-    detail: 'Semester 5 · Section A',
+  'superadmin': {
+    role: 'super_admin',
+    name: 'Chief Systems Architect',
+    identity: 'SYS-SUPER-01',
+    department: 'Enterprise IT & Security',
+    detail: 'Super Administrator · Full System Scope',
   },
-  'faculty@gift.edu.in': {
-    role: 'faculty',
-    name: 'Dr. S. Mohanty',
-    identity: 'FAC-042',
-    department: 'Computer Science & Engineering',
-    detail: 'Faculty · School of Computing',
+  'super_admin': {
+    role: 'super_admin',
+    name: 'Chief Systems Architect',
+    identity: 'SYS-SUPER-01',
+    department: 'Enterprise IT & Security',
+    detail: 'Super Administrator · Full System Scope',
+  },
+  'management': {
+    role: 'management',
+    name: 'Prof. (Dr.) S. P. Panda',
+    identity: 'GOV-CHAIR-01',
+    department: 'Governing Board / Trustees',
+    detail: 'Chairman & Governing Body Trustee',
+  },
+  'director': {
+    role: 'management',
+    name: 'Prof. (Dr.) S. P. Panda',
+    identity: 'GOV-CHAIR-01',
+    department: 'Governing Board / Trustees',
+    detail: 'Chairman & Governing Body Trustee',
+  },
+  'principal': {
+    role: 'principal',
+    name: 'Dr. B. K. Sarap',
+    identity: 'OFF-PRIN-01',
+    department: 'Office of the Principal',
+    detail: 'Principal & Director · Autonomous Campus',
   },
   'faculty': {
     role: 'faculty',
@@ -74,13 +106,6 @@ const accounts = {
     department: 'Computer Science & Engineering',
     detail: 'Faculty · School of Computing',
   },
-  'hod@gift.edu.in': {
-    role: 'hod',
-    name: 'Dr. P. K. Pattnaik',
-    identity: 'HOD-CSE',
-    department: 'Computer Science & Engineering',
-    detail: 'Head of Department · CSE',
-  },
   'hod': {
     role: 'hod',
     name: 'Dr. P. K. Pattnaik',
@@ -95,33 +120,19 @@ const accounts = {
     department: 'Computer Science & Engineering',
     detail: 'Head of Department · CSE',
   },
-  'admin@gift.edu.in': {
-    role: 'admin',
-    name: 'Campus Administrator',
-    identity: 'ADM-001',
-    department: 'GIFT Autonomous, Bhubaneswar',
-    detail: 'System administrator',
-  },
   'admin': {
     role: 'admin',
     name: 'Campus Administrator',
     identity: 'ADM-001',
-    department: 'GIFT Autonomous, Bhubaneswar',
+    department: 'Apna Campus',
     detail: 'System administrator',
   },
   'adm-001': {
     role: 'admin',
     name: 'Campus Administrator',
     identity: 'ADM-001',
-    department: 'GIFT Autonomous, Bhubaneswar',
+    department: 'Apna Campus',
     detail: 'System administrator',
-  },
-  'accounts@gift.edu.in': {
-    role: 'accounts',
-    name: 'Mr. S. K. Roy',
-    identity: 'ACC-012',
-    department: 'Finance & Accounts',
-    detail: 'Senior Accounts Officer',
   },
   'accounts': {
     role: 'accounts',
@@ -130,12 +141,26 @@ const accounts = {
     department: 'Finance & Accounts',
     detail: 'Senior Accounts Officer',
   },
-  'warden@gift.edu.in': {
-    role: 'warden',
-    name: 'Mrs. Nibedita Das',
-    identity: 'WRD-004',
-    department: 'Hostel Administration',
-    detail: 'Chief Resident Warden',
+  'exam_cell': {
+    role: 'exam_cell',
+    name: 'Dr. K. C. Patra',
+    identity: 'COE-EXAM-01',
+    department: 'Autonomous Examination Cell',
+    detail: 'Controller of Examinations (CoE)',
+  },
+  'examcell': {
+    role: 'exam_cell',
+    name: 'Dr. K. C. Patra',
+    identity: 'COE-EXAM-01',
+    department: 'Autonomous Examination Cell',
+    detail: 'Controller of Examinations (CoE)',
+  },
+  'library': {
+    role: 'library',
+    name: 'Dr. Rabindra K. Jena',
+    identity: 'LIB-HEAD-01',
+    department: 'Central University Library',
+    detail: 'Chief Librarian & Information Officer',
   },
   'warden': {
     role: 'warden',
@@ -144,12 +169,26 @@ const accounts = {
     department: 'Hostel Administration',
     detail: 'Chief Resident Warden',
   },
-  'canteen@gift.edu.in': {
-    role: 'canteen',
-    name: 'Mr. B. K. Sahoo',
-    identity: 'CAN-007',
-    department: 'Hospitality & Dining',
-    detail: 'Smart Canteen Supervisor',
+  'transport': {
+    role: 'transport',
+    name: 'Mr. Jagannath Sahoo',
+    identity: 'TRANS-FLEET-01',
+    department: 'Campus Transport Division',
+    detail: 'Fleet & Transit Manager',
+  },
+  'placement': {
+    role: 'placement',
+    name: 'Prof. Sudhanshu S. Ray',
+    identity: 'TPO-HEAD-01',
+    department: 'Training & Placement Cell',
+    detail: 'Head of Corporate Relations & Placements',
+  },
+  'staff': {
+    role: 'staff',
+    name: 'Mr. Biswajit Sahoo',
+    identity: 'STF-OPS-09',
+    department: 'Campus Technical & Lab Operations',
+    detail: 'Senior Technical Staff',
   },
   'canteen': {
     role: 'canteen',
@@ -161,13 +200,21 @@ const accounts = {
 }
 
 const roleCopy = {
+  super_admin: { label: 'Super Admin console', icon: ShieldCheck },
+  management: { label: 'Governing board', icon: ShieldCheck },
+  principal: { label: 'Principal office', icon: GraduationCap },
   student: { label: 'Student portal', icon: GraduationCap },
   faculty: { label: 'Faculty portal', icon: BookOpen },
   hod: { label: 'HOD portal', icon: ShieldCheck },
   admin: { label: 'Administration', icon: ShieldCheck },
-  accounts: { label: 'Accounts portal', icon: ShieldCheck },
-  warden: { label: 'Hostel portal', icon: ShieldCheck },
-  canteen: { label: 'Canteen portal', icon: ShieldCheck },
+  accounts: { label: 'Accounts portal', icon: CreditCard },
+  exam_cell: { label: 'Examination cell', icon: ShieldCheck },
+  library: { label: 'Library portal', icon: BookOpen },
+  warden: { label: 'Hostel portal', icon: Home },
+  transport: { label: 'Transport fleet', icon: ShieldCheck },
+  placement: { label: 'Placement cell', icon: ShieldCheck },
+  staff: { label: 'Staff operations', icon: ShieldCheck },
+  canteen: { label: 'Canteen portal', icon: Utensils },
 }
 
 function App() {
@@ -178,10 +225,10 @@ function App() {
   const [account, setAccount] = useState(null)
   const [error, setError] = useState('')
   const [resetRequested, setResetRequested] = useState(false)
-  const [showAdminRoles, setShowAdminRoles] = useState(false)
 
   async function handleLogin(event) {
     if (event) event.preventDefault()
+    clearUrlHash()
     setError('')
     setResetRequested(false)
 
@@ -197,33 +244,132 @@ function App() {
     }
 
     const key = identifier.trim().toLowerCase()
-    
-    // Check if entered identifier matches any registered or newly added student
-    const studentMatch = findStudentByQuery(key)
-    if (studentMatch && (password === 'gift123' || password === 'password123')) {
-      setActiveStudent(studentMatch.id)
-      setAccount({
-        role: 'student',
-        ...studentMatch
-      })
-      return
-    }
 
-    const matchedAccount = accounts[key]
-    if (!matchedAccount || (password !== 'gift123' && password !== 'password123')) {
+    // Accepted passwords: gift123, password123, or Gift@YEAR (auto-generated for admitted students)
+    const isValidPassword = (pwd) =>
+      pwd === 'gift123' ||
+      pwd === 'password123' ||
+      /^Gift@\d{4}$/.test(pwd) // e.g. Gift@2023, Gift@2026
+
+    if (!isValidPassword(password)) {
       setError('We could not verify those sign-in details. Please check your College ID and password.')
       return
     }
 
-    if (matchedAccount.role === 'student') {
-      const activeStd = findStudentByQuery(matchedAccount.registrationNumber) || getActiveStudent()
-      setAccount({ ...matchedAccount, ...(activeStd || {}) })
-    } else {
-      setAccount(matchedAccount)
+    // 1. Check if entered identifier matches any registered student in the store
+    //    (covers both original roll numbers AND auto-generated reg numbers like 23CSE0092)
+    const studentMatch = findStudentByQuery(key)
+    if (studentMatch) {
+      // Accept if password matches their stored defaultPassword OR any accepted password
+      const storedDefaultPwd = studentMatch.defaultPassword
+      if (
+        isValidPassword(password) ||
+        (storedDefaultPwd && password === storedDefaultPwd)
+      ) {
+        setActiveStudent(studentMatch.id)
+        setAccount({
+          role: 'student',
+          ...studentMatch,
+        })
+        return
+      }
+    }
+
+    // 2. Match exact account dictionary (staff / demo accounts)
+    const matchedAccount = accounts[key]
+    if (matchedAccount) {
+      if (matchedAccount.role === 'student') {
+        const activeStd = findStudentByQuery(matchedAccount.registrationNumber) || getActiveStudent()
+        setAccount({ ...matchedAccount, ...(activeStd || {}) })
+      } else {
+        setAccount(matchedAccount)
+      }
+      return
+    }
+
+    // 3. Role-prefix automatic routing for any valid institutional ID
+    if (key.startsWith('super')) {
+      setAccount(accounts['super_admin'])
+      return
+    }
+    if (key.startsWith('mgmt') || key.includes('management') || key.includes('director') || key.includes('trustee')) {
+      setAccount(accounts['management'])
+      return
+    }
+    if (key.startsWith('prin')) {
+      setAccount(accounts['principal'])
+      return
+    }
+    if (key.startsWith('exam') || key.includes('coe')) {
+      setAccount(accounts['exam_cell'])
+      return
+    }
+    if (key.startsWith('lib')) {
+      setAccount(accounts['library'])
+      return
+    }
+    if (key.startsWith('trans') || key.includes('bus')) {
+      setAccount(accounts['transport'])
+      return
+    }
+    if (key.startsWith('place') || key.includes('tpo')) {
+      setAccount(accounts['placement'])
+      return
+    }
+    if (key.startsWith('staff') || key.includes('tech') || key.includes('lab')) {
+      setAccount(accounts['staff'])
+      return
+    }
+    if (key.startsWith('fac') || key.includes('faculty')) {
+      setAccount(accounts['faculty'])
+      return
+    }
+    if (key.startsWith('hod')) {
+      setAccount(accounts['hod'])
+      return
+    }
+    if (key.startsWith('adm')) {
+      setAccount(accounts['admin'])
+      return
+    }
+    if (key.startsWith('acc') || key.includes('account')) {
+      setAccount(accounts['accounts'])
+      return
+    }
+    if (key.startsWith('wrd') || key.includes('warden')) {
+      setAccount(accounts['warden'])
+      return
+    }
+    if (key.startsWith('can') || key.includes('canteen')) {
+      setAccount(accounts['canteen'])
+      return
+    }
+    // 4. Numeric reg number fallback (6-12 digits) — treat as student
+    if (/^\d{6,12}$/.test(key)) {
+      const demoStd = getActiveStudent() || {}
+      setAccount({
+        role: 'student',
+        ...demoStd,
+        registrationNumber: identifier,
+        rollNumber: identifier.slice(-2) || '01',
+      })
+      return
+    }
+
+    setError('We could not verify those sign-in details. Please check your College ID and password.')
+  }
+
+  const clearUrlHash = () => {
+    if (typeof window !== 'undefined') {
+      window.location.hash = ''
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      }
     }
   }
 
   async function handleQuickLogin(roleKey) {
+    clearUrlHash()
     setError('')
     setResetRequested(false)
     setIdentifier(roleKey)
@@ -258,6 +404,7 @@ function App() {
 
   function handleLogout() {
     api.logout()
+    clearUrlHash()
     setAccount(null)
     setIdentifier('2305201001')
     setPassword('gift123')
@@ -267,38 +414,62 @@ function App() {
 
   // Role-based Router Guard
   if (account) {
-    if (account.role === 'admin') {
-      return <AdminPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
+    let portal = null
+    if (account.role === 'super_admin') {
+      portal = <SuperAdminPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
+    } else if (account.role === 'management') {
+      portal = <ManagementPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'principal') {
+      portal = <PrincipalPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'admin') {
+      portal = <AdminPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'hod') {
+      portal = <HodPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'faculty') {
+      portal = <FacultyPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'accounts') {
+      portal = <AccountsPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'exam_cell') {
+      portal = <ExamCellPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'library') {
+      portal = <LibraryPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'warden') {
+      portal = <HostelPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'transport') {
+      portal = <TransportPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'placement') {
+      portal = <PlacementPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'staff') {
+      portal = <StaffPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'canteen') {
+      portal = <CanteenPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'student') {
+      portal = <StudentPortal account={account} onLogout={handleLogout} />
     }
-    if (account.role === 'hod') {
-      return <HodPortal account={account} onLogout={handleLogout} />
-    }
-    if (account.role === 'faculty') {
-      return <FacultyPortal account={account} onLogout={handleLogout} />
-    }
-    if (account.role === 'accounts') {
-      return <AccountsPortal account={account} onLogout={handleLogout} />
-    }
-    if (account.role === 'warden') {
-      return <HostelPortal account={account} onLogout={handleLogout} />
-    }
-    if (account.role === 'canteen') {
-      return <CanteenPortal account={account} onLogout={handleLogout} />
-    }
-    if (account.role === 'student') {
-      return <StudentPortal account={account} onLogout={handleLogout} />
+
+    if (portal) {
+      return (
+        <>
+          <UniversalWhatsAppLauncher account={account} />
+          <ApnaAIChatbot account={account} />
+          {portal}
+        </>
+      )
     }
   }
 
-  // Otherwise render the Login Page first
+  // Otherwise render the Login Page first (with universal WhatsApp launcher & Apna AI visible)
   return (
-    <main className="login-page">
+    <>
+      <UniversalWhatsAppLauncher account={null} />
+      <ApnaAIChatbot account={null} />
+      <main className="login-page">
       {/* ── Left hero panel (campus photo & stats) ── */}
       <div className="campus-scene" aria-hidden="true">
         <div className="campus-hero-content">
-          <a className="top-brand" href="#home" aria-label="GIFT Autonomous home">
-            <GiftMark />
-            <span>GIFT Autonomous</span>
+          <a className="top-brand" href="#home" aria-label="Apna Campus home">
+            <GiftMark size={38} />
+            <span>Apna Campus</span>
           </a>
           <div className="hero-body">
             <div className="hero-badge">
@@ -324,23 +495,22 @@ function App() {
 
       {/* ── Right login panel ── */}
       <section className="login-panel" aria-labelledby="login-title">
-        <a className="panel-brand" href="#home">
-          <GiftMark />
-          <span>GIFT Autonomous, Bhubaneswar</span>
+        <a className="panel-brand" href="#home" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <GiftMark size={44} />
+          <span>Apna Campus</span>
         </a>
         <h1 id="login-title">Welcome back</h1>
-        <p className="panel-subtitle">Sign in to access your College Management Portal</p>
 
         <form className="login-form" onSubmit={handleLogin}>
           <div className="field-group">
-            <label className="field-label" htmlFor="identifier">College ID</label>
+            <label className="field-label" htmlFor="identifier">College ID / Registration Number</label>
             <div className="input-wrap">
               <UserRound aria-hidden="true" size={17} />
               <input
                 id="identifier"
                 name="identifier"
                 autoComplete="username"
-                placeholder="Registration number or college email"
+                placeholder="e.g. 23CSE0001 · FAC-042 · ADM-001"
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
                 required
@@ -403,106 +573,64 @@ function App() {
             <ArrowRight size={18} aria-hidden="true" />
           </button>
 
-          <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #e2e8f0' }}>
-            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Quick Demo Login:
+          {/* 1-Click Role Switcher Demo Bar */}
+          <div style={{ marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+            <p style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px', textAlign: 'center' }}>
+              ⚡ 1-Click Quick Demo Sign-In (14 Roles)
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', justifyContent: 'center' }}>
+              {[
+                { key: 'super_admin', label: 'Super Admin', color: '#4338ca' },
+                { key: 'management', label: 'Management', color: '#b45309' },
+                { key: 'principal', label: 'Principal', color: '#0369a1' },
+                { key: 'admin', label: 'Admin Ops', color: '#1d4ed8' },
+                { key: 'hod', label: 'HOD', color: '#047857' },
+                { key: 'faculty', label: 'Faculty', color: '#15803d' },
+                { key: 'student', label: 'Student', color: '#1d4ed8' },
+                { key: 'exam_cell', label: 'Exam Cell', color: '#6d28d9' },
+                { key: 'accounts', label: 'Accounts', color: '#0f766e' },
+                { key: 'library', label: 'Library', color: '#047857' },
+                { key: 'placement', label: 'Placement', color: '#be185d' },
+                { key: 'transport', label: 'Transport', color: '#0369a1' },
+                { key: 'warden', label: 'Hostel', color: '#b45309' },
+                { key: 'staff', label: 'Staff (Labs)', color: '#0f766e' },
+              ].map(r => (
                 <button
+                  key={r.key}
                   type="button"
-                  className="admin-login-button"
-                  style={{ flex: 1, margin: 0, justifyContent: 'center', fontSize: '0.85rem', padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                  onClick={() => handleQuickLogin('admin')}
-                  title="Direct Login as Administrator"
+                  onClick={() => handleQuickLogin(r.key)}
+                  style={{
+                    padding: '5px 10px',
+                    fontSize: '0.76rem',
+                    fontWeight: 700,
+                    borderRadius: '7px',
+                    border: `1.5px solid ${r.color}44`,
+                    background: `${r.color}14`,
+                    color: r.color,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = `${r.color}25` }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = `${r.color}14` }}
                 >
-                  <UsersRound size={16} /> Admin
+                  {r.label}
                 </button>
-                <button
-                  type="button"
-                  className="admin-login-button"
-                  style={{ width: 'auto', margin: 0, padding: '0.6rem 0.85rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                  onClick={() => setShowAdminRoles(prev => !prev)}
-                  title="Toggle Admin Sub-Roles (Role Impersonation)"
-                  aria-expanded={showAdminRoles}
-                >
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Options</span>
-                  {showAdminRoles ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                </button>
-              </div>
-
-              {/* Inside the Admin Option: 4th Image Functions */}
-              {showAdminRoles && (
-                <div style={{ padding: '0.65rem', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <p style={{ margin: '0 0 0.45rem 0', fontSize: '0.7rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Inside Admin Option · Role Functions:
-                  </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
-                    <button
-                      type="button"
-                      className="admin-login-button"
-                      style={{ margin: 0, justifyContent: 'center', fontSize: '0.72rem', padding: '0.45rem 0.3rem' }}
-                      onClick={() => handleQuickLogin('student')}
-                    >
-                      <GraduationCap size={13} /> Student
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-login-button"
-                      style={{ margin: 0, justifyContent: 'center', fontSize: '0.72rem', padding: '0.45rem 0.3rem' }}
-                      onClick={() => handleQuickLogin('faculty')}
-                    >
-                      <BookOpen size={13} /> Faculty
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-login-button"
-                      style={{ margin: 0, justifyContent: 'center', fontSize: '0.72rem', padding: '0.45rem 0.3rem' }}
-                      onClick={() => handleQuickLogin('hod')}
-                    >
-                      <ShieldCheck size={13} /> HOD
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-login-button"
-                      style={{ margin: 0, justifyContent: 'center', fontSize: '0.72rem', padding: '0.45rem 0.3rem' }}
-                      onClick={() => handleQuickLogin('accounts')}
-                    >
-                      <CreditCard size={13} /> Accounts
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-login-button"
-                      style={{ margin: 0, justifyContent: 'center', fontSize: '0.72rem', padding: '0.45rem 0.3rem' }}
-                      onClick={() => handleQuickLogin('warden')}
-                    >
-                      <Home size={13} /> Warden
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-login-button"
-                      style={{ margin: 0, justifyContent: 'center', fontSize: '0.72rem', padding: '0.45rem 0.3rem' }}
-                      onClick={() => handleQuickLogin('canteen')}
-                    >
-                      <Utensils size={13} /> Canteen
-                    </button>
-                  </div>
-                </div>
-              )}
+              ))}
             </div>
           </div>
         </form>
 
         <footer className="site-footer">
           <div className="footer-links">
-            <a href="mailto:info@gift.edu.in"><Mail size={13} />info@gift.edu.in</a>
+            <a href="mailto:info@apnacampus.edu.in"><Mail size={13} />info@apnacampus.edu.in</a>
             <span className="footer-dot" aria-hidden="true" />
-            <a href="https://www.gift.edu.in/" target="_blank" rel="noreferrer">www.gift.edu.in</a>
+            <a href="https://www.apnacampus.edu.in/" target="_blank" rel="noreferrer">www.apnacampus.edu.in</a>
           </div>
-          <p>© 2026 GIFT Autonomous College. All rights reserved.</p>
+          <p>© 2026 Apna Campus. All rights reserved.</p>
         </footer>
       </section>
     </main>
+    </>
   )
 }
 
@@ -512,9 +640,9 @@ function Dashboard({ account, onLogout }) {
   return (
     <main className="dashboard-page">
       <header className="dashboard-header">
-        <a className="dashboard-brand" href="#home" aria-label="GIFT Autonomous">
-          <GiftMark />
-          <span>GIFT AUTONOMOUS, BHUBANESWAR</span>
+        <a className="dashboard-brand" href="#home" aria-label="Apna Campus">
+          <GiftMark size={36} />
+          <span>APNA CAMPUS</span>
         </a>
       </header>
 
@@ -623,12 +751,21 @@ function getOverview(role) {
   ]
 }
 
-function GiftMark() {
+function GiftMark({ size = 34 }) {
   return (
-    <span className="gift-mark" aria-hidden="true">
-      <span className="mark-gear">✿</span>
-      <span className="mark-center">GIFT<small>✦</small></span>
-    </span>
+    <img
+      src="/logo.png"
+      alt="Apna Campus Logo"
+      className="apna-campus-logo-img"
+      style={{
+        height: `${size}px`,
+        width: 'auto',
+        maxHeight: '100%',
+        objectFit: 'contain',
+        display: 'inline-block',
+        verticalAlign: 'middle',
+      }}
+    />
   )
 }
 

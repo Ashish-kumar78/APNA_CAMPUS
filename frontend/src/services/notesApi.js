@@ -1,4 +1,5 @@
 // Class Notes Sharing & Missed Lecture Notes API Handler
+import { API_BASE_URL } from './api';
 
 let mockClassNotes = [
   {
@@ -20,7 +21,7 @@ let mockClassNotes = [
     fileType: 'application/pdf',
     status: 'VISIBLE',
     isFacultyVerified: true,
-    verifiedBy: 'Dr. Pratyush Mohapatra (HOD CSE)',
+    verifiedBy: 'Dr. Pratyush Mohapatra (HOD)',
     duplicateGroupKey: 'Operating Systems|2026-10-05|Process Scheduling Algorithms',
     duplicateVersionIndex: 1,
     totalDuplicatesAvailable: 3,
@@ -172,7 +173,7 @@ export const notesApi = {
   getClassNotes: async (filters = {}) => {
     try {
       const query = new URLSearchParams(filters).toString();
-      const res = await fetch(`http://localhost:4000/api/class-notes?${query}`, {
+      const res = await fetch(`${API_BASE_URL}/class-notes?${query}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('collegeflow_token') || ''}` }
       });
       const data = await res.json();
@@ -203,7 +204,7 @@ export const notesApi = {
   // 2. Upload Student Class Notes
   uploadClassNotes: async (payload) => {
     try {
-      const res = await fetch('http://localhost:4000/api/class-notes', {
+      const res = await fetch(`${API_BASE_URL}/class-notes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -279,7 +280,7 @@ export const notesApi = {
   // 3. Report Inappropriate or Inaccurate Student Notes
   reportNote: async (id, reason, description) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/class-notes/${id}/report`, {
+      const res = await fetch(`${API_BASE_URL}/class-notes/${id}/report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -313,7 +314,7 @@ export const notesApi = {
   // 4. Fetch Missed Classes for Student Dashboard
   getMissedClasses: async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/class-notes/missed-classes', {
+      const res = await fetch(`${API_BASE_URL}/class-notes/missed-classes`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('collegeflow_token') || ''}` }
       });
       const data = await res.json();
@@ -327,7 +328,7 @@ export const notesApi = {
   // 5. Faculty Verification & Moderation
   verifyNoteByFaculty: async (id, facultyName = 'Dr. Pratyush Mohapatra') => {
     try {
-      const res = await fetch(`http://localhost:4000/api/faculty/class-notes/${id}/verify`, {
+      const res = await fetch(`${API_BASE_URL}/faculty/class-notes/${id}/verify`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('collegeflow_token') || ''}` }
       });

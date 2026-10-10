@@ -37,6 +37,8 @@ import {
   Clock,
   PartyPopper,
   MapPin,
+  Award,
+  Maximize2,
 } from 'lucide-react'
 import './StudentPortal.css'
 import './DashboardHome.css'
@@ -60,6 +62,11 @@ import BiometricPage from './pages/BiometricPage.jsx'
 import CanteenPage from './pages/CanteenPage.jsx'
 import StudentHostelPage from './pages/StudentHostelPage.jsx'
 import ClassNotesPage from './pages/ClassNotesPage.jsx'
+import CampusConnect from './components/CampusConnect/CampusConnect.jsx'
+import AcademicResourcesSection from './components/CampusConnect/AcademicResourcesSection.jsx'
+import LeadershipScoreboardSection from './components/CampusConnect/LeadershipScoreboardSection.jsx'
+import AnonymousComplaintsSection from './components/CampusConnect/AnonymousComplaintsSection.jsx'
+import { campusConnectStore } from './services/campusConnectStore.js'
 import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, getAllStudents, findStudentByQuery } from './services/studentStore.js'
 
@@ -69,20 +76,52 @@ const profilePageTabMap = {
   health: 'Health & Medical',
 }
 
-const navigation = [
-  { label: 'Dashboard', icon: Home, page: 'dashboard' },
-  { label: 'Class Notes & Sharing', icon: FileText, page: 'class-notes' },
-  { label: 'Fees & Accounts', icon: CreditCard, page: 'fees' },
-  { label: 'Hostel Residence', icon: Building2, page: 'hostel' },
-  { label: 'Library', icon: LibraryBig, page: 'library' },
-  { label: 'Academics', icon: BookOpen, page: 'academics' },
-  { label: 'Timetable', icon: CalendarDays, page: 'timetable' },
-  { label: 'Self Development & Placement', icon: TrendingUp, page: 'placement' },
-  { label: 'Internship', icon: Briefcase, page: 'internship' },
-  { label: 'Online Examination', icon: ClipboardList, page: 'online-exam' },
-  { label: 'Blogging', icon: Rss, page: 'blogging' },
-  { label: 'Feedback/Appraisal/Survey', icon: MessageSquare, page: 'feedback' },
-]
+const campusSubViewMap = {
+  'campus-connect': 'chats',
+  'class-groups': 'chats',
+  'announcements': 'announcements',
+  'academic-requests': 'requests',
+  'shared-resources': 'resources',
+  'leadership': 'leadership',
+  'anonymous-complaints': 'complaints',
+}
+
+const navSections = [
+  {
+    title: 'OVERVIEW',
+    items: [
+      { label: 'Dashboard', icon: Home, page: 'dashboard' },
+    ]
+  },
+  {
+    title: 'ACADEMICS',
+    items: [
+      { label: 'Academics', icon: BookOpen, page: 'academics' },
+      { label: 'Timetable', icon: CalendarDays, page: 'timetable' },
+      { label: 'Online Examination', icon: ClipboardList, page: 'online-exam' },
+      { label: 'Class Notes & Sharing', icon: FileText, page: 'class-notes' },
+    ]
+  },
+  {
+    title: 'CAMPUS',
+    items: [
+      { label: 'Hostel Residence', icon: Building2, page: 'hostel' },
+      { label: 'Library', icon: LibraryBig, page: 'library' },
+      { label: 'Self Development & Placement', icon: TrendingUp, page: 'placement' },
+      { label: 'Internship', icon: Briefcase, page: 'internship' },
+    ]
+  },
+  {
+    title: 'SUPPORT',
+    items: [
+      { label: 'Anonymous Complaints', icon: ShieldCheck, page: 'anonymous-complaints' },
+      { label: 'Feedback/Appraisal/Survey', icon: MessageSquare, page: 'feedback' },
+      { label: 'Blogging & Stories', icon: Rss, page: 'blogging' },
+    ]
+  }
+];
+
+const navigation = navSections.flatMap(sec => sec.items);
 
 const latestNotices = [
   { tag: 'SCHOLARSHIP', title: 'PRERANA Scholarship', detail: 'Eligible students can submit their application through the state scholarship portal.', date: '27 Sep 2026' },
@@ -158,7 +197,7 @@ const holidays = [
   ['14-09-2026', 'Ganesh Chaturthi / Vinayaka Puja'],
   ['16-09-2026', 'Nuakhai (Western Odisha Festival)'],
   ['02-10-2026', 'Mahatma Gandhi Jayanti'],
-  ['09-10-2026', 'Mahalaya'],
+  ['10-10-2026', 'Mahalaya'],
   ['14-10-2026', 'Durga Puja (Maha Saptami)'],
   ['15-10-2026', 'Durga Puja (Maha Ashtami)'],
   ['16-10-2026', 'Durga Puja (Maha Navami)'],
@@ -175,6 +214,12 @@ function StudentPortal({ account, onLogout }) {
   const getInitial = () => {
     const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '';
     if (hash && hash !== 'portal-top') {
+      if (campusSubViewMap[hash]) {
+        return { page: 'campus-connect', link: 'Campus Connect', tab: '', quickView: '' };
+      }
+      if (hash === 'profile' || hash === 'student-profile') {
+        return { page: 'profile', link: 'Student Profile', tab: 'Personal', quickView: '' };
+      }
       if (hash === 'marks' || hash === 'college-marks') {
         return { page: 'profile', link: 'View Profile', tab: '', quickView: 'College Marks' };
       }
@@ -190,6 +235,39 @@ function StudentPortal({ account, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeLink, setActiveLink] = useState(init.link);
   const [activePage, setActivePage] = useState(init.page);
+  const [initialConvId, setInitialConvId] = useState('conv-ds');
+  const [whatsappDrawerOpen, setWhatsappDrawerOpen] = useState(false);
+  const [campusSubView, setCampusSubView] = useState(() => {
+    const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '';
+    return campusSubViewMap[hash] || 'chats';
+  });
+  const [chatUnreadCount, setChatUnreadCount] = useState(() => {
+    return campusConnectStore.getTotalUnreadCount ? campusConnectStore.getTotalUnreadCount() : 12;
+  });
+
+  useEffect(() => {
+    const updateUnread = () => {
+      if (campusConnectStore.getTotalUnreadCount) {
+        setChatUnreadCount(campusConnectStore.getTotalUnreadCount());
+      }
+    };
+    window.addEventListener('campus_connect_updated', updateUnread);
+    return () => window.removeEventListener('campus_connect_updated', updateUnread);
+  }, []);
+
+  useEffect(() => {
+    const handleChatNav = (e) => {
+      const targetConvId = e.detail?.convId || 'conv-ds';
+      setInitialConvId(targetConvId);
+      setCampusSubView('chats');
+      setActivePage('campus-connect');
+      setActiveLink('Campus Connect');
+      window.location.hash = 'campus-connect';
+      setSidebarOpen(false);
+    };
+    window.addEventListener('cms_navigate_chat', handleChatNav);
+    return () => window.removeEventListener('cms_navigate_chat', handleChatNav);
+  }, []);
 
   useEffect(() => {
     const handleHash = () => {
@@ -198,6 +276,24 @@ function StudentPortal({ account, onLogout }) {
         setActivePage('dashboard');
         setActiveLink('Dashboard');
         setProfileTab('');
+        setProfileQuickView('');
+        return;
+      }
+      if (campusSubViewMap[hash]) {
+        setActivePage('campus-connect');
+        setActiveLink('Campus Connect');
+        setCampusSubView(campusSubViewMap[hash]);
+        setProfileTab('');
+        setProfileQuickView('');
+        return;
+      }
+      if (hash === 'profile' || hash === 'student-profile') {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        setActivePage('profile');
+        setActiveLink('Student Profile');
+        setProfileTab('Personal');
         setProfileQuickView('');
         return;
       }
@@ -226,6 +322,17 @@ function StudentPortal({ account, onLogout }) {
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
+
+  // Scroll restoration: Whenever activePage changes, always scroll instantly to the top
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const shell = document.querySelector('.campus-os-shell');
+    if (shell) shell.scrollTop = 0;
+    const main = document.querySelector('.campus-os-main');
+    if (main) main.scrollTop = 0;
+  }, [activePage]);
   const [noticeTab, setNoticeTab] = useState('Latest')
   const [noticeQuery, setNoticeQuery] = useState('')
   const [expandedNotice, setExpandedNotice] = useState('')
@@ -249,10 +356,10 @@ function StudentPortal({ account, onLogout }) {
 
   const studentPhoto = useMemo(() => {
     if (account?.photo) return account.photo
-    if (/Aarav|Rohan|Vikram|Siddharth|Rahul|Amit|Rajesh|Pradeep|Debasish|Bishnu|Manoj/i.test(account?.name || '')) {
-      return '/passport_photo_male.svg'
+    if (account?.gender === 'Female' || /Priya|Sneha|Puja|Swati|Monika|Ipsita|Smruti|Lipika|Archana|Sonali|Niharika|Ananya|Pooja|Shreya|Ankita|Divya/i.test(account?.name || '')) {
+      return '/passport_photo_female.svg'
     }
-    return '/passport_photo.svg'
+    return '/passport_photo_male.svg'
   }, [account])
 
   const [today] = useState(() => new Date())
@@ -354,17 +461,73 @@ function StudentPortal({ account, onLogout }) {
 
   return (
     <div className="campus-os-shell">
+      {/* WhatsApp Slide-out Drawer (Side of Notifications Panel Launcher) */}
+      {whatsappDrawerOpen && (
+        <div className="campus-whatsapp-drawer-overlay" onClick={() => setWhatsappDrawerOpen(false)}>
+          <aside className="campus-whatsapp-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="whatsapp-drawer-header">
+              <div className="whatsapp-drawer-title">
+                <div className="whatsapp-drawer-logo">
+                  <MessageSquare size={16} />
+                </div>
+                <div>
+                  <h3>Campus Connect</h3>
+                  <p>College WhatsApp • Live Academic Hub</p>
+                </div>
+              </div>
+              <div className="whatsapp-drawer-actions">
+                <button
+                  type="button"
+                  className="whatsapp-drawer-action-btn"
+                  title="Expand to Fullscreen"
+                  onClick={() => {
+                    setWhatsappDrawerOpen(false);
+                    setActivePage('campus-connect');
+                    setActiveLink('Campus Connect');
+                    window.location.hash = 'campus-connect';
+                  }}
+                >
+                  <Maximize2 size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="whatsapp-drawer-action-btn"
+                  title="Close Drawer"
+                  onClick={() => setWhatsappDrawerOpen(false)}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="whatsapp-drawer-body">
+              <CampusConnect
+                account={account}
+                isDrawerMode={true}
+                initialConversationId={initialConvId}
+                initialView={campusSubView}
+                onNavigateToModule={(mod) => {
+                  setWhatsappDrawerOpen(false);
+                  setActivePage(mod);
+                  setActiveLink(mod);
+                  window.location.hash = mod;
+                }}
+              />
+            </div>
+          </aside>
+        </div>
+      )}
+
       <div className="campus-os-container">
         {/* Floating Sidebar identical to Campus OS Dashboard */}
         {sidebarOpen && (
           <aside className="campus-os-sidebar">
             <div className="campus-os-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div className="campus-brand-icon">
-                  <GraduationCap size={22} />
+                <div className="campus-brand-icon" style={{ background: '#ffffff', padding: '4px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
                 </div>
                 <div>
-                  <p className="campus-brand-kicker">GIFT AUTONOMOUS</p>
+                  <p className="campus-brand-kicker">APNA CAMPUS</p>
                   <h2 className="campus-brand-title">Student Portal</h2>
                 </div>
               </div>
@@ -390,27 +553,48 @@ function StudentPortal({ account, onLogout }) {
             </div>
 
             <nav className="campus-os-nav">
-              {navigation.map(({ label, icon: Icon, page }) => (
-                <a
-                  className={activeLink === label ? 'active' : ''}
-                  href={`#${page}`}
-                  aria-current={activeLink === label ? 'page' : undefined}
-                  key={label}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setActiveLink(label)
-                    setActivePage(page)
-                    window.location.hash = page
-                    setSidebarOpen(false)
-                  }}
-                >
-                  <Icon size={18} />
-                  <span>{label}</span>
-                </a>
+              {navSections.map((sec) => (
+                <div key={sec.title} className="campus-os-nav-section">
+                  <p className="campus-os-nav-section-title">{sec.title}</p>
+                  {sec.items.map(({ label, icon: Icon, page, badge }) => (
+                    <a
+                      className={activeLink === label ? 'active' : ''}
+                      href={`#${page}`}
+                      aria-current={activeLink === label ? 'page' : undefined}
+                      key={label}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setActiveLink(label)
+                        setActivePage(page)
+                        window.location.hash = page
+                        setSidebarOpen(false)
+                      }}
+                    >
+                      <Icon size={17} />
+                      <span>{label}</span>
+                      {badge && <span className="cc-nav-badge">{badge}</span>}
+                    </a>
+                  ))}
+                </div>
               ))}
             </nav>
 
-            <div className="campus-os-role-card">
+            <div
+              className="campus-os-role-card"
+              onClick={() => {
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+                setActivePage('profile');
+                setActiveLink('Student Profile');
+                setProfileTab('Personal');
+                setProfileQuickView('');
+                window.location.hash = 'profile';
+                setSidebarOpen(false);
+              }}
+              style={{ cursor: 'pointer' }}
+              title="View student profile"
+            >
               <div>
                 <p className="campus-role-kicker" style={{ margin: 0 }}>CURRENT ROLE</p>
                 <p className="campus-role-val" style={{ margin: 0 }}>Student</p>
@@ -443,6 +627,23 @@ function StudentPortal({ account, onLogout }) {
             </div>
 
             <div className="campus-header-actions">
+              {/* WhatsApp / Campus Connect Button - Side of Notifications Panel */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  className="campus-icon-btn campus-whatsapp-header-btn"
+                  type="button"
+                  aria-label="Campus Connect (College WhatsApp)"
+                  title="Campus Connect • College WhatsApp"
+                  onClick={() => setWhatsappDrawerOpen((prev) => !prev)}
+                >
+                  <MessageSquare size={18} className="whatsapp-header-icon" />
+                  {chatUnreadCount > 0 && (
+                    <span className="campus-whatsapp-header-badge">{chatUnreadCount}</span>
+                  )}
+                </button>
+              </div>
+
+              {/* Notification Bell */}
               <div style={{ position: 'relative' }}>
                 <button
                   className="campus-icon-btn"
@@ -517,7 +718,21 @@ function StudentPortal({ account, onLogout }) {
                   </div>
                 )}
               </div>
-              <div className="campus-user-pill">
+              <div
+                className="campus-user-pill"
+                onClick={() => {
+                  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                  document.documentElement.scrollTop = 0;
+                  document.body.scrollTop = 0;
+                  setActivePage('profile');
+                  setActiveLink('Student Profile');
+                  setProfileTab('Personal');
+                  setProfileQuickView('');
+                  window.location.hash = 'profile';
+                }}
+                style={{ cursor: 'pointer' }}
+                title="View student profile"
+              >
                 <div className="campus-user-passport" title={`${account.name} Passport Photo`}>
                   <img src={studentPhoto} alt={account.name} className="campus-user-passport-img" />
                 </div>
@@ -525,7 +740,22 @@ function StudentPortal({ account, onLogout }) {
                   <strong>{account.name}</strong>
                   <small>Student • {account.registrationNumber}</small>
                 </div>
-                <button className="campus-logout-btn" type="button" onClick={onLogout} title="Log out" aria-label="Log out">
+                <button
+                  className="campus-logout-btn"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (typeof window !== 'undefined') {
+                      window.location.hash = '';
+                      if (window.history && window.history.replaceState) {
+                        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                      }
+                    }
+                    onLogout();
+                  }}
+                  title="Log out"
+                  aria-label="Log out"
+                >
                   <LogOut size={16} />
                 </button>
               </div>
@@ -551,6 +781,25 @@ function StudentPortal({ account, onLogout }) {
                 <span>/</span>
                 <strong>{activeLink}</strong>
               </div>
+              {(activePage === 'campus-connect' ||
+                activePage === 'class-groups' ||
+                activePage === 'announcements' ||
+                activePage === 'academic-requests' ||
+                activePage === 'shared-resources' ||
+                activePage === 'leadership' ||
+                activePage === 'anonymous-complaints') && (
+                <CampusConnect
+                  account={account}
+                  initialConversationId={initialConvId}
+                  initialCategory={activePage === 'class-groups' ? 'Classes' : 'All'}
+                  initialView={campusSubView}
+                  onNavigateToModule={(mod) => {
+                    setActivePage(mod);
+                    setActiveLink(mod);
+                    window.location.hash = mod;
+                  }}
+                />
+              )}
               {activePage === 'class-notes' && <ClassNotesPage account={account} />}
               {activePage === 'marks' && <MarksPage initialRole="student" />}
               {activePage === 'hostel' && <StudentHostelPage defaultTab="overview" />}
@@ -575,11 +824,14 @@ function StudentPortal({ account, onLogout }) {
               initialTab={profileTab || 'Personal'}
               initialQuickView={profileQuickView || ''}
               onBack={() => {
-                setActivePage('dashboard')
-                setActiveLink('Dashboard')
-                setProfileTab('')
-                setProfileQuickView('')
-                window.location.hash = 'dashboard'
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+                setActivePage('dashboard');
+                setActiveLink('Dashboard');
+                setProfileTab('');
+                setProfileQuickView('');
+                window.location.hash = 'dashboard';
               }}
             />
           ) : (
@@ -606,6 +858,7 @@ function StudentPortal({ account, onLogout }) {
             </div>
           </section>
 
+
           {/* Top Hero Split: 1st Image (Student Profile) on LEFT + 2nd Image (2x2 Stats) on RIGHT (50% each) */}
           <div className="dash-hero-split">
             {/* 1st Image: Student Profile Card placed on LEFT SIDE with strict Passport Size Photo */}
@@ -621,18 +874,30 @@ function StudentPortal({ account, onLogout }) {
                 <span className="dash-status"><i /> Active</span>
               </div>
               <dl className="dash-info-list">
-                <DetailRow label="Registration No." value={account?.registrationNumber || '—'} />
+                <DetailRow label="Registration No." value={account?.registrationNumber || account?.rollNumber || '—'} />
                 <DetailRow label="Name" value={account?.name || 'Student'} />
-                <DetailRow label="Course" value="B.Tech" />
-                <DetailRow label="Batch" value="2023–2027" />
-                <DetailRow label="Branch" value={account?.department || 'Computer Science & Engineering'} />
-                <DetailRow label="Section" value="CSE · Section A" />
-                <DetailRow label="Email ID" value="rakesh.das@student.gift.edu.in" />
-                <DetailRow label="Mobile No." value="+91 98610 23010" />
+                <DetailRow label="Program" value={account?.program || account?.course || 'B.Tech'} />
+                <DetailRow label="Batch" value={account?.batch || '2023–2027'} />
+                <DetailRow label="Department" value={account?.department || 'Computer Science & Engineering'} />
+                <DetailRow
+                  label="Section"
+                  value={(() => {
+                    const sec = account?.section || account?.sectionName || 'A';
+                    return String(sec).startsWith('Section') ? sec : `Section ${sec}`;
+                  })()}
+                />
+                <DetailRow label="Email ID" value={account?.email || `${(account?.name || 'student').toLowerCase().replace(/\s+/g, '.')}@student.apnacampus.edu.in`} />
+                <DetailRow label="Mobile No." value={account?.phone || '+91 98610 23010'} />
               </dl>
               <button className="dash-btn dash-btn-primary dash-info-btn" type="button" onClick={() => {
-                setActivePage('profile')
-                setActiveLink('Dashboard')
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+                setActivePage('profile');
+                setActiveLink('Student Profile');
+                setProfileTab('Personal');
+                setProfileQuickView('');
+                window.location.hash = 'profile';
               }}>View profile <ChevronRight size={15} /></button>
             </aside>
 
@@ -640,17 +905,25 @@ function StudentPortal({ account, onLogout }) {
             <section className="dash-stats-2x2" aria-label="Semester snapshot">
               {/* Card 1: Enrolled Courses */}
               <article className="dash-stat tone-blue">
-                <div className="dash-stat-head">
-                  <div className="dash-stat-head-left">
-                    <span className="dash-stat-icon"><BookOpen size={18} /></span>
-                    <span className="dash-stat-label">Enrolled courses</span>
-                  </div>
-                  <span className="dash-stat-badge tone-blue-badge">Semester 5</span>
-                </div>
-                <div className="dash-stat-body">
-                  <strong className="dash-stat-value">06</strong>
-                  <p className="dash-stat-desc">Semester 5 · 22 total credits</p>
-                </div>
+                {(() => {
+                  const sem = account?.currentSemester || account?.semester || 5;
+                  const semLabel = String(sem).startsWith('Semester') ? sem : `Semester ${sem}`;
+                  return (
+                    <>
+                      <div className="dash-stat-head">
+                        <div className="dash-stat-head-left">
+                          <span className="dash-stat-icon"><BookOpen size={18} /></span>
+                          <span className="dash-stat-label">Enrolled courses</span>
+                        </div>
+                        <span className="dash-stat-badge tone-blue-badge">{semLabel}</span>
+                      </div>
+                      <div className="dash-stat-body">
+                        <strong className="dash-stat-value">{account?.enrolledSubjects ? String(account.enrolledSubjects.length).padStart(2, '0') : '06'}</strong>
+                        <p className="dash-stat-desc">{semLabel} · 22 total credits</p>
+                      </div>
+                    </>
+                  );
+                })()}
                 <div className="dash-stat-foot">
                   <span className="dash-stat-pill">4 Core Theory</span>
                   <span className="dash-stat-pill">2 Practical Labs</span>
@@ -713,7 +986,7 @@ function StudentPortal({ account, onLogout }) {
                   <span className="dash-stat-badge tone-amber-badge">Govt Gazetted</span>
                 </div>
                 <div className="dash-stat-body">
-                  <strong className="dash-stat-value">{nextHoliday ? (nextHoliday.daysLeft === 0 ? 'Today' : `${nextHoliday.daysLeft} days`) : '5 days'}</strong>
+                  <strong className="dash-stat-value">{nextHoliday ? (nextHoliday.daysLeft === 0 ? 'Today' : nextHoliday.daysLeft === 1 ? 'Tomorrow' : `${nextHoliday.daysLeft} days`) : '5 days'}</strong>
                   <p className="dash-stat-desc">{nextHoliday ? nextHoliday.name : 'Mahalaya'}</p>
                 </div>
                 <div className="dash-stat-foot">
@@ -790,7 +1063,7 @@ function StudentPortal({ account, onLogout }) {
                       <small>{h.date.toLocaleString('en-IN', { weekday: 'long' })} · {h.raw}</small>
                     </span>
                     <span className="dash-holiday-badge">
-                      {h.daysLeft < 0 ? 'Passed' : h.daysLeft === 0 ? 'Today' : `in ${h.daysLeft}d`}
+                      {h.daysLeft < 0 ? 'Passed' : h.daysLeft === 0 ? 'Today' : h.daysLeft === 1 ? 'Tomorrow' : `in ${h.daysLeft}d`}
                     </span>
                   </li>
                 ))}
@@ -798,7 +1071,7 @@ function StudentPortal({ account, onLogout }) {
             </section>
           </div>
 
-          <footer className="dash-footer">GIFT Autonomous, Bhubaneswar <span>·</span> Student management portal <span>·</span> {today.getFullYear()}</footer>
+          <footer className="dash-footer">Apna Campus <span>·</span> Student management portal <span>·</span> {today.getFullYear()}</footer>
             </div>
           )}
           </div>

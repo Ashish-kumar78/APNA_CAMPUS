@@ -183,7 +183,8 @@ select:focus-visible {
 
 
 /* ========================================================
-   GLOBAL BOLD & HIGH CONTRAST TYPOGRAPHY SYSTEM
+   GLOBAL HIGH-CONTRAST TYPOGRAPHY SYSTEM
+   Ensures crystal-clear legibility across light & dark surfaces.
    ======================================================== */
 body {
   font-weight: 500;
@@ -192,30 +193,615 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-weight: 800 !important;
-  color: #0f172a !important;
+  font-weight: 800;
   letter-spacing: -0.015em;
+  color: inherit;
 }
 
 b, strong {
-  font-weight: 800 !important;
+  font-weight: 800;
 }
 
 button {
-  font-weight: 700 !important;
+  font-weight: 700;
 }
 
-table th {
+/* Light Surfaces Defaults */
+.admin-table th, .hod-table th, .faculty-table th, .accounts-table th {
   font-weight: 800 !important;
   color: #1e293b !important;
+  background: #f8fafc !important;
 }
 
-table td strong {
+.admin-table td strong, .hod-table td strong, .faculty-table td strong, .accounts-table td strong {
   font-weight: 800 !important;
   color: #0f172a !important;
 }
 
 .fee-val, .bio-card-val, .metric-value {
   font-weight: 800 !important;
+  color: #0f172a;
+}
+
+/* ─── DARK SURFACES & HERO BANNER HIGH CONTRAST (Login, Exam Cell, Placement, Super Admin, Library, Transport, Staff) ─── */
+.login-page .campus-scene,
+.login-page .campus-scene h1,
+.login-page .campus-scene h2,
+.login-page .campus-scene h3,
+.login-page .campus-scene h4,
+.login-page .campus-scene strong,
+.login-page .campus-scene a,
+.login-page .campus-scene p,
+.login-page .top-brand span {
+  color: #ffffff !important;
+}
+
+.login-page .hero-title {
+  color: #ffffff !important;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6) !important;
+}
+
+.login-page .hero-title span {
+  background: linear-gradient(120deg, #fbbf24, #60a5fa) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+.login-page .hero-description {
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7) !important;
+  font-weight: 600 !important;
+}
+
+.login-page .hero-stat strong {
+  color: #ffffff !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7) !important;
+  font-weight: 900 !important;
+}
+
+.login-page .hero-stat small {
+  color: #e2e8f0 !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6) !important;
+}
+
+.login-page .hero-badge {
+  color: #bfdbfe !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  border-color: rgba(147, 197, 253, 0.5) !important;
+  font-weight: 700 !important;
+}
+
+/* ─── CLEAN WHITE SAAS PORTALS (Super Admin, Exam Cell, Placement, Library, Transport, Staff, Accounts, Admin Ops, Faculty, HOD) ─── */
+.erp-main-content {
+  background: #f8fafc !important;
   color: #0f172a !important;
 }
+
+.erp-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.erp-header-title h1 {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+.erp-header-title p {
+  color: #475569 !important;
+  font-weight: 600 !important;
+}
+
+.erp-panel {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.erp-panel-title h3 {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+.erp-panel-title p {
+  color: #475569 !important;
+  font-weight: 500 !important;
+}
+
+.erp-table th {
+  color: #0f172a !important;
+  background: #f1f5f9 !important;
+  font-weight: 800 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+}
+
+.erp-table td {
+  color: #1e293b !important;
+  font-weight: 500 !important;
+}
+
+.erp-table td strong {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+.erp-stat-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.erp-stat-val {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+.erp-stat-card-title {
+  color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+.erp-stat-note {
+  color: #64748b !important;
+  font-weight: 600 !important;
+}
+
+/* Dark Sidebars */
+.erp-sidebar {
+  background: #0f172a !important;
+}
+
+.erp-sidebar .erp-brand-text h2 {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+.erp-sidebar .erp-nav-item {
+  color: #cbd5e1 !important;
+  font-weight: 600 !important;
+}
+
+.erp-sidebar .erp-nav-item.active {
+  color: #ffffff !important;
+  background: #2563eb !important;
+}
+
+/* ========================================================
+   GLOBAL STUDENT-STYLE NAV CURSOR SYSTEM ACROSS ALL PORTALS
+   Ensures identical electric-blue active pill indicator
+   and pointer cursor on all navigation and action items.
+   ======================================================== */
+.campus-os-nav a,
+.campus-os-nav button,
+.erp-nav-item,
+.admin-nav-btn,
+.hod-nav-btn,
+.faculty-nav-btn,
+.accounts-nav-btn,
+.hostel-nav-btn,
+.canteen-nav-btn,
+.mgmt-nav-item {
+  cursor: pointer !important;
+}
+
+.erp-nav-item.active,
+.admin-nav-btn.active,
+.hod-nav-btn.active,
+.faculty-nav-btn.active,
+.accounts-nav-btn.active,
+.hostel-nav-btn.active,
+.canteen-nav-btn.active,
+.mgmt-nav-item.active {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45) !important;
+  border-radius: 14px !important;
+}
+
+.erp-nav-item.active svg,
+.admin-nav-btn.active svg,
+.hod-nav-btn.active svg,
+.faculty-nav-btn.active svg,
+.accounts-nav-btn.active svg,
+.hostel-nav-btn.active svg,
+.canteen-nav-btn.active svg,
+.mgmt-nav-item.active svg {
+  color: #ffffff !important;
+}
+
+/* ─── Global Hamburger Menu Toggle Button (3-Line Icon) ─── */
+.campus-nav-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  cursor: pointer !important;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
+  flex-shrink: 0;
+}
+
+.campus-nav-toggle-btn:hover {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+.hod-layout.sidebar-closed,
+.faculty-layout.sidebar-closed,
+.accounts-layout.sidebar-closed,
+.hostel-layout.sidebar-closed,
+.canteen-layout.sidebar-closed,
+.admin-layout.sidebar-closed {
+  grid-template-columns: 1fr !important;
+}
+
+/* ========================================================
+   GLOBAL CAMPUS OS TOP-RIGHT USER PROFILE PILL & SIGN OUT
+   Matches Image 2 reference design across all roles & portals.
+   ======================================================== */
+.campus-user-pill {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 5px 10px 5px 6px !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+  transition: all 0.2s ease !important;
+  cursor: default;
+}
+
+.campus-user-pill:hover {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+}
+
+.campus-user-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25) !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+}
+
+.campus-user-passport {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  border: 2px solid #2563eb !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #f1f5f9 !important;
+}
+
+.campus-user-passport-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.campus-user-details {
+  display: flex !important;
+  flex-direction: column !important;
+  text-align: left !important;
+  line-height: 1.2 !important;
+}
+
+.campus-user-details strong {
+  display: block !important;
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  line-height: 1.2 !important;
+}
+
+.campus-user-details small {
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  color: #2563eb !important;
+  line-height: 1.2 !important;
+}
+
+.campus-logout-btn {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  padding: 6px !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+  margin-left: 4px !important;
+}
+
+.campus-logout-btn:hover {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  border-color: #fca5a5 !important;
+  transform: scale(1.05) !important;
+}
+
+/* Hide any legacy bottom sidebar sign out buttons across all portals */
+.erp-sidebar-footer,
+.mgmt-sidebar-footer {
+  display: none !important;
+}
+
+/* ========================================================
+   GLOBAL HIGH-CONTRAST LEGIBILITY & ACCESSIBLE FONT SIZES
+   Eliminates tiny, washed-out or low-contrast text across
+   all student views, widgets, tables, cards and profiles.
+   ======================================================== */
+.student-portal,
+.student-profile-page {
+  font-size: 13px !important;
+  color: #0f172a !important;
+}
+
+.student-detail-row dt {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+}
+
+.student-detail-row dd {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+}
+
+.student-profile-name {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+.portal-brand-copy small {
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  letter-spacing: 0.05em !important;
+}
+
+.portal-brand-copy strong {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+.portal-user-copy strong {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+.portal-user-copy small {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #2563eb !important;
+}
+
+.fee-bar strong {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+.fee-bar span {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.notice-copy strong {
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+}
+
+.notice-copy small {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.notice-tag {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+}
+
+.birthday-list strong {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+}
+
+.birthday-list small {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+}
+
+.birthday-date {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.calendar-weekdays span {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+}
+
+.calendar-days > span {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+}
+
+.calendar-controls strong {
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+.calendar-legend {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+}
+
+.holiday-row > * {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+}
+
+.holiday-heading > * {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+.portal-footer {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+}
+
+/* Student Profile Page Legibility */
+.profile-breadcrumb {
+  font-size: 12px !important;
+  color: #475569 !important;
+}
+
+.profile-breadcrumb strong {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.profile-title-row h1 {
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+.profile-return {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+}
+
+.profile-summary-row dt {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+}
+
+.profile-summary-row dd {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+}
+
+.profile-tabs button {
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+}
+
+.profile-data-field > span {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  background: #f1f5f9 !important;
+}
+
+.profile-data-field > strong {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+}
+
+.qualification-table th,
+.qualification-table td,
+.attendance-summary-table th,
+.attendance-summary-table td,
+.subject-attendance-table th,
+.subject-attendance-table td,
+.fee-data-table th,
+.fee-data-table td {
+  font-size: 12px !important;
+  color: #0f172a !important;
+}
+
+.qualification-table thead th,
+.attendance-summary-table thead th,
+.subject-attendance-table thead th,
+.fee-data-table thead th {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  background: #f1f5f9 !important;
+}
+
+.fee-overview p {
+  font-size: 12px !important;
+  color: #1e293b !important;
+}
+
+.fee-notice {
+  font-size: 12px !important;
+  color: #78350f !important;
+}
+
+.profile-overview-label {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.profile-overview-copy p {
+  font-size: 12px !important;
+  color: #475569 !important;
+}
+
+.profile-overview-facts small {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+}
+
+.profile-overview-facts strong {
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+.profile-quick-links button {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #1d4ed8 !important;
+}
+

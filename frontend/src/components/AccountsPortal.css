@@ -86,40 +86,42 @@
   padding: 1.25rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 6px;
 }
 
 .accounts-nav-btn {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
   width: 100%;
-  padding: 0.6rem 0.75rem;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 14px;
   border: none;
   background: transparent;
   color: #475569;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer !important;
+  transition: all 0.2s ease;
   text-align: left;
 }
 
 .accounts-nav-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: #eff6ff;
+  color: #2563eb;
+  cursor: pointer !important;
 }
 
 .accounts-nav-btn.active {
-  background: #047857;
-  color: #ffffff;
-  font-weight: 600;
-  box-shadow: 0 4px 10px rgba(4, 120, 87, 0.2);
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45) !important;
+  border-radius: 14px !important;
 }
 
 .accounts-nav-btn.active svg {
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .accounts-main {
@@ -127,3 +129,229 @@
   overflow-y: auto;
   max-width: 1400px;
 }
+
+/* Accounts Filter Bar */
+.accounts-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  background: #ffffff;
+  padding: 0.85rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.accounts-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.accounts-filter-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.accounts-filter-select {
+  padding: 0.45rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.825rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.accounts-filter-select:focus {
+  border-color: #2563eb;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Clickable Interactive KPI Card */
+.admin-kpi-card.interactive-kpi {
+  cursor: pointer !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+}
+
+.admin-kpi-card.interactive-kpi:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  border-color: #93c5fd;
+}
+
+.kpi-click-indicator {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.admin-kpi-card.interactive-kpi:hover .kpi-click-indicator {
+  opacity: 1;
+  color: #2563eb;
+}
+
+/* Visual Progress Bar */
+.accounts-progress-track {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.accounts-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Monthly Trends Visual Chart */
+.accounts-trend-chart-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  height: 160px;
+  padding: 1.25rem 0.5rem 0.5rem;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 0.75rem;
+}
+
+.accounts-trend-bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.accounts-trend-bars-wrapper {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  height: 120px;
+  width: 100%;
+  justify-content: center;
+}
+
+.accounts-bar-assessed {
+  width: 14px;
+  background: #94a3b8;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.4s ease;
+}
+
+.accounts-bar-collected {
+  width: 14px;
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.4s ease;
+}
+
+.accounts-trend-bar-label {
+  font-size: 0.725rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+/* Fee Head Breakdown Item */
+.accounts-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.85rem;
+}
+
+.accounts-head-row:last-child {
+  border-bottom: none;
+}
+
+/* Student Statement Summary Box */
+.accounts-statement-box {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  padding: 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1rem;
+}
+
+.accounts-statement-stat-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.accounts-statement-stat-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+/* Badges for Clearance */
+.accounts-badge-cleared {
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.accounts-badge-pending {
+  background: #fee2e2;
+  color: #b91c1c;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.accounts-badge-partial {
+  background: #fef3c7;
+  color: #b45309;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+

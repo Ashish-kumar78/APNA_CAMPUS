@@ -1,6 +1,6 @@
 // Fee Payment Proof & Verification API Handler with Live Endpoint Calling and Initial Mock Fallback
 
-import { api } from './api'
+import { api } from './api';
 
 // Mock In-Memory Storage for dynamic testing when backend is offline
 let mockPaymentProofs = [
@@ -21,7 +21,7 @@ let mockPaymentProofs = [
     status: 'PENDING',
     submittedAt: '2026-10-05T09:30:00Z',
     rejectionReason: null,
-    ocrMatch: { txnMatch: 'EXACT', amountMatch: 'EXACT', confidence: 98 }
+    ocrMatch: { txnMatch: 'EXACT', amountMatch: 'EXACT', confidence: 98 },
   },
   {
     id: 'PAY-8819',
@@ -42,7 +42,7 @@ let mockPaymentProofs = [
     verifiedBy: 'Accounts Officer (Subhashree Jena)',
     verifiedAt: '2026-10-04T16:00:00Z',
     rejectionReason: null,
-    ocrMatch: { txnMatch: 'EXACT', amountMatch: 'EXACT', confidence: 99 }
+    ocrMatch: { txnMatch: 'EXACT', amountMatch: 'EXACT', confidence: 99 },
   },
   {
     id: 'PAY-8815',
@@ -63,50 +63,101 @@ let mockPaymentProofs = [
     verifiedBy: 'Accounts Officer (Subhashree Jena)',
     verifiedAt: '2026-10-04T12:30:00Z',
     rejectionReason: 'Transaction ID could not be verified in bank statement log.',
-    ocrMatch: { txnMatch: 'MISMATCH', amountMatch: 'EXACT', confidence: 45 }
-  }
+    ocrMatch: { txnMatch: 'MISMATCH', amountMatch: 'EXACT', confidence: 45 },
+  },
 ];
 
 export const feesApi = {
-  // 1. Fetch Fee Statement & Payment History for Student
+  // 1. Fetch Financial Dashboard Metrics & KPIs
+  getDashboardStats: async (query = {}) => {
+    try {
+      const res = await api.getFeeDashboardStats(query);
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return {
+      totalAssessed: 41370000,
+      totalCollected: 36240000,
+      totalOutstanding: 5130000,
+      collectionRate: 87.6,
+      studentsWithDues: 54,
+      pendingVerificationsCount: mockPaymentProofs.filter(p => p.status === 'PENDING').length,
+      pendingVerificationsSum: mockPaymentProofs.filter(p => p.status === 'PENDING').reduce((s, p) => s + p.amount, 0),
+      failedTransactionsCount: 2,
+      scholarshipsSanctioned: 8610000,
+      scholarshipsDisbursed: 6610000,
+      refundsAndReversals: 25000,
+      monthlyTrends: [
+        { month: 'Jun', assessed: 8200000, collected: 7100000 },
+        { month: 'Jul', assessed: 12500000, collected: 11200000 },
+        { month: 'Aug', assessed: 9800000, collected: 8900000 },
+        { month: 'Sep', assessed: 6400000, collected: 5600000 },
+        { month: 'Oct', assessed: 4470000, collected: 3440000 },
+      ],
+      feeHeadBreakdown: [
+        { head: 'Tuition & Academic Fee', percentage: 55, amount: 22753500 },
+        { head: 'Development & Infrastructure', percentage: 18, amount: 7446600 },
+        { head: 'Hostel & Residential Boarding', percentage: 15, amount: 6205500 },
+        { head: 'Transportation Fleet Charges', percentage: 7, amount: 2895900 },
+        { head: 'Examination & Autonomous Evaluation', percentage: 5, amount: 2068500 },
+      ],
+      paymentChannelDistribution: [
+        { channel: 'Online Net Banking', percentage: 48, count: 214 },
+        { channel: 'UPI / QR Campus Scan', percentage: 32, count: 142 },
+        { channel: 'Bank Challan / NEFT', percentage: 14, count: 62 },
+        { channel: 'Accounts Counter Cash', percentage: 6, count: 26 },
+      ],
+    };
+  },
+
+  // 2. Fetch Fee Statement & Payment History for Student
   getFeeStatement: async (rollNumber = '2305201001') => {
     try {
       const res = await api.getFeeStatement(rollNumber);
       if (res && res.success) return res.data;
     } catch {
-      // Fallback mock payload
+      // Fallback
     }
     const studentHistory = mockPaymentProofs.filter(
       (item) => item.rollNumber === rollNumber || item.rollNumber === '2305201037' || item.rollNumber === '2305201001'
     );
     return {
-      studentName: 'Rakesh Das',
-      rollNumber: '2305201001',
-      department: 'Computer Science & Engineering',
-      totalFee: 89000,
-      scholarship: 15000,
-      paidAmount: 62000,
-      pendingAmount: 12000,
-      currentSemester: 'Semester 7 (4th Year)',
-      paymentHistory: studentHistory
+      student: {
+        studentName: 'Rakesh Das',
+        rollNumber: '2305201001',
+        department: 'Computer Science & Engineering',
+        program: 'B.Tech (Autonomous)',
+        semester: 'Semester 7 (4th Year)',
+        academicYear: '2026-27',
+        category: 'General',
+        quota: 'State Counselling (OJEE)',
+      },
+      totalAnnualDues: 98500,
+      paidAmount: 86500,
+      scholarshipCredit: 15000,
+      outstanding: 12000,
+      nextDueDate: '15 Nov 2026',
+      feeHeads: [
+        { id: 'FH-01', head: 'Tuition Fee (Autumn Term)', assessed: 38000, paid: 38000, balance: 0, dueDate: '15 Aug 2026', status: 'Cleared' },
+        { id: 'FH-02', head: 'Development & Infrastructure Fee', assessed: 10500, paid: 10500, balance: 0, dueDate: '15 Aug 2026', status: 'Cleared' },
+        { id: 'FH-03', head: 'Laboratory & Computing Systems Fee', assessed: 6000, paid: 6000, balance: 0, dueDate: '30 Aug 2026', status: 'Cleared' },
+        { id: 'FH-04', head: 'Autonomous Semester Examination Fee', assessed: 2500, paid: 2500, balance: 0, dueDate: '10 Sep 2026', status: 'Cleared' },
+        { id: 'FH-05', head: 'Central Library & Digital ERP Access', assessed: 1500, paid: 1500, balance: 0, dueDate: '10 Sep 2026', status: 'Cleared' },
+        { id: 'FH-06', head: 'Hostel & Residential Boarding', assessed: 28000, paid: 20000, balance: 8000, dueDate: '15 Nov 2026', status: 'Partial' },
+        { id: 'FH-07', head: 'Mess Catering Charges (Installment 2)', assessed: 12000, paid: 8000, balance: 4000, dueDate: '15 Nov 2026', status: 'Partial' },
+      ],
+      paymentHistory: studentHistory,
     };
   },
 
-  // 2. Upload Fee Payment Proof
+  // 3. Upload Fee Payment Proof
   uploadPaymentProof: async (payload) => {
     try {
-      const res = await fetch('http://localhost:4000/api/fees/payment-proof', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('collegeflow_token') || ''}`
-        },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (data && data.success) return data;
+      const res = await api.uploadPaymentProof(payload);
+      if (res && res.success) return res;
     } catch {
-      // Fallback mock behavior
+      // Fallback
     }
 
     const newProof = {
@@ -115,9 +166,9 @@ export const feesApi = {
       rollNumber: payload.rollNumber || '2305201001',
       department: payload.department || 'Computer Science & Engineering',
       amount: Number(payload.amount),
-      paymentDate: payload.paymentDate,
-      paymentMethod: payload.paymentMethod,
-      transactionId: payload.transactionId,
+      paymentDate: payload.paymentDate || new Date().toISOString().split('T')[0],
+      paymentMethod: payload.paymentMethod || 'UPI',
+      transactionId: payload.transactionId || `TXN${Date.now()}`,
       referenceNumber: payload.referenceNumber || `REF-${Math.floor(1000 + Math.random() * 9000)}`,
       remarks: payload.remarks || '',
       proofUrl: payload.previewUrl || payload.fileUrl || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80',
@@ -126,27 +177,24 @@ export const feesApi = {
       status: 'PENDING',
       submittedAt: new Date().toISOString(),
       rejectionReason: null,
-      ocrMatch: { txnMatch: 'VERIFYING', amountMatch: 'MATCH', confidence: 95 }
+      ocrMatch: { txnMatch: 'VERIFYING', amountMatch: 'MATCH', confidence: 95 },
     };
 
     mockPaymentProofs.unshift(newProof);
     return {
       success: true,
       message: 'Payment proof submitted successfully for verification!',
-      data: newProof
+      data: newProof,
     };
   },
 
-  // 3. Fetch All Pending/Reviewed Payment Proofs for Accounts Verification Dashboard
+  // 4. Fetch All Pending/Reviewed Payment Proofs
   getPaymentVerifications: async (statusFilter = 'ALL', search = '') => {
     try {
-      const res = await fetch(`http://localhost:4000/api/accounts/payment-verifications?status=${statusFilter}&search=${encodeURIComponent(search)}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('collegeflow_token') || ''}` }
-      });
-      const data = await res.json();
-      if (data && data.success) return data.data;
+      const res = await api.getPaymentVerifications(statusFilter, search);
+      if (res && res.success) return res.data;
     } catch {
-      // Fallback mock filtering
+      // Fallback
     }
 
     let filtered = [...mockPaymentProofs];
@@ -165,17 +213,13 @@ export const feesApi = {
     return filtered;
   },
 
-  // 4. Approve Payment Verification (Accounts Section)
+  // 5. Approve Payment Verification
   approvePayment: async (id) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/accounts/payment-verifications/${id}/approve`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('collegeflow_token') || ''}` }
-      });
-      const data = await res.json();
-      if (data && data.success) return data;
+      const res = await api.approvePaymentProof(id);
+      if (res && res.success) return res;
     } catch {
-      // Fallback mock update
+      // Fallback
     }
 
     mockPaymentProofs = mockPaymentProofs.map((item) => {
@@ -185,7 +229,7 @@ export const feesApi = {
           status: 'APPROVED',
           verifiedBy: 'Accounts Officer (Subhashree Jena)',
           verifiedAt: new Date().toISOString(),
-          rejectionReason: null
+          rejectionReason: null,
         };
       }
       return item;
@@ -193,25 +237,17 @@ export const feesApi = {
 
     return {
       success: true,
-      message: 'Payment verified and approved! Student fee ledger updated.'
+      message: 'Payment verified and approved! Student fee ledger updated.',
     };
   },
 
-  // 5. Reject Payment Verification (Accounts Section)
+  // 6. Reject Payment Verification
   rejectPayment: async (id, rejectionReason) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/accounts/payment-verifications/${id}/reject`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('collegeflow_token') || ''}`
-        },
-        body: JSON.stringify({ rejectionReason })
-      });
-      const data = await res.json();
-      if (data && data.success) return data;
+      const res = await api.rejectPaymentProof(id, rejectionReason);
+      if (res && res.success) return res;
     } catch {
-      // Fallback mock update
+      // Fallback
     }
 
     mockPaymentProofs = mockPaymentProofs.map((item) => {
@@ -221,7 +257,7 @@ export const feesApi = {
           status: 'REJECTED',
           verifiedBy: 'Accounts Officer (Subhashree Jena)',
           verifiedAt: new Date().toISOString(),
-          rejectionReason: rejectionReason || 'Transaction proof could not be validated.'
+          rejectionReason: rejectionReason || 'Transaction proof could not be validated.',
         };
       }
       return item;
@@ -229,7 +265,74 @@ export const feesApi = {
 
     return {
       success: true,
-      message: 'Payment rejected. Reason sent to student.'
+      message: 'Payment rejected. Reason sent to student.',
     };
-  }
+  },
+
+  // 7. Fee Structures
+  getFeeStructures: async () => {
+    try {
+      const res = await api.getFeeStructures();
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  createFeeStructure: async (payload) => {
+    return api.createFeeStructure(payload);
+  },
+
+  // 8. Fee Transactions
+  getFeeTransactions: async (search = '') => {
+    try {
+      const res = await api.getFeeTransactions(search);
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  recordFeePayment: async (payload) => {
+    return api.recordFeePayment(payload);
+  },
+
+  // 9. Scholarships
+  getScholarships: async () => {
+    try {
+      const res = await api.getScholarships();
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  sanctionScholarship: async (payload) => {
+    return api.sanctionScholarship(payload);
+  },
+
+  // 10. Financial Reports & Documents
+  getFinancialReports: async (type = 'DAILY_COLLECTION') => {
+    try {
+      const res = await api.getFinancialReports(type);
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  getStudentDocuments: async (rollNumber = '') => {
+    try {
+      const res = await api.getStudentFinancialDocuments(rollNumber);
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
 };
+export default feesApi;

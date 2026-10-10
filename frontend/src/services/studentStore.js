@@ -1,4 +1,4 @@
-import { generateAllStudents } from '../data/collegeData.js';
+import { generateAllStudents, initialSubjects } from '../data/collegeData.js';
 
 const STORAGE_KEY = 'bput_students_records';
 const ACTIVE_STUDENT_KEY = 'bput_active_student_id';
@@ -10,16 +10,23 @@ export const defaultDemoStudent = {
   rollNumber: '01',
   registrationNumber: '2305201001',
   name: 'Rakesh Das',
-  email: 'rakesh.das@gift.edu.in',
+  email: 'rakesh.das@apnacampus.edu.in',
   phone: '+91 98610 23010',
   department: 'Computer Science & Engineering',
   deptCode: 'CSE',
+  program: 'B.Tech',
+  course: 'Bachelor of Technology',
+  currentSemester: 5,
   semester: 'Semester 5',
-  section: 'CSE · Section A',
+  section: 'A',
+  sectionName: 'CSE · Section A',
   academicYear: '2023-2027',
   status: 'Active',
+  lifecycleStatus: 'ACTIVE',
   cgpa: '8.42',
   attendance: 92,
+  backlogCount: 0,
+  enrolledSubjects: initialSubjects.filter(s => s.semester === 5 && (s.department === 'CSE' || s.deptCode === 'CSE')),
 
   // 1. Personal Details
   admissionCategory: 'General',
@@ -72,7 +79,7 @@ export const defaultDemoStudent = {
     { qualification: '+3', institute: 'Not applicable', year: '—', marks: '—' },
     { qualification: 'BCA', institute: 'Not applicable', year: '—', marks: '—' },
     { qualification: 'BBA', institute: 'Not applicable', year: '—', marks: '—' },
-    { qualification: 'BTECH', institute: 'GIFT Autonomous, Bhubaneswar', year: '2027', marks: 'In progress' },
+    { qualification: 'BTECH', institute: 'Apna Campus, Bhubaneswar', year: '2027', marks: 'In progress' },
   ],
 
   // 3. Guardians Details
@@ -100,7 +107,7 @@ export const defaultDemoStudent = {
 
   // 5. Documents Details
   documents: {
-    passportPhoto: { name: 'Passport-size photograph', status: 'Uploaded', url: '/passport_photo.svg' },
+    passportPhoto: { name: 'Passport-size photograph', status: 'Uploaded', url: '/passport_photo_male.svg' },
     govtIdProof: { name: 'Aadhaar Card', status: 'Uploaded', type: 'Aadhaar Card' },
     panCard: { name: 'PAN Card', status: 'Uploaded', type: 'PAN Card' },
     nptelCert: { name: 'NPTEL Certificate', status: 'Uploaded', type: 'NPTEL Certificate' },
@@ -238,7 +245,7 @@ export function getAllStudents() {
       permCountry: 'India',
       permPin: '751010',
 
-      currAddress: 'Campus Hostel, GIFT Autonomous',
+      currAddress: 'Campus Hostel, Apna Campus',
       currCity: 'Bhubaneswar',
       currState: 'Odisha',
       currCountry: 'India',
@@ -315,8 +322,15 @@ export function saveStudent(studentData) {
       admissionDateFormatted,
       cgpa: studentData.cgpa || '8.20',
       attendance: studentData.attendance || 90,
+      backlogCount: studentData.backlogCount !== undefined ? Number(studentData.backlogCount) : 0,
       status: studentData.status || 'Active',
+      lifecycleStatus: studentData.lifecycleStatus || 'ADMITTED',
+      program: studentData.program || studentData.course || 'Bachelor of Technology',
+      batch: studentData.batch || 'BTECH 2026–2030',
       academicSection: `${studentData.deptCode || 'CSE'} · ${studentData.section || 'Section A'}`,
+      enrolledSubjects: studentData.enrolledSubjects || initialSubjects
+        .filter(sub => sub.program === (studentData.program || 'B.Tech') || sub.department === (studentData.deptCode || 'CSE'))
+        .map(sub => sub.name),
       qualifications: studentData.qualifications && studentData.qualifications.length > 0
         ? studentData.qualifications
         : [
@@ -327,7 +341,7 @@ export function saveStudent(studentData) {
             { qualification: '+3', institute: studentData.qualPlus3Institute || 'Not applicable', year: studentData.qualPlus3Year || '—', marks: studentData.qualPlus3Marks || '—' },
             { qualification: 'BCA', institute: studentData.qualBcaInstitute || 'Not applicable', year: studentData.qualBcaYear || '—', marks: studentData.qualBcaMarks || '—' },
             { qualification: 'BBA', institute: studentData.qualBbaInstitute || 'Not applicable', year: studentData.qualBbaYear || '—', marks: studentData.qualBbaMarks || '—' },
-            { qualification: 'BTECH', institute: studentData.qualBtechInstitute || 'GIFT Autonomous, Bhubaneswar', year: studentData.qualBtechYear || '2027', marks: studentData.qualBtechMarks || 'In progress' },
+            { qualification: 'BTECH', institute: studentData.qualBtechInstitute || 'Apna Campus, Bhubaneswar', year: studentData.qualBtechYear || '2027', marks: studentData.qualBtechMarks || 'In progress' },
           ],
       documents: {
         passportPhoto: {

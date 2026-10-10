@@ -15,7 +15,9 @@ import {
   Edit2,
   Download,
   X,
-  TrendingUp
+  TrendingUp,
+  Menu,
+  MessageSquare
 } from 'lucide-react';
 import './CanteenPortal.css';
 import '../components/AdminPortal.css';
@@ -23,8 +25,10 @@ import { downloadCanteenStatementPdf } from '../utils/pdfGenerator';
 import { initialFoodItems, initialCanteenOrders } from '../data/collegeData.js';
 import { api } from '../services/api.js';
 import { useTimeGreeting } from '../utils/timeGreeting.js';
+import CampusConnect from './CampusConnect/CampusConnect.jsx';
 
 export default function CanteenPortal({ account, onLogout }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [foodItems, setFoodItems] = useState(initialFoodItems);
@@ -130,62 +134,117 @@ export default function CanteenPortal({ account, onLogout }) {
 
       {/* Top Header */}
       <header className="canteen-header">
-        <div className="canteen-brand">
-          <div className="canteen-brand-icon">
-            <Utensils size={20} />
+        <div className="canteen-brand" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {!sidebarOpen && (
+            <button
+              className="campus-nav-toggle-btn"
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              title="Show Navigation"
+              aria-label="Show Navigation"
+            >
+              <Menu size={20} />
+            </button>
+          )}
+          <div className="canteen-brand-icon" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
           </div>
           <div className="canteen-brand-text">
-            <h1>GIFT AUTONOMOUS · SMART MESS & CANTEEN</h1>
-            <p>Food Services & Kitchen Management Terminal</p>
+            <h1>APNA CAMPUS · SMART MESS &amp; CANTEEN</h1>
+            <p>Food Services &amp; Kitchen Management Terminal</p>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span className="canteen-role-badge">
-            <Utensils size={14} />
-            Canteen Supervisor
-          </span>
-          <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>
-            {account?.name || 'Canteen Staff'}
-          </span>
-          <button className="admin-signout-btn" onClick={onLogout} title="Sign Out">
-            <LogOut size={15} /> Sign out
-          </button>
+          {/* Top-Right Campus OS User Profile Pill with Sign Out */}
+          <div className="campus-user-pill">
+            <div className="campus-user-avatar">CAN</div>
+            <div className="campus-user-details">
+              <strong>{account?.name || 'Canteen Staff'}</strong>
+              <small>Smart Mess &amp; Canteen Operations</small>
+            </div>
+            <button
+              className="campus-logout-btn"
+              type="button"
+              onClick={onLogout}
+              title="Sign out"
+              aria-label="Sign out"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Main Layout */}
-      <div className="canteen-layout">
+      <div className={`canteen-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
         {/* Sidebar */}
-        <aside className="canteen-sidebar">
-          <button
-            className={`canteen-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <Layers size={17} /> Dashboard
-          </button>
-          <button
-            className={`canteen-nav-btn ${activeTab === 'orders' ? 'active' : ''}`}
-            onClick={() => setActiveTab('orders')}
-          >
-            <ShoppingBag size={17} /> Live Order Queue ({pendingOrders + preparingOrders})
-          </button>
-          <button
-            className={`canteen-nav-btn ${activeTab === 'menu' ? 'active' : ''}`}
-            onClick={() => setActiveTab('menu')}
-          >
-            <Utensils size={17} /> Food Menu & Pricing
-          </button>
-          <button
-            className={`canteen-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reports')}
-          >
-            <FileText size={17} /> Daily Sales Reports
-          </button>
-        </aside>
+        {sidebarOpen && (
+          <aside className="canteen-sidebar">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.2rem 0.4rem 0.6rem', borderBottom: '1px solid #f1f5f9', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Canteen Menu</span>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(false)}
+                style={{
+                  background: 'rgba(15, 23, 42, 0.08)',
+                  border: 'none',
+                  color: '#64748b',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Close Navigation"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <button
+              className={`canteen-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveTab('dashboard')}
+            >
+              <Layers size={17} /> Dashboard
+            </button>
+            <button
+              className={`canteen-nav-btn ${activeTab === 'orders' ? 'active' : ''}`}
+              onClick={() => setActiveTab('orders')}
+            >
+              <ShoppingBag size={17} /> Live Order Queue ({pendingOrders + preparingOrders})
+            </button>
+            <button
+              className={`canteen-nav-btn ${activeTab === 'menu' ? 'active' : ''}`}
+              onClick={() => setActiveTab('menu')}
+            >
+              <Utensils size={17} /> Food Menu & Pricing
+            </button>
+            <button
+              className={`canteen-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
+              onClick={() => setActiveTab('reports')}
+            >
+              <FileText size={17} /> Daily Sales Reports
+            </button>
+            <button
+              className={`canteen-nav-btn ${activeTab === 'campus-connect' ? 'active' : ''}`}
+              onClick={() => setActiveTab('campus-connect')}
+            >
+              <MessageSquare size={17} /> Campus Connect (WhatsApp)
+            </button>
+          </aside>
+        )}
 
         {/* Dynamic Content Pane */}
         <main className="canteen-main">
+          {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
+          {activeTab === 'campus-connect' && (
+            <div style={{ height: 'calc(100vh - 120px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>
+              <CampusConnect account={account} />
+            </div>
+          )}
+
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
             <div>

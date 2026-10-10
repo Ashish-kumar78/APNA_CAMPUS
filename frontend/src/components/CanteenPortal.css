@@ -86,40 +86,42 @@
   padding: 1.25rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 6px;
 }
 
 .canteen-nav-btn {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
   width: 100%;
-  padding: 0.6rem 0.75rem;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 14px;
   border: none;
   background: transparent;
   color: #475569;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer !important;
+  transition: all 0.2s ease;
   text-align: left;
 }
 
 .canteen-nav-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: #eff6ff;
+  color: #2563eb;
+  cursor: pointer !important;
 }
 
 .canteen-nav-btn.active {
-  background: #d97706;
-  color: #ffffff;
-  font-weight: 600;
-  box-shadow: 0 4px 10px rgba(217, 119, 6, 0.2);
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45) !important;
+  border-radius: 14px !important;
 }
 
 .canteen-nav-btn.active svg {
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .canteen-main {

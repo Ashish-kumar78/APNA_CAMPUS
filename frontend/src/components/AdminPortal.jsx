@@ -39,9 +39,15 @@ import {
   UsersRound,
   Briefcase,
   CreditCard,
-  ChevronDown
+  ChevronDown,
+  Megaphone,
+  Menu,
+  Coffee,
+  FileSpreadsheet
 } from 'lucide-react';
+import ReportGenerationModule from './ReportGenerationModule.jsx';
 import './AdminPortal.css';
+import AdminCommunicationControl from './CampusConnect/AdminCommunicationControl.jsx';
 import { downloadAdminReportPdf } from '../utils/pdfGenerator';
 import {
   initialDepartments,
@@ -57,7 +63,11 @@ import {
   initialSecurityGuards,
   initialCanteenStaff,
   initialOtherStaff,
+  initialPrograms,
+  initialBatches,
+  initialFacultyAssignments,
 } from '../data/collegeData.js';
+import { erpStore } from '../services/erpStore.js';
 import MarksManagementModule from '../marks/MarksManagementModule.jsx';
 import { api } from '../services/api.js';
 import { getAllStudents, saveStudent, setActiveStudent, getAllDocuments, saveDocument, deleteDocument, getStudentDocuments, addStudentDocument } from '../services/studentStore.js';
@@ -132,7 +142,7 @@ const defaultStudentFormState = {
   qualBbaInstitute: 'Not applicable',
   qualBbaYear: '—',
   qualBbaMarks: '—',
-  qualBtechInstitute: 'GIFT Autonomous, Bhubaneswar',
+  qualBtechInstitute: 'Apna Campus',
   qualBtechYear: '2027',
   qualBtechMarks: 'In progress',
 
@@ -197,7 +207,7 @@ const sampleAutofillStudent = {
 
   // Step 2: Academic Details
   rollNumber: '92',
-  email: 'priyanshu.mohapatra92@gift.edu.in',
+  email: 'priyanshu.mohapatra92@apnacampus.edu.in',
   phone: '+91 94371 88920',
   course: 'Bachelor of Technology',
   batch: 'BTECH 2023–2027',
@@ -240,7 +250,7 @@ const sampleAutofillStudent = {
   qualBbaInstitute: 'Not applicable',
   qualBbaYear: '—',
   qualBbaMarks: '—',
-  qualBtechInstitute: 'GIFT Autonomous, Bhubaneswar',
+  qualBtechInstitute: 'Apna Campus',
   qualBtechYear: '2027',
   qualBtechMarks: 'In progress',
 
@@ -281,6 +291,7 @@ const sampleAutofillStudent = {
 };
 
 export default function AdminPortal({ account, onLogout, onSwitchRole }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const greeting = useTimeGreeting();
   const [currentLiveTime, setCurrentLiveTime] = useState(() => new Date());
 
@@ -339,7 +350,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
     assignedHostel: 'Gandhi Boys Residence (Hostel 1)',
     roomOffice: 'Ground Floor, Warden Office A-01',
     phone: '+91 94370 11223',
-    email: 'warden@gift.edu.in',
+    email: 'warden@apnacampus.edu.in',
     shift: '24x7 Resident Duty',
     residentsCount: 160,
     totalBeds: 180,
@@ -412,6 +423,9 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
   const [formValidationError, setFormValidationError] = useState('');
   const [studentFormData, setStudentFormData] = useState(defaultStudentFormState);
   const [studentDocPreview, setStudentDocPreview] = useState(null);
+
+  // Admission Credential Card (shown after new student creation)
+  const [admissionCredential, setAdmissionCredential] = useState(null); // { name, regNo, password, department, semester }
 
   const [isFacultyModalOpen, setIsFacultyModalOpen] = useState(false);
   const [editingFaculty, setEditingFaculty] = useState(null);
@@ -549,7 +563,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
       ...defaultStudentFormState,
       rollNumber: nextRoll,
       thumbId: `GFT230520${nextRoll.padStart(4, '0')}`,
-      email: `student.${nextRoll}@gift.edu.in`,
+      email: `student.${nextRoll}@apnacampus.edu.in`,
     });
     setIsStudentModalOpen(true);
   };
@@ -574,7 +588,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
       ...sampleAutofillStudent,
       rollNumber: nextRoll,
       thumbId: `GFT230520${nextRoll.padStart(4, '0')}`,
-      email: `priyanshu.mohapatra${nextRoll}@gift.edu.in`,
+      email: `priyanshu.mohapatra${nextRoll}@apnacampus.edu.in`,
     });
     setFormValidationError('');
     showToast('✨ All 5 compulsory sections populated with verified sample student details!');
@@ -583,7 +597,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
   const handleAttachDemoDocs = () => {
     setStudentFormData(prev => ({
       ...prev,
-      passportPhotoUrl: prev.passportPhotoUrl || (prev.gender === 'Female' ? '/passport_photo.svg' : '/passport_photo_male.svg'),
+      passportPhotoUrl: prev.passportPhotoUrl || (prev.gender === 'Female' ? '/passport_photo_female.svg' : '/passport_photo_male.svg'),
       passportPhotoName: prev.passportPhotoName || 'passport_photo_sample.jpg',
       govtIdFileUrl: prev.govtIdFileUrl || '/sample_documents/sample_document.pdf',
       govtIdFileName: prev.govtIdFileName || 'aadhaar_card_verified.pdf',
@@ -726,6 +740,26 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
     setStudentFormStep(prev => Math.max(1, prev - 1));
   };
 
+  /**
+   * Auto-generate a structured Registration Number.
+   * Format: YY + DEPT_CODE(3) + ROLL(4 digits)
+   * Example: 2305CSE0092  →  Year 2023, Dept CSE, Roll 92
+   */
+  function generateRegistrationNumber(admissionYear, deptCode, rollNumber) {
+    const yy = String(admissionYear || new Date().getFullYear()).slice(2); // '23'
+    const dept = String(deptCode || 'CSE').toUpperCase().slice(0, 3);       // 'CSE'
+    const roll = String(rollNumber || students.length + 1).padStart(4, '0'); // '0092'
+    return `${yy}05${dept}${roll}`;
+  }
+
+  /**
+   * Auto-generate a default password for the student.
+   * Format: Gift@YYYY  (e.g., Gift@2023)
+   */
+  function generateDefaultPassword(admissionYear) {
+    return `Gift@${admissionYear || new Date().getFullYear()}`;
+  }
+
   const handleSaveStudent = (e) => {
     if (e) e.preventDefault();
 
@@ -751,22 +785,63 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
     }
 
     const fullName = `${studentFormData.firstName || ''} ${studentFormData.lastName || ''}`.trim() || studentFormData.name || 'New Student';
+    const isNew = !editingStudent;
+
+    // Auto-generate Registration Number for new students
+    const admissionYear = studentFormData.admissionDate
+      ? new Date(studentFormData.admissionDate).getFullYear()
+      : new Date().getFullYear();
+    const autoRegNo = isNew
+      ? generateRegistrationNumber(admissionYear, studentFormData.deptCode, studentFormData.rollNumber)
+      : (editingStudent.registrationNumber || studentFormData.registrationNumber);
+    const defaultPassword = isNew ? generateDefaultPassword(admissionYear) : null;
+
     const payload = {
       ...studentFormData,
       name: fullName,
       id: editingStudent ? editingStudent.id : undefined,
+      registrationNumber: autoRegNo,
+      defaultPassword: defaultPassword, // stored so it can be shown in credential card
     };
 
     const saved = saveStudent(payload);
     setStudents(getAllStudents());
     setActiveStudent(saved.id);
 
-    if (editingStudent) {
-      showToast(`Student ${saved.name} updated successfully!`);
-    } else {
-      showToast(`Student ${saved.name} (Roll ${saved.rollNumber}) registered with all 5 sections! Auto-synced to Student Section.`);
-    }
     setIsStudentModalOpen(false);
+
+    if (isNew) {
+      erpStore.logAuditEvent({
+        user: account?.name || 'Academic Administrator',
+        role: 'ADMIN',
+        action: 'Admitted New Student',
+        target: `${saved.name} (${saved.registrationNumber || autoRegNo})`,
+        oldValue: 'Application Verified',
+        newValue: `Admitted: ${saved.course || saved.program || 'B.Tech'} · ${saved.department} · ${saved.semester} ${saved.section}`,
+      });
+      // Show Admission Credential Card
+      setAdmissionCredential({
+        name: saved.name,
+        regNo: saved.registrationNumber || autoRegNo,
+        password: defaultPassword,
+        rollNumber: saved.rollNumber,
+        department: saved.department,
+        semester: saved.semester,
+        section: saved.section,
+        email: saved.email,
+        admissionDate: studentFormData.admissionDate,
+      });
+    } else {
+      erpStore.logAuditEvent({
+        user: account?.name || 'Academic Administrator',
+        role: 'ADMIN',
+        action: 'Updated Student Profile',
+        target: `${saved.name} (${saved.registrationNumber})`,
+        oldValue: 'Existing Profile',
+        newValue: 'Updated Details & Status',
+      });
+      showToast(`Student ${saved.name} updated successfully!`);
+    }
   };
 
   const handleDeleteStudent = (id, name) => {
@@ -890,7 +965,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
       assignedHostel: 'Gandhi Boys Residence (Hostel 1)',
       roomOffice: 'Ground Floor, Warden Office A-01',
       phone: '+91 94370 11223',
-      email: 'warden.new@gift.edu.in',
+      email: 'warden.new@apnacampus.edu.in',
       shift: '24x7 Resident Duty',
       residentsCount: 160,
       totalBeds: 180,
@@ -1068,6 +1143,162 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
 
   return (
     <div className="admin-portal-root">
+
+      {/* ══════════════════════════════════════════════════════════
+           ADMISSION CREDENTIAL CARD MODAL
+           Shown immediately after a new student is admitted.
+           Displays auto-generated Registration No. + default password.
+          ══════════════════════════════════════════════════════════ */}
+      {admissionCredential && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          background: 'rgba(2, 6, 23, 0.88)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px',
+        }}>
+          <div style={{
+            background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
+            border: '1px solid rgba(59,130,246,0.35)',
+            borderRadius: '20px',
+            padding: '40px 44px',
+            maxWidth: '520px',
+            width: '100%',
+            boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,130,246,0.1)',
+            position: 'relative',
+          }}>
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: '60px', height: '60px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #2563eb, #0ea5e9)',
+                marginBottom: '16px',
+              }}>
+                <GraduationCap size={28} color="#fff" />
+              </div>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)',
+                borderRadius: '20px', padding: '4px 14px', marginBottom: '12px',
+                fontSize: '11px', fontWeight: 700, color: '#4ade80',
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                Admission Successful
+              </div>
+              <h2 style={{ color: '#f8fafc', fontSize: '22px', fontWeight: 800, margin: '0 0 6px', fontFamily: "'Outfit', sans-serif" }}>
+                Welcome to Apna Campus
+              </h2>
+              <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
+                Student admission confirmed. Share these login credentials with the student.
+              </p>
+            </div>
+
+            {/* Student Info */}
+            <div style={{
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: '12px', padding: '16px 20px', marginBottom: '20px',
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  { label: 'Student Name', value: admissionCredential.name },
+                  { label: 'Department', value: admissionCredential.department },
+                  { label: 'Semester / Section', value: `${admissionCredential.semester} · ${admissionCredential.section}` },
+                  { label: 'Roll Number', value: admissionCredential.rollNumber },
+                ].map(row => (
+                  <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#64748b', fontSize: '12px', fontWeight: 500 }}>{row.label}</span>
+                    <span style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 600 }}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Credential Box */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(37,99,235,0.15), rgba(14,165,233,0.1))',
+              border: '1.5px solid rgba(59,130,246,0.4)',
+              borderRadius: '14px', padding: '20px 24px', marginBottom: '24px',
+            }}>
+              <p style={{ color: '#93c5fd', fontSize: '11px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', margin: '0 0 14px' }}>
+                🔐 Login Credentials (First-Time Login)
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <p style={{ color: '#64748b', fontSize: '11px', fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Registration Number (Login ID)</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <code style={{
+                      flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '8px', padding: '10px 14px', color: '#7dd3fc',
+                      fontSize: '18px', fontWeight: 800, fontFamily: "'Outfit', monospace", letterSpacing: '0.06em',
+                    }}>
+                      {admissionCredential.regNo}
+                    </code>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(admissionCredential.regNo); showToast('Registration number copied!'); }}
+                      style={{ background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px', padding: '10px 12px', color: '#93c5fd', cursor: 'pointer', fontSize: '11px', fontWeight: 600, whiteSpace: 'nowrap' }}
+                    >Copy</button>
+                  </div>
+                </div>
+                <div>
+                  <p style={{ color: '#64748b', fontSize: '11px', fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Default Password (must be changed on first login)</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <code style={{
+                      flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '8px', padding: '10px 14px', color: '#86efac',
+                      fontSize: '18px', fontWeight: 800, fontFamily: "'Outfit', monospace", letterSpacing: '0.06em',
+                    }}>
+                      {admissionCredential.password}
+                    </code>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(admissionCredential.password); showToast('Password copied!'); }}
+                      style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', padding: '10px 12px', color: '#4ade80', cursor: 'pointer', fontSize: '11px', fontWeight: 600, whiteSpace: 'nowrap' }}
+                    >Copy</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Info note */}
+            <p style={{ color: '#475569', fontSize: '12px', lineHeight: 1.6, marginBottom: '20px', textAlign: 'center' }}>
+              The student can log in to <strong style={{ color: '#7dd3fc' }}>Apna Campus Portal</strong> using their Registration Number as their ID.<br/>
+              The system automatically detects their role and redirects to the Student Dashboard.
+            </p>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  const text = `Apna Campus — Student Login Credentials\n\nName: ${admissionCredential.name}\nRegistration No: ${admissionCredential.regNo}\nDefault Password: ${admissionCredential.password}\nDepartment: ${admissionCredential.department}\n\nLogin at: Apna Campus Portal\nPlease change your password after first login.`;
+                  navigator.clipboard.writeText(text);
+                  showToast('Full credential slip copied to clipboard!');
+                }}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '10px',
+                  background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
+                  color: '#93c5fd', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+                }}
+              >
+                📋 Copy Full Credential Slip
+              </button>
+              <button
+                onClick={() => {
+                  setAdmissionCredential(null);
+                  showToast(`✅ ${admissionCredential.name} successfully admitted! They can now login with Reg No: ${admissionCredential.regNo}`);
+                }}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #2563eb, #0ea5e9)',
+                  border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+                }}
+              >
+                ✓ Done — Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast Alert */}
       {toastMessage && (
         <div style={{
@@ -1093,11 +1324,24 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
 
       {/* Top Header */}
       <header className="admin-header">
-        <div className="admin-brand">
-          <div className="admin-brand-icon">G</div>
+        <div className="admin-brand" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {!sidebarOpen && (
+            <button
+              className="campus-nav-toggle-btn"
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              title="Show Navigation"
+              aria-label="Show Navigation"
+            >
+              <Menu size={20} />
+            </button>
+          )}
+          <div className="admin-brand-icon" style={{ background: '#ffffff', padding: '4px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '34px', width: 'auto', objectFit: 'contain' }} />
+          </div>
           <div className="admin-brand-text">
-            <h1>GIFT AUTONOMOUS · ERP ADMIN</h1>
-            <p>Institutional Governance & Academic Management</p>
+            <h1>APNA CAMPUS · ERP ADMIN</h1>
+            <p>Institutional Governance &amp; Academic Management</p>
           </div>
         </div>
 
@@ -1126,23 +1370,53 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
             <span style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.04em' }}>{formattedLiveTime}</span>
           </div>
 
-          <span className="admin-role-badge">
-            <ShieldCheck size={14} />
-            Administrator
-          </span>
-          <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>
-            {account?.name || 'Campus Administrator'}
-          </span>
-          <button className="admin-signout-btn" onClick={onLogout} title="Sign Out">
-            <LogOut size={15} /> Sign out
-          </button>
+          {/* Top-Right Campus OS User Profile Pill with Sign Out */}
+          <div className="campus-user-pill">
+            <div className="campus-user-avatar">AD</div>
+            <div className="campus-user-details">
+              <strong>{account?.name || 'Campus Administrator'}</strong>
+              <small>Administrator • {account?.identity || 'ADM-OPS-01'}</small>
+            </div>
+            <button
+              className="campus-logout-btn"
+              type="button"
+              onClick={onLogout}
+              title="Sign out"
+              aria-label="Sign out"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Main Layout */}
-      <div className="admin-layout">
+      <div className={`admin-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
         {/* Sidebar */}
-        <aside className="admin-sidebar">
+        {sidebarOpen && (
+          <aside className="admin-sidebar">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.2rem 0.4rem 0.6rem', borderBottom: '1px solid #f1f5f9', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Menu</span>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(false)}
+                style={{
+                  background: 'rgba(15, 23, 42, 0.08)',
+                  border: 'none',
+                  color: '#64748b',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Close Navigation"
+              >
+                <X size={16} />
+              </button>
+            </div>
           {/* ── 1. INSTITUTIONAL OVERVIEW DROPDOWN ── */}
           <button
             className="admin-nav-section-dropdown"
@@ -1162,6 +1436,12 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               onClick={() => setActiveTab('dashboard')}
             >
               <Layers size={16} /> Dashboard
+            </button>
+            <button
+              className={`admin-nav-btn roster-child ${activeTab === 'report-generation' ? 'active' : ''}`}
+              onClick={() => setActiveTab('report-generation')}
+            >
+              <FileSpreadsheet size={16} /> Report Generation
             </button>
           </div>
 
@@ -1242,10 +1522,22 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
           </button>
           <div className={`roster-items ${structureOpen ? 'expanded' : ''}`}>
             <button
+              className={`admin-nav-btn roster-child ${activeTab === 'programs' ? 'active' : ''}`}
+              onClick={() => setActiveTab('programs')}
+            >
+              <GraduationCap size={16} /> Programs &amp; Degrees
+            </button>
+            <button
               className={`admin-nav-btn roster-child ${activeTab === 'departments' ? 'active' : ''}`}
               onClick={() => setActiveTab('departments')}
             >
               <Building2 size={16} /> Departments
+            </button>
+            <button
+              className={`admin-nav-btn roster-child ${activeTab === 'faculty-allocations' ? 'active' : ''}`}
+              onClick={() => setActiveTab('faculty-allocations')}
+            >
+              <Users size={16} /> Faculty Allocations
             </button>
             <button
               className={`admin-nav-btn roster-child ${activeTab === 'semesters' ? 'active' : ''}`}
@@ -1321,11 +1613,30 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
             >
               <Settings size={16} /> Settings
             </button>
+            <button
+              className={`admin-nav-btn roster-child ${activeTab === 'campus-connect-admin' ? 'active' : ''}`}
+              onClick={() => setActiveTab('campus-connect-admin')}
+            >
+              <Megaphone size={16} /> Campus Connect & Broadcast
+            </button>
           </div>
         </aside>
+        )}
 
         {/* Dynamic Content Pane */}
         <main className="admin-main">
+          {/* TAB: CAMPUS CONNECT ADMIN CONTROL */}
+          {activeTab === 'campus-connect-admin' && (
+            <div style={{ marginBottom: '20px' }}>
+              <AdminCommunicationControl account={account} />
+            </div>
+          )}
+
+          {/* TAB: REPORT GENERATION */}
+          {activeTab === 'report-generation' && (
+            <ReportGenerationModule account={account} role="admin" />
+          )}
+
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
             <div>
@@ -1601,29 +1912,61 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                       <th>Roll No</th>
                       <th>Student Name</th>
                       <th>Student ID</th>
-                      <th>Email</th>
-                      <th>Phone</th>
-                      <th>Department</th>
-                      <th>Semester & Sec</th>
+                      <th>Program &amp; Dept</th>
+                      <th>Semester &amp; Sec</th>
+                      <th>Attendance</th>
+                      <th>Academic Health</th>
                       <th>Status</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredStudents.slice(0, 25).map(s => (
-                      <tr key={s.id}>
-                        <td><strong>{s.rollNumber}</strong></td>
-                        <td style={{ fontWeight: 600 }}>{s.name}</td>
-                        <td><code style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '2px 4px', borderRadius: '4px' }}>{s.studentId}</code></td>
-                        <td>{s.email}</td>
-                        <td>{s.phone}</td>
-                        <td>{s.deptCode || 'CSE'}</td>
-                        <td>{s.semester} · {s.section}</td>
-                        <td>
-                          <span className={`admin-badge ${s.status === 'Active' ? 'active' : 'inactive'}`}>
-                            {s.status}
-                          </span>
-                        </td>
+                    {filteredStudents.slice(0, 25).map(s => {
+                      const risk = erpStore.calculateStudentRisk(s);
+                      return (
+                        <tr key={s.id}>
+                          <td><strong>{s.rollNumber}</strong></td>
+                          <td style={{ fontWeight: 600 }}>
+                            <div>{s.name}</div>
+                            <small style={{ color: '#64748b', fontSize: '0.72rem' }}>{s.email}</small>
+                          </td>
+                          <td><code style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '2px 4px', borderRadius: '4px' }}>{s.studentId}</code></td>
+                          <td>
+                            <span className="admin-badge active" style={{ fontSize: '0.74rem' }}>
+                              {s.program || s.course?.split(' ')[0] || 'B.Tech'} · {s.deptCode || 'CSE'}
+                            </span>
+                          </td>
+                          <td>{s.semester} · {s.section}</td>
+                          <td>
+                            <span style={{ fontWeight: 700, color: (s.attendance || 85) < 75 ? '#dc2626' : '#059669' }}>
+                              {s.attendance || 85}%
+                            </span>
+                          </td>
+                          <td>
+                            <span
+                              style={{
+                                background: `${risk.badgeColor}15`,
+                                color: risk.badgeColor,
+                                border: `1px solid ${risk.badgeColor}35`,
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                              title={risk.reasons.length > 0 ? risk.reasons.join(' | ') : 'Academic performance in good standing'}
+                            >
+                              {risk.isAtRisk && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: risk.badgeColor }} />}
+                              {risk.category}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`admin-badge ${s.status === 'Active' ? 'active' : 'inactive'}`}>
+                              {s.status}
+                            </span>
+                          </td>
                         <td style={{ textAlign: 'right' }}>
                           <button
                             className="admin-table-action-btn"
@@ -1648,7 +1991,8 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                    );
+                  })}
                     {filteredStudents.length === 0 && (
                       <tr>
                         <td colSpan="9" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
@@ -2556,13 +2900,123 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
             </div>
           )}
 
+          {/* TAB: PROGRAMS & DEGREES MANAGEMENT */}
+          {activeTab === 'programs' && (
+            <div>
+              <div className="admin-view-header">
+                <div>
+                  <h2>Degree Programs &amp; Academic Regulations</h2>
+                  <p>Autonomous programs offering degrees across Undergraduate, Postgraduate, and Polytechnic tracks.</p>
+                </div>
+                <span className="admin-badge active" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
+                  {initialPrograms.length} Autonomous Programs Active
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.25rem' }}>
+                {initialPrograms.map(prog => (
+                  <div key={prog.id} className="admin-card" style={{ marginBottom: 0, position: 'relative' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                      <span className="admin-badge active" style={{ fontSize: '0.85rem', fontWeight: 700 }}>
+                        {prog.code} · {prog.type}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600, background: '#eff6ff', padding: '2px 8px', borderRadius: '12px' }}>
+                        {prog.durationYears} Years ({prog.semestersCount} Semesters)
+                      </span>
+                    </div>
+
+                    <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '1.15rem', color: '#0f172a' }}>{prog.name}</h3>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.75rem' }}>
+                      Regulation: <strong style={{ color: '#334155' }}>{prog.academicRegulation}</strong>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', marginBottom: '0.75rem', fontSize: '0.8rem', color: '#475569' }}>
+                      <div style={{ marginBottom: '4px' }}>
+                        <strong>Intake Capacity:</strong> {prog.intakeCapacity} Students / Year
+                      </div>
+                      <div style={{ marginBottom: '4px' }}>
+                        <strong>Department Code:</strong> {prog.departmentCode}
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                        <strong>Eligibility:</strong> {prog.eligibility}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                        SPECIALIZATION TRACKS &amp; BRANCHES:
+                      </span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                        {prog.branches.map((br, bIdx) => (
+                          <span key={bIdx} style={{ background: '#f1f5f9', color: '#1e293b', fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 500 }}>
+                            {br}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB: FACULTY RELATIONAL ALLOCATIONS MATRIX */}
+          {activeTab === 'faculty-allocations' && (
+            <div>
+              <div className="admin-view-header">
+                <div>
+                  <h2>Faculty Academic Allocations &amp; Workload Matrix</h2>
+                  <p>Relational mapping connecting: Faculty → Department → Program → Semester → Section → Subject → Room.</p>
+                </div>
+              </div>
+
+              <div className="admin-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Allocation ID</th>
+                      <th>Faculty Name</th>
+                      <th>Program &amp; Dept</th>
+                      <th>Class Cohort</th>
+                      <th>Assigned Subject</th>
+                      <th>Classroom</th>
+                      <th>Weekly Hours</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {initialFacultyAssignments.map(fa => (
+                      <tr key={fa.id}>
+                        <td><strong>{fa.id}</strong></td>
+                        <td style={{ fontWeight: 600, color: '#0f172a' }}>{fa.facultyName}</td>
+                        <td>
+                          <span className="admin-badge active" style={{ fontSize: '0.75rem' }}>
+                            {fa.program} ({fa.deptCode})
+                          </span>
+                        </td>
+                        <td>{fa.semester} · {fa.section}</td>
+                        <td>
+                          <div><strong>{fa.subjectName}</strong></div>
+                          <code style={{ fontSize: '0.72rem', color: '#64748b' }}>{fa.subjectCode}</code>
+                        </td>
+                        <td><span style={{ color: '#475569', fontSize: '0.8rem' }}>{fa.room}</span></td>
+                        <td>
+                          <span style={{ fontWeight: 700, color: '#2563eb' }}>{fa.periodsPerWeek} Hrs/Week</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* TAB 5: DEPARTMENTS MANAGEMENT */}
           {activeTab === 'departments' && (
             <div>
               <div className="admin-view-header">
                 <div>
                   <h2>Department Management</h2>
-                  <p>Academic branches under GIFT Autonomous Engineering & Technology faculties.</p>
+                  <p>Academic branches under Apna Campus Engineering &amp; Technology faculties.</p>
                 </div>
               </div>
 
@@ -2954,7 +3408,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   <div className="admin-form-group">
                     <label>Institution Name</label>
-                    <input type="text" className="admin-form-input" defaultValue="Gandhi Institute For Technology (GIFT) Autonomous, Bhubaneswar" />
+                    <input type="text" className="admin-form-input" defaultValue="Apna Campus, Bhubaneswar" />
                   </div>
                   <div className="admin-form-group">
                     <label>Affiliating University</label>
@@ -3684,31 +4138,37 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                       <div className="admin-form-group">
-                        <label>Course <span className="admin-compulsory-tag">*</span></label>
+                        <label>Program / Degree Course <span className="admin-compulsory-tag">*</span></label>
                         <select
                           className="admin-form-select"
                           value={studentFormData.course}
-                          onChange={e => setStudentFormData({ ...studentFormData, course: e.target.value })}
+                          onChange={e => setStudentFormData({ ...studentFormData, course: e.target.value, program: e.target.value })}
                           required
                         >
                           <option value="Bachelor of Technology">Bachelor of Technology (B.Tech)</option>
-                          <option value="Master of Technology">Master of Technology (M.Tech)</option>
+                          <option value="Bachelor of Computer Applications">Bachelor of Computer Applications (BCA)</option>
                           <option value="Master of Computer Applications">Master of Computer Applications (MCA)</option>
                           <option value="Master of Business Administration">Master of Business Administration (MBA)</option>
+                          <option value="Diploma in Engineering">Diploma in Engineering (Polytechnic)</option>
+                          <option value="Master of Technology">Master of Technology (M.Tech)</option>
                         </select>
                       </div>
                       <div className="admin-form-group">
-                        <label>Batch <span className="admin-compulsory-tag">*</span></label>
+                        <label>Academic Batch <span className="admin-compulsory-tag">*</span></label>
                         <select
                           className="admin-form-select"
                           value={studentFormData.batch}
                           onChange={e => setStudentFormData({ ...studentFormData, batch: e.target.value })}
                           required
                         >
-                          <option value="BTECH 2023–2027">BTECH 2023–2027</option>
-                          <option value="BTECH 2024–2028">BTECH 2024–2028</option>
-                          <option value="BTECH 2025–2029">BTECH 2025–2029</option>
-                          <option value="BTECH 2026–2030">BTECH 2026–2030</option>
+                          <option value="BTECH 2026–2030">B.Tech Batch 2026–2030 (Fresh Admissions)</option>
+                          <option value="BTECH 2025–2029">B.Tech Batch 2025–2029 (Sem 1-2)</option>
+                          <option value="BTECH 2024–2028">B.Tech Batch 2024–2028 (Sem 3-4)</option>
+                          <option value="BTECH 2023–2027">B.Tech Batch 2023–2027 (Sem 5-6)</option>
+                          <option value="BCA 2024–2027">BCA Batch 2024–2027</option>
+                          <option value="MCA 2025–2027">MCA Batch 2025–2027</option>
+                          <option value="MBA 2025–2027">MBA Batch 2025–2027</option>
+                          <option value="DIPLOMA 2024–2027">Diploma Batch 2024–2027</option>
                         </select>
                       </div>
                       <div className="admin-form-group">
@@ -3719,10 +4179,15 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                           onChange={e => {
                             const map = {
                               CSE: 'Computer Science & Engineering',
+                              'AI&ML': 'CSE - Artificial Intelligence & Machine Learning',
                               ECE: 'Electronics & Communication',
                               EEE: 'Electrical & Electronics',
                               MECH: 'Mechanical Engineering',
-                              CIVIL: 'Civil Engineering'
+                              CIVIL: 'Civil Engineering',
+                              IT: 'Information Technology',
+                              CA: 'Computer Applications (BCA & MCA)',
+                              MGMT: 'Management Studies (MBA)',
+                              DIPLOMA: 'Diploma Engineering Wing'
                             };
                             setStudentFormData({
                               ...studentFormData,
@@ -3733,10 +4198,15 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                           required
                         >
                           <option value="CSE">CSE - Computer Science & Engineering</option>
-                          <option value="ECE">ECE - Electronics & Comm</option>
+                          <option value="AI&ML">AI&ML - Artificial Intelligence & ML</option>
+                          <option value="ECE">ECE - Electronics & Communication</option>
                           <option value="EEE">EEE - Electrical & Electronics</option>
-                          <option value="MECH">MECH - Mechanical Engg</option>
-                          <option value="CIVIL">CIVIL - Civil Engg</option>
+                          <option value="MECH">MECH - Mechanical Engineering</option>
+                          <option value="CIVIL">CIVIL - Civil Engineering</option>
+                          <option value="IT">IT - Information Technology</option>
+                          <option value="CA">CA - Computer Applications</option>
+                          <option value="MGMT">MGMT - Management Studies</option>
+                          <option value="DIPLOMA">DIPLOMA - Polytechnic Wing</option>
                         </select>
                       </div>
                     </div>
@@ -3800,7 +4270,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                         <input
                           type="email"
                           className="admin-form-input"
-                          placeholder="student.01@gift.edu.in"
+                          placeholder="student.01@apnacampus.edu.in"
                           value={studentFormData.email}
                           onChange={e => setStudentFormData({ ...studentFormData, email: e.target.value })}
                           required
@@ -4964,7 +5434,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                     <input
                       type="email"
                       className="admin-form-input"
-                      placeholder="warden@gift.edu.in"
+                      placeholder="warden@apnacampus.edu.in"
                       value={wardenFormData.email}
                       onChange={e => setWardenFormData({ ...wardenFormData, email: e.target.value })}
                       required
@@ -5642,7 +6112,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               <div style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem' }}>
                 {studentDocPreview.document === 'Passport-size photograph' ? (
                   <img
-                    src={studentDocPreview.docObj?.fileUrl || (studentDocPreview.student?.gender === 'Female' ? '/passport_photo.svg' : '/passport_photo_male.svg')}
+                    src={studentDocPreview.docObj?.fileUrl || (studentDocPreview.student?.gender === 'Female' ? '/passport_photo_female.svg' : '/passport_photo_male.svg')}
                     alt="Passport photo"
                     style={{ width: '120px', height: '140px', objectFit: 'cover', borderRadius: '8px', border: '2px solid #2563eb', margin: '0 auto', display: 'block' }}
                   />

@@ -53,6 +53,12 @@ export class AuthService {
 
     const accessToken = jwt.sign(payload, secret, { expiresIn });
 
+    // Update lastLogin timestamp asynchronously
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() },
+    }).catch(() => {});
+
     // Format role and identifiers cleanly for frontend consumption
     const roleKey = user.role.toLowerCase();
     const regNo = user.student?.rollNumber || user.student?.studentId || (user.role === 'STUDENT' ? user.identifier : undefined);
@@ -65,13 +71,17 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone || '+91 94370 12345',
         identifier: user.identifier,
         role: roleKey,
         roleEnum: user.role,
+        designation: user.designation || user.detail || '',
+        permissions: user.permissions || [],
         registrationNumber: regNo,
         identity: facultyId || regNo,
         department: user.department || user.student?.department || 'Computer Science & Engineering',
         detail: user.detail || (user.role === 'STUDENT' ? 'Semester 5 · Section A' : 'School of Computing'),
+        lastLogin: new Date(),
       },
     };
   }

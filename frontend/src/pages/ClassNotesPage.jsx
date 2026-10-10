@@ -18,7 +18,8 @@ import {
   Sparkles,
   Info,
   Flag,
-  Share2
+  Share2,
+  MessageSquare
 } from 'lucide-react'
 import { notesApi } from '../services/notesApi'
 import './ClassNotesPage.css'
@@ -210,6 +211,28 @@ export default function ClassNotesPage({ account }) {
         >
           <UploadCloud size={18} />
           <span>Upload Class Notes</span>
+        </button>
+      </div>
+
+      {/* Campus Connect Integration Callout */}
+      <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', border: '1px solid rgba(6, 182, 212, 0.35)', borderRadius: '12px', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', color: '#fff' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(6, 182, 212, 0.2)', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <MessageSquare size={18} />
+          </div>
+          <div>
+            <strong style={{ fontSize: '0.88rem', color: '#fff', display: 'block' }}>Missed a lecture today? Request notes in Campus Connect</strong>
+            <span style={{ fontSize: '0.76rem', color: '#94a3b8' }}>Classmates can upload directly in response to your request, with automatic upload locks and faculty verification points.</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          style={{ background: 'linear-gradient(135deg, #06b6d4, #2563eb)', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('cms_navigate_chat', { detail: { convId: 'conv-ds' } }));
+          }}
+        >
+          Open Class Chat →
         </button>
       </div>
 

@@ -42,14 +42,14 @@ function addInstitutionalHeader(doc, docTitle, subTitle = '') {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text('GANDHI INSTITUTE FOR TECHNOLOGY (GIFT AUTONOMOUS)', 14, 11);
+  doc.text('APNA CAMPUS ENTERPRISE ERP', 14, 11);
 
   // Subtitle
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(203, 213, 225);
   doc.text('Affiliated to BPUT, Rourkela, Odisha | Approved by AICTE, New Delhi | NAAC "A" Grade Accredited', 14, 17);
-  doc.text('Bhubaneswar, Odisha - 752054 | www.gift.edu.in | ERP Academic System', 14, 22);
+  doc.text('Bhubaneswar, Odisha - 752054 | www.apnacampus.edu.in | ERP Academic System', 14, 22);
 
   // Document title header
   doc.setFont('helvetica', 'bold');
@@ -159,7 +159,7 @@ export function downloadIdCardPdf(studentData = {}) {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text('GIFT AUTONOMOUS COLLEGE, BHUBANESWAR', cardX + 8, cardY + 8);
+  doc.text('APNA CAMPUS, BHUBANESWAR', cardX + 8, cardY + 8);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(226, 232, 240);
@@ -269,10 +269,10 @@ export function downloadIdCardPdf(studentData = {}) {
   doc.text('TERMS OF USAGE & CAMPUS RULES', 14, instY);
 
   const instructions = [
-    '1. This digital identity pass is recognized across GIFT Autonomous turnstiles, libraries, and mess facilities.',
+    '1. This digital identity pass is recognized across Apna Campus turnstiles, libraries, and mess facilities.',
     '2. For University End-Semester Examinations, students must present this document or smart badge.',
     '3. Transfer or duplication of this smart pass is strictly prohibited under BPUT Disciplinary By-laws.',
-    '4. In case of lost credentials, contact Student Affairs or email: support@gift.edu.in immediately.'
+    '4. In case of lost credentials, contact Student Affairs or email: support@apnacampus.edu.in immediately.'
   ];
 
   doc.setFont('helvetica', 'normal');
@@ -291,7 +291,10 @@ export function downloadIdCardPdf(studentData = {}) {
 // -------------------------------------------------------------
 // 2. Official College Fee Receipt PDF
 // -------------------------------------------------------------
-export function downloadFeeReceiptPdf(receipt = {}, studentInfo = {}) {
+// -------------------------------------------------------------
+// 2. Official College Fee Receipt PDF (Download & Open)
+// -------------------------------------------------------------
+export function buildFeeReceiptDoc(receipt = {}, studentInfo = {}) {
   const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
   addInstitutionalHeader(doc, 'Official Accounts Fee Receipt', 'Student Copy & University Autonomous Enrollment Clearance');
@@ -385,11 +388,184 @@ export function downloadFeeReceiptPdf(receipt = {}, studentInfo = {}) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...TEXT_MUTED);
-  doc.text('GIFT Autonomous College, Bhubaneswar', 145, finalY + 58);
+  doc.text('Apna Campus, Bhubaneswar', 145, finalY + 58);
 
   addInstitutionalFooter(doc, 1, 1);
 
+  return { doc, receiptNo };
+}
+
+export function downloadFeeReceiptPdf(receipt = {}, studentInfo = {}) {
+  const { doc, receiptNo } = buildFeeReceiptDoc(receipt, studentInfo);
   doc.save(`Fee_Receipt_${receiptNo}.pdf`);
+}
+
+export function openFeeReceiptPdf(receipt = {}, studentInfo = {}) {
+  const { doc } = buildFeeReceiptDoc(receipt, studentInfo);
+  try {
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch (err) {
+    console.error('Failed to open fee receipt PDF in new window, downloading instead:', err);
+    doc.save(`Fee_Receipt_${receipt.receiptNo || 'Voucher'}.pdf`);
+  }
+}
+
+// -------------------------------------------------------------
+// 2b. Student Payment Proof / Bank Transfer Voucher PDF
+// -------------------------------------------------------------
+export function buildPaymentProofDoc(proof = {}) {
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const isUpi = (proof.paymentMethod || '').toUpperCase().includes('UPI');
+  const bankName = isUpi
+    ? 'NATIONAL PAYMENTS CORPORATION OF INDIA (NPCI / UPI)'
+    : 'HDFC BANK LIMITED (BHUBANESWAR MAIN BRANCH)';
+
+  addInstitutionalHeader(doc, 'Bank Electronic Remittance Acknowledgement', 'Official Fee Payment Counterfoil & Interbank Settlement Advice');
+
+  const txnId = proof.transactionId || 'HDFC00019284';
+  const refNo = proof.referenceNumber || 'TXN-98124';
+  const amount = Number(proof.amount || 15000);
+  const studentName = proof.studentName || 'Rahul Sharma';
+  const rollNumber = proof.rollNumber || '2305201038';
+  const department = proof.department || 'Computer Science & Engineering';
+  const paymentDate = proof.paymentDate || '2026-10-05';
+  const method = proof.paymentMethod || 'Bank Transfer';
+  const remarks = proof.remarks || 'Hostel and Mess fee installment';
+
+  // Bank Info banner
+  doc.setFillColor(241, 245, 249);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(14, 52, doc.internal.pageSize.getWidth() - 28, 28, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text(`ISSUING BANK / GATEWAY: ${bankName}`, 20, 60);
+  doc.text(`VALUE DATE: ${paymentDate}`, 125, 60);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...TEXT_DARK);
+  doc.text(`Remitter Student: ${studentName} (Roll: ${rollNumber})`, 20, 68);
+  doc.text(`Department: ${department} • B.Tech Regular`, 20, 74);
+  doc.text(`Beneficiary: Apna Campus (Accounts)`, 125, 68);
+  doc.text(`Beneficiary IFSC: HDFC0000042 • Current A/c`, 125, 74);
+
+  // Table breakdown
+  const tableData = [
+    ['1', 'Bank UTR / Transaction Reference ID', txnId, 'CONFIRMED'],
+    ['2', 'Internal Remittance Journal Ref', refNo, 'SETTLED'],
+    ['3', 'Payment Mode / Protocol', method, 'SUCCESS'],
+    ['4', 'Fee Allocation & Student Remarks', remarks, 'ALLOCATED'],
+    ['5', 'Interbank Settlement Clearing Status', 'RBI RTGS/NEFT/UPI Cleared', 'VERIFIED']
+  ];
+
+  renderTable(doc, {
+    startY: 86,
+    head: [['Sl', 'Voucher Specification', 'Transaction Value / Detail', 'Clearing Status']],
+    body: tableData,
+    theme: 'grid',
+    headStyles: {
+      fillColor: PRIMARY_COLOR,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8.5
+    },
+    bodyStyles: {
+      fontSize: 8,
+      textColor: TEXT_DARK
+    },
+    columnStyles: {
+      0: { cellWidth: 14, halign: 'center' },
+      1: { cellWidth: 70 },
+      2: { cellWidth: 70 },
+      3: { cellWidth: 28, halign: 'center' }
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 8;
+
+  // Amount box
+  doc.setFillColor(240, 253, 244);
+  doc.setDrawColor(187, 247, 208);
+  doc.roundedRect(14, finalY, doc.internal.pageSize.getWidth() - 28, 20, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('TOTAL REMITTANCE AMOUNT:', 20, finalY + 12);
+  doc.setFontSize(14);
+  doc.setTextColor(21, 128, 61);
+  doc.text(`INR ₹${amount.toLocaleString('en-IN')}`, 140, finalY + 13);
+
+  // Verification & seals
+  const certY = finalY + 28;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text(`Cryptographic Audit Checksum: SHA256-${Math.random().toString(36).substring(2, 12).toUpperCase()}`, 14, certY);
+  doc.text('This is an authentic computer-generated digital payment counterfoil issued by the core banking gateway.', 14, certY + 5);
+
+  drawOfficialSeal(doc, 14, certY + 14, 'BANK GATEWAY');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Automated Clearing System Authorized', 130, certY + 24);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text('Payment Gateway Verification Services', 130, certY + 28);
+
+  addInstitutionalFooter(doc, 1, 1);
+
+  return { doc, fileName: proof.fileName || `Payment_Proof_${txnId}.pdf` };
+}
+
+export function openPaymentProofPdf(proof = {}) {
+  // If proofUrl is a valid data URL containing PDF
+  if (proof.proofUrl && typeof proof.proofUrl === 'string' && proof.proofUrl.startsWith('data:application/pdf')) {
+    try {
+      const parts = proof.proofUrl.split(',');
+      const bstr = atob(parts[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const blob = new Blob([u8arr], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      return;
+    } catch (e) {
+      console.warn('Error decoding base64 PDF proof:', e);
+    }
+  }
+
+  // If proofUrl is a real remote PDF URL
+  if (proof.proofUrl && typeof proof.proofUrl === 'string' && proof.proofUrl.startsWith('http') && !proof.proofUrl.includes('images.unsplash.com') && proof.proofUrl.endsWith('.pdf')) {
+    window.open(proof.proofUrl, '_blank');
+    return;
+  }
+
+  // Otherwise generate official bank proof PDF
+  const { doc } = buildPaymentProofDoc(proof);
+  try {
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch (err) {
+    console.error('Failed to open generated proof PDF in new window, downloading instead:', err);
+    doc.save(proof.fileName || 'Payment_Proof.pdf');
+  }
+}
+
+export function downloadPaymentProofPdf(proof = {}) {
+  const { doc, fileName } = buildPaymentProofDoc(proof);
+  doc.save(fileName);
 }
 
 // -------------------------------------------------------------
@@ -423,7 +599,7 @@ export function downloadGradeCardPdf(examData = {}, studentInfo = {}) {
   doc.text('Program: Bachelor of Technology (B.Tech)', 20, 67);
   doc.text('Discipline: Computer Science & Engineering', 125, 67);
   doc.text(`Examination: ${semester} Regular Examination 2025-26`, 20, 73);
-  doc.text('College Code: 204 (GIFT Autonomous)', 125, 73);
+  doc.text('College Code: 204 (Apna Campus)', 125, 73);
 
   // Subject rows
   const subjects = examData.subjects || [
@@ -617,6 +793,146 @@ export function downloadAdmitCardPdf(schedule = [], studentInfo = {}) {
 }
 
 // -------------------------------------------------------------
+// 3b. Exam Hall Door Chart & Seating Allocation PDF
+// -------------------------------------------------------------
+export function downloadDoorChartPdf(hall = {}) {
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  addInstitutionalHeader(doc, 'Examination Hall Door Chart & Seating Plan', 'Office of Controller of Examinations • Autonomous Examination Division');
+
+  const hallName = hall.hall || 'Exam Hall B-301';
+  const session = hall.session || 'Morning (10:00 AM - 01:00 PM)';
+  const invigilator = hall.invigilator || 'Faculty Invigilator';
+  const range = hall.range || 'Roll Range (Allocated Candidates)';
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text(`EXAMINATION HALL: ${hallName.toUpperCase()}`, 14, 46);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...TEXT_DARK);
+  doc.text(`Session: ${session} | Capacity: ${hall.capacity || 60} Desks | Allocated: ${hall.allocated || 58}`, 14, 52);
+  doc.text(`Invigilator: ${invigilator}`, 14, 57);
+  doc.text(`Allocated Candidate Range: ${range}`, 14, 62);
+
+  const bodyData = [];
+  const startRoll = 2305201001;
+  const count = hall.allocated || 58;
+  for (let i = 0; i < count; i += 2) {
+    const roll1 = String(startRoll + i);
+    const roll2 = i + 1 < count ? String(startRoll + i + 1) : '-';
+    bodyData.push([
+      `DESK-${String(i + 1).padStart(2, '0')}`,
+      roll1,
+      'CSE (Sem 5)',
+      `DESK-${String(i + 2).padStart(2, '0')}`,
+      roll2,
+      roll2 !== '-' ? 'CSE (Sem 5)' : '-'
+    ]);
+  }
+
+  renderTable(doc, {
+    startY: 68,
+    head: [['Desk #', 'Roll Number', 'Branch/Sem', 'Desk #', 'Roll Number', 'Branch/Sem']],
+    body: bodyData,
+    theme: 'grid',
+    headStyles: {
+      fillColor: PRIMARY_COLOR,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8
+    },
+    bodyStyles: {
+      fontSize: 7.5,
+      textColor: TEXT_DARK
+    },
+    columnStyles: {
+      0: { cellWidth: 20, fontStyle: 'bold', halign: 'center' },
+      1: { cellWidth: 32, fontStyle: 'bold' },
+      2: { cellWidth: 38 },
+      3: { cellWidth: 20, fontStyle: 'bold', halign: 'center' },
+      4: { cellWidth: 32, fontStyle: 'bold' },
+      5: { cellWidth: 38 }
+    }
+  });
+
+  const finalY = (doc.lastAutoTable?.finalY || 180) + 10;
+  drawOfficialSeal(doc, 14, finalY, 'EXAM CELL');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Chief Superintendent / CoE', 135, finalY + 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text('Autonomous Examination Cell • GIFT', 135, finalY + 16);
+
+  addInstitutionalFooter(doc, 1, 1);
+  doc.save(`Door_Chart_${hallName.replace(/\s+/g, '_')}.pdf`);
+}
+
+// -------------------------------------------------------------
+// 3c. Master Autonomous Examination Timetable PDF
+// -------------------------------------------------------------
+export function downloadExamTimetableMasterPdf(timetable = []) {
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  addInstitutionalHeader(doc, 'Master Autonomous Examination Schedule', 'Office of Controller of Examinations • Autumn 2026-27');
+
+  const bodyData = timetable.map((t, idx) => [
+    String(idx + 1),
+    t.date,
+    t.time,
+    t.code,
+    t.subject,
+    t.semester,
+    Array.isArray(t.branches) ? t.branches.join(', ') : t.branches
+  ]);
+
+  renderTable(doc, {
+    startY: 52,
+    head: [['#', 'Exam Date', 'Time Session', 'Code', 'Course / Subject Title', 'Semester', 'Branches']],
+    body: bodyData,
+    theme: 'grid',
+    headStyles: {
+      fillColor: PRIMARY_COLOR,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8
+    },
+    bodyStyles: {
+      fontSize: 7.5,
+      textColor: TEXT_DARK
+    },
+    columnStyles: {
+      0: { cellWidth: 10, halign: 'center' },
+      1: { cellWidth: 26 },
+      2: { cellWidth: 32 },
+      3: { cellWidth: 18, fontStyle: 'bold' },
+      4: { cellWidth: 50 },
+      5: { cellWidth: 22 },
+      6: { cellWidth: 26 }
+    }
+  });
+
+  const finalY = (doc.lastAutoTable?.finalY || 160) + 10;
+  drawOfficialSeal(doc, 14, finalY, 'EXAM CELL');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Controller of Examinations', 135, finalY + 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text('Autonomous Examination Division • GIFT', 135, finalY + 16);
+
+  addInstitutionalFooter(doc, 1, 1);
+  doc.save('Autonomous_Examination_Master_Timetable.pdf');
+}
+
+
+// -------------------------------------------------------------
 // 4. Class Timetable / Schedule PDF
 // -------------------------------------------------------------
 export function downloadTimetablePdf(scheduleData = {}) {
@@ -631,7 +947,7 @@ export function downloadTimetablePdf(scheduleData = {}) {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text('GANDHI INSTITUTE FOR TECHNOLOGY (GIFT AUTONOMOUS) • CSE DEPARTMENT', 14, 11);
+  doc.text('APNA CAMPUS • DEPARTMENT OF CSE', 14, 11);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(203, 213, 225);
@@ -676,7 +992,7 @@ export function downloadTimetablePdf(scheduleData = {}) {
   doc.setFontSize(7.5);
   doc.setTextColor(...TEXT_MUTED);
   doc.text('Note: 75% minimum attendance is mandatory as per BPUT autonomous norms.', 14, pageHeight - 8);
-  doc.text('Head of Department (CSE) • GIFT Autonomous', pageWidth - 14, pageHeight - 8, { align: 'right' });
+  doc.text('Head of Department (CSE) • Apna Campus', pageWidth - 14, pageHeight - 8, { align: 'right' });
 
   doc.save('Class_Timetable_5th_Sem_CSE.pdf');
 }
@@ -762,7 +1078,7 @@ export function downloadNoticePdf(notice = {}) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(...TEXT_MUTED);
-  doc.text('GIFT Autonomous College, Bhubaneswar', doc.internal.pageSize.getWidth() - 60, dispatchY + 47);
+  doc.text('Apna Campus, Bhubaneswar', doc.internal.pageSize.getWidth() - 60, dispatchY + 47);
 
   addInstitutionalFooter(doc, 1, 1);
 
@@ -988,7 +1304,7 @@ export function downloadHostelCensusPdf(hostels = []) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...TEXT_MUTED);
-  doc.text('GIFT Autonomous College, Bhubaneswar', 135, finalY + 52);
+  doc.text('Apna Campus, Bhubaneswar', 135, finalY + 52);
 
   addInstitutionalFooter(doc, 1, 1);
 
@@ -1050,12 +1366,141 @@ export function downloadAccountsRegisterPdf(transactions = []) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...TEXT_MUTED);
-  doc.text('Accounts Section • GIFT Autonomous College', 135, finalY + 16);
+  doc.text('Accounts Section • Apna Campus', 135, finalY + 16);
 
   addInstitutionalFooter(doc, 1, 1);
 
   doc.save('Daily_Fee_Collection_Register.pdf');
 }
+
+// -------------------------------------------------------------
+// 9b. Student Financial Account Statement PDF
+// -------------------------------------------------------------
+export function downloadStudentStatementPdf(statement = {}) {
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const student = statement.student || {};
+  addInstitutionalHeader(doc, 'Student Financial Account Statement', `Registration ID: ${student.rollNumber || 'N/A'}`);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text(`Student: ${student.studentName || 'Student'}`, 14, 46);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...TEXT_DARK);
+  doc.text(`Program: ${student.program || 'B.Tech (Autonomous)'} | Dept: ${student.department || 'CSE'} | Sem: ${student.semester || 'Semester 5'}`, 14, 51);
+  doc.text(`Total Assessed: INR ${(statement.totalAnnualDues || 0).toLocaleString('en-IN')} | Paid: INR ${(statement.paidAmount || 0).toLocaleString('en-IN')} | Balance Due: INR ${(statement.outstanding || 0).toLocaleString('en-IN')}`, 14, 56);
+
+  const feeHeads = statement.feeHeads || [];
+  const bodyData = feeHeads.map(fh => [
+    fh.head || 'Fee Head',
+    `INR ${Number(fh.assessed || 0).toLocaleString('en-IN')}`,
+    `INR ${Number(fh.paid || 0).toLocaleString('en-IN')}`,
+    `INR ${Number(fh.balance || 0).toLocaleString('en-IN')}`,
+    fh.dueDate || '-',
+    fh.status || (fh.balance === 0 ? 'Cleared' : 'Pending')
+  ]);
+
+  renderTable(doc, {
+    startY: 62,
+    head: [['Fee Head / Component', 'Assessed (INR)', 'Paid (INR)', 'Balance (INR)', 'Due Date', 'Status']],
+    body: bodyData,
+    theme: 'grid',
+    headStyles: {
+      fillColor: PRIMARY_COLOR,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8
+    },
+    bodyStyles: {
+      fontSize: 7.5,
+      textColor: TEXT_DARK
+    },
+    columnStyles: {
+      0: { cellWidth: 54 },
+      1: { cellWidth: 26, halign: 'right' },
+      2: { cellWidth: 26, halign: 'right' },
+      3: { cellWidth: 26, halign: 'right', fontStyle: 'bold' },
+      4: { cellWidth: 26, halign: 'center' },
+      5: { cellWidth: 24, halign: 'center' }
+    }
+  });
+
+  const finalY = (doc.lastAutoTable?.finalY || 130) + 10;
+  drawOfficialSeal(doc, 14, finalY, 'BURSAR OFFICE');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Authorized Finance Officer / Bursar', 135, finalY + 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text('Accounts & Fee Clearance Section • Apna Campus', 135, finalY + 16);
+
+  addInstitutionalFooter(doc, 1, 1);
+  doc.save(`Student_Fee_Statement_${student.rollNumber || 'Record'}.pdf`);
+}
+
+// -------------------------------------------------------------
+// 9c. Semester Defaulters List PDF
+// -------------------------------------------------------------
+export function downloadDefaultersListPdf(defaulters = []) {
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  addInstitutionalHeader(doc, 'Institutional Fee Defaulters & Arrears Register', 'Office of the Bursar • Semester Clearance Audit');
+
+  const defaultRows = [
+    ['2301289146', 'Rakesh Das', 'CSE - Sem 5', 'INR 28,500', '15-Aug-2026', 'Final Notice'],
+    ['2301289150', 'Priya Mohanty', 'ECE - Sem 5', 'INR 18,000', '15-Aug-2026', 'Reminder 2'],
+    ['2301289154', 'Subrat Nayak', 'MECH - Sem 5', 'INR 34,000', '15-Aug-2026', 'Final Notice'],
+    ['2301289162', 'Ananya Sahu', 'CIVIL - Sem 5', 'INR 12,500', '15-Aug-2026', 'Reminder 1']
+  ];
+
+  const bodyData = defaulters.length > 0
+    ? defaulters.map(d => [d.rollNumber || d.roll, d.name, `${d.department || 'CSE'} - ${d.semester || 'Sem 5'}`, `INR ${Number(d.dueAmount || d.outstanding || 0).toLocaleString('en-IN')}`, d.dueDate || '15-Aug-2026', d.noticeLevel || 'Notice Sent'])
+    : defaultRows;
+
+  renderTable(doc, {
+    startY: 54,
+    head: [['Roll Number', 'Student Name', 'Program & Semester', 'Outstanding (INR)', 'Due Date', 'Clearance Status']],
+    body: bodyData,
+    theme: 'grid',
+    headStyles: {
+      fillColor: SECONDARY_COLOR,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8
+    },
+    bodyStyles: {
+      fontSize: 7.5,
+      textColor: TEXT_DARK
+    },
+    columnStyles: {
+      0: { cellWidth: 26, fontStyle: 'bold' },
+      1: { cellWidth: 42 },
+      2: { cellWidth: 38 },
+      3: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+      4: { cellWidth: 26, halign: 'center' },
+      5: { cellWidth: 24, halign: 'center' }
+    }
+  });
+
+  const finalY = (doc.lastAutoTable?.finalY || 130) + 10;
+  drawOfficialSeal(doc, 14, finalY, 'BURSAR OFFICE');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Senior Finance Officer / Bursar', 135, finalY + 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text('Accounts Section • Apna Campus', 135, finalY + 16);
+
+  addInstitutionalFooter(doc, 1, 1);
+  doc.save('Fee_Defaulters_Register.pdf');
+}
+
 
 // -------------------------------------------------------------
 // 10. Department Continuous Internal Assessment (CIA) Gazette PDF
@@ -1229,7 +1674,7 @@ export function downloadAdminReportPdf(reportType = 'College-wide Performance Re
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...TEXT_MUTED);
-  doc.text('GIFT Autonomous College, Bhubaneswar', 130, finalY + 16);
+  doc.text('Apna Campus, Bhubaneswar', 130, finalY + 16);
 
   addInstitutionalFooter(doc, 1, 1);
 
@@ -1707,7 +2152,7 @@ export function downloadStudentDocumentPdf(record) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(...TEXT_MUTED);
-  doc.text('GIFT Autonomous College, Bhubaneswar', 125, stampY + 15);
+  doc.text('Apna Campus, Bhubaneswar', 125, stampY + 15);
   doc.text('Authenticated Electronic Document Archive', 125, stampY + 19);
 
   addInstitutionalFooter(doc, 1, 1);

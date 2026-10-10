@@ -15,7 +15,9 @@ import {
   Eye,
   Info,
   Layers,
-  ArrowRight
+  ArrowRight,
+  MessageSquare,
+  Sparkles
 } from 'lucide-react'
 import { notesApi } from '../services/notesApi'
 import './AttendancePage.css'
@@ -236,11 +238,44 @@ export default function AttendancePage() {
                 <div className={`att-bar-fill ${st}`} style={{ width: `${p}%` }} role="progressbar" aria-valuenow={p} aria-valuemin="0" aria-valuemax="100" />
                 <div className="att-threshold-marker" style={{ left: `${TH}%` }} />
               </div>
-              {nd > 0 && (
-                <p className="att-needed-note">
-                  <TrendingDown size={11} /> Need {nd} more consecutive classes to reach {TH}%.
-                </p>
-              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+                {nd > 0 ? (
+                  <p className="att-needed-note" style={{ margin: 0 }}>
+                    <TrendingDown size={11} /> Need {nd} more consecutive classes to reach {TH}%.
+                  </p>
+                ) : <div />}
+                <button
+                  type="button"
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.08)',
+                    border: '1px solid rgba(59, 130, 246, 0.25)',
+                    color: '#2563eb',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '3px 9px',
+                    borderRadius: '6px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer'
+                  }}
+                  title="Open Campus Connect Chat for this course"
+                  onClick={() => {
+                    const convMap = {
+                      'CS501': 'conv-cse-ai',
+                      'CS502': 'conv-dbms',
+                      'CS503': 'conv-cn',
+                      'CS504': 'conv-os',
+                      'CS505': 'conv-ds',
+                      'CS506': 'conv-ds'
+                    };
+                    window.dispatchEvent(new CustomEvent('cms_navigate_chat', { detail: { convId: convMap[sub.code] || 'conv-ds' } }));
+                  }}
+                >
+                  <MessageSquare size={12} /> Open Class Chat
+                </button>
+              </div>
 
               {isExpanded && (
                 <div className="att-history-container">
@@ -256,7 +291,7 @@ export default function AttendancePage() {
                         <tr>
                           <th style={{ width: '70px', textAlign: 'center' }}>Sl. No.</th>
                           <th>Class Date</th>
-                          <th style={{ width: '140px', textAlign: 'center' }}>Attendance</th>
+                          <th style={{ width: '180px', textAlign: 'center' }}>Attendance</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -273,9 +308,33 @@ export default function AttendancePage() {
                                   <CheckCircle2 size={12} /> Present
                                 </span>
                               ) : (
-                                <span className="att-status-badge absent">
-                                  <XCircle size={12} /> Absent
-                                </span>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  <span className="att-status-badge absent">
+                                    <XCircle size={12} /> Absent
+                                  </span>
+                                  <button
+                                    type="button"
+                                    style={{
+                                      background: '#fef3c7',
+                                      border: '1px solid #fde68a',
+                                      color: '#b45309',
+                                      fontSize: '10px',
+                                      fontWeight: 700,
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '3px'
+                                    }}
+                                    title="Ask classmates for notes from this missed lecture"
+                                    onClick={() => {
+                                      window.dispatchEvent(new CustomEvent('cms_navigate_chat', { detail: { convId: 'conv-ds' } }));
+                                    }}
+                                  >
+                                    <Sparkles size={10} /> Ask Notes
+                                  </button>
+                                </div>
                               )}
                             </td>
                           </tr>

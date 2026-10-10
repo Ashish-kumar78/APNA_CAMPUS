@@ -39,7 +39,7 @@ const initialGatePasses = [
       fileSize: '340 KB',
       uploadedAt: '05 Oct 2026, 01:15 PM',
       docTitle: 'Application for Home Leave with Mentor Recommendation',
-      applicationText: `To\nThe Resident Warden\nGandhi Boys Residence (Hostel 1)\nGIFT Autonomous College, Bhubaneswar\n\nRespected Sir,\n\nI am Rakesh Das, a resident of Room 101 (Bed 01) pursuing B.Tech in Computer Science & Engineering (5th Semester, Roll No: 01, Reg No: 2305201001).\n\nI humbly request permission to visit my home in Bargarh from 08-Oct-2026 (09:00 AM) to 12-Oct-2026 (06:00 PM) for the upcoming festival and family gathering. My parents have given their telephonic and written consent.\n\nMy academic mentor, Dr. Siba Prasad Tripathy, has verified my attendance (92%) and academic clearance and has signed his endorsement below.\n\nKindly issue the official Gate Pass for outstation travel.\n\nYours obediently,\nRakesh Das\nContact: +91 98610 23010\nFather: Sanjay Das (+91 94370 10001)\n\n[MENTOR ENDORSEMENT]\nStatus: Verified and Recommended\nSigned: Dr. Siba Prasad Tripathy (Faculty Advisor, Dept of CSE)\nDate: 05-Oct-2026 11:30 AM`
+      applicationText: `To\nThe Resident Warden\nGandhi Boys Residence (Hostel 1)\nApna Campus, Bhubaneswar\n\nRespected Sir,\n\nI am Rakesh Das, a resident of Room 101 (Bed 01) pursuing B.Tech in Computer Science & Engineering (5th Semester, Roll No: 01, Reg No: 2305201001).\n\nI humbly request permission to visit my home in Bargarh from 08-Oct-2026 (09:00 AM) to 12-Oct-2026 (06:00 PM) for the upcoming festival and family gathering. My parents have given their telephonic and written consent.\n\nMy academic mentor, Dr. Siba Prasad Tripathy, has verified my attendance (92%) and academic clearance and has signed his endorsement below.\n\nKindly issue the official Gate Pass for outstation travel.\n\nYours obediently,\nRakesh Das\nContact: +91 98610 23010\nFather: Sanjay Das (+91 94370 10001)\n\n[MENTOR ENDORSEMENT]\nStatus: Verified and Recommended\nSigned: Dr. Siba Prasad Tripathy (Faculty Advisor, Dept of CSE)\nDate: 05-Oct-2026 11:30 AM`
     },
     status: 'Pending Warden Approval', // 'Pending Warden Approval' | 'Approved' | 'Rejected'
     appliedAt: '05 Oct 2026, 01:20 PM',
@@ -261,6 +261,70 @@ export function rejectGatePass(passId, wardenName = 'Mr. Rajesh Jena (Resident W
     window.dispatchEvent(new StorageEvent('storage', { key: GATE_PASS_STORAGE_KEY, newValue: JSON.stringify(updated) }));
   } catch (err) {
     console.error('Failed to reject gate pass:', err);
+  }
+  return updated.find(p => p.id === passId);
+}
+
+export function recordGatePassExit(passId) {
+  const passes = getAllGatePasses();
+  const now = new Date().toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }) + ', ' + new Date().toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const updated = passes.map(p => {
+    if (p.id === passId) {
+      return {
+        ...p,
+        status: 'Exited Campus',
+        actualExitTime: now,
+      };
+    }
+    return p;
+  });
+
+  try {
+    localStorage.setItem(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('bput_gate_passes_changed', { detail: { passId, status: 'Exited Campus' } }));
+    window.dispatchEvent(new StorageEvent('storage', { key: GATE_PASS_STORAGE_KEY, newValue: JSON.stringify(updated) }));
+  } catch (err) {
+    console.error('Failed to record exit:', err);
+  }
+  return updated.find(p => p.id === passId);
+}
+
+export function recordGatePassReturn(passId) {
+  const passes = getAllGatePasses();
+  const now = new Date().toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }) + ', ' + new Date().toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const updated = passes.map(p => {
+    if (p.id === passId) {
+      return {
+        ...p,
+        status: 'Returned to Hostel',
+        actualReturnTime: now,
+      };
+    }
+    return p;
+  });
+
+  try {
+    localStorage.setItem(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('bput_gate_passes_changed', { detail: { passId, status: 'Returned to Hostel' } }));
+    window.dispatchEvent(new StorageEvent('storage', { key: GATE_PASS_STORAGE_KEY, newValue: JSON.stringify(updated) }));
+  } catch (err) {
+    console.error('Failed to record return:', err);
   }
   return updated.find(p => p.id === passId);
 }

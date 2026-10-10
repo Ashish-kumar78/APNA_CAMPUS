@@ -57,7 +57,7 @@ export default function HandwrittenApplicationLetter({ pass, doc }) {
           <div>To,</div>
           <div>The Resident Warden,</div>
           <div style={{ fontWeight: 600 }}>{hostelName},</div>
-          <div>GIFT Autonomous College, Bhubaneswar</div>
+          <div>Apna Campus, Bhubaneswar</div>
         </div>
 
         {/* Subject */}
@@ -109,7 +109,7 @@ export default function HandwrittenApplicationLetter({ pass, doc }) {
           <div className="handwritten-mentor-approval-box">
             {/* Rubber Stamp Watermark */}
             <div className="mentor-circular-seal">
-              <div className="seal-ring-inner">GIFT AUTONOMOUS</div>
+              <div className="seal-ring-inner">APNA CAMPUS</div>
               <div className="seal-center-text">✓ VERIFIED</div>
               <div className="seal-ring-inner">FACULTY MENTOR</div>
             </div>

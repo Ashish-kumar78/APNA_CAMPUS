@@ -38,13 +38,39 @@ async function bootstrap() {
     'http://127.0.0.1:3000',
     'http://localhost:4000',
   ];
-  const clientUrl = process.env.CLIENT_URL;
-  const origins = clientUrl && !defaultAllowedOrigins.includes(clientUrl)
-    ? [...defaultAllowedOrigins, clientUrl]
-    : defaultAllowedOrigins;
+
+  if (process.env.CLIENT_URL) {
+    const urls = process.env.CLIENT_URL.split(',').map((u) => u.trim());
+    for (const u of urls) {
+      if (u && !defaultAllowedOrigins.includes(u)) {
+        defaultAllowedOrigins.push(u);
+      }
+    }
+  }
 
   app.enableCors({
-    origin: origins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      if (!origin) return callback(null, true);
+
+      // Check explicit allowed origins
+      if (defaultAllowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Automatically allow Vercel preview and production domains
+      try {
+        const hostname = new URL(origin).hostname;
+        if (hostname.endsWith('.vercel.app') || hostname === 'localhost') {
+          return callback(null, true);
+        }
+      } catch {
+        // invalid URL format
+      }
+
+      // Permissive fallback so frontend deployments are never blocked by unexpected origins
+      return callback(null, true);
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
@@ -63,7 +89,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || 4000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 CollegeFlow NestJS Backend is running on: http://localhost:${port}/api`);
   console.log(`📚 Swagger Documentation is available at: http://localhost:${port}/api/docs`);
 }

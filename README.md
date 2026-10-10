@@ -292,3 +292,62 @@ From the repository root:
 - `npm run prisma:seed` — Runs the idempotent database seed script.
 - `npm run setup:db` — Runs Prisma generate, migrate, and seed in sequence.
 - `npm run test:frontend` — Runs the frontend Vitest suite.
+
+---
+
+## 🚀 Cloud Deployment Guide (Backend on Render + Frontend on Vercel)
+
+### Part 1: Deploy Backend on Render
+
+You can deploy the backend using Render's free tier with a connected PostgreSQL database:
+
+#### Method A: Using Render Blueprint (`render.yaml`) — Recommended
+1. Log in to [Render](https://dashboard.render.com).
+2. Click **New +** > **Blueprint**.
+3. Connect your repository (`https://github.com/sahooprasadbishnu1234/CMS.git`) and branch (`backend`).
+4. Render will detect [`render.yaml`](render.yaml) and automatically create:
+   - **PostgreSQL Database**: `apna-campus-db`
+   - **Web Service**: `apna-campus-backend` with all required build and start commands.
+5. In the blueprint review:
+   - Set `CLIENT_URL` to your Vercel URL (or `*` during initial setup).
+6. Click **Apply**.
+7. Once deployed, note your backend URL: `https://<your-backend-service>.onrender.com`.
+
+#### Method B: Manual Web Service on Render
+If configuring manually:
+1. Create a **PostgreSQL Database** on Render (or Supabase/Neon). Copy the **Internal/External Database URL**.
+2. Click **New +** > **Web Service**.
+3. Connect the GitHub repository and branch `backend`.
+4. Configure settings:
+   - **Root Directory**: `backend`
+   - **Runtime**: `Node`
+   - **Build Command**: `npm install && npx prisma generate && npm run build`
+   - **Start Command**: `npm run start:prod`
+5. Under **Environment Variables**, add:
+   - `NODE_ENV`: `production`
+   - `DATABASE_URL`: `postgresql://...` (your PostgreSQL connection string)
+   - `JWT_SECRET`: A long random secret string (32+ characters)
+   - `JWT_EXPIRES_IN`: `8h`
+   - `CLIENT_URL`: `https://<your-frontend-app>.vercel.app`
+6. Click **Create Web Service**.
+7. Test the health endpoint: `https://<your-backend>.onrender.com/api` should return `{"message":"..."}`.
+8. (Optional) In the Render Shell tab, run: `npm run prisma:seed` to populate default demo accounts.
+
+---
+
+### Part 2: Deploy Frontend on Vercel
+
+1. Log in to [Vercel](https://vercel.com).
+2. Click **Add New...** > **Project**.
+3. Import your GitHub repository (`CMS`).
+4. In the **Configure Project** screen:
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: Click `Edit` and select `frontend`.
+   - **Build Command**: `npm run build` (or leave default)
+   - **Output Directory**: `dist` (or leave default)
+5. Expand **Environment Variables**:
+   - Add `VITE_API_URL`: `https://<your-backend>.onrender.com/api` *(Make sure to include `/api`!)*
+6. Click **Deploy**.
+7. Once deployment finishes, Vercel gives you a live production URL (e.g., `https://cms-frontend-xxxx.vercel.app`).
+8. Copy this URL, go back to Render, and set `CLIENT_URL` to this Vercel URL in your backend environment variables.
+

@@ -16,6 +16,7 @@ import { ExamsModule } from './exams/exams.module';
 import { FacultyModule } from './faculty/faculty.module';
 import { HodModule } from './hod/hod.module';
 import { ReportsModule } from './reports/reports.module';
+import { AppController } from './app.controller';
 
 import * as path from 'path';
 
@@ -47,5 +48,6 @@ import * as path from 'path';
     HodModule,
     ReportsModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}

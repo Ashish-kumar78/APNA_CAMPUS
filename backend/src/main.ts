@@ -1,10 +1,9 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
-import { execSync } from 'child_process';
 
 const logger = new Logger('Bootstrap');
 
@@ -30,23 +29,22 @@ async function bootstrap() {
     logger.error('\n❌ [CRITICAL CONFIG ERROR] DATABASE_URL environment variable is missing!');
     logger.error('   Please configure DATABASE_URL in your Render dashboard environment variables:');
     logger.error('   DATABASE_URL="postgresql://user:pass@host:5432/college_management?sslmode=require"\n');
-  } else {
-    // Attempt auto-migration deploy on startup so production database tables are always created
-    try {
-      logger.log('🔄 Checking database schema & applying pending Prisma migrations...');
-      execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-      logger.log('✅ Prisma migrations applied successfully.');
-    } catch (migErr) {
-      logger.warn('⚠️ Prisma migrate deploy encountered an issue or was skipped: ' + (migErr as Error)?.message);
-    }
   }
 
   const app = await NestFactory.create(AppModule);
 
-  // 1. Global API Prefix
-  app.setGlobalPrefix('api');
+  // 1. Global API Prefix with root exclusions so GET / and GET /health are always reachable
+  app.setGlobalPrefix('api', {
+    exclude: [
+      { path: '', method: RequestMethod.GET },
+      { path: '/', method: RequestMethod.GET },
+      { path: 'health', method: RequestMethod.GET },
+      { path: 'api', method: RequestMethod.GET },
+      { path: 'api/health', method: RequestMethod.GET },
+    ],
+  });
 
-  // Fallbacks for load balancers or monitoring pinging root '/' or '/health' without '/api' prefix
+  // Fallbacks on underlying Express adapter for load balancers or crawlers
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.get('/', (_req: any, res: any) => {
     res.status(200).json({
@@ -58,7 +56,24 @@ async function bootstrap() {
       timestamp: new Date().toISOString(),
     });
   });
+  expressApp.get('/api', (_req: any, res: any) => {
+    res.status(200).json({
+      status: 'ok',
+      success: true,
+      message: 'Apna Campus (CollegeFlow) NestJS API is operational.',
+      docs: '/api/docs',
+      timestamp: new Date().toISOString(),
+    });
+  });
   expressApp.get('/health', (_req: any, res: any) => {
+    res.status(200).json({
+      status: 'ok',
+      success: true,
+      message: 'Apna Campus (CollegeFlow) NestJS API is healthy.',
+      timestamp: new Date().toISOString(),
+    });
+  });
+  expressApp.get('/api/health', (_req: any, res: any) => {
     res.status(200).json({
       status: 'ok',
       success: true,

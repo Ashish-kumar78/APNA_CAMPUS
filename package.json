@@ -1,8 +1,8 @@
 {
-  "name": "cms-monorepo",
+  "name": "apna-campus",
   "version": "1.0.0",
   "private": true,
-  "description": "College Management System - Monorepo root",
+  "description": "Apna Campus - Monorepo root",
   "scripts": {
     "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "npm run start:dev --prefix backend",

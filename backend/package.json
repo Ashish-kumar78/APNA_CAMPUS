@@ -1,8 +1,8 @@
 {
-  "name": "collegeflow-backend",
+  "name": "apna-campus-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "NestJS API for CollegeFlow.",
+  "description": "NestJS API for Apna Campus.",
   "scripts": {
     "start": "nest start",
     "start:dev": "nest start --watch",

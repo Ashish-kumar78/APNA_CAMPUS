@@ -18,11 +18,12 @@ import { downloadLibraryBookPdf } from '../utils/pdfGenerator'
 import './LibraryPage.css'
 import api from '../services/api'
 import { erpStore } from '../services/erpStore'
+import LibraryBooksView from '../components/LibraryBooksView'
 
 const categories = ['All', 'Algorithms', 'Systems', 'Databases', 'AI/ML', 'Networks', 'Software Engineering']
 
 export default function LibraryPage() {
-  const [activeTab, setActiveTab] = useState('catalog')
+  const [activeTab, setActiveTab] = useState('erp-library')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [catalog, setCatalog] = useState(() => erpStore.getBooksCatalog())
@@ -139,11 +140,34 @@ export default function LibraryPage() {
           <h2>Central Library & Learning Resources</h2>
           <p className="library-caption">Search bibliographic catalog, manage active borrowings, reserve physical copies, and access e-books.</p>
         </div>
-        <div className="library-hours">
-          <Clock size={13} />
-          <div>
-            <strong>Library Hours</strong>
-            <small>Mon–Sat: 8 AM – 8 PM &nbsp;|&nbsp; Sun: 10 AM – 4 PM</small>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setActiveTab('erp-library')}
+            style={{
+              backgroundColor: '#1e293b',
+              color: '#ffffff',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            <BookOpen size={14} />
+            View Library of Books
+          </button>
+          <div className="library-hours">
+            <Clock size={13} />
+            <div>
+              <strong>Library Hours</strong>
+              <small>Mon–Sat: 8 AM – 8 PM &nbsp;|&nbsp; Sun: 10 AM – 4 PM</small>
+            </div>
           </div>
         </div>
       </div>
@@ -185,7 +209,8 @@ export default function LibraryPage() {
 
       <div className="library-tabs" role="tablist">
         {[
-          { key: 'catalog', label: 'Book Catalog' },
+          { key: 'erp-library', label: '📖 Library Books & Issue Portal' },
+          { key: 'catalog', label: 'Visual Book Catalog' },
           { key: 'issued', label: `My Issued Books (${activeIssuedBooks.length})` },
           { key: 'history', label: 'Borrowing History' },
         ].map(({ key, label }) => (
@@ -205,6 +230,15 @@ export default function LibraryPage() {
         <div className="library-reserve-msg">
           <Check size={13} />{reserveMsg}
         </div>
+      )}
+
+      {activeTab === 'erp-library' && (
+        <LibraryBooksView
+          studentRoll={studentRoll}
+          studentName={studentName}
+          activeIssuedBooks={activeIssuedBooks}
+          initialView="issued"
+        />
       )}
 
       {activeTab === 'catalog' && (
@@ -282,6 +316,25 @@ export default function LibraryPage() {
 
       {activeTab === 'issued' && (
         <div className="library-issued">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
+            <button
+              type="button"
+              className="btn-view-library-books"
+              onClick={() => setActiveTab('erp-library')}
+              style={{
+                backgroundColor: '#333333',
+                color: '#ffffff',
+                border: '1px solid #222222',
+                borderRadius: '3px',
+                padding: '7px 18px',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
+            >
+              View Library of Books
+            </button>
+          </div>
           {activeIssuedBooks.length === 0 ? (
             <div className="library-empty-state">
               <BookOpen size={32} />

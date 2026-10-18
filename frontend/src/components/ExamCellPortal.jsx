@@ -45,6 +45,7 @@ import './ExamCellPortal.css';
 import './SuperAdminPortal.css';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
+import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 import { erpStore } from '../services/erpStore.js';
 import { examsApi } from '../services/examsApi.js';
 import {
@@ -621,6 +622,18 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               <span className="erp-nav-badge">{examCirculars.length}</span>
             </button>
             <button
+              className={`erp-nav-item ${activeTab === 'digital_evaluation' ? 'active' : ''}`}
+              onClick={() => setActiveTab('digital_evaluation')}
+              style={{
+                background: activeTab === 'digital_evaluation' ? undefined : 'linear-gradient(90deg, rgba(124, 58, 237, 0.12), rgba(99, 102, 241, 0.12))',
+                border: '1px solid rgba(139, 92, 246, 0.3)'
+              }}
+            >
+              <FileCheck2 size={18} style={{ color: '#a78bfa' }} />
+              <span>Digital Evaluation System</span>
+              <span className="erp-nav-badge" style={{ background: '#7c3aed', color: '#ffffff' }}>Live</span>
+            </button>
+            <button
               className={`erp-nav-item ${activeTab === 'report-generation' ? 'active' : ''}`}
               onClick={() => setActiveTab('report-generation')}
             >
@@ -720,6 +733,13 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
           {activeTab === 'campus-connect' && (
             <div style={{ height: 'calc(100vh - 140px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>
               <CampusConnect account={account} />
+            </div>
+          )}
+
+          {/* TAB: DIGITAL ANSWER SHEET EVALUATION SYSTEM */}
+          {activeTab === 'digital_evaluation' && (
+            <div style={{ marginTop: '-0.75rem', marginBottom: '20px' }}>
+              <DigitalAnswerSheetEvaluationSystem initialRole="exam_cell" currentUser={account} />
             </div>
           )}
 

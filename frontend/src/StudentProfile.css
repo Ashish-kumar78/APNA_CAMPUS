@@ -689,3 +689,153 @@
   .profile-quick-links button { justify-content: flex-start; }
   .profile-tabs { max-width: calc(100vw - 36px); }
 }
+
+/* ========================================================
+   ERP OFFICIAL TABLE STYLES (MATCHING USER SCREENSHOTS)
+   ======================================================== */
+.erp-tab-content {
+  padding: 12px 16px 28px;
+  background: #ffffff;
+}
+
+.erp-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #212529;
+  font-size: 1.18rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.erp-profile-header .erp-info-icon {
+  color: #1e293b;
+}
+
+.erp-cyan-divider-bar {
+  width: 100%;
+  height: 3px;
+  background: #00bcd4;
+  margin: -6px 0 16px;
+  border-radius: 1px;
+}
+
+.erp-section-subhead-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.erp-section-subhead {
+  color: #2c3e50;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.erp-gold-divider-line {
+  width: 100%;
+  height: 2px;
+  background: #f59e0b;
+  margin-bottom: 12px;
+}
+
+.erp-emergency-contact-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.erp-badge-orange {
+  display: inline-block;
+  padding: 2px 7px;
+  background: #f97316;
+  color: #ffffff;
+  border-radius: 3px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.erp-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #f1f5f9;
+  border-radius: 4px;
+}
+
+.erp-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.erp-grid-table td {
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.erp-grid-table tr:hover {
+  background: #fafbfc;
+}
+
+.erp-th-cell {
+  width: 18%;
+  color: #334155;
+  font-weight: 600;
+  background: #ffffff;
+}
+
+.erp-th-blue {
+  color: #1e3a5f;
+  font-weight: 700;
+}
+
+.erp-td-cell {
+  width: 32%;
+  color: #1e293b;
+  font-weight: 400;
+  background: #ffffff;
+}
+
+.erp-td-yellow {
+  background: #fef9e7 !important;
+  color: #333333;
+  font-weight: 500;
+}
+
+.erp-qualification-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.erp-qualification-grid-table th,
+.erp-qualification-grid-table td {
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.erp-qualification-grid-table thead th {
+  background: #f8fafc;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.erp-qualification-grid-table tbody td {
+  color: #334155;
+}
+
+.erp-qual-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+

@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { BISHNU_CANDIDATE_PHOTO, ADMIT_SIG_CENTER_SUP, ADMIT_SIG_CONTROLLER } from './admitCardAssets';
 
 // Safe constructor helper for both ESM and CJS bundling contexts
 function createPdfDoc(options) {
@@ -292,281 +293,515 @@ export function downloadIdCardPdf(studentData = {}) {
 // 2. Official College Fee Receipt PDF
 // -------------------------------------------------------------
 // -------------------------------------------------------------
-// 2. Official College Fee Receipt PDF (Download & Open)
 // -------------------------------------------------------------
-export function buildFeeReceiptDoc(receipt = {}, studentInfo = {}) {
+// 2. Official GIFT Autonomous College Fee Receipt PDF (Matching Image 5)
+// -------------------------------------------------------------
+
+export function convertNumberToIndianWords(num) {
+  const n = Math.round(Number(num) || 0);
+  if (isNaN(n) || n === 0) return 'zero Rupees Only';
+
+  const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+  const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+  function helper(number) {
+    if (number === 0) return '';
+    if (number < 20) return ones[number] + ' ';
+    if (number < 100) return tens[Math.floor(number / 10)] + ' ' + helper(number % 10);
+    if (number < 1000) return ones[Math.floor(number / 100)] + 'hundred ' + helper(number % 100);
+    if (number < 100000) return helper(Math.floor(number / 1000)) + 'thousands ' + helper(number % 1000);
+    if (number < 10000000) return helper(Math.floor(number / 100000)) + 'lakh ' + helper(number % 100000);
+    return helper(Math.floor(number / 10000000)) + 'crore ' + helper(number % 10000000);
+  }
+
+  const words = helper(n).trim().replace(/\s+/g, ' ');
+  return `${words} Rupees Only`;
+}
+
+export function drawGiftLogo(doc, x, y, size = 26, isWatermark = false) {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const r = size * 0.40;
+
+  const cyanColor = isWatermark ? [195, 232, 252] : [0, 153, 230];
+  const redColor = isWatermark ? [252, 205, 205] : [229, 57, 53];
+
+  // 16 Gear teeth
+  const teethCount = 16;
+  const toothWidth = size * 0.085;
+  const toothHeight = size * 0.12;
+
+  for (let i = 0; i < teethCount; i++) {
+    const angle = (i * 2 * Math.PI) / teethCount - Math.PI / 2;
+    const toothColor = (i >= 0 && i <= 4) ? redColor : cyanColor;
+    doc.setFillColor(...toothColor);
+    doc.setDrawColor(...toothColor);
+
+    const tx = cx + Math.cos(angle) * (r + toothHeight / 2);
+    const ty = cy + Math.sin(angle) * (r + toothHeight / 2);
+
+    const hw = toothWidth / 2;
+    const hh = toothHeight / 2;
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+
+    const p1 = [tx - hw * sinA - hh * cosA, ty + hw * cosA - hh * sinA];
+    const p2 = [tx + hw * sinA - hh * cosA, ty - hw * cosA - hh * sinA];
+    const p3 = [tx + hw * sinA + hh * cosA, ty - hw * cosA + hh * sinA];
+    const p4 = [tx - hw * sinA + hh * cosA, ty + hw * cosA + hh * sinA];
+
+    doc.triangle(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1], 'F');
+    doc.triangle(p1[0], p1[1], p3[0], p3[1], p4[0], p4[1], 'F');
+  }
+
+  // Rim ring
+  doc.setFillColor(255, 255, 255);
+  doc.circle(cx, cy, r, 'F');
+  doc.setLineWidth(isWatermark ? 0.8 : 1.2);
+  doc.setDrawColor(...cyanColor);
+  doc.circle(cx, cy, r, 'S');
+
+  // Inner ring
+  doc.setLineWidth(0.4);
+  doc.circle(cx, cy, r * 0.92, 'S');
+
+  // Diya flame & lamp at top inside
+  doc.setFillColor(...redColor);
+  doc.setDrawColor(...redColor);
+  const flameY = cy - r * 0.45;
+  doc.circle(cx, flameY, size * 0.045, 'F');
+  doc.rect(cx - size * 0.08, cy - r * 0.28, size * 0.16, size * 0.035, 'F');
+
+  // Bold text: APNA
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(size * 0.28);
+  doc.setTextColor(...cyanColor);
+  doc.text('APNA', cx, cy + size * 0.06, { align: 'center' });
+
+  // Book line art below GIFT
+  doc.setDrawColor(...redColor);
+  doc.setLineWidth(isWatermark ? 0.4 : 0.6);
+  const bookY = cy + r * 0.45;
+  const bW = size * 0.16;
+  doc.line(cx, bookY - 1, cx, bookY + size * 0.1);
+  doc.line(cx, bookY, cx - bW, bookY - size * 0.04);
+  doc.line(cx - bW, bookY - size * 0.04, cx - bW, bookY + size * 0.06);
+  doc.line(cx - bW, bookY + size * 0.06, cx, bookY + size * 0.1);
+
+  doc.line(cx, bookY, cx + bW, bookY - size * 0.04);
+  doc.line(cx + bW, bookY - size * 0.04, cx + bW, bookY + size * 0.06);
+  doc.line(cx + bW, bookY + size * 0.06, cx, bookY + size * 0.1);
+}
+
+export function buildGiftFeeReceiptDoc(receipt = {}, studentInfo = {}) {
   const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-  addInstitutionalHeader(doc, 'Official Accounts Fee Receipt', 'Student Copy & University Autonomous Enrollment Clearance');
+  // 1. Watermark in center of the page
+  drawGiftLogo(doc, 75, 115, 60, true);
 
-  const receiptNo = receipt.receiptNo || receipt.id || 'TXN-98421';
-  const amount = Number(receipt.amount || receipt.paid || 48500);
-  const head = receipt.head || 'Tuition & Development Fee';
-  const mode = receipt.mode || 'Net Banking (HDFC)';
-  const date = receipt.date || new Date().toLocaleDateString('en-IN');
-  const studentName = receipt.studentName || studentInfo.name || 'Aarav Sharma';
-  const rollNumber = receipt.rollNumber || studentInfo.rollNumber || studentInfo.rollNo || '2301289140';
-
-  // Receipt voucher summary box
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, 52, doc.internal.pageSize.getWidth() - 28, 30, 2, 2, 'FD');
+  // 2. Top Header - Logo and College Details
+  drawGiftLogo(doc, 18, 14, 25, false);
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...PRIMARY_COLOR);
-  doc.text(`RECEIPT NO: ${receiptNo}`, 20, 60);
-  doc.text(`DATE: ${date}`, 130, 60);
+  doc.setFontSize(15);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Gandhi Institute for Technology (GIFT)', 46, 20);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(...TEXT_DARK);
-  doc.text(`Student Name: ${studentName}`, 20, 68);
-  doc.text(`Registration No: ${rollNumber}`, 130, 68);
-  doc.text(`Course: B.Tech (Computer Science & Engineering)`, 20, 75);
-  doc.text(`Academic Session: 2026-27 | 7th Semester`, 130, 75);
-
-  // Fee table breakdown
-  const tableData = [
-    ['1', head, `₹${amount.toLocaleString('en-IN')}`, 'Cleared (100%)'],
-    ['2', 'Autonomous Examination & Assessment Fee', 'Included', 'Cleared'],
-    ['3', 'Digital ERP & Library Access Services', 'Included', 'Cleared'],
-    ['4', 'Campus Infrastructure & Laboratory Caution', 'Included', 'Cleared']
-  ];
-
-  renderTable(doc, {
-    startY: 88,
-    head: [['Sl. No', 'Fee Head Description', 'Amount Paid (INR)', 'Payment Status']],
-    body: tableData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: PRIMARY_COLOR,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 8.5
-    },
-    bodyStyles: {
-      fontSize: 8,
-      textColor: TEXT_DARK
-    },
-    columnStyles: {
-      0: { cellWidth: 16, halign: 'center' },
-      1: { cellWidth: 100 },
-      2: { cellWidth: 38, halign: 'right' },
-      3: { cellWidth: 28, halign: 'center' }
-    }
-  });
-
-  const finalY = doc.lastAutoTable.finalY + 8;
-
-  // Total summary row
-  doc.setFillColor(241, 245, 249);
-  doc.roundedRect(14, finalY, doc.internal.pageSize.getWidth() - 28, 18, 2, 2, 'F');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(...PRIMARY_COLOR);
-  doc.text('TOTAL RECEIVED:', 20, finalY + 11);
   doc.setFontSize(13);
-  doc.setTextColor(5, 150, 105);
-  doc.text(`INR ₹${amount.toLocaleString('en-IN')}`, 145, finalY + 12);
+  doc.text('(Autonomous)', 46, 26);
 
-  // Mode and verification notes
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...TEXT_MUTED);
-  doc.text(`Payment Instrument: ${mode} | Transaction Ref: TXN-${Math.floor(100000 + Math.random() * 900000)}`, 14, finalY + 26);
-  doc.text('Amount in words: Indian Rupees Only. Valid for semester examination clearance.', 14, finalY + 31);
+  doc.setFontSize(9.5);
+  doc.text('At- Gramadiha, P.o- Gangapada', 46, 32);
 
-  // Seal & Signature
-  drawOfficialSeal(doc, 14, finalY + 40, 'ACCOUNTS DEPT');
+  // 3. Top dividing line
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.6);
+  doc.line(18, 38, 192, 38);
+
+  // 4. Centered Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.text('Fees Receipt (Student Copy)', 105, 44, { align: 'center' });
+
+  // Resolve fields
+  const regdNo = receipt.registrationNumber || receipt.rollNumber || studentInfo.rollNumber || studentInfo.registrationNumber || studentInfo.rollNo || '2401432265';
+  const name = (receipt.studentName || studentInfo.name || 'BISHNU PRASAD SAHOO').toUpperCase();
+  const courseBatch = receipt.courseBatch || studentInfo.batch || 'BTECH 2028-P';
+  const section = receipt.section || studentInfo.section || 'CSE (AI) - Genius';
+
+  const receiptNo = receipt.receiptNo || receipt.no || `GIFT/ACC/${receipt.id ? String(receipt.id).replace(/\D/g, '') || '128680' : '128680'}`;
+  const receiptDate = receipt.receiptDate || receipt.date || receipt.paymentDate || '27-07-2026';
+
+  const amount = Number(receipt.amount || receipt.paid || 20000);
+  const amountWords = convertNumberToIndianWords(amount);
+  const mode = receipt.mode || receipt.paymentMethod || 'Bank Transfer';
+  const txnId = receipt.transactionId || receipt.txnId || receipt.id || '126928800409';
+  const feeHead = receipt.head || receipt.feeHead || receipt.remarks || 'Tuition Fee';
+
+  // 5. Two-column Metadata
+  const leftX = 18;
+  const rightX = 135;
+  const startY = 52;
+  const rowH = 5.5;
+
+  // Left column
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.text('Regd. No : ', leftX, startY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(String(regdNo), leftX + 18, startY);
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(...PRIMARY_COLOR);
-  doc.text('Finance & Accounts Officer', 145, finalY + 54);
+  doc.text('Name : ', leftX, startY + rowH);
+  doc.text(name, leftX + 14, startY + rowH);
+
+  doc.text('Course/Batch: ', leftX, startY + rowH * 2);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(...TEXT_MUTED);
-  doc.text('Apna Campus, Bhubaneswar', 145, finalY + 58);
+  doc.text(courseBatch, leftX + 24, startY + rowH * 2);
 
-  addInstitutionalFooter(doc, 1, 1);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Section: ', leftX, startY + rowH * 3);
+  doc.setFont('helvetica', 'normal');
+  doc.text(section, leftX + 15, startY + rowH * 3);
 
-  return { doc, receiptNo };
+  // Right column
+  doc.setFont('helvetica', 'bold');
+  doc.text('No. : ', rightX, startY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(receiptNo, rightX + 10, startY);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Receipt Date : ', rightX, startY + rowH);
+  doc.setFont('helvetica', 'normal');
+  doc.text(receiptDate, rightX + 24, startY + rowH);
+
+  // 6. Body Statement
+  const statementY = startY + rowH * 4 + 4;
+  doc.setFontSize(9.5);
+  const cleanTxn = String(txnId).replace(/[^a-zA-Z0-9]/g, '');
+  const statement = `Received RS. ${amount.toLocaleString('en-IN')}.00 (${amountWords}) by ${mode} transcation id-${cleanTxn} on ${receiptDate} from ${name} towards ${feeHead}.`;
+  
+  const splitStatement = doc.splitTextToSize(statement, 174);
+  doc.text(splitStatement, 18, statementY);
+
+  // 7. Bottom dividing line
+  const bottomLineY = statementY + (splitStatement.length * 5) + 3;
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.6);
+  doc.line(18, bottomLineY, 192, bottomLineY);
+
+  // 8. Disclaimer Footer
+  const disclaimerY = bottomLineY + 6;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.8);
+  doc.setTextColor(40, 40, 40);
+  const disclaimer = "This money receipt is computer generated by the student through his/her CMS login and does not require the Accountant's signature or the Institute's stamp in order to be considered valid. This is a duplicate money receipt and the original receipt is available with Accounts Department.";
+  const splitDisclaimer = doc.splitTextToSize(disclaimer, 174);
+  doc.text(splitDisclaimer, 18, disclaimerY);
+
+  const cleanFileName = `Fee_Receipt_${receiptNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+  return { doc, receiptNo, fileName: cleanFileName };
+}
+
+export function buildFeeReceiptDoc(receipt = {}, studentInfo = {}) {
+  return buildGiftFeeReceiptDoc(receipt, studentInfo);
 }
 
 export function downloadFeeReceiptPdf(receipt = {}, studentInfo = {}) {
-  const { doc, receiptNo } = buildFeeReceiptDoc(receipt, studentInfo);
-  doc.save(`Fee_Receipt_${receiptNo}.pdf`);
+  const { doc, receiptNo } = buildGiftFeeReceiptDoc(receipt, studentInfo);
+  doc.save(`Fee_Receipt_${receiptNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`);
 }
 
 export function openFeeReceiptPdf(receipt = {}, studentInfo = {}) {
-  const { doc } = buildFeeReceiptDoc(receipt, studentInfo);
+  const { doc, receiptNo } = buildGiftFeeReceiptDoc(receipt, studentInfo);
   try {
     const blob = doc.output('blob');
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
   } catch (err) {
     console.error('Failed to open fee receipt PDF in new window, downloading instead:', err);
-    doc.save(`Fee_Receipt_${receipt.receiptNo || 'Voucher'}.pdf`);
+    doc.save(`Fee_Receipt_${receiptNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`);
   }
 }
 
-// -------------------------------------------------------------
-// 2b. Student Payment Proof / Bank Transfer Voucher PDF
-// -------------------------------------------------------------
 export function buildPaymentProofDoc(proof = {}) {
-  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-  const isUpi = (proof.paymentMethod || '').toUpperCase().includes('UPI');
-  const bankName = isUpi
-    ? 'NATIONAL PAYMENTS CORPORATION OF INDIA (NPCI / UPI)'
-    : 'HDFC BANK LIMITED (BHUBANESWAR MAIN BRANCH)';
-
-  addInstitutionalHeader(doc, 'Bank Electronic Remittance Acknowledgement', 'Official Fee Payment Counterfoil & Interbank Settlement Advice');
-
-  const txnId = proof.transactionId || 'HDFC00019284';
-  const refNo = proof.referenceNumber || 'TXN-98124';
-  const amount = Number(proof.amount || 15000);
-  const studentName = proof.studentName || 'Rahul Sharma';
-  const rollNumber = proof.rollNumber || '2305201038';
-  const department = proof.department || 'Computer Science & Engineering';
-  const paymentDate = proof.paymentDate || '2026-10-05';
-  const method = proof.paymentMethod || 'Bank Transfer';
-  const remarks = proof.remarks || 'Hostel and Mess fee installment';
-
-  // Bank Info banner
-  doc.setFillColor(241, 245, 249);
-  doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(14, 52, doc.internal.pageSize.getWidth() - 28, 28, 2, 2, 'FD');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...PRIMARY_COLOR);
-  doc.text(`ISSUING BANK / GATEWAY: ${bankName}`, 20, 60);
-  doc.text(`VALUE DATE: ${paymentDate}`, 125, 60);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(...TEXT_DARK);
-  doc.text(`Remitter Student: ${studentName} (Roll: ${rollNumber})`, 20, 68);
-  doc.text(`Department: ${department} • B.Tech Regular`, 20, 74);
-  doc.text(`Beneficiary: Apna Campus (Accounts)`, 125, 68);
-  doc.text(`Beneficiary IFSC: HDFC0000042 • Current A/c`, 125, 74);
-
-  // Table breakdown
-  const tableData = [
-    ['1', 'Bank UTR / Transaction Reference ID', txnId, 'CONFIRMED'],
-    ['2', 'Internal Remittance Journal Ref', refNo, 'SETTLED'],
-    ['3', 'Payment Mode / Protocol', method, 'SUCCESS'],
-    ['4', 'Fee Allocation & Student Remarks', remarks, 'ALLOCATED'],
-    ['5', 'Interbank Settlement Clearing Status', 'RBI RTGS/NEFT/UPI Cleared', 'VERIFIED']
-  ];
-
-  renderTable(doc, {
-    startY: 86,
-    head: [['Sl', 'Voucher Specification', 'Transaction Value / Detail', 'Clearing Status']],
-    body: tableData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: PRIMARY_COLOR,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 8.5
-    },
-    bodyStyles: {
-      fontSize: 8,
-      textColor: TEXT_DARK
-    },
-    columnStyles: {
-      0: { cellWidth: 14, halign: 'center' },
-      1: { cellWidth: 70 },
-      2: { cellWidth: 70 },
-      3: { cellWidth: 28, halign: 'center' }
-    }
+  return buildGiftFeeReceiptDoc(proof, {
+    name: proof.studentName || 'BISHNU PRASAD SAHOO',
+    rollNumber: proof.rollNumber || '2401432265',
+    batch: 'BTECH 2028-P',
+    section: 'CSE (AI) - Genius'
   });
-
-  const finalY = doc.lastAutoTable.finalY + 8;
-
-  // Amount box
-  doc.setFillColor(240, 253, 244);
-  doc.setDrawColor(187, 247, 208);
-  doc.roundedRect(14, finalY, doc.internal.pageSize.getWidth() - 28, 20, 2, 2, 'FD');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(...PRIMARY_COLOR);
-  doc.text('TOTAL REMITTANCE AMOUNT:', 20, finalY + 12);
-  doc.setFontSize(14);
-  doc.setTextColor(21, 128, 61);
-  doc.text(`INR ₹${amount.toLocaleString('en-IN')}`, 140, finalY + 13);
-
-  // Verification & seals
-  const certY = finalY + 28;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...TEXT_MUTED);
-  doc.text(`Cryptographic Audit Checksum: SHA256-${Math.random().toString(36).substring(2, 12).toUpperCase()}`, 14, certY);
-  doc.text('This is an authentic computer-generated digital payment counterfoil issued by the core banking gateway.', 14, certY + 5);
-
-  drawOfficialSeal(doc, 14, certY + 14, 'BANK GATEWAY');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(...PRIMARY_COLOR);
-  doc.text('Automated Clearing System Authorized', 130, certY + 24);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(...TEXT_MUTED);
-  doc.text('Payment Gateway Verification Services', 130, certY + 28);
-
-  addInstitutionalFooter(doc, 1, 1);
-
-  return { doc, fileName: proof.fileName || `Payment_Proof_${txnId}.pdf` };
 }
 
 export function openPaymentProofPdf(proof = {}) {
-  // If proofUrl is a valid data URL containing PDF
-  if (proof.proofUrl && typeof proof.proofUrl === 'string' && proof.proofUrl.startsWith('data:application/pdf')) {
-    try {
-      const parts = proof.proofUrl.split(',');
-      const bstr = atob(parts[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-      const blob = new Blob([u8arr], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      return;
-    } catch (e) {
-      console.warn('Error decoding base64 PDF proof:', e);
-    }
-  }
-
-  // If proofUrl is a real remote PDF URL
-  if (proof.proofUrl && typeof proof.proofUrl === 'string' && proof.proofUrl.startsWith('http') && !proof.proofUrl.includes('images.unsplash.com') && proof.proofUrl.endsWith('.pdf')) {
-    window.open(proof.proofUrl, '_blank');
-    return;
-  }
-
-  // Otherwise generate official bank proof PDF
-  const { doc } = buildPaymentProofDoc(proof);
+  const { doc, receiptNo } = buildPaymentProofDoc(proof);
   try {
     const blob = doc.output('blob');
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
   } catch (err) {
     console.error('Failed to open generated proof PDF in new window, downloading instead:', err);
-    doc.save(proof.fileName || 'Payment_Proof.pdf');
+    doc.save(`Fee_Receipt_${receiptNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`);
   }
 }
 
 export function downloadPaymentProofPdf(proof = {}) {
-  const { doc, fileName } = buildPaymentProofDoc(proof);
-  doc.save(fileName);
+  const { doc, receiptNo } = buildPaymentProofDoc(proof);
+  doc.save(`Fee_Receipt_${receiptNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`);
 }
+
+
+// -------------------------------------------------------------
+// 2B. GIFT Autonomous Examination Admit Card (Matching Screenshot)
+// -------------------------------------------------------------
+export function drawOfficialAdmitStamp(doc, x, y, title1, title2) {
+  doc.setDrawColor(124, 58, 237);
+  doc.setFillColor(250, 245, 255);
+  doc.roundedRect(x, y, 48, 12, 1, 1, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(109, 40, 217);
+  doc.text(title1, x + 24, y + 5, { align: 'center' });
+  doc.setFontSize(6.8);
+  doc.text(title2, x + 24, y + 9.5, { align: 'center' });
+}
+
+export function buildGiftAdmitCardDoc(exam = {}, studentInfo = {}) {
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth(); // 210
+
+  // 1. Background Watermark (GIFT Cogwheel Logo in center of schedule table)
+  drawGiftLogo(doc, (pageWidth - 75) / 2, 95, 75, true);
+
+  // 2. Header
+  // Top left GIFT Logo
+  drawGiftLogo(doc, 14, 10, 25, false);
+
+  // Top Center text
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(0, 0, 0);
+  doc.text('APNA CAMPUS, BHUBANESWAR', (pageWidth / 2) + 6, 17, { align: 'center' });
+
+  doc.setFontSize(11);
+  doc.text('ADMIT CARD', (pageWidth / 2) + 6, 23, { align: 'center' });
+  const admitWidth = doc.getTextWidth('ADMIT CARD');
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.4);
+  doc.line(((pageWidth / 2) + 6) - (admitWidth / 2), 24, ((pageWidth / 2) + 6) + (admitWidth / 2), 24);
+
+  const examName = exam.name || '4th Semester End Semester Examination 2025-26';
+  doc.setFontSize(9.5);
+  doc.text(examName, (pageWidth / 2) + 6, 29, { align: 'center' });
+
+  // 3. Candidate Details Box (Left) and Photo (Right)
+  const regdNo = studentInfo.registrationNumber || studentInfo.rollNumber || '2401432265';
+  const name = (studentInfo.name || 'BISHNU PRASAD SAHOO').toUpperCase();
+  const dob = studentInfo.dobFormatted || studentInfo.dob || '04/03/2007';
+  const courseBatch = studentInfo.courseBatchFull || 'BTECH 2028-P (Branch:- Computer Science & Engineering (Artificial Intelligence))';
+
+  const leftBoxX = 14;
+  const leftBoxY = 34;
+  const leftBoxW = 145;
+  const photoX = 163;
+  const photoY = 34;
+  const photoW = 24;
+  const photoH = 30;
+
+  const detailRows = [
+    ['Registration No.', `-  ${regdNo}`],
+    ["Candidate's Name", `-  ${name}`],
+    ['Date of Birth', `-  ${dob}`],
+    ['Course/Batch', `-  ${courseBatch}`],
+  ];
+
+  renderTable(doc, {
+    startY: leftBoxY,
+    margin: { left: leftBoxX },
+    tableWidth: leftBoxW,
+    body: detailRows,
+    theme: 'grid',
+    styles: {
+      lineColor: [0, 0, 0],
+      lineWidth: 0.25,
+      cellPadding: 1.5,
+      fontSize: 7.2,
+      textColor: [0, 0, 0]
+    },
+    columnStyles: {
+      0: { cellWidth: 32, fontStyle: 'bold' },
+      1: { cellWidth: 113, fontStyle: 'bold' }
+    }
+  });
+
+  const leftBoxFinalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : leftBoxY + 28;
+
+  // Render Candidate Photo
+  try {
+    if (BISHNU_CANDIDATE_PHOTO) {
+      doc.addImage(BISHNU_CANDIDATE_PHOTO, 'PNG', photoX, photoY, photoW, photoH);
+    } else {
+      doc.setFillColor(240, 243, 248);
+      doc.rect(photoX, photoY, photoW, photoH, 'F');
+    }
+  } catch (err) {
+    doc.setFillColor(240, 243, 248);
+    doc.rect(photoX, photoY, photoW, photoH, 'F');
+  }
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  doc.rect(photoX, photoY, photoW, photoH, 'S');
+
+  // Candidate's Signature label
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(0, 0, 0);
+  doc.text("Candidate's Signature", photoX + (photoW / 2), photoY + photoH + 5, { align: 'center' });
+
+  // 4. Schedule of Examination Title
+  const schedTitleY = Math.max(leftBoxFinalY, photoY + photoH + 6) + 4;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('Schedule of Examination', pageWidth / 2, schedTitleY, { align: 'center' });
+
+  // 5. Schedule Table
+  const defaultSubs = [
+    { sl: 1, dateFull: '06/05/2026 (Wednesday)', sitting: '2nd', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-403', name: 'Programming with Python' },
+    { sl: 2, dateFull: '07/05/2026 (Thursday)', sitting: '2nd', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-402', name: 'Computer Organization & Architecture' },
+    { sl: 3, dateFull: '08/05/2026 (Friday)', sitting: '2nd', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-401', name: 'Design and Analysis of Algorithms' },
+    { sl: 4, dateFull: '09/05/2026 (Saturday)', sitting: '2nd', time: '12.00 PM - 03.00 PM', code: 'BTEC-T-OE-401', name: 'Digital Signal Processing' },
+    { sl: 5, dateFull: '11/05/2026 (Monday)', sitting: '2nd', time: '12.00 PM - 03.00 PM', code: 'BTBS-T-HS-302', name: 'Engineering Economics' },
+    { sl: 6, dateFull: '12/05/2026 (Tuesday)', sitting: '2nd', time: '12.00 PM - 03.00 PM', code: 'BTMC-T-MC-302', name: 'EIKT' },
+    { sl: 7, dateFull: '13/05/2026 (Wednesday)', sitting: '2nd', time: '12.00 PM - 03.00 PM', code: 'BTSC-T-AE-401', name: 'Ability Enhancement Training -C' },
+  ];
+
+  const subjects = (exam.subjects && exam.subjects.length > 0) ? exam.subjects : defaultSubs;
+
+  const schedRows = subjects.map(s => [
+    s.sl,
+    s.dateFull || `${s.date}`,
+    s.sitting || '2nd',
+    s.time || '12.00 PM - 03.00 PM',
+    s.code,
+    s.name
+  ]);
+
+  renderTable(doc, {
+    startY: schedTitleY + 2.5,
+    margin: { left: 14, right: 14 },
+    head: [['Sl.', 'Date', 'Sitting', 'Time', 'Subject Code', 'Subject Name']],
+    body: schedRows,
+    theme: 'grid',
+    styles: {
+      lineColor: [0, 0, 0],
+      lineWidth: 0.25,
+      cellPadding: 1.6,
+      fontSize: 6.8,
+      textColor: [0, 0, 0]
+    },
+    headStyles: {
+      fillColor: [248, 250, 252],
+      textColor: [0, 0, 0],
+      fontStyle: 'bold',
+      halign: 'center'
+    },
+    columnStyles: {
+      0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
+      1: { cellWidth: 38, halign: 'center' },
+      2: { cellWidth: 16, halign: 'center' },
+      3: { cellWidth: 34, halign: 'center' },
+      4: { cellWidth: 26, halign: 'center' },
+      5: { cellWidth: 58, halign: 'left', fontStyle: 'bold' },
+    }
+  });
+
+  const tableFinalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : 125;
+
+  // 6. Signatures & Official Stamps
+  const sigY = tableFinalY + 3;
+  try {
+    if (ADMIT_SIG_CENTER_SUP) {
+      doc.addImage(ADMIT_SIG_CENTER_SUP, 'PNG', 16, sigY, 46, 22);
+    } else {
+      drawOfficialAdmitStamp(doc, 16, sigY + 8, 'Center Superintendent', 'Apna Campus, Bhubaneswar');
+    }
+  } catch (err) {
+    drawOfficialAdmitStamp(doc, 16, sigY + 8, 'Center Superintendent', 'Apna Campus, Bhubaneswar');
+  }
+
+  try {
+    if (ADMIT_SIG_CONTROLLER) {
+      doc.addImage(ADMIT_SIG_CONTROLLER, 'PNG', 140, sigY, 46, 22);
+    } else {
+      drawOfficialAdmitStamp(doc, 140, sigY + 8, 'Controller of Examinations', 'Apna Campus (Autonomous), Bhubaneswar');
+    }
+  } catch (err) {
+    drawOfficialAdmitStamp(doc, 140, sigY + 8, 'Controller of Examinations', 'Apna Campus (Autonomous), Bhubaneswar');
+  }
+
+  // 7. Instructions
+  const instY = sigY + 24;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.8);
+  doc.setTextColor(0, 0, 0);
+  doc.text('*Instruction (s)', 14, instY);
+
+  const instructions = [
+    'i. This Admit Card is issued on the basis of student data filled in on-line by the college.',
+    'ii. A Candidate is required to bring his / her Registration / Identity Card and Identity Proof to the Examination Hall.',
+    'iii. A Candidate detected with possession of Mobile Phone / Pager and any Objectionable Electronic Gadgets inside the Examination Hall will be debarred and punishable as per Regulation of the University.',
+    'iv. A candidate shall report the Invigilator and / Centre Superintendent in case of wrong photograph or discrepancies and the Centre Superintendent shall permit only after verification with the University Registration Card and valid Vote Id / Aadhar Card.',
+    'v. The Centre Superintendent shall permit a candidate to appear in subject (s), if he / she has registered, eligible and subject (s) are available in the University Schedule and Admit Card.',
+    'vi. The Centre Superintendent shall make permissible arrangement for physically challenged / blind candidates with required supporting documents as per rules.',
+    'vii. The Result will be published subject to fulfilment of all academic regulations for the course in force of the university.'
+  ];
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.8);
+  let curInstY = instY + 4;
+  instructions.forEach((inst) => {
+    const splitLines = doc.splitTextToSize(inst, 182);
+    splitLines.forEach((l) => {
+      doc.text(l, 18, curInstY);
+      curInstY += 3.7;
+    });
+  });
+
+  // 8. Footer divider and text
+  const footerY = 278;
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.6);
+  doc.line(14, footerY, pageWidth - 14, footerY);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('Apna Campus Autonomous Institution, Bhubaneswar', 14, footerY + 5);
+
+  const printDate = '18-10-2026';
+  doc.text(`Printed @ ${printDate}`, pageWidth - 14, footerY + 5, { align: 'right' });
+
+  return doc;
+}
+
+export function downloadGiftAdmitCardPdf(exam = {}, studentInfo = {}) {
+  const doc = buildGiftAdmitCardDoc(exam, studentInfo);
+  const cleanSem = (exam.name || 'Admit_Card').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const regd = studentInfo.registrationNumber || studentInfo.rollNumber || '2401432265';
+  doc.save(`GIFT_AdmitCard_${regd}_${cleanSem}.pdf`);
+}
+
+export function openGiftAdmitCardPdf(exam = {}, studentInfo = {}) {
+  const doc = buildGiftAdmitCardDoc(exam, studentInfo);
+  try {
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch (err) {
+    downloadGiftAdmitCardPdf(exam, studentInfo);
+  }
+}
+
 
 // -------------------------------------------------------------
 // 3. Examination Grade Card / Marksheet PDF

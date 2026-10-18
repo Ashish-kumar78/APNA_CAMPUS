@@ -1378,6 +1378,21 @@ button, .btn-pay-now, .btn-receipt, .btn-notice-action {
   color: #ffffff !important;
   box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45);
 }
+.campus-os-nav a svg {
+  flex-shrink: 0;
+}
+
+.campus-nav-chat-bubble {
+  flex-shrink: 0;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 2px !important;
+}
+
 .campus-os-nav a.active svg {
   color: #ffffff !important;
 }

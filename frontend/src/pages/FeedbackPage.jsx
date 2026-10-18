@@ -12,17 +12,20 @@ import {
   HelpCircle,
   FlaskConical,
   BookOpen,
-  Check
+  Check,
+  ShieldAlert,
+  GraduationCap
 } from 'lucide-react'
+import GrievanceRedressalSection from '../components/GrievanceRedressalSection.jsx'
 import './FeedbackPage.css'
 
-// ── Theory Questions (11 Evaluation Criteria) ──
+// ── Theory Questions (11 Evaluation Criteria - Exact Match to Image 1) ──
 export const theoryQuestions = [
-  { id: 'q1', label: 'Class Management (discipline) - Begins & end class on time' },
+  { id: 'q1', label: 'Class Management (discipline). Begins & end class on time' },
   { id: 'q2', label: 'Teaching Ability. Is he/she well prepared for the class? Is organized and teaches clearly?' },
   { id: 'q3', label: 'Coverage of Subject. Tells the class in each meeting what is going to be taught and what students are expected to learn.' },
   { id: 'q4', label: 'Blackboard Usage/ Alternative teaching-learning methods. There is effective use of audio visual aids/handouts.' },
-  { id: 'q5', label: 'Time Sense (Whether total period devoted to Lecture); Encourages students to ask questions and participate' },
+  { id: 'q5', label: 'Time Sense (Whether total period devoted to Lecture)/ Encourages students to ask questions and participate' },
   { id: 'q6', label: 'Clarification of Student doubts, answers questions clearly' },
   { id: 'q7', label: 'Usefulness of the study material provided by the faculty' },
   { id: 'q8', label: 'Communication skills (English Fluency)' },
@@ -81,32 +84,60 @@ export const labRows = [
 // Numbers 1 to 10 for rating
 const ratingNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export default function FeedbackPage({ onBack }) {
-  // Initialize theory ratings from localStorage or default all to 10
+export default function FeedbackPage({ onBack, account, initialSection }) {
+  // Active Section: 'faculty-feedback' (Give Faculty Feedback) or 'grievance-redressal' (Grievance Redressal)
+  const [activeSection, setActiveSection] = useState(() => {
+    if (
+      initialSection === 'grievance' ||
+      (typeof window !== 'undefined' &&
+        (window.location.hash.includes('grievance') || window.location.hash.includes('complain')))
+    ) {
+      return 'grievance-redressal';
+    }
+    return 'faculty-feedback';
+  });
+
+  useEffect(() => {
+    if (
+      initialSection === 'grievance' ||
+      (typeof window !== 'undefined' &&
+        (window.location.hash.includes('grievance') || window.location.hash.includes('complain')))
+    ) {
+      setActiveSection('grievance-redressal');
+    } else if (
+      initialSection === 'feedback' ||
+      (typeof window !== 'undefined' &&
+        (window.location.hash === '#feedback' || window.location.hash === '#appraisal'))
+    ) {
+      setActiveSection('faculty-feedback');
+    }
+  }, [initialSection]);
+
+  // Initialize theory ratings from localStorage or default all to 1 (Student must change)
   const [theoryRatings, setTheoryRatings] = useState(() => {
     try {
-      const saved = localStorage.getItem('apna_campus_feedback_theory');
+      const saved = localStorage.getItem('apna_campus_feedback_theory_v2');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     const initial = {};
     theoryRows.forEach((row) => {
       theoryQuestions.forEach((q) => {
-        initial[`${row.id}-${q.id}`] = 10;
+        initial[`${row.id}-${q.id}`] = 1;
       });
     });
     return initial;
   });
 
-  // Initialize lab ratings from localStorage or default all to 10
+  // Initialize lab ratings from localStorage or default all to 1 (Student must change)
   const [labRatings, setLabRatings] = useState(() => {
     try {
-      const saved = localStorage.getItem('apna_campus_feedback_lab');
+      const saved = localStorage.getItem('apna_campus_feedback_lab_v2');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     const initial = {};
     labRows.forEach((row) => {
       labQuestions.forEach((q) => {
-        initial[`${row.id}-${q.id}`] = 10;
+        initial[`${row.id}-${q.id}`] = 1;
       });
     });
     return initial;
@@ -114,6 +145,23 @@ export default function FeedbackPage({ onBack }) {
 
   const [toastMessage, setToastMessage] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
+
+  // Track submission status for Theory and Lab (First time is Submit, subsequent is Update)
+  const [isTheorySubmitted, setIsTheorySubmitted] = useState(() => {
+    try {
+      return localStorage.getItem('apna_campus_feedback_theory_submitted') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const [isLabSubmitted, setIsLabSubmitted] = useState(() => {
+    try {
+      return localStorage.getItem('apna_campus_feedback_lab_submitted') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -155,22 +203,36 @@ export default function FeedbackPage({ onBack }) {
     showToast(`All 29 teachers & practicals set to ${val}/10 rating!`);
   };
 
-  const handleUpdateTheory = () => {
+  // Submit or Update Theory feedback
+  const handleSubmitOrUpdateTheory = (isUpdateMode = false) => {
     try {
-      localStorage.setItem('apna_campus_feedback_theory', JSON.stringify(theoryRatings));
+      localStorage.setItem('apna_campus_feedback_theory_v2', JSON.stringify(theoryRatings));
+      localStorage.setItem('apna_campus_feedback_theory_submitted', 'true');
     } catch (e) {}
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setLastUpdated(now);
-    showToast('Theory Subjects Feedback Appraisal successfully updated!');
+    setIsTheorySubmitted(true);
+    if (isUpdateMode) {
+      showToast('Theory Subjects Feedback Appraisal successfully updated!');
+    } else {
+      showToast('Theory Subjects Feedback Appraisal successfully submitted!');
+    }
   };
 
-  const handleUpdateLab = () => {
+  // Submit or Update Laboratory/Practical feedback
+  const handleSubmitOrUpdateLab = (isUpdateMode = false) => {
     try {
-      localStorage.setItem('apna_campus_feedback_lab', JSON.stringify(labRatings));
+      localStorage.setItem('apna_campus_feedback_lab_v2', JSON.stringify(labRatings));
+      localStorage.setItem('apna_campus_feedback_lab_submitted', 'true');
     } catch (e) {}
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setLastUpdated(now);
-    showToast('Laboratory/Practical Feedback Appraisal successfully updated!');
+    setIsLabSubmitted(true);
+    if (isUpdateMode) {
+      showToast('Laboratory/Practical Feedback Appraisal successfully updated!');
+    } else {
+      showToast('Laboratory/Practical Feedback Appraisal successfully submitted!');
+    }
   };
 
   const handleBack = () => {
@@ -199,43 +261,85 @@ export default function FeedbackPage({ onBack }) {
         </div>
       )}
 
-      {/* Top Header Card */}
-      <header className="feedback-top-card">
-        <div className="feedback-top-main">
-          <div className="feedback-badge-pill">
-            <Sparkles size={13} />
-            <span>OFFICIAL FACULTY APPRAISAL · 2026-2027</span>
-          </div>
-          <h1>Student Feedback & Teacher Appraisal</h1>
-          <p className="feedback-top-desc">
-            Provide transparent, anonymous feedback about each teacher for Theory and Laboratory/Practical subjects.
-            Ratings start from <strong>1 (Lowest)</strong> to <strong>10 (Highest/Excellent)</strong>. Both evaluations are submitted on this page.
-          </p>
+      {/* ── Main Top Section Navigation (Two Separate Sections) ── */}
+      <div className="feedback-section-tabs-bar" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeSection === 'faculty-feedback'}
+          className={`feedback-main-tab ${activeSection === 'faculty-feedback' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveSection('faculty-feedback');
+            window.location.hash = 'feedback';
+          }}
+        >
+          <GraduationCap size={18} />
+          <span>Give Faculty Feedback</span>
+          <span className="tab-pill-badge">29 Subjects</span>
+        </button>
 
-          <div className="feedback-quick-nav-bar">
-            <button
-              type="button"
-              className="feedback-nav-chip"
-              onClick={() => scrollToSection('theory-subjects-section')}
-            >
-              <BookOpen size={14} />
-              <span>Feedback - Theory Subjects (20)</span>
-            </button>
-            <button
-              type="button"
-              className="feedback-nav-chip"
-              onClick={() => scrollToSection('laboratory-subjects-section')}
-            >
-              <FlaskConical size={14} />
-              <span>Feedback - Laboratory/Practical (9)</span>
-            </button>
-          </div>
-        </div>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeSection === 'grievance-redressal'}
+          className={`feedback-main-tab feedback-main-tab-grievance ${activeSection === 'grievance-redressal' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveSection('grievance-redressal');
+            window.location.hash = 'grievance-redressal';
+          }}
+        >
+          <ShieldAlert size={18} />
+          <span>Grievance Redressal</span>
+          <span className="tab-pill-badge grievance-badge">Complaints Cell</span>
+        </button>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 1: GIVE FACULTY FEEDBACK ONLY (When 1st tab is selected)
+          ───────────────────────────────────────────────────────────── */}
+      {activeSection === 'faculty-feedback' && (
+        <>
+          {/* Top Header Card */}
+          <header className="feedback-top-card">
+            <div className="feedback-top-main">
+              <div className="feedback-badge-pill">
+                <Sparkles size={13} />
+                <span>OFFICIAL FACULTY APPRAISAL · 2026-2027</span>
+              </div>
+              <h1>Student Feedback & Teacher Appraisal</h1>
+              <p className="feedback-top-desc">
+                Provide transparent, anonymous feedback about each teacher for Theory and Laboratory/Practical subjects.
+                Ratings range from <strong>1 (Lowest / Default)</strong> to <strong>10 (Highest / Excellent)</strong>.
+                By default, all ratings are set to <strong>1</strong> and need to be evaluated and changed by the student.
+              </p>
+
+              <div className="feedback-quick-nav-bar">
+                <button
+                  type="button"
+                  className="feedback-nav-chip"
+                  onClick={() => scrollToSection('theory-subjects-section')}
+                >
+                  <BookOpen size={14} />
+                  <span>Feedback - Theory Subjects (20)</span>
+                </button>
+                <button
+                  type="button"
+                  className="feedback-nav-chip"
+                  onClick={() => scrollToSection('laboratory-subjects-section')}
+                >
+                  <FlaskConical size={14} />
+                  <span>Feedback - Laboratory/Practical (9)</span>
+                </button>
+              </div>
+            </div>
 
         {/* Quick Fill Utility Bar */}
         <div className="feedback-quick-presets">
           <span className="preset-label">Quick Rating Fill:</span>
           <div className="preset-buttons">
+            <button type="button" onClick={() => handleSetAllRatings(1)} title="Reset all ratings to 1 (Default)">
+              ↺ Reset to 1 (Default)
+            </button>
             <button type="button" onClick={() => handleSetAllRatings(10)} title="Set all ratings to 10">
               ⭐ All 10
             </button>
@@ -286,7 +390,7 @@ export default function FeedbackPage({ onBack }) {
                   <td className="col-subject">{row.subject}</td>
                   {theoryQuestions.map((q) => {
                     const key = `${row.id}-${q.id}`;
-                    const val = theoryRatings[key] ?? 10;
+                    const val = theoryRatings[key] ?? 1;
                     return (
                       <td key={q.id} className="col-rating-cell">
                         <select
@@ -310,17 +414,29 @@ export default function FeedbackPage({ onBack }) {
           </table>
         </div>
 
-        {/* Action Buttons: Update & Back */}
+        {/* Action Buttons: Submit / Update & Back */}
         <div className="feedback-table-footer-actions">
-          <button
-            type="button"
-            className="feedback-btn-update"
-            onClick={handleUpdateTheory}
-            title="Save and update Theory feedback"
-          >
-            <Save size={14} />
-            <span>Update</span>
-          </button>
+          {!isTheorySubmitted ? (
+            <button
+              type="button"
+              className="feedback-btn-submit"
+              onClick={() => handleSubmitOrUpdateTheory(false)}
+              title="Submit Theory feedback ratings"
+            >
+              <FileText size={14} />
+              <span>Submit</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="feedback-btn-update"
+              onClick={() => handleSubmitOrUpdateTheory(true)}
+              title="Update submitted Theory feedback ratings"
+            >
+              <FileText size={14} />
+              <span>Update</span>
+            </button>
+          )}
           <button
             type="button"
             className="feedback-btn-back"
@@ -368,7 +484,7 @@ export default function FeedbackPage({ onBack }) {
                   <td className="col-subject">{row.subject}</td>
                   {labQuestions.map((q) => {
                     const key = `${row.id}-${q.id}`;
-                    const val = labRatings[key] ?? 10;
+                    const val = labRatings[key] ?? 1;
                     return (
                       <td key={q.id} className="col-rating-cell">
                         <select
@@ -392,17 +508,29 @@ export default function FeedbackPage({ onBack }) {
           </table>
         </div>
 
-        {/* Action Buttons: Update & Back */}
+        {/* Action Buttons: Submit / Update & Back */}
         <div className="feedback-table-footer-actions">
-          <button
-            type="button"
-            className="feedback-btn-update"
-            onClick={handleUpdateLab}
-            title="Save and update Laboratory feedback"
-          >
-            <Save size={14} />
-            <span>Update</span>
-          </button>
+          {!isLabSubmitted ? (
+            <button
+              type="button"
+              className="feedback-btn-submit"
+              onClick={() => handleSubmitOrUpdateLab(false)}
+              title="Submit Laboratory/Practical feedback ratings"
+            >
+              <FileText size={14} />
+              <span>Submit</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="feedback-btn-update"
+              onClick={() => handleSubmitOrUpdateLab(true)}
+              title="Update submitted Laboratory/Practical feedback ratings"
+            >
+              <FileText size={14} />
+              <span>Update</span>
+            </button>
+          )}
           <button
             type="button"
             className="feedback-btn-back"
@@ -415,13 +543,38 @@ export default function FeedbackPage({ onBack }) {
       </section>
 
       {/* Confidentiality Footer Note */}
-      <footer className="feedback-confidential-note">
-        <Info size={15} color="#2563eb" />
-        <span>
-          <strong>Confidentiality Notice:</strong> All responses submitted are completely anonymous and encrypted.
-          Evaluations are aggregated at the end of the semester to assist faculty development and enhance academic quality.
-        </span>
-      </footer>
+          <footer className="feedback-confidential-note">
+            <Info size={15} color="#2563eb" />
+            <span>
+              <strong>Confidentiality Notice:</strong> All responses submitted are completely anonymous and encrypted.
+              Evaluations are aggregated at the end of the semester to assist faculty development and enhance academic quality.
+            </span>
+          </footer>
+        </>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 2: GRIEVANCE REDRESSAL ONLY (When 2nd tab is selected)
+          ───────────────────────────────────────────────────────────── */}
+      {activeSection === 'grievance-redressal' && (
+        <>
+          <header className="feedback-top-card grievance-hero-card">
+            <div className="feedback-top-main">
+              <div className="feedback-badge-pill grievance-badge-pill">
+                <ShieldAlert size={13} />
+                <span>OFFICIAL STUDENT GRIEVANCE & REDRESSAL CELL · AICTE/UGC COMPLIANT</span>
+              </div>
+              <h1>Grievance Redressal Portal</h1>
+              <p className="feedback-top-desc">
+                Lodge grievances, hostel concerns, academic issues, examination delays, or fee queries directly to the Autonomous Grievance Committee.
+                Track investigation progress, review resolutions, and download formal PDF/Excel records.
+              </p>
+            </div>
+          </header>
+
+          <GrievanceRedressalSection studentAccount={account} />
+        </>
+      )}
     </div>
   )
 }

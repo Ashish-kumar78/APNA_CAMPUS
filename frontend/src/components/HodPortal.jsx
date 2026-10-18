@@ -48,6 +48,7 @@ import { useTimeGreeting } from '../utils/timeGreeting.js';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
+import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 
 function exportToCsv(filename, rows) {
   if (!rows || !rows.length) return;
@@ -468,6 +469,16 @@ export default function HodPortal({ account, onLogout }) {
               <ClipboardCheck size={17} /> Take Attendance
             </button>
             <button
+              className={`hod-nav-btn ${activeTab === 'digital-evaluation' ? 'active' : ''}`}
+              onClick={() => setActiveTab('digital-evaluation')}
+              style={{
+                background: activeTab === 'digital-evaluation' ? undefined : 'linear-gradient(90deg, rgba(13, 148, 136, 0.12), rgba(16, 185, 129, 0.12))',
+                border: '1px solid rgba(13, 148, 136, 0.35)'
+              }}
+            >
+              <FileText size={17} style={{ color: '#0d9488' }} /> Digital Evaluation &amp; Approval
+            </button>
+            <button
               className={`hod-nav-btn ${activeTab === 'approval' ? 'active' : ''}`}
               onClick={() => setActiveTab('approval')}
             >
@@ -543,6 +554,13 @@ export default function HodPortal({ account, onLogout }) {
           {activeTab === 'campus-connect' && (
             <div style={{ height: 'calc(100vh - 120px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>
               <CampusConnect account={account} />
+            </div>
+          )}
+
+          {/* TAB: DIGITAL ANSWER SHEET EVALUATION SYSTEM */}
+          {activeTab === 'digital-evaluation' && (
+            <div style={{ marginTop: '-0.75rem', marginBottom: '20px' }}>
+              <DigitalAnswerSheetEvaluationSystem initialRole="hod" currentUser={account} />
             </div>
           )}
 

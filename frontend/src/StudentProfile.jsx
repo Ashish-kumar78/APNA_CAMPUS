@@ -15,6 +15,7 @@ import {
   Heart,
   HeartPulse,
   IdCard,
+  Info,
   MapPin,
   ShieldCheck,
   UserRound,
@@ -159,24 +160,27 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
     setTimeout(() => setMessage(''), 4500)
   }
 
-  const firstName = student.firstName || student.name.split(' ')[0]
-  const lastName = student.lastName || student.name.split(' ').slice(1).join(' ') || ''
-  const emailName = student.name.toLowerCase().replaceAll(' ', '.')
+  const firstName = student.firstName || 'BISHNU'
+  const lastName = student.lastName || 'SAHOO'
+  const middleName = student.middleName || 'PRASAD'
+  const fullName = student.name || `${firstName} ${middleName} ${lastName}`.trim()
+  const regNumber = student.registrationNumber || account?.registrationNumber || '2401432265'
+  const emailName = fullName.toLowerCase().replaceAll(' ', '.')
   const summaryRows = [
     ['Last Date of Class Attendance', student.lastClassAttendanceDate || '14/10/2026'],
     ['Last Date of Hostel Attendance', student.lastHostelAttendanceDate || '16/10/2026'],
-    ['Registration No.', student.registrationNumber || account.registrationNumber],
+    ['Registration No.', regNumber],
     ['Serial No.', student.rollNumber || '01'],
-    ['Name', student.name.toUpperCase()],
+    ['Name', fullName.toUpperCase()],
     ['Mentor', student.mentor || 'Dr. Pratyush Mohapatra'],
     ['Course', student.course || 'Bachelor of Technology'],
-    ['Batch', student.batch || 'BTECH 2023–2027'],
-    ['Branch', student.department || student.branch || account.department],
-    ['Section', student.academicSection || student.section || 'CSE · Section A'],
+    ['Batch', student.batch || 'BTECH 2028-P'],
+    ['Branch', student.branch || student.department || 'Computer Science & Engineering (Artificial Intelligence)'],
+    ['Section', student.academicSection || student.section || 'CSE (AI) - Genius'],
     ['Domain Email ID', student.email || `${emailName}@gift.edu.in`],
     ['Email ID', student.personalEmail || `${emailName}@gmail.com`],
-    ['Mobile No.', student.phone || '+91 98610 23010'],
-    ['WhatsApp No.', student.phone || '+91 98610 23010'],
+    ['Mobile No.', student.phone || '7749844291'],
+    ['WhatsApp No.', student.phone || '7749844291'],
     ['Aadhaar No.', student.govtIdNumber || 'XXXX XXXX 2341'],
     ['Voter ID', 'Not provided'],
     ['PAN No.', 'Not provided'],
@@ -387,7 +391,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
                         <Plus size={16} /> Add Document
                       </button>
                     </div>
-                  ) : (
+                  ) : ['Personal', 'Academic', 'Guardians', 'Address'].includes(activeTab) ? null : (
                     <h2><ShieldCheck size={15} />{panelTitle}</h2>
                   )
                 )}
@@ -424,15 +428,21 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
             ) : activeTab === 'Examination' ? (
               <ExaminationPage />
             ) : activeTab === 'Fee Details' || activeTab === 'Fees' ? (
-              <FeesPage />
+              <FeesPage account={account || student} />
             ) : activeTab === 'Campus Biometrics' ? (
               <BiometricPage />
             ) : activeTab === 'Canteen & Mess' ? (
               <CanteenPage />
             ) : activeTab === 'Health & Medical' || activeTab === 'Health' ? (
               <HealthPage />
+            ) : activeTab === 'Personal' ? (
+              <PersonalDetails student={student} />
             ) : activeTab === 'Academic' ? (
               <AcademicDetails student={student} />
+            ) : activeTab === 'Guardians' ? (
+              <GuardiansDetails student={student} />
+            ) : activeTab === 'Address' ? (
+              <AddressDetails student={student} />
             ) : activeTab === 'Documents' ? (
               <div className="profile-documents">
                 {studentDocs.map((docItem) => {
@@ -934,6 +944,95 @@ function AttendanceDetails() {
   )
 }
 
+function PersonalDetails({ student }) {
+  const s = student || {}
+  return (
+    <div className="erp-tab-content">
+      <div className="erp-profile-header">
+        <Info size={19} className="erp-info-icon" />
+        <span>Personal Details</span>
+      </div>
+
+      <div className="erp-table-responsive">
+        <table className="erp-grid-table">
+          <tbody>
+            <tr>
+              <td className="erp-th-cell erp-th-blue">Admission Category</td>
+              <td className="erp-td-cell erp-td-yellow" colSpan={3}>
+                {s.admissionCategory || 'General'}
+              </td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">Title</td>
+              <td className="erp-td-cell" colSpan={3}>
+                {s.title || 'Mr.'}
+              </td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">First Name</td>
+              <td className="erp-td-cell">{s.firstName || 'BISHNU'}</td>
+              <td className="erp-th-cell">Last Name</td>
+              <td className="erp-td-cell">{s.lastName || 'SAHOO'}</td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">Middle Name</td>
+              <td className="erp-td-cell">{s.middleName || 'PRASAD'}</td>
+              <td className="erp-th-cell">Gender</td>
+              <td className="erp-td-cell">{s.gender || 'MALE'}</td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">Date of Birth</td>
+              <td className="erp-td-cell">{s.dobFormatted || s.dob || '04-03-2007'}</td>
+              <td className="erp-th-cell">Nationality</td>
+              <td className="erp-td-cell">{s.nationality || 'Indian'}</td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">Caste</td>
+              <td className="erp-td-cell">{s.caste || 'SEBC/OBC'}</td>
+              <td className="erp-th-cell">Religion</td>
+              <td className="erp-td-cell">{s.religion || 'HINDU'}</td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">Bloodgroup</td>
+              <td className="erp-td-cell">{s.bloodGroup || 'O+'}</td>
+              <td className="erp-th-cell">Birthplace</td>
+              <td className="erp-td-cell">{s.birthplace || 'GHASIPUT, CUTTACK'}</td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">Identification Mark</td>
+              <td className="erp-td-cell" colSpan={3}>{s.identificationMark || 'NO'}</td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">Thumb ID</td>
+              <td className="erp-td-cell" colSpan={3}>{s.thumbId || '19181'}</td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">Hostel</td>
+              <td className="erp-td-cell">{s.hostel || 'Yes'}</td>
+              <td className="erp-th-cell">Transport</td>
+              <td className="erp-td-cell">{s.transport || 'N'}</td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">Lunch</td>
+              <td className="erp-td-cell">{s.lunch || 'N'}</td>
+              <td className="erp-th-cell">NSS</td>
+              <td className="erp-td-cell">{s.nss || 'N'}</td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">Languages Known</td>
+              <td className="erp-td-cell" colSpan={3}>{s.languagesKnown || 'odia,hindi,english'}</td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell">Hobbies</td>
+              <td className="erp-td-cell" colSpan={3}>{s.hobbies || ''}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 function AcademicDetails({ student }) {
   const s = student || {}
   const [enrollments, setEnrollments] = useState([])
@@ -970,6 +1069,52 @@ function AcademicDetails({ student }) {
   ]
 
   const fields = [
+    ['Course', s.course || 'Bachelor of Technology'],
+    ['Batch', s.batch || 'BTECH 2028-P'],
+    ['Branch', s.branch || 'Computer Science & Engineering (Artificial Intelligence)'],
+    ['Section', s.section || s.academicSection || 'CSE (AI) - Genius'],
+    ['House', s.house || 'ANAND'],
+    ['Lab Group', s.labGroup || '1'],
+    ['Honors', s.honors || 'N'],
+    ['Minor', s.minor || 'N'],
+    ['Value added course-1', s.valueAdded1 || ''],
+    ['Value added course-2', s.valueAdded2 || ''],
+    ['Value added course-3', s.valueAdded3 || ''],
+    ['Admission Date', s.admissionDateFormatted || s.admissionDate || '05-08-2024'],
+    ['Entrance Examination', s.entranceExam || 'JEE MAIN'],
+    ['Rank', s.rank !== undefined ? String(s.rank) : '0'],
+  ]
+
+  const qualifications = [
+    ['10th', s.qual10thInstitute || 'ARACHANDI UCHA BIDYAMANDIR,NISTIPUR', s.qual10thYear || '2022', s.qual10thMarks || '82.50'],
+    ['12th', s.qual12thInstitute || 'Shanti Institute Of Management,CDA,Cuttack', s.qual12thYear || '2024', s.qual12thMarks || '80.16'],
+    ['ITI', s.qualItiInstitute || '0', s.qualItiYear || '', s.qualItiMarks || '0.00'],
+    ['Diploma', s.qualDiplomaInstitute || '0', s.qualDiplomaYear || '', s.qualDiplomaMarks || '0.00'],
+    ['+3', s.qualPlus3Institute || '0', s.qualPlus3Year || '', s.qualPlus3Marks || '0.00'],
+    ['BCA', s.qualBcaInstitute || '0', s.qualBcaYear || '', s.qualBcaMarks || '0.00'],
+    ['BBA', s.qualBbaInstitute || '0', s.qualBbaYear || '', s.qualBbaMarks || '0.00'],
+    ['BTECH', s.qualBtechInstitute || '0', s.qualBtechYear || '', s.qualBtechMarks || '0.00'],
+  ]
+
+  return (
+    <div className="erp-tab-content">
+      <div className="erp-profile-header">
+        <Info size={19} className="erp-info-icon" />
+        <span>Academic Details</span>
+      </div>
+      <div className="erp-cyan-divider-bar"></div>
+
+      <div className="erp-table-responsive" style={{ marginBottom: '20px' }}>
+        <table className="erp-grid-table">
+          <tbody>
+            {fields.map(([label, value]) => (
+              <tr key={label}>
+                <td className="erp-th-cell" style={{ width: '32%' }}>{label}</td>
+                <td className="erp-td-cell">{value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
     ['Course', s.course || s.programme?.name || 'Bachelor of Technology (Autonomous)'],
     ['Batch', s.batch || 'BTECH 2023–2027'],
     ['Branch', s.branch || s.department || 'Computer Science & Engineering'],
@@ -1070,21 +1215,251 @@ function AcademicDetails({ student }) {
           </div>
         ))}
       </div>
-      <div className="qualification-table-wrap">
-        <table className="qualification-table">
+
+      <div className="erp-table-responsive" style={{ marginBottom: '20px' }}>
+        <table className="erp-qualification-grid-table">
           <thead>
-            <tr><th>Qualification</th><th>Institute Name</th><th>Passout Year</th><th>Marks</th></tr>
+            <tr>
+              <th style={{ width: '18%' }}>Qualification</th>
+              <th style={{ width: '52%' }}>Institute Name</th>
+              <th style={{ width: '16%' }}>Passout Year</th>
+              <th style={{ width: '14%' }}>Marks</th>
+            </tr>
           </thead>
           <tbody>
             {qualifications.map(([qualification, institute, year, marks]) => (
-              <tr key={qualification}><th scope="row">{qualification}</th><td>{institute}</td><td>{year}</td><td>{marks}</td></tr>
+              <tr key={qualification}>
+                <td className="erp-qual-name">{qualification}</td>
+                <td>{institute}</td>
+                <td>{year}</td>
+                <td>{marks}</td>
+              </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="profile-data-table academic-status-table">
-        <div className="profile-data-row wide-row"><div className="profile-data-field"><span>Student Status</span><strong>{s.studentStatus || s.status || 'Active'}</strong></div></div>
-        <div className="profile-data-row wide-row"><div className="profile-data-field"><span>Active/Inactive</span><strong>{s.activeStatus || s.status || 'Active'}</strong></div></div>
+
+      <div className="erp-table-responsive">
+        <table className="erp-grid-table">
+          <tbody>
+            <tr>
+              <td className="erp-th-cell" style={{ width: '32%' }}>Student Status</td>
+              <td className="erp-td-cell">{s.studentStatus || 'Active'}</td>
+            </tr>
+            <tr>
+              <td className="erp-th-cell" style={{ width: '32%' }}>Active/InActive</td>
+              <td className="erp-td-cell">{s.activeStatus || 'Active'}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function GuardiansDetails({ student }) {
+  const s = student || {}
+  return (
+    <div className="erp-tab-content">
+      <div className="erp-profile-header">
+        <Info size={19} className="erp-info-icon" />
+        <span>Guardians Details</span>
+      </div>
+
+      {/* Guardian 1: Father */}
+      <div className="erp-guardian-section">
+        <div className="erp-section-subhead-row">
+          <div className="erp-section-subhead">1-{s.fatherName || 'AJAY KUMAR SAHOO'}</div>
+          <div className="erp-emergency-contact-box">
+            <span>Is Emergency Contact</span>
+            <span className="erp-badge-orange">{s.fatherIsEmergency || 'No'}</span>
+          </div>
+        </div>
+        <div className="erp-gold-divider-line"></div>
+
+        <div className="erp-table-responsive">
+          <table className="erp-grid-table">
+            <tbody>
+              <tr>
+                <td className="erp-th-cell">Name</td>
+                <td className="erp-td-cell">{s.fatherName || 'AJAY KUMAR SAHOO'}</td>
+                <td className="erp-th-cell"></td>
+                <td className="erp-td-cell"></td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Relation</td>
+                <td className="erp-td-cell">{s.fatherRelationship || 'Father'}</td>
+                <td className="erp-th-cell">Occupation</td>
+                <td className="erp-td-cell">{s.fatherOccupation || 'FARMER'}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Mobile No</td>
+                <td className="erp-td-cell">{s.fatherPhone || '7749844291'}</td>
+                <td className="erp-th-cell">Phone No</td>
+                <td className="erp-td-cell">{s.fatherLandline || ''}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Income</td>
+                <td className="erp-td-cell">{s.fatherIncome || '1LAK'}</td>
+                <td className="erp-th-cell">Email</td>
+                <td className="erp-td-cell">{s.fatherEmail || ''}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Qualification</td>
+                <td className="erp-td-cell">{s.fatherQualification || ''}</td>
+                <td className="erp-th-cell"></td>
+                <td className="erp-td-cell"></td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Home Address</td>
+                <td className="erp-td-cell" colSpan={3}>{s.fatherHomeAddress || ''}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Office Address</td>
+                <td className="erp-td-cell" colSpan={3}>{s.fatherOfficeAddress || ''}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Guardian 2: Mother */}
+      <div className="erp-guardian-section" style={{ marginTop: '28px' }}>
+        <div className="erp-section-subhead-row">
+          <div className="erp-section-subhead">2-{s.motherName || 'SANJUBALA SAHOO'}</div>
+          <div className="erp-emergency-contact-box">
+            <span>Is Emergency Contact</span>
+            <span className="erp-badge-orange">{s.motherIsEmergency || 'No'}</span>
+          </div>
+        </div>
+        <div className="erp-gold-divider-line"></div>
+
+        <div className="erp-table-responsive">
+          <table className="erp-grid-table">
+            <tbody>
+              <tr>
+                <td className="erp-th-cell">Name</td>
+                <td className="erp-td-cell">{s.motherName || 'SANJUBALA SAHOO'}</td>
+                <td className="erp-th-cell"></td>
+                <td className="erp-td-cell"></td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Relation</td>
+                <td className="erp-td-cell">{s.motherRelationship || 'Mother'}</td>
+                <td className="erp-th-cell">Occupation</td>
+                <td className="erp-td-cell">{s.motherOccupation || ''}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Mobile No</td>
+                <td className="erp-td-cell">{s.motherPhone || ''}</td>
+                <td className="erp-th-cell">Phone No</td>
+                <td className="erp-td-cell">{s.motherLandline || ''}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Income</td>
+                <td className="erp-td-cell">{s.motherIncome || '0'}</td>
+                <td className="erp-th-cell">Email</td>
+                <td className="erp-td-cell">{s.motherEmail || ''}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Qualification</td>
+                <td className="erp-td-cell">{s.motherQualification || ''}</td>
+                <td className="erp-th-cell"></td>
+                <td className="erp-td-cell"></td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Home Address</td>
+                <td className="erp-td-cell" colSpan={3}>{s.motherHomeAddress || ''}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Office Address</td>
+                <td className="erp-td-cell" colSpan={3}>{s.motherOfficeAddress || ''}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AddressDetails({ student }) {
+  const s = student || {}
+  return (
+    <div className="erp-tab-content">
+      <div className="erp-profile-header">
+        <Info size={19} className="erp-info-icon" />
+        <span>Address Info</span>
+      </div>
+
+      {/* Current Address */}
+      <div className="erp-address-section">
+        <div className="erp-section-subhead">Current Address</div>
+        <div className="erp-gold-divider-line"></div>
+
+        <div className="erp-table-responsive">
+          <table className="erp-grid-table">
+            <tbody>
+              <tr>
+                <td className="erp-th-cell">Address</td>
+                <td className="erp-td-cell" colSpan={3}>{s.currAddress || 'GHASIPUT, CUTTACK'}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">City</td>
+                <td className="erp-td-cell">{s.currCity || 'Cuttack'}</td>
+                <td className="erp-th-cell">State</td>
+                <td className="erp-td-cell">{s.currState || 'Odisha'}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Country</td>
+                <td className="erp-td-cell">{s.currCountry || 'India'}</td>
+                <td className="erp-th-cell">House No</td>
+                <td className="erp-td-cell">{s.currHouseNo || ''}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Pincode</td>
+                <td className="erp-td-cell">{s.currPin || '754008'}</td>
+                <td className="erp-th-cell">Phone No</td>
+                <td className="erp-td-cell">{s.currPhone || '7749844291'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Permenant Address */}
+      <div className="erp-address-section" style={{ marginTop: '28px' }}>
+        <div className="erp-section-subhead">Permenant Address</div>
+        <div className="erp-gold-divider-line"></div>
+
+        <div className="erp-table-responsive">
+          <table className="erp-grid-table">
+            <tbody>
+              <tr>
+                <td className="erp-th-cell">Address</td>
+                <td className="erp-td-cell" colSpan={3}>{s.permAddress || 'GHASIPUT, CUTTACK'}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">City</td>
+                <td className="erp-td-cell">{s.permCity || 'Cuttack'}</td>
+                <td className="erp-th-cell">State</td>
+                <td className="erp-td-cell">{s.permState || 'Odisha'}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Country</td>
+                <td className="erp-td-cell">{s.permCountry || 'India'}</td>
+                <td className="erp-th-cell">House No</td>
+                <td className="erp-td-cell">{s.permHouseNo || ''}</td>
+              </tr>
+              <tr>
+                <td className="erp-th-cell">Pincode</td>
+                <td className="erp-td-cell">{s.permPin || '754008'}</td>
+                <td className="erp-th-cell">Phone No</td>
+                <td className="erp-td-cell">{s.permPhone || '7749844291'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

@@ -29,8 +29,19 @@ export default function CampusConnect({
   initialCategory = 'All',
   initialView = 'chats',
   isDrawerMode = false,
-  onNavigateToModule
+  onNavigateToModule,
+  onBack
 }) {
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (onNavigateToModule) {
+      onNavigateToModule('dashboard');
+    } else if (typeof window !== 'undefined') {
+      window.location.hash = 'dashboard';
+    }
+  };
+
   const [conversations, setConversations] = useState([]);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [activeView, setActiveView] = useState(() => {
@@ -847,6 +858,19 @@ export default function CampusConnect({
           ───────────────────────────────────────────────────────────── */}
       <nav className="cc-nav-rail">
         <div className="cc-rail-top">
+          {!isDrawerMode && (
+            <button
+              type="button"
+              className="cc-rail-btn cc-rail-back-btn"
+              onClick={handleBack}
+              title="Back to Dashboard"
+              aria-label="Back to Dashboard"
+            >
+              <ArrowLeft size={19} />
+              <span className="cc-rail-tip">Back</span>
+            </button>
+          )}
+
           <div className="cc-rail-brand" title="Apna Campus Connect">
             <div className="cc-rail-brand-logo" style={{ background: '#ffffff', padding: '2px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <img src="/logo.png" alt="Apna Campus" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} />
@@ -965,6 +989,17 @@ export default function CampusConnect({
           <aside className="cc-left-panel">
         <div className="cc-left-header">
           <div className="cc-brand-row">
+            {!isDrawerMode && (
+              <button
+                type="button"
+                className="cc-back-btn-header"
+                onClick={handleBack}
+                title="Back to Dashboard"
+                aria-label="Back to Dashboard"
+              >
+                <ArrowLeft size={18} />
+              </button>
+            )}
             <div className="cc-brand-title">
               <div className="cc-brand-logo" style={{ background: '#ffffff', padding: '2px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <img src="/logo.png" alt="Apna Campus" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} />

@@ -23,6 +23,7 @@ import {
   X,
   Plus,
   UploadCloud,
+  ChevronDown,
 } from 'lucide-react'
 import './StudentProfile.css'
 import './ProfileModern.css'
@@ -161,16 +162,17 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
   const lastName = student.lastName || student.name.split(' ').slice(1).join(' ') || ''
   const emailName = student.name.toLowerCase().replaceAll(' ', '.')
   const summaryRows = [
-    ['Last Date of Class Attendance', '01/10/2026'],
+    ['Last Date of Class Attendance', student.lastClassAttendanceDate || '14/10/2026'],
+    ['Last Date of Hostel Attendance', student.lastHostelAttendanceDate || '16/10/2026'],
     ['Registration No.', student.registrationNumber || account.registrationNumber],
-    ['Serial No.', student.rollNumber || '16'],
+    ['Serial No.', student.rollNumber || '01'],
     ['Name', student.name.toUpperCase()],
     ['Mentor', student.mentor || 'Dr. Pratyush Mohapatra'],
     ['Course', student.course || 'Bachelor of Technology'],
     ['Batch', student.batch || 'BTECH 2023–2027'],
     ['Branch', student.department || student.branch || account.department],
     ['Section', student.academicSection || student.section || 'CSE · Section A'],
-    ['Domain Email ID', student.email || `${emailName}@apnacampus.edu.in`],
+    ['Domain Email ID', student.email || `${emailName}@gift.edu.in`],
     ['Email ID', student.personalEmail || `${emailName}@gmail.com`],
     ['Mobile No.', student.phone || '+91 98610 23010'],
     ['WhatsApp No.', student.phone || '+91 98610 23010'],
@@ -225,10 +227,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
   }
 
   const studentPhoto = useMemo(() => {
-    if (account?.photo) return account.photo
-    if (account?.gender === 'Female' || /Priya|Sneha|Puja|Swati|Monika|Ipsita|Smruti|Lipika|Archana|Sonali|Niharika|Ananya|Pooja|Shreya|Ankita|Divya/i.test(account?.name || '')) {
-      return '/passport_photo_female.svg'
-    }
+    if (account?.photo && !account.photo.includes('female')) return account.photo
     return '/passport_photo_male.svg'
   }, [account])
 
@@ -255,34 +254,72 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
           <p>{account?.department || 'Computer Science & Engineering'}</p>
         </div>
         <div className="profile-overview-facts">
-          <span><small>Registration number</small><strong>{account?.registrationNumber || '—'}</strong></span>
-          <span><small>Program</small><strong>B.Tech · 2023–2027</strong></span>
-          <span><small>Current section</small><strong>CSE · Section A</strong></span>
-        </div>
-        <details className="profile-registry-summary">
-          <summary><FileText size={15} /><span>Full registry</span></summary>
-          <dl className="profile-summary-table">
-            {summaryRows.map(([label, value]) => (
-              <div className="profile-summary-row" key={label}>
-                <dt>{label}</dt>
-                <dd>{label === 'WhatsApp No.' ? <a href="tel:+919861023010">{value}</a> : value}</dd>
+          <span>
+            <small>Registration number</small>
+            <strong>{account?.registrationNumber || '—'}</strong>
+          </span>
+          <span>
+            <small>Program</small>
+            <strong>B.Tech · 2023–2027</strong>
+          </span>
+          <span>
+            <small>Current section</small>
+            <strong>CSE · Section A</strong>
+          </span>
+          <details className="profile-registry-summary">
+            <summary>
+              <small>Student record</small>
+              <strong className="registry-summary-title">
+                <FileText size={14} />
+                <span>Full registry</span>
+                <ChevronDown size={13} className="registry-caret" />
+              </strong>
+            </summary>
+            <dl className="profile-summary-table">
+              {summaryRows.map(([label, value]) => {
+                const isClass = label === 'Last Date of Class Attendance';
+                const isHostel = label === 'Last Date of Hostel Attendance';
+                const rowCls = isClass
+                  ? 'row-class-attendance'
+                  : isHostel
+                    ? 'row-hostel-attendance'
+                    : '';
+
+                return (
+                  <div className={`profile-summary-row ${rowCls}`} key={label}>
+                    <dt>{label}</dt>
+                    <dd>{label === 'WhatsApp No.' ? <a href="tel:+919861023010">{value}</a> : value}</dd>
+                  </div>
+                );
+              })}
+              <div className="profile-summary-row">
+                <dt>Status</dt>
+                <dd><span className="profile-active"><Check size={10} />Active</span></dd>
               </div>
-            ))}
-            <div className="profile-summary-row">
-              <dt>Status</dt>
-              <dd><span className="profile-active"><Check size={10} />Active</span></dd>
-            </div>
-          </dl>
-        </details>
+            </dl>
+          </details>
+        </div>
       </section>
 
       <div className="profile-layout">
         <div className="profile-main-column">
           <nav className="profile-quick-links" aria-label="Student records">
-            <button className={activeQuickView === 'College Marks' ? 'active' : ''} type="button" aria-pressed={activeQuickView === 'College Marks'} onClick={() => selectQuickLink('College Marks')}><Building2 size={14} />College Marks</button>
-            <button className={activeQuickView === 'University Marks' ? 'active' : ''} type="button" aria-pressed={activeQuickView === 'University Marks'} onClick={() => selectQuickLink('University Marks')}><GraduationCap size={14} />University Marks</button>
-            <button className={activeQuickView === 'Campus Biometric' ? 'active' : ''} type="button" aria-pressed={activeQuickView === 'Campus Biometric'} onClick={() => selectQuickLink('Campus Biometric')}><Fingerprint size={14} />Campus Biometric</button>
-            <button className={activeQuickView === 'Canteen Access Log' ? 'active' : ''} type="button" aria-pressed={activeQuickView === 'Canteen Access Log'} onClick={() => selectQuickLink('Canteen Access Log')}><Utensils size={14} />Canteen Access Log</button>
+            <button className={activeQuickView === 'College Marks' ? 'active' : ''} type="button" aria-pressed={activeQuickView === 'College Marks'} onClick={() => selectQuickLink('College Marks')}>
+              <Building2 size={16} />
+              <span className="quick-link-text">College Marks</span>
+            </button>
+            <button className={activeQuickView === 'University Marks' ? 'active' : ''} type="button" aria-pressed={activeQuickView === 'University Marks'} onClick={() => selectQuickLink('University Marks')}>
+              <GraduationCap size={16} />
+              <span className="quick-link-text">University Marks</span>
+            </button>
+            <button className={activeQuickView === 'Campus Biometric' ? 'active' : ''} type="button" aria-pressed={activeQuickView === 'Campus Biometric'} onClick={() => selectQuickLink('Campus Biometric')}>
+              <Fingerprint size={16} />
+              <span className="quick-link-text">Campus Biometric</span>
+            </button>
+            <button className={activeQuickView === 'Canteen Access Log' ? 'active' : ''} type="button" aria-pressed={activeQuickView === 'Canteen Access Log'} onClick={() => selectQuickLink('Canteen Access Log')}>
+              <Utensils size={16} />
+              <span className="quick-link-text">Canteen Access Log</span>
+            </button>
           </nav>
 
           <div className="profile-tabs" role="tablist" aria-label="Student profile sections">
@@ -315,9 +352,10 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
               'Health',
             ].includes(activeTab);
             const panelTitle = activeQuickView || (activeTab.endsWith('Details') ? activeTab : `${activeTab} Details`);
+            const isCollegeMarks = activeQuickView === 'College Marks';
 
             return (
-              <section className={`profile-detail-panel ${isEmbeddedPage ? 'has-embedded-page' : ''}`} role="tabpanel" aria-label={`${activeTab} details`}>
+              <section className={`profile-detail-panel ${isEmbeddedPage ? 'has-embedded-page' : ''} ${activeQuickView ? 'has-quick-view' : ''} ${isCollegeMarks ? 'has-college-marks-view' : ''}`} role="tabpanel" aria-label={`${activeTab} details`}>
                 {!isEmbeddedPage && activeQuickView !== 'University Marks' && (
                   activeTab === 'Documents' ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '10px' }}>
@@ -355,10 +393,14 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
                 {activeQuickView ? (
                   activeQuickView === 'College Marks' ? (
                     <div className="profile-embedded-marks-wrap">
-                      <div className="profile-marks-header-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '10px' }}>
-                        <div>
-                          <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: 800 }}>College Internal Marks &amp; Assessment Management</h3>
-                          <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#64748b' }}>Complete continuous internal evaluation grade book, quiz, midterm, and practical performance breakdown.</p>
+                      <div className="profile-marks-header-bar">
+                        <div className="profile-marks-header-info">
+                          <div className="profile-marks-header-pill">
+                            <ShieldCheck size={13} />
+                            <span>CONTINUOUS INTERNAL ASSESSMENT (CIA)</span>
+                          </div>
+                          <h3>College Internal Marks &amp; Assessment Management</h3>
+                          <p>Complete continuous internal evaluation grade book, quiz, midterm, and practical performance breakdown.</p>
                         </div>
                         <button className="profile-return" type="button" onClick={() => setActiveQuickView('')}>
                           <ArrowLeft size={13} /> Back to profile
@@ -377,7 +419,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
             {activeTab === 'Attendance Dashboard' || activeTab === 'Attendance' ? (
               <AttendancePage />
             ) : activeTab === 'Internal Marks' ? (
-              <MarksPage />
+              <MarksPage initialRole="student" />
             ) : activeTab === 'Examination' ? (
               <ExaminationPage />
             ) : activeTab === 'Fee Details' || activeTab === 'Fees' ? (

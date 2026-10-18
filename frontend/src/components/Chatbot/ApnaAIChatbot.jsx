@@ -445,22 +445,18 @@ export default function ApnaAIChatbot({ account = null, activeTab = '' }) {
 
   return (
     <>
-      {/* ── 1. Floating Chatbot Trigger Button ── */}
+      {/* ── 1. Floating Chatbot Trigger Button - Round Circular Shape ── */}
       {!isOpen && (
         <button
           className="apna-ai-floating-trigger"
           type="button"
           onClick={() => setIsOpen(true)}
-          title="Apna AI Assistant • Ask about campus & live records"
+          title={`Apna AI Assistant (${userRole}) • Click to view`}
           aria-label="Open Apna AI Assistant"
         >
           <div className="apna-ai-icon-container">
-            <Sparkles size={18} />
+            <Sparkles size={22} color="#ffffff" />
             <span className="apna-ai-pulse-beacon" />
-          </div>
-          <div className="apna-ai-trigger-label">
-            <span>Apna AI</span>
-            <span className="apna-ai-role-chip">{userRole}</span>
           </div>
         </button>
       )}

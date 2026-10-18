@@ -5,31 +5,29 @@
   bottom: 86px;
   right: 24px;
   z-index: 9998;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 18px 12px 14px;
+  justify-content: center;
   background: linear-gradient(135deg, #25d366, #128c7e);
   color: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  border-radius: 9999px;
-  box-shadow: 0 10px 25px -4px rgba(18, 140, 126, 0.5), 0 4px 10px rgba(0, 0, 0, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  box-shadow: 0 10px 25px -4px rgba(18, 140, 126, 0.55), 0 4px 12px rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 0.92rem;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
 }
 
 .universal-wa-trigger-btn:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 16px 32px -4px rgba(18, 140, 126, 0.65), 0 6px 14px rgba(0, 0, 0, 0.2);
+  transform: translateY(-3px) scale(1.08);
+  box-shadow: 0 16px 32px -4px rgba(18, 140, 126, 0.7), 0 6px 16px rgba(0, 0, 0, 0.25);
   background: linear-gradient(135deg, #2ae06d, #0f9b8a);
 }
 
 .universal-wa-trigger-btn:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.96);
 }
 
 .wa-icon-glow {
@@ -38,19 +36,23 @@
   justify-content: center;
 }
 
-.wa-btn-label {
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
 .wa-unread-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
   background: #ef4444;
   color: #ffffff;
   font-size: 0.72rem;
   font-weight: 800;
-  padding: 2px 7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
   border-radius: 9999px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   animation: wa-pulse 2s infinite;
 }
 
@@ -191,10 +193,10 @@
 
 @media (max-width: 640px) {
   .universal-wa-trigger-btn {
-    bottom: 16px;
+    bottom: 74px;
     right: 16px;
-    padding: 10px 14px;
-    font-size: 0.85rem;
+    width: 46px;
+    height: 46px;
   }
   .universal-wa-drawer {
     width: 100vw;

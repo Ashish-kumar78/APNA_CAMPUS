@@ -10,16 +10,160 @@
 .att-pct-circle { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; font-size: 16px; font-weight: 800; font-family: 'Outfit', sans-serif; flex-shrink: 0; }
 .att-pct-circle.good { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #065f46; border: 2px solid #6ee7b7; }
 .att-pct-circle.warn { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; border: 2px solid #fbbf24; }
-.att-summary-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-.att-stat-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 12px; background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); text-align: center; }
-.att-stat-card svg { opacity: 0.7; }
-.att-stat-card strong { font-size: 22px; font-weight: 800; font-family: 'Outfit', sans-serif; line-height: 1; }
-.att-stat-card span { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
-.att-stat-card.blue svg { color: var(--accent-500); } .att-stat-card.blue strong { color: var(--accent-500); }
-.att-stat-card.green svg { color: #059669; } .att-stat-card.green strong { color: #059669; }
-.att-stat-card.red svg { color: var(--danger-500); } .att-stat-card.red strong { color: var(--danger-500); }
-.att-stat-card.emerald svg { color: #10b981; } .att-stat-card.emerald strong { color: #10b981; }
-.att-stat-card.amber svg { color: var(--gold-500); } .att-stat-card.amber strong { color: var(--gold-500); }
+.att-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.att-stat-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 10px;
+  border-radius: 14px;
+  text-align: center;
+  overflow: hidden;
+  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+  min-height: 104px;
+}
+
+.att-stat-card::before {
+  content: '';
+  position: absolute;
+  top: -18px;
+  right: -18px;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
+}
+
+.att-stat-card::after {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  left: -15px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
+}
+
+.att-stat-card:hover {
+  transform: translateY(-3px) scale(1.015);
+}
+
+.att-stat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(4px);
+  transition: transform 0.2s ease;
+  margin-bottom: 2px;
+  position: relative;
+  z-index: 2;
+}
+
+.att-stat-card:hover .att-stat-icon {
+  transform: scale(1.1);
+}
+
+.att-stat-card strong {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  line-height: 1.1;
+  color: #ffffff !important;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 2;
+}
+
+.att-stat-card span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff !important;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 2;
+  line-height: 1.2;
+}
+
+.att-stat-card small {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9) !important;
+  letter-spacing: 0.01em;
+  position: relative;
+  z-index: 2;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Card 1: Classes Held - Rich Royal Blue Gradient */
+.att-stat-card.blue {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+  box-shadow: 0 10px 22px -4px rgba(37, 99, 235, 0.4), 0 4px 8px -2px rgba(37, 99, 235, 0.25) !important;
+}
+.att-stat-card.blue:hover {
+  box-shadow: 0 16px 30px -4px rgba(37, 99, 235, 0.55), 0 6px 12px -2px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Card 2: Attended - Vibrant Emerald Green Gradient */
+.att-stat-card.green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  box-shadow: 0 10px 22px -4px rgba(16, 185, 129, 0.4), 0 4px 8px -2px rgba(16, 185, 129, 0.25) !important;
+}
+.att-stat-card.green:hover {
+  box-shadow: 0 16px 30px -4px rgba(16, 185, 129, 0.55), 0 6px 12px -2px rgba(16, 185, 129, 0.3) !important;
+}
+
+/* Card 3: Missed - Coral Rose Red Gradient */
+.att-stat-card.red {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
+  box-shadow: 0 10px 22px -4px rgba(244, 63, 94, 0.4), 0 4px 8px -2px rgba(244, 63, 94, 0.25) !important;
+}
+.att-stat-card.red:hover {
+  box-shadow: 0 16px 30px -4px rgba(244, 63, 94, 0.55), 0 6px 12px -2px rgba(244, 63, 94, 0.3) !important;
+}
+
+/* Card 4: Rate - Modern Royal Violet Gradient */
+.att-stat-card.purple {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%) !important;
+  box-shadow: 0 10px 22px -4px rgba(139, 92, 246, 0.4), 0 4px 8px -2px rgba(139, 92, 246, 0.25) !important;
+}
+.att-stat-card.purple:hover {
+  box-shadow: 0 16px 30px -4px rgba(139, 92, 246, 0.55), 0 6px 12px -2px rgba(139, 92, 246, 0.3) !important;
+}
+
+.att-stat-card.emerald {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  box-shadow: 0 10px 22px -4px rgba(5, 150, 105, 0.4) !important;
+}
+
+.att-stat-card.amber {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  box-shadow: 0 10px 22px -4px rgba(245, 158, 11, 0.4) !important;
+}
 .att-alert { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; background: #fef3c7; border: 1px solid #fbbf24; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 12px; }
 .att-alert svg { color: #d97706; flex-shrink: 0; margin-top: 1px; }
 .att-alert div { display: flex; flex-direction: column; gap: 2px; }

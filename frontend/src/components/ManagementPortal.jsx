@@ -268,7 +268,6 @@ export default function ManagementPortal({ account, onLogout }) {
     { id: 'placements',   label: 'Placement & Careers',      icon: <Briefcase size={17} /> },
     { id: 'approvals',    label: 'Strategic Approvals',      icon: <FileCheck size={17} /> },
     { id: 'governance',   label: 'Governance & Notices',     icon: <Shield size={17} /> },
-    { id: 'campus-connect', label: 'Campus Connect (WhatsApp)', icon: <MessageSquare size={17} /> },
     { id: 'report-generation', label: 'Report Generation',   icon: <FileSpreadsheet size={17} /> },
   ];
 

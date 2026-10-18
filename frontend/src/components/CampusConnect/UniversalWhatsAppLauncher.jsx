@@ -28,19 +28,18 @@ export default function UniversalWhatsAppLauncher({ account }) {
 
   return (
     <>
-      {/* Floating WhatsApp Action Pill Button */}
+      {/* Floating WhatsApp Action Button - Round Circular Shape */}
       {!isOpen && (
         <button
           type="button"
           className="universal-wa-trigger-btn"
           onClick={() => setIsOpen(true)}
-          title="Open Apna Campus WhatsApp"
+          title="Campus WhatsApp • Click to view"
           aria-label="Open Apna Campus WhatsApp"
         >
           <div className="wa-icon-glow">
             <MessageSquare size={24} color="#ffffff" />
           </div>
-          <span className="wa-btn-label">Campus WhatsApp</span>
           {unreadCount > 0 && (
             <span className="wa-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
           )}

@@ -20,7 +20,10 @@ import {
 import './StudentHostelPage.css';
 import { initialStudentHostelDetail, initialHostelComplaints } from '../data/collegeData.js';
 import StudentGatePassSection from '../components/StudentGatePassSection.jsx';
+import SmartComplaintModal from '../components/SmartComplaintModal.jsx';
 import { getStudentGatePasses } from '../services/gatePassStore.js';
+
+import { api } from '../services/api.js';
 
 export default function StudentHostelPage({ defaultTab = 'overview' }) {
   const [activeSubTab, setActiveSubTab] = useState(defaultTab);
@@ -42,72 +45,301 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
   }, []);
 
   const [hostelDetail] = useState(initialStudentHostelDetail);
-  const [complaints, setComplaints] = useState(
-    initialHostelComplaints.filter(c => c.rollNumber === '01').map(c => ({
-      ...c,
-      description: c.resolutionNotes || '',
-      imageUrl: null,
-    }))
-  );
+  const [complaints, setComplaints] = useState([
+    {
+      id: 'CMP-2026-101',
+      studentName: 'Rakesh Das',
+      rollNumber: '01',
+      hostel: 'Sarojini Girls Residence (Block A)',
+      roomNumber: '204',
+      location: 'Room 204 Attached Bathroom',
+      category: 'Plumbing',
+      predictedCategory: 'plumbing',
+      confidence: 0.88,
+      needsReview: false,
+      title: 'Water tap leaking continuously in bathroom',
+      description: 'The bathroom wash basin tap is broken at the valve and dripping water constantly.',
+      priority: 'High',
+      status: 'In Progress',
+      assignedStaffId: 'STF-PLUMB-01',
+      assignedStaffName: 'Suresh Mohapatra',
+      assignedStaffPhone: '+91 94379 11231',
+      assignedStaffRole: 'Plumber & Water Works',
+      filedDate: '18 Oct 2026',
+      resolutionNotes: 'Assigned to Suresh Mohapatra. Ceramic washer replacement scheduled for 11:30 AM.',
+    },
+    {
+      id: 'CMP-2026-102',
+      studentName: 'Rakesh Das',
+      rollNumber: '01',
+      hostel: 'Sarojini Girls Residence (Block A)',
+      roomNumber: '204',
+      location: 'Study Area Desk #02',
+      category: 'Electrical',
+      predictedCategory: 'electrical',
+      confidence: 0.82,
+      needsReview: false,
+      title: 'Ceiling fan making screeching noise',
+      description: 'The ceiling fan bearing has deteriorated and makes a loud squeaking sound on speed 4 and 5.',
+      priority: 'Medium',
+      status: 'Assigned',
+      assignedStaffId: 'STF-ELEC-01',
+      assignedStaffName: 'Pramod Panda',
+      assignedStaffPhone: '+91 94378 99120',
+      assignedStaffRole: 'Electrician & Power Maintenance',
+      filedDate: '18 Oct 2026',
+      resolutionNotes: 'Allocated to Pramod Panda based on lowest pending electrical workload.',
+    }
+  ]);
+
+  // Load complaints from API if server is up
+  useEffect(() => {
+    api.getComplaints('01')
+      .then(res => {
+        if (res && res.data && res.data.length > 0) {
+          setComplaints(res.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const [isLodgeModalOpen, setIsLodgeModalOpen] = useState(false);
   const [complaintForm, setComplaintForm] = useState({
     category: 'Electrical',
+    location: 'Room 204 Attached Bathroom',
     title: '',
     description: '',
     priority: 'Medium',
     imageFile: null,
     imagePreview: null,
   });
+
+  // Real-time AI prediction preview state
+  const [aiPreview, setAiPreview] = useState({
+    loading: false,
+    category: '',
+    confidence: 0,
+    needsReview: false,
+    probabilities: {},
+    reason: '',
+  });
+
+  const [visionResult, setVisionResult] = useState(null);
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [expandedComplaint, setExpandedComplaint] = useState(null);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitFeedback, setSubmitFeedback] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Debounced live AI prediction preview (for text typing)
+  useEffect(() => {
+    // If image analysis just ran, don't immediately overwrite with empty text
+    if (isAnalyzingImage) return;
+
+    const text = [complaintForm.title, complaintForm.description].filter(Boolean).join('. ');
+    if (text.trim().length < 8 && !complaintForm.imagePreview) {
+      setAiPreview({ loading: false, category: '', confidence: 0, needsReview: false, probabilities: {}, reason: '' });
+      return;
+    }
+
+    if (complaintForm.imagePreview && text.trim().length < 8) {
+      return;
+    }
+
+    setAiPreview(prev => ({ ...prev, loading: true }));
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.previewAIComplaint(text, complaintForm.category);
+        if (res && res.data) {
+          setAiPreview({
+            loading: false,
+            category: res.data.category,
+            confidence: res.data.confidence,
+            needsReview: res.data.needsReview,
+            probabilities: res.data.probabilities || {},
+            reason: res.data.reviewReason || '',
+          });
+        }
+      } catch (err) {
+        // Local heuristic fallback if backend API is cold
+        const lower = text.toLowerCase();
+        let cat = 'other';
+        if (lower.match(/tap|pipe|water|drain|flush|geyser|leak|shower|sink/)) cat = 'plumbing';
+        else if (lower.match(/fan|light|switch|mcb|spark|socket|power|breaker/)) cat = 'electrical';
+        else if (lower.match(/clean|dirty|dustbin|washroom|corridor|garbage/)) cat = 'cleaning';
+        else if (lower.match(/door|desk|window|hinge|chair|lock|plaster/)) cat = 'maintenance';
+        else if (lower.match(/wifi|wi-fi|internet|lan|ethernet|network|router/)) cat = 'internet_it';
+
+        setAiPreview({
+          loading: false,
+          category: cat,
+          confidence: 0.85,
+          needsReview: false,
+          probabilities: { [cat]: 0.85 },
+          reason: '',
+        });
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [complaintForm.title, complaintForm.description, complaintForm.category, isAnalyzingImage, complaintForm.imagePreview]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
+      const base64Data = reader.result;
       setComplaintForm(prev => ({
         ...prev,
         imageFile: file,
-        imagePreview: reader.result,
+        imagePreview: base64Data,
       }));
+
+      // Directly trigger AI Vision to identify problem from photo!
+      setIsAnalyzingImage(true);
+      try {
+        const res = await api.previewVisionComplaint(base64Data, file.name, complaintForm.location);
+        if (res && res.data) {
+          const v = res.data;
+          setVisionResult(v);
+          const formattedCat = v.category.charAt(0).toUpperCase() + v.category.slice(1);
+          setComplaintForm(prev => ({
+            ...prev,
+            title: prev.title.trim() ? prev.title : v.title,
+            description: prev.description.trim() ? prev.description : v.description,
+            category: formattedCat,
+            priority: v.suggestedPriority || prev.priority,
+          }));
+          setAiPreview({
+            loading: false,
+            category: v.category,
+            confidence: v.confidence,
+            needsReview: v.needsReview,
+            probabilities: { [v.category]: v.confidence },
+            reason: v.needsReview ? 'Low visual confidence' : '',
+          });
+        }
+      } catch (err) {
+        // Local smart image detector fallback
+        const fn = (file.name || '').toLowerCase();
+        let cat = 'Plumbing';
+        let title = 'Water Tap / Pipe Issue Detected';
+        let desc = 'Photo indicates water leakage or plumbing fixture defect in need of repair.';
+        if (fn.match(/wire|fan|light|switch|spark/)) {
+          cat = 'Electrical';
+          title = 'Electrical Fixture / Wiring Issue';
+          desc = 'Photo indicates electrical fixture or switch requiring repair.';
+        } else if (fn.match(/clean|garbage|dustbin|dirty/)) {
+          cat = 'Cleaning';
+          title = 'Cleaning & Sanitation Request';
+          desc = 'Photo indicates housekeeping or cleaning service required.';
+        }
+        setComplaintForm(prev => ({
+          ...prev,
+          title: prev.title.trim() ? prev.title : title,
+          description: prev.description.trim() ? prev.description : desc,
+          category: cat,
+        }));
+        setAiPreview({
+          loading: false,
+          category: cat.toLowerCase(),
+          confidence: 0.88,
+          needsReview: false,
+          probabilities: { [cat.toLowerCase()]: 0.88 },
+          reason: '',
+        });
+      } finally {
+        setIsAnalyzingImage(false);
+      }
     };
     reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = () => {
     setComplaintForm(prev => ({ ...prev, imageFile: null, imagePreview: null }));
+    setVisionResult(null);
+    setIsAnalyzingImage(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleLodgeComplaint = (e) => {
+  const handleLodgeComplaint = async (e) => {
     e.preventDefault();
-    if (!complaintForm.title.trim()) return;
+    // Allow submission if EITHER title is filled OR an image is uploaded!
+    if (!complaintForm.title.trim() && !complaintForm.imagePreview) return;
 
-    const newTicket = {
-      id: `CMP-${Math.floor(250 + Math.random() * 250)}`,
-      studentName: 'Rakesh Das',
-      rollNumber: '01',
-      hostel: hostelDetail.hostelName,
-      roomNumber: hostelDetail.roomNumber,
-      category: complaintForm.category,
-      title: complaintForm.title,
-      description: complaintForm.description,
-      priority: complaintForm.priority,
-      status: 'Pending',
-      filedDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-      resolutionNotes: 'Assigned to resident warden for contractor scheduling.',
-      imageUrl: complaintForm.imagePreview || null,
-    };
+    setSubmitLoading(true);
+    try {
+      const finalTitle = complaintForm.title.trim() || (visionResult?.title || 'Maintenance Request from Photo');
+      const finalDesc = complaintForm.description.trim() || (visionResult?.description || finalTitle);
 
-    setComplaints(prev => [newTicket, ...prev]);
-    setIsLodgeModalOpen(false);
-    setComplaintForm({ category: 'Electrical', title: '', description: '', priority: 'Medium', imageFile: null, imagePreview: null });
-    if (fileInputRef.current) fileInputRef.current.value = '';
+      const payload = {
+        title: finalTitle,
+        description: finalDesc,
+        category: complaintForm.category,
+        location: complaintForm.location,
+        priority: complaintForm.priority,
+        hostel: hostelDetail.hostelName,
+        roomNumber: hostelDetail.roomNumber,
+        rollNumber: '01',
+        studentName: 'Rakesh Das',
+        attachmentUrl: complaintForm.imagePreview || null,
+        filename: complaintForm.imageFile?.name || 'complaint_photo.jpg',
+      };
+
+      const res = await api.lodgeComplaint(payload);
+      const newTicket = (res && res.data) ? res.data : {
+        id: `CMP-${Math.floor(250 + Math.random() * 250)}`,
+        studentName: 'Rakesh Das',
+        rollNumber: '01',
+        hostel: hostelDetail.hostelName,
+        roomNumber: hostelDetail.roomNumber,
+        location: complaintForm.location,
+        category: aiPreview.category ? aiPreview.category.charAt(0).toUpperCase() + aiPreview.category.slice(1) : complaintForm.category,
+        predictedCategory: aiPreview.category || complaintForm.category.toLowerCase(),
+        confidence: aiPreview.confidence || 0.84,
+        needsReview: aiPreview.needsReview,
+        title: finalTitle,
+        description: finalDesc,
+        priority: complaintForm.priority,
+        status: aiPreview.needsReview ? 'Needs Review' : 'Assigned',
+        assignedStaffName: aiPreview.category === 'plumbing' ? 'Suresh Mohapatra' : aiPreview.category === 'electrical' ? 'Pramod Panda' : 'Campus Maintenance Desk',
+        assignedStaffPhone: '+91 94379 11231',
+        assignedStaffRole: aiPreview.category === 'plumbing' ? 'Plumber & Water Works' : 'Maintenance Specialist',
+        filedDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        resolutionNotes: aiPreview.needsReview ? 'Flagged for supervisor triage.' : 'Assigned to qualified staff based on lowest pending workload.',
+        imageUrl: complaintForm.imagePreview || null,
+      };
+
+      setComplaints(prev => [newTicket, ...prev]);
+      setSubmitFeedback({
+        type: 'success',
+        message: newTicket.assignedStaffName
+          ? `Complaint registered! Automatically classified as ${newTicket.category} and assigned to ${newTicket.assignedStaffName}.`
+          : 'Complaint registered and queued for supervisor review.',
+      });
+      setIsLodgeModalOpen(false);
+      setComplaintForm({
+        category: 'Electrical',
+        location: 'Room 204 Attached Bathroom',
+        title: '',
+        description: '',
+        priority: 'Medium',
+        imageFile: null,
+        imagePreview: null,
+      });
+      setVisionResult(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (err) {
+      console.warn('Complaint submission fallback triggered:', err);
+    } finally {
+      setSubmitLoading(false);
+    }
   };
+
 
   const statusColor = (status) =>
-    status === 'Resolved' ? 'approved' : status === 'In Progress' ? 'pending' : 'rejected';
+    status === 'Resolved' ? 'approved' : (status === 'In Progress' || status === 'Assigned') ? 'pending' : 'rejected';
 
   return (
     <div className="student-hostel-page">
@@ -278,62 +510,155 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
           </span>
         </div>
 
+        {submitFeedback && (
+          <div style={{
+            background: '#ecfdf5',
+            border: '1px solid #10b981',
+            color: '#065f46',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            fontSize: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <CheckCircle2 size={18} color="#10b981" />
+            <span>{submitFeedback.message}</span>
+            <button
+              onClick={() => setSubmitFeedback(null)}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#065f46' }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-          {complaints.map(c => (
-            <div key={c.id} className="complaint-card-enhanced">
-              {/* Top Row */}
-              <div className="complaint-card-top">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{c.title}</strong>
-                  <span className={`admin-badge ${c.priority === 'High' ? 'rejected' : 'pending'}`}>{c.priority}</span>
-                  <span className="admin-badge active">{c.category}</span>
-                </div>
-                <span className={`admin-badge ${statusColor(c.status)}`} style={{ flexShrink: 0 }}>
-                  {c.status}
-                </span>
-              </div>
+          {complaints.map(c => {
+            const isResolved = c.status === 'Resolved';
+            const isInProgress = c.status === 'In Progress';
+            const isAssigned = c.status === 'Assigned' || isInProgress || isResolved;
+            const confPercent = Math.round((c.confidence || 0.85) * 100);
 
-              {/* Meta */}
-              <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                Ticket: <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>{c.id}</code>
-                &nbsp;·&nbsp;Filed: {c.filedDate}
-                &nbsp;·&nbsp;Room {c.roomNumber}
-              </div>
-
-              {/* Description */}
-              {c.description && (
-                <div className="complaint-description-block">
-                  <FileText size={13} style={{ color: '#7c3aed', flexShrink: 0, marginTop: '1px' }} />
-                  <span style={{ fontSize: '0.83rem', color: '#334155' }}>{c.description}</span>
-                </div>
-              )}
-
-              {/* Image thumbnail */}
-              {c.imageUrl && (
-                <div className="complaint-image-wrap">
-                  <img
-                    src={c.imageUrl}
-                    alt="Complaint attachment"
-                    className="complaint-thumb"
-                    onClick={() => setExpandedComplaint(c)}
-                    title="Click to view full image"
-                  />
-                  <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
-                    <Image size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} />
-                    Photo attached
+            return (
+              <div key={c.id} className="complaint-card-enhanced">
+                {/* Top Row */}
+                <div className="complaint-card-top">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <strong style={{ fontSize: '0.98rem', color: '#0f172a' }}>{c.title}</strong>
+                    <span className={`admin-badge ${c.priority === 'High' ? 'rejected' : 'pending'}`}>{c.priority}</span>
+                    <span className="admin-badge active">{c.category}</span>
+                    {c.predictedCategory && (
+                      <span className="ai-category-badge" title={`Machine Learning confidence: ${confPercent}%`}>
+                        ✨ AI: {c.predictedCategory} ({confPercent}%)
+                      </span>
+                    )}
+                  </div>
+                  <span className={`admin-badge ${statusColor(c.status)}`} style={{ flexShrink: 0 }}>
+                    {c.status}
                   </span>
                 </div>
-              )}
 
-              {/* Resolution note */}
-              <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic', borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
-                ℹ️ {c.resolutionNotes}
+                {/* Location & Ticket Metadata */}
+                <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <span>Ticket: <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>{c.id}</code></span>
+                  <span>📅 {c.filedDate}</span>
+                  <span>📍 {c.location || (c.roomNumber ? `Room ${c.roomNumber}` : 'Hostel Complex')}</span>
+                </div>
+
+                {/* Description */}
+                {c.description && (
+                  <div className="complaint-description-block">
+                    <FileText size={14} style={{ color: '#7c3aed', flexShrink: 0, marginTop: '2px' }} />
+                    <span style={{ fontSize: '0.84rem', color: '#334155' }}>{c.description}</span>
+                  </div>
+                )}
+
+                {/* Assigned Staff Card */}
+                {c.assignedStaffName ? (
+                  <div className="staff-contact-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div className="staff-avatar-badge">
+                        {c.assignedStaffName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
+                          {c.assignedStaffName}
+                        </div>
+                        <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                          {c.assignedStaffRole || 'Qualified Maintenance Specialist'} · Auto-assigned by workload
+                        </div>
+                      </div>
+                    </div>
+                    {c.assignedStaffPhone && (
+                      <a href={`tel:${c.assignedStaffPhone}`} className="staff-call-btn">
+                        <Phone size={13} /> {c.assignedStaffPhone}
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{
+                    background: '#fffbeb',
+                    border: '1px solid #fef3c7',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    color: '#92400e',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <Clock size={14} />
+                    <span>Queued in supervisor triage queue for manual review and staff allocation.</span>
+                  </div>
+                )}
+
+                {/* Progress History Stepper */}
+                <div className="complaint-progress-stepper">
+                  <div className="stepper-step done">
+                    ✓ 1. Filed
+                  </div>
+                  <span style={{ color: '#94a3b8', fontWeight: 600 }}>→</span>
+                  <div className={`stepper-step ${isAssigned ? 'done' : 'active'}`}>
+                    {isAssigned ? '✓ 2. AI Assigned' : '2. Classification'}
+                  </div>
+                  <span style={{ color: '#94a3b8', fontWeight: 600 }}>→</span>
+                  <div className={`stepper-step ${isResolved ? 'done' : isInProgress ? 'active' : ''}`}>
+                    {isResolved ? '✓ 3. In Progress' : '3. Work Execution'}
+                  </div>
+                  <span style={{ color: '#94a3b8', fontWeight: 600 }}>→</span>
+                  <div className={`stepper-step ${isResolved ? 'done' : ''}`}>
+                    {isResolved ? '✓ 4. Resolved' : '4. Verification'}
+                  </div>
+                </div>
+
+                {/* Image thumbnail */}
+                {c.imageUrl && (
+                  <div className="complaint-image-wrap">
+                    <img
+                      src={c.imageUrl}
+                      alt="Complaint attachment"
+                      className="complaint-thumb"
+                      onClick={() => setExpandedComplaint(c)}
+                      title="Click to view full image"
+                    />
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                      <Image size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} />
+                      Photo attached
+                    </span>
+                  </div>
+                )}
+
+                {/* Resolution note */}
+                <div style={{ fontSize: '0.78rem', color: '#64748b', background: '#f8fafc', padding: '6px 10px', borderRadius: '6px', borderLeft: '3px solid #7c3aed' }}>
+                  ℹ️ <strong>Status Log:</strong> {c.resolutionNotes}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {complaints.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.85rem' }}>
               <AlertCircle size={28} style={{ opacity: 0.4, marginBottom: '0.5rem', display: 'block', margin: '0 auto 0.5rem' }} />
               No active maintenance complaints recorded.
             </div>
@@ -341,134 +666,25 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
         </div>
       </div>
 
-      {/* MODAL: LODGE COMPLAINT */}
-      {isLodgeModalOpen && (
-        <div className="admin-modal-backdrop" onClick={() => setIsLodgeModalOpen(false)}>
-          <div className="admin-modal-card complaint-modal" onClick={e => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <h3>Lodge Hostel Maintenance Request</h3>
-              <button className="admin-table-action-btn" onClick={() => setIsLodgeModalOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleLodgeComplaint}>
-              <div className="admin-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-                {/* Category + Priority row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="admin-form-group">
-                    <label>Category</label>
-                    <select
-                      className="admin-form-select"
-                      value={complaintForm.category}
-                      onChange={e => setComplaintForm({ ...complaintForm, category: e.target.value })}
-                    >
-                      <option value="Electrical">Electrical (Fan, Light, Switch)</option>
-                      <option value="Plumbing">Plumbing (Tap, Shower, Geyser)</option>
-                      <option value="Internet / Wi-Fi">Internet / Wi-Fi</option>
-                      <option value="Carpentry">Carpentry (Bed, Table, Almirah)</option>
-                      <option value="Housekeeping">Housekeeping &amp; Cleaning</option>
-                    </select>
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Priority</label>
-                    <select
-                      className="admin-form-select"
-                      value={complaintForm.priority}
-                      onChange={e => setComplaintForm({ ...complaintForm, priority: e.target.value })}
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High (Urgent)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Issue Title */}
-                <div className="admin-form-group">
-                  <label>Issue Title <span style={{ color: '#e11d48' }}>*</span></label>
-                  <input
-                    type="text"
-                    className="admin-form-input"
-                    value={complaintForm.title}
-                    onChange={e => setComplaintForm({ ...complaintForm, title: e.target.value })}
-                    placeholder="e.g. Ceiling fan speed regulator broken"
-                    required
-                  />
-                </div>
-
-                {/* Detailed Description */}
-                <div className="admin-form-group">
-                  <label>Describe What Happened <span style={{ color: '#e11d48' }}>*</span></label>
-                  <textarea
-                    rows={4}
-                    className="admin-form-input"
-                    value={complaintForm.description}
-                    onChange={e => setComplaintForm({ ...complaintForm, description: e.target.value })}
-                    placeholder="Explain the problem in detail — when it started, how it affects daily routine, and what you observed (e.g. sparking, water leakage, no signal, etc.)"
-                    required
-                    style={{ resize: 'vertical', minHeight: '90px' }}
-                  />
-                  <small style={{ color: '#64748b' }}>
-                    The more detail you provide, the faster our maintenance team can resolve it.
-                  </small>
-                </div>
-
-                {/* Image Upload */}
-                <div className="admin-form-group">
-                  <label>Attach Photo (Optional)</label>
-                  {!complaintForm.imagePreview ? (
-                    <div
-                      className="complaint-upload-zone"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Upload size={20} style={{ color: '#7c3aed' }} />
-                      <span style={{ fontWeight: 600, color: '#7c3aed', fontSize: '0.9rem' }}>Click to upload image</span>
-                      <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>JPG, PNG, WEBP up to 5MB</span>
-                    </div>
-                  ) : (
-                    <div className="complaint-preview-wrap">
-                      <img src={complaintForm.imagePreview} alt="Preview" className="complaint-preview-img" />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                        <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
-                          ✓ {complaintForm.imageFile?.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={handleRemoveImage}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e11d48', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.8rem' }}
-                        >
-                          <Trash2 size={13} /> Remove
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={handleImageChange}
-                  />
-                </div>
-
-                <div style={{ fontSize: '0.78rem', color: '#64748b', background: '#f8fafc', borderRadius: '8px', padding: '0.6rem 0.75rem', borderLeft: '3px solid #7c3aed' }}>
-                  🔔 Warden and campus facilities team will inspect within 24 hours of submission.
-                </div>
-              </div>
-
-              <div className="admin-modal-footer">
-                <button type="button" className="admin-action-btn-secondary" onClick={() => setIsLodgeModalOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="admin-action-btn-primary" style={{ background: '#7c3aed' }}>
-                  <Send size={14} /> Submit Maintenance Request
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* SMART COMPLAINT SUBMISSION MODAL (5-SECTION WITH HUMAN VERIFICATION) */}
+      <SmartComplaintModal
+        isOpen={isLodgeModalOpen}
+        onClose={() => setIsLodgeModalOpen(false)}
+        onComplaintSubmitted={(newTicket) => {
+          setComplaints((prev) => [newTicket, ...prev]);
+          setSubmitFeedback({
+            type: 'success',
+            message: newTicket.assignedStaffName
+              ? `Complaint #${newTicket.id} registered! Classified as ${newTicket.category} and assigned to ${newTicket.assignedStaffName}.`
+              : `Complaint #${newTicket.id} registered and queued for supervisor triage.`,
+          });
+        }}
+        defaultLocation={complaintForm.location}
+        hostelName={hostelDetail.hostelName}
+        roomNumber={hostelDetail.roomNumber}
+        studentName="Rakesh Das"
+        rollNumber="01"
+      />
 
       {/* Full Image Viewer Modal */}
       {expandedComplaint && expandedComplaint.imageUrl && (

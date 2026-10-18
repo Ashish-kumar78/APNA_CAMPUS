@@ -1149,7 +1149,7 @@ export default function ReportGenerationModule({ account, role }) {
                 <strong>{summary?.totalMatchingRecords || reportData.length}</strong> records
               </span>
               <span>·</span>
-              <span style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
+              <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 500 }}>
                 Date basis: {meta?.dateBasis || 'Cumulative academic records'}
               </span>
             </div>
@@ -1182,7 +1182,7 @@ export default function ReportGenerationModule({ account, role }) {
                   );
                 }
                 if (p === page - 2 || p === page + 2) {
-                  return <span key={p} style={{ padding: '0 4px', color: '#94a3b8' }}>...</span>;
+                  return <span key={p} style={{ padding: '0 4px', color: '#64748b', fontWeight: 600 }}>...</span>;
                 }
                 return null;
               })}

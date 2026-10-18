@@ -1670,14 +1670,14 @@ export default function HodPortal({ account, onLogout }) {
                           </div>
                           <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '0.95rem', color: '#0f172a', lineHeight: 1.3 }}>{doc.title}</h3>
                           <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.4 }}>{doc.description || 'No description.'}</p>
-                          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.6rem', fontSize: '0.72rem', color: '#94a3b8' }}>
-                            <span style={{ fontWeight: 600, color: '#475569' }}>{doc.uploadedBy}</span> · {doc.fileSize || '—'} · {new Date(doc.uploadedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.6rem', fontSize: '0.72rem', color: '#64748b' }}>
+                            <span style={{ fontWeight: 600, color: '#334155' }}>{doc.uploadedBy}</span> · {doc.fileSize || '—'} · {new Date(doc.uploadedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </div>
                         </div>
                       ))}
                       {filtered.length === 0 && (
-                        <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-                          <FileText size={40} style={{ opacity: 0.4, marginBottom: '0.75rem' }} />
+                        <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                          <FileText size={40} style={{ opacity: 0.5, marginBottom: '0.75rem' }} />
                           <p style={{ margin: 0, fontWeight: 600 }}>No documents available</p>
                         </div>
                       )}

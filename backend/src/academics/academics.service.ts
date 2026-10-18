@@ -102,4 +102,231 @@ export class AcademicsService {
       },
     };
   }
+
+  // ==========================================
+  // PROGRAMMES (B.Tech, BBA, BCA, Diploma, etc.)
+  // ==========================================
+  async getProgrammes() {
+    return this.prisma.programme.findMany({
+      orderBy: { code: 'asc' },
+      include: {
+        _count: {
+          select: { students: true, applicants: true, courseOfferings: true },
+        },
+      },
+    });
+  }
+
+  async createProgramme(data: {
+    code: string;
+    name: string;
+    degreeType?: string;
+    departmentCode: string;
+    durationYears?: number;
+    totalSemesters?: number;
+    creditsRequired?: number;
+  }) {
+    return this.prisma.programme.create({
+      data: {
+        code: data.code.toUpperCase().trim(),
+        name: data.name.trim(),
+        degreeType: data.degreeType || 'UG',
+        departmentCode: data.departmentCode.toUpperCase().trim(),
+        durationYears: data.durationYears || 4,
+        totalSemesters: data.totalSemesters || 8,
+        creditsRequired: data.creditsRequired || 160,
+      },
+    });
+  }
+
+  async updateProgramme(id: string, data: any) {
+    return this.prisma.programme.update({
+      where: { id },
+      data,
+    });
+  }
+
+  // ==========================================
+  // ACADEMIC YEARS
+  // ==========================================
+  async getAcademicYears() {
+    return this.prisma.academicYear.findMany({
+      orderBy: { year: 'desc' },
+    });
+  }
+
+  async createAcademicYear(data: { year: string; startDate?: string; endDate?: string; isCurrent?: boolean }) {
+    if (data.isCurrent) {
+      await this.prisma.academicYear.updateMany({ data: { isCurrent: false } });
+    }
+    return this.prisma.academicYear.create({
+      data: {
+        year: data.year.trim(),
+        startDate: data.startDate,
+        endDate: data.endDate,
+        isCurrent: Boolean(data.isCurrent),
+      },
+    });
+  }
+
+  // ==========================================
+  // COURSE OFFERINGS & FACULTY ASSIGNMENTS
+  // ==========================================
+  async getCourseOfferings(query?: { department?: string; semester?: string; academicYear?: string; programmeId?: string }) {
+    const where: any = {};
+    if (query?.department && query.department !== 'All') where.department = query.department;
+    if (query?.semester && query.semester !== 'All') where.semester = query.semester;
+    if (query?.academicYear && query.academicYear !== 'All') where.academicYear = query.academicYear;
+    if (query?.programmeId && query.programmeId !== 'All') where.programmeId = query.programmeId;
+
+    return this.prisma.courseOffering.findMany({
+      where,
+      include: {
+        programme: true,
+        facultyAssignments: {
+          include: { faculty: true },
+        },
+      },
+      orderBy: { subjectCode: 'asc' },
+    });
+  }
+
+  async createCourseOffering(data: {
+    subjectCode: string;
+    subjectName: string;
+    programmeId?: string;
+    department: string;
+    semester: string;
+    academicYear: string;
+    credits?: number;
+    type?: string;
+  }) {
+    return this.prisma.courseOffering.create({
+      data: {
+        subjectCode: data.subjectCode.toUpperCase().trim(),
+        subjectName: data.subjectName.trim(),
+        programmeId: data.programmeId || null,
+        department: data.department,
+        semester: data.semester,
+        academicYear: data.academicYear || '2026-27',
+        credits: data.credits || 4,
+        type: data.type || 'Theory + Lab',
+      },
+      include: { programme: true },
+    });
+  }
+
+  async assignFacultyToCourse(data: {
+    courseOfferingId: string;
+    facultyId: string;
+    section?: string;
+    academicYear?: string;
+    role?: string;
+    allocatedHours?: number;
+  }) {
+    return this.prisma.facultyAssignment.upsert({
+      where: {
+        courseOfferingId_facultyId_section: {
+          courseOfferingId: data.courseOfferingId,
+          facultyId: data.facultyId,
+          section: data.section || 'Section A',
+        },
+      },
+      update: {
+        role: data.role || 'Lead Instructor',
+        allocatedHours: data.allocatedHours || 4,
+      },
+      create: {
+        courseOfferingId: data.courseOfferingId,
+        facultyId: data.facultyId,
+        section: data.section || 'Section A',
+        academicYear: data.academicYear || '2026-27',
+        role: data.role || 'Lead Instructor',
+        allocatedHours: data.allocatedHours || 4,
+      },
+      include: { courseOffering: true, faculty: true },
+    });
+  }
+
+  // ==========================================
+  // STUDENT ENROLLMENTS & SEMESTER PROGRESSION
+  // ==========================================
+  async getStudentEnrollments(studentIdOrRoll: string) {
+    const student = await this.prisma.student.findFirst({
+      where: {
+        OR: [
+          { id: studentIdOrRoll },
+          { rollNumber: studentIdOrRoll },
+          { studentId: studentIdOrRoll },
+        ],
+      },
+    });
+
+    if (!student) return [];
+
+    return this.prisma.studentEnrollment.findMany({
+      where: { studentId: student.id },
+      include: { programme: true },
+      orderBy: { enrolledAt: 'asc' },
+    });
+  }
+
+  async promoteStudentSemester(data: {
+    studentId: string;
+    targetSemester: string;
+    academicYear: string;
+    section?: string;
+    previousSemesterSgpa?: number;
+  }) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: data.studentId },
+    });
+
+    if (!student) {
+      throw new Error(`Student ${data.studentId} not found.`);
+    }
+
+    // Atomic transaction: mark prior enrollment as Promoted/Completed and create new semester enrollment
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Update previous active enrollment
+      await tx.studentEnrollment.updateMany({
+        where: {
+          studentId: student.id,
+          semester: student.semester,
+          status: 'Enrolled',
+        },
+        data: {
+          status: 'Completed',
+          sgpa: data.previousSemesterSgpa || student.cgpa,
+          promotedAt: new Date(),
+        },
+      });
+
+      // 2. Create next semester enrollment
+      const newEnrollment = await tx.studentEnrollment.create({
+        data: {
+          studentId: student.id,
+          programmeId: student.programmeId,
+          academicYear: data.academicYear || student.academicYear,
+          semester: data.targetSemester,
+          section: data.section || student.section,
+          status: 'Enrolled',
+          cgpa: student.cgpa,
+          attendanceRate: 100,
+        },
+      });
+
+      // 3. Update student record current semester
+      const updatedStudent = await tx.student.update({
+        where: { id: student.id },
+        data: {
+          semester: data.targetSemester,
+          section: data.section || student.section,
+          academicYear: data.academicYear || student.academicYear,
+        },
+      });
+
+      return { student: updatedStudent, enrollment: newEnrollment };
+    });
+  }
 }

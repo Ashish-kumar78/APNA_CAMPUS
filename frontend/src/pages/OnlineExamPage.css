@@ -46,7 +46,7 @@
   font-family: monospace;
 }
 
-.oec-subject-name { font-size: 8px; color: #8880aa; text-align: center; line-height: 1.2; }
+.oec-subject-name { font-size: 9.5px; font-weight: 600; color: #475569; text-align: center; line-height: 1.2; }
 
 .oec-body { flex: 1; min-width: 0; }
 .oec-body h3 { margin: 0 0 6px; font-size: 13px; color: #2a2050; }
@@ -112,7 +112,7 @@
 
 .instructions-header svg { color: #5b3fd4; margin-bottom: 10px; }
 .instructions-header h2 { margin: 0 0 4px; color: #2a2050; font-size: 20px; }
-.instructions-header p { margin: 0; color: #888; font-size: 12px; }
+.instructions-header p { margin: 0; color: #64748b; font-size: 12.5px; font-weight: 500; }
 
 .instructions-meta-grid {
   display: grid;
@@ -251,8 +251,9 @@
 .exam-question-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
-  color: #8880aa;
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 600;
   margin-bottom: 8px;
 }
 
@@ -363,12 +364,13 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 9px;
-  color: #8880a0;
+  font-size: 9.5px;
+  color: #475569;
+  font-weight: 500;
 }
 
 .palette-answered::before { content: '●'; color: #27ae60; margin-right: 4px; }
-.palette-not-answered::before { content: '●'; color: #c0b8e0; margin-right: 4px; }
+.palette-not-answered::before { content: '●'; color: #94a3b8; margin-right: 4px; }
 .palette-current::before { content: '●'; color: #5b3fd4; margin-right: 4px; }
 
 /* Result */
@@ -396,7 +398,7 @@
 .result-icon.average { background: #fdeaea; color: #c0392b; }
 
 .exam-result-card h2 { margin: 0 0 4px; color: #1e1840; font-size: 20px; }
-.exam-result-card > p { margin: 0 0 20px; color: #888; font-size: 12px; }
+.exam-result-card > p { margin: 0 0 20px; color: #64748b; font-size: 13px; }
 
 .result-score-display {
   display: flex;
@@ -407,8 +409,8 @@
 }
 
 .result-score-display strong { font-size: 52px; color: #1e7a43; font-weight: 700; line-height: 1; }
-.result-score-display span { font-size: 20px; color: #999; }
-.result-percentage { margin-bottom: 20px; color: #555; font-size: 14px; }
+.result-score-display span { font-size: 20px; color: #64748b; font-weight: 600; }
+.result-percentage { margin-bottom: 20px; color: #334155; font-size: 14px; font-weight: 600; }
 
 .result-review {
   text-align: left;

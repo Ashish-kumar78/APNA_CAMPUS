@@ -303,27 +303,27 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     </thead>
                     <tbody>
                       <tr>
-                        <td><strong>Computer Science & Engineering (CSE)</strong></td>
-                        <td>Dr. P. K. Pattnaik</td>
-                        <td>540</td>
-                        <td>31 / 32 On Duty</td>
-                        <td><span style={{ color: '#22c55e', fontWeight: 600 }}>74% Completed</span> (On Schedule)</td>
+                        <td><strong style={{ color: '#0f172a' }}>Computer Science & Engineering (CSE)</strong></td>
+                        <td style={{ color: '#1e293b' }}>Dr. P. K. Pattnaik</td>
+                        <td style={{ color: '#1e293b', fontWeight: 600 }}>540</td>
+                        <td style={{ color: '#1e293b' }}>31 / 32 On Duty</td>
+                        <td><span style={{ color: '#16a34a', fontWeight: 700 }}>74% Completed</span> <span style={{ color: '#475569' }}>(On Schedule)</span></td>
                         <td><button className="erp-btn erp-btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }} onClick={() => triggerToast('CSE report opened')}>Inspect</button></td>
                       </tr>
                       <tr>
-                        <td><strong>Electronics & Communication (ECE)</strong></td>
-                        <td>Dr. M. R. Senapati</td>
-                        <td>380</td>
-                        <td>24 / 24 On Duty</td>
-                        <td><span style={{ color: '#22c55e', fontWeight: 600 }}>71% Completed</span> (On Schedule)</td>
+                        <td><strong style={{ color: '#0f172a' }}>Electronics & Communication (ECE)</strong></td>
+                        <td style={{ color: '#1e293b' }}>Dr. M. R. Senapati</td>
+                        <td style={{ color: '#1e293b', fontWeight: 600 }}>380</td>
+                        <td style={{ color: '#1e293b' }}>24 / 24 On Duty</td>
+                        <td><span style={{ color: '#16a34a', fontWeight: 700 }}>71% Completed</span> <span style={{ color: '#475569' }}>(On Schedule)</span></td>
                         <td><button className="erp-btn erp-btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }} onClick={() => triggerToast('ECE report opened')}>Inspect</button></td>
                       </tr>
                       <tr>
-                        <td><strong>Electrical & Electronics (EEE)</strong></td>
-                        <td>Dr. S. K. Das</td>
-                        <td>290</td>
-                        <td>18 / 18 On Duty</td>
-                        <td><span style={{ color: '#22c55e', fontWeight: 600 }}>69% Completed</span> (On Schedule)</td>
+                        <td><strong style={{ color: '#0f172a' }}>Electrical & Electronics (EEE)</strong></td>
+                        <td style={{ color: '#1e293b' }}>Dr. S. K. Das</td>
+                        <td style={{ color: '#1e293b', fontWeight: 600 }}>290</td>
+                        <td style={{ color: '#1e293b' }}>18 / 18 On Duty</td>
+                        <td><span style={{ color: '#16a34a', fontWeight: 700 }}>69% Completed</span> <span style={{ color: '#475569' }}>(On Schedule)</span></td>
                         <td><button className="erp-btn erp-btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }} onClick={() => triggerToast('EEE report opened')}>Inspect</button></td>
                       </tr>
                     </tbody>
@@ -360,33 +360,33 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     {leaveRequests.map(leave => (
                       <tr key={leave.id}>
                         <td>
-                          <strong>{leave.applicantName}</strong>
+                          <strong style={{ color: '#0f172a' }}>{leave.applicantName}</strong>
                           <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ID: {leave.applicantId}</div>
                         </td>
                         <td>
-                          <div>{leave.applicantRole}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{leave.department}</div>
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{leave.applicantRole}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#475569' }}>{leave.department}</div>
                         </td>
                         <td>
-                          <span style={{ background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                          <span style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
                             {leave.leaveType}
                           </span>
                         </td>
                         <td>
-                          <strong>{leave.totalDays} Days</strong>
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{leave.startDate} to {leave.endDate}</div>
+                          <strong style={{ color: '#0f172a' }}>{leave.totalDays} Days</strong>
+                          <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '2px' }}>{leave.startDate} to {leave.endDate}</div>
                         </td>
-                        <td style={{ maxWidth: '280px' }}>
-                          <div style={{ fontSize: '0.82rem', color: '#f1f5f9' }}>{leave.reason}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '4px' }}>
+                        <td style={{ maxWidth: '300px' }}>
+                          <div style={{ fontSize: '0.86rem', color: '#0f172a', fontWeight: 600, lineHeight: 1.45 }}>{leave.reason}</div>
+                          <div style={{ fontSize: '0.76rem', color: '#15803d', fontWeight: 600, marginTop: '4px' }}>
                             ✓ HOD: {leave.hodRemarks || 'Recommended'}
                           </div>
                         </td>
                         <td>
                           <span style={{
-                            color: leave.principalStatus === 'Approved' ? '#22c55e' : leave.principalStatus === 'Rejected' ? '#ef4444' : '#f59e0b',
-                            fontWeight: 600,
-                            fontSize: '0.8rem',
+                            color: leave.principalStatus === 'Approved' ? '#16a34a' : leave.principalStatus === 'Rejected' ? '#dc2626' : '#d97706',
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
                           }}>
                             {leave.principalStatus}
                           </span>
@@ -410,7 +410,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                               </button>
                             </div>
                           ) : (
-                            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Action Recorded</span>
+                            <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>Action Recorded</span>
                           )}
                         </td>
                       </tr>
@@ -485,16 +485,16 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     <tbody>
                       {institutionalNotices.map(n => (
                         <tr key={n.id}>
-                          <td><strong>{n.title}</strong></td>
+                          <td><strong style={{ color: '#0f172a' }}>{n.title}</strong></td>
                           <td>
-                            <span style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                            <span style={{ background: '#f1f5f9', color: '#1e293b', border: '1px solid #cbd5e1', padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
                               {n.scope}
                             </span>
                           </td>
-                          <td style={{ color: '#94a3b8' }}>{n.author}</td>
-                          <td style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{n.date}</td>
+                          <td style={{ color: '#475569', fontWeight: 500 }}>{n.author}</td>
+                          <td style={{ fontSize: '0.8rem', color: '#475569' }}>{n.date}</td>
                           <td>
-                            <span style={{ color: n.status.includes('Approved') ? '#22c55e' : '#f59e0b', fontWeight: 600 }}>
+                            <span style={{ color: n.status.includes('Approved') ? '#16a34a' : '#d97706', fontWeight: 700 }}>
                               {n.status}
                             </span>
                           </td>
@@ -508,7 +508,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                                 Approve & Release
                               </button>
                             ) : (
-                              <span style={{ color: '#22c55e', fontSize: '0.8rem' }}>Released</span>
+                              <span style={{ color: '#16a34a', fontSize: '0.8rem', fontWeight: 600 }}>Released</span>
                             )}
                           </td>
                         </tr>
@@ -529,7 +529,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                   <p>Certified pass percentage, backlog distribution, and NAAC quality indicators</p>
                 </div>
               </div>
-              <p style={{ color: '#94a3b8' }}>
+              <p style={{ color: '#334155', fontSize: '0.9rem', lineHeight: 1.5 }}>
                 Official autonomous results compiled by Examination Cell. Continuous evaluation verified across all five engineering departments.
               </p>
             </div>

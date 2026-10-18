@@ -105,54 +105,154 @@ export class HostelController {
   }
 
   // ==========================================
-  // 4. MAINTENANCE COMPLAINTS
+  // 4. MAINTENANCE COMPLAINTS (AI-POWERED)
   // ==========================================
   @Get('complaints')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get hostel maintenance complaints' })
+  @ApiOperation({ summary: 'Get campus maintenance complaints with AI triage and filters' })
   async getComplaints(
     @CurrentUser() user: any,
     @Query('rollNumber') rollNumber?: string,
     @Query('category') category?: string,
     @Query('status') status?: string,
+    @Query('assignedStaffId') assignedStaffId?: string,
+    @Query('needsReview') needsReview?: string,
+    @Query('search') search?: string,
   ) {
     const role = normalizeRole(user.role);
     let targetRoll = rollNumber;
+    let targetStaffId = assignedStaffId;
+
+    // Security & Role Isolation:
+    // Students can ONLY view their own complaints
     if (role === 'student') {
       targetRoll = user.student?.rollNumber || user.identifier;
+    } else if (role === 'staff' && !targetStaffId) {
+      // Staff defaults to their assigned tickets unless admin
+      targetStaffId = user.id;
     }
 
-    const data = await this.hostelService.getComplaints(targetRoll, category, status);
+    const data = await this.hostelService.getComplaints({
+      rollNumber: targetRoll,
+      category,
+      status,
+      assignedStaffId: role === 'admin' || role === 'super_admin' || role === 'warden' || role === 'hostel' ? assignedStaffId : targetStaffId,
+      needsReview: needsReview !== undefined ? needsReview === 'true' : undefined,
+      search,
+    });
     return { success: true, count: data.length, data };
+  }
+
+  @Post('complaints/preview-ai')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Preview AI classification and confidence without lodging' })
+  async previewAIComplaint(@Body() body: { text: string; categoryHint?: string }) {
+    const aiResult = await this.hostelService.aiAssignmentService.predictCategory(
+      body.text,
+      body.categoryHint
+    );
+    return { success: true, data: aiResult };
+  }
+
+  @Post('complaints/preview-vision')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Directly analyze uploaded photo to identify defect, title, and category' })
+  async previewVisionComplaint(@Body() body: { imageBase64: string; filename?: string; locationHint?: string }) {
+    const visionResult = await this.hostelService.previewVisionComplaint(
+      body.imageBase64,
+      body.filename,
+      body.locationHint
+    );
+    return { success: true, data: visionResult };
   }
 
   @Post('complaints')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Lodge new hostel maintenance complaint' })
+  @ApiOperation({ summary: 'Lodge new complaint with automatic AI classification and staff assignment' })
   async lodgeComplaint(@CurrentUser() user: any, @Body() body: any) {
-    const ticket = await this.hostelService.lodgeComplaint(body);
-    return { success: true, message: 'Hostel maintenance ticket lodged successfully! The warden has been notified.', data: ticket };
+    const payload = {
+      ...body,
+      studentId: user?.student?.id || user?.id,
+      studentName: body.studentName || user?.student?.name || user?.name || 'Rakesh Das',
+      rollNumber: body.rollNumber || user?.student?.rollNumber || user?.identifier || '01',
+      hostel: body.hostel || user?.student?.hostelName || 'Sarojini Girls Residence (Block A)',
+      roomNumber: body.roomNumber || user?.student?.roomNumber || '204',
+      title: body.title || '',
+      description: body.description || '',
+      attachmentUrl: body.attachmentUrl || body.imageUrl || body.imagePreview,
+      filename: body.filename,
+    };
+
+    const ticket = await this.hostelService.lodgeComplaint(payload);
+    return {
+      success: true,
+      message: ticket.needsReview
+        ? 'Complaint received and queued for administrative supervisor review.'
+        : `Complaint classified as ${ticket.category} and automatically assigned to ${ticket.assignedStaffName || 'maintenance staff'}.`,
+      data: ticket,
+    };
   }
 
   @Patch('complaints/:id/status')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update complaint status (Hostel staff / Warden only)' })
+  @ApiOperation({ summary: 'Update complaint status and assign/reassign staff (Staff / Warden / Admin)' })
   async updateComplaintStatus(
     @CurrentUser() user: any,
     @Param('id') id: string,
-    @Body() body: { status: string; assignedStaff?: string; resolutionNotes?: string },
+    @Body() body: {
+      status: string;
+      assignedStaff?: string;
+      assignedStaffId?: string;
+      resolutionNotes?: string;
+    },
   ) {
     const role = normalizeRole(user.role);
     const authorized = ['hostel', 'warden', 'admin', 'super_admin', 'staff'];
     if (!authorized.includes(role)) {
-      throw new ForbiddenException('Access denied. Only Hostel Warden or Operations Staff can update complaint status.');
+      throw new ForbiddenException('Access denied. Only authorized staff or administrators can update complaints.');
     }
 
-    const updated = await this.hostelService.updateComplaintStatus(id, body.status, body.assignedStaff, body.resolutionNotes);
-    return { success: true, message: `Complaint ${id} status updated to ${body.status}`, data: updated };
+    const updated = await this.hostelService.updateComplaintStatus(
+      id,
+      body.status,
+      body.assignedStaff,
+      body.resolutionNotes,
+      body.assignedStaffId
+    );
+    return { success: true, message: `Complaint #${id} status updated to "${body.status}"`, data: updated };
+  }
+
+  @Get('staff-roster')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get active staff roster with live workload for manual assignment/reassignment' })
+  async getStaffRosterWithWorkload(@CurrentUser() user: any) {
+    const staff = await this.hostelService.prisma.staffRoster.findMany({
+      where: { status: { in: ['Active', 'On Duty'] } },
+      orderBy: { name: 'asc' },
+    });
+
+    const withWorkload = await Promise.all(
+      staff.map(async (s) => {
+        const activeCount = await this.hostelService.prisma.hostelComplaint.count({
+          where: {
+            assignedStaffId: s.id,
+            status: { in: ['Pending', 'Assigned', 'In Progress'] },
+          },
+        });
+        return {
+          ...s,
+          activeWorkload: activeCount,
+        };
+      })
+    );
+
+    return { success: true, count: withWorkload.length, data: withWorkload };
   }
 
   // ==========================================

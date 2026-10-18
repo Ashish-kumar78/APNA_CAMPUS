@@ -32,6 +32,15 @@ export const rolePolicies = {
   transport_staff: {
     permissions: ['transport:read','transport:write'],
   },
+  admissions: {
+    permissions: ['admission:read','admission:write','admission:approve','student:read','student:write'],
+  },
+  maintenance: {
+    permissions: ['complaints:read','complaints:write','maintenance:read','maintenance:write'],
+  },
+  non_teaching: {
+    permissions: ['staff:read:self','attendance:read:self','leave:read:self','leave:write:self'],
+  },
 };
 
 export function hasPermission(role, permission) {

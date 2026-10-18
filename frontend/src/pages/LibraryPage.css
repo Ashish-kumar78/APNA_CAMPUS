@@ -58,7 +58,7 @@
 
 .library-summary-strip svg { color: #2563eb; }
 .library-summary-strip strong { font-size: 16px; color: #0f172a; }
-.library-summary-strip small { font-size: 9px; color: #94a3b8; }
+.library-summary-strip small { font-size: 9.5px; color: #64748b; font-weight: 500; }
 
 .library-tabs {
   display: flex;
@@ -240,7 +240,7 @@
   font-size: 10px;
 }
 
-.library-empty { color: #94a3b8; font-size: 12px; padding: 20px; text-align: center; grid-column: 1/-1; }
+.library-empty { color: #64748b; font-size: 12px; font-weight: 500; padding: 20px; text-align: center; grid-column: 1/-1; }
 
 /* Issued Books */
 .issued-list { display: flex; flex-direction: column; gap: 10px; }
@@ -273,7 +273,7 @@
 .issued-body { flex: 1; min-width: 0; }
 .issued-body h3 { margin: 0 0 5px; font-size: 12px; color: #0f172a; }
 
-.issued-meta { display: flex; gap: 14px; font-size: 10px; color: #94a3b8; }
+.issued-meta { display: flex; gap: 14px; font-size: 10.5px; color: #64748b; font-weight: 500; }
 
 .issued-fine {
   display: flex;

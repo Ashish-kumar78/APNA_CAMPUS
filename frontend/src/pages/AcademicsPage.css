@@ -213,7 +213,7 @@
 
 .results-summary-card svg { color: #2563eb; }
 .results-summary-card strong { font-size: 22px; }
-.results-summary-card span { color: #94a3b8; font-size: 10px; }
+.results-summary-card span { color: #64748b; font-size: 10.5px; font-weight: 600; }
 
 .result-semester-table-wrap { overflow-x: auto; }
 

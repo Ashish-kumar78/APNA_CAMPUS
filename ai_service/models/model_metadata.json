@@ -1,6 +1,6 @@
 {
   "model_type": "TF-IDF + LogisticRegression",
-  "trained_at": "2026-10-18T10:59:21.177672",
+  "trained_at": "2026-10-18T11:52:34.325324",
   "num_training_samples": 144,
   "num_test_samples": 36,
   "classes": [

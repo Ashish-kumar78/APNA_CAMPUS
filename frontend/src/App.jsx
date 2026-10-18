@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   ArrowRight,
   BookOpen,
@@ -35,6 +35,8 @@ import LibraryPortal from './components/LibraryPortal.jsx'
 import TransportPortal from './components/TransportPortal.jsx'
 import PlacementPortal from './components/PlacementPortal.jsx'
 import StaffPortal from './components/StaffPortal.jsx'
+import AdmissionsPortal from './components/AdmissionsPortal.jsx'
+import AccountActivationModal from './components/AccountActivationModal.jsx'
 import UniversalWhatsAppLauncher from './components/CampusConnect/UniversalWhatsAppLauncher.jsx'
 import ApnaAIChatbot from './components/Chatbot/ApnaAIChatbot.jsx'
 import MarksManagementModule from './marks/MarksManagementModule.jsx'
@@ -197,12 +199,34 @@ const accounts = {
     department: 'Hospitality & Dining',
     detail: 'Smart Canteen Supervisor',
   },
+  'admissions': {
+    role: 'admissions',
+    name: 'Ms. Sasmita Mohapatra',
+    identity: 'ADM-OFF-01',
+    department: 'Admissions & Student Intake Office',
+    detail: 'Senior Admissions Officer · Admissions & Counseling',
+  },
+  'adm-off-01': {
+    role: 'admissions',
+    name: 'Ms. Sasmita Mohapatra',
+    identity: 'ADM-OFF-01',
+    department: 'Admissions & Student Intake Office',
+    detail: 'Senior Admissions Officer · Admissions & Counseling',
+  },
+  'maintenance': {
+    role: 'staff',
+    name: 'Mr. Pradeep Kumar Barik',
+    identity: 'MTN-OPS-01',
+    department: 'Estate Maintenance & Civil Works',
+    detail: 'Estate Maintenance Supervisor',
+  },
 }
 
 const roleCopy = {
   super_admin: { label: 'Super Admin console', icon: ShieldCheck },
   management: { label: 'Governing board', icon: ShieldCheck },
   principal: { label: 'Principal office', icon: GraduationCap },
+  admissions: { label: 'Admissions & intake', icon: GraduationCap },
   student: { label: 'Student portal', icon: GraduationCap },
   faculty: { label: 'Faculty portal', icon: BookOpen },
   hod: { label: 'HOD portal', icon: ShieldCheck },
@@ -225,6 +249,29 @@ function App() {
   const [account, setAccount] = useState(null)
   const [error, setError] = useState('')
   const [resetRequested, setResetRequested] = useState(false)
+  const [activationModalOpen, setActivationModalOpen] = useState(false)
+  const [activationTokenInput, setActivationTokenInput] = useState('')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || ''
+      const search = window.location.search || ''
+      if (hash.includes('activate?token=')) {
+        const tok = hash.split('activate?token=')[1]?.split('&')[0]
+        if (tok) {
+          setActivationTokenInput(tok)
+          setActivationModalOpen(true)
+        }
+      } else if (search.includes('token=')) {
+        const params = new URLSearchParams(search)
+        const tok = params.get('token')
+        if (tok) {
+          setActivationTokenInput(tok)
+          setActivationModalOpen(true)
+        }
+      }
+    }
+  }, [])
 
   async function handleLogin(event) {
     if (event) event.preventDefault()
@@ -443,6 +490,8 @@ function App() {
       portal = <StaffPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'canteen') {
       portal = <CanteenPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'admissions') {
+      portal = <AdmissionsPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'student') {
       portal = <StudentPortal account={account} onLogout={handleLogout} />
     }
@@ -573,10 +622,21 @@ function App() {
             <ArrowRight size={18} aria-hidden="true" />
           </button>
 
+          <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '0.82rem' }}>
+            <span style={{ color: '#64748b' }}>Newly admitted student? </span>
+            <button
+              type="button"
+              onClick={() => { setActivationModalOpen(true); setActivationTokenInput(''); }}
+              style={{ background: 'none', border: 'none', color: '#0284c7', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+            >
+              Activate with security token
+            </button>
+          </div>
+
           {/* 1-Click Role Switcher Demo Bar */}
-          <div style={{ marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+          <div style={{ marginTop: '18px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
             <p style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px', textAlign: 'center' }}>
-              ⚡ 1-Click Quick Demo Sign-In (14 Roles)
+              ⚡ 1-Click Quick Demo Sign-In (15 Roles)
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', justifyContent: 'center' }}>
               {[
@@ -584,6 +644,7 @@ function App() {
                 { key: 'management', label: 'Management', color: '#b45309' },
                 { key: 'principal', label: 'Principal', color: '#0369a1' },
                 { key: 'admin', label: 'Admin Ops', color: '#1d4ed8' },
+                { key: 'admissions', label: 'Admissions', color: '#0284c7' },
                 { key: 'hod', label: 'HOD', color: '#047857' },
                 { key: 'faculty', label: 'Faculty', color: '#15803d' },
                 { key: 'student', label: 'Student', color: '#1d4ed8' },
@@ -630,6 +691,17 @@ function App() {
         </footer>
       </section>
     </main>
+
+    {activationModalOpen && (
+      <AccountActivationModal
+        initialToken={activationTokenInput}
+        onClose={() => setActivationModalOpen(false)}
+        onActivationSuccess={(user, token) => {
+          setAccount(user)
+          setActivationModalOpen(false)
+        }}
+      />
+    )}
     </>
   )
 }

@@ -464,7 +464,7 @@ export default function AdminComplaintsConsole() {
                     <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
                       {c.studentName} ({c.rollNumber})
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>
                       {c.filedDate}
                     </div>
                   </td>
@@ -539,7 +539,7 @@ export default function AdminComplaintsConsole() {
         </table>
 
         {filteredComplaints.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
+          <div style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b', fontWeight: 500 }}>
             No complaint records match the selected filters.
           </div>
         )}

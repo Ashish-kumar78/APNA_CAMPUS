@@ -146,14 +146,15 @@
 }
 
 .internship-status-tag.open { background: #d4edda; color: #155724; }
-.internship-status-tag.closed { background: #f0f0f0; color: #888; }
+.internship-status-tag.closed { background: #f1f5f9; color: #64748b; font-weight: 600; }
 
 .internship-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  font-size: 10px;
-  color: #7090a0;
+  font-size: 10.5px;
+  color: #475569;
+  font-weight: 500;
   margin-bottom: 8px;
 }
 

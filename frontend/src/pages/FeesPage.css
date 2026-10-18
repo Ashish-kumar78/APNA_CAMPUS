@@ -15,7 +15,7 @@
 .fee-metric-card.interactive:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(79, 70, 229, 0.15); border-color: #a5b4fc; }
 .fee-metric-body h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin: 0 0 4px; }
 .fee-metric-body .fee-val { font-size: 1.35rem; font-weight: 700; color: #0a0f1e; }
-.fee-metric-body .fee-sub { font-size: 0.76rem; color: #94a3b8; }
+.fee-metric-body .fee-sub { font-size: 0.76rem; color: #64748b; font-weight: 500; }
 
 .fees-tabs { display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 22px; }
 .fee-tab-btn { background: none; border: none; padding: 10px 18px; font-weight: 600; font-size: 0.92rem; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }

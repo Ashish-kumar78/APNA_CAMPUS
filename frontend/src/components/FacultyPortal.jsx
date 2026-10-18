@@ -1754,7 +1754,7 @@ export default function FacultyPortal({ account, onLogout }) {
                                 <Flag size={12} /> {n.reports.length} Reports
                               </span>
                             ) : (
-                              <small style={{ color: '#94a3b8' }}>Clean</small>
+                              <span style={{ fontSize: '0.78rem', background: '#ecfdf5', color: '#15803d', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>✓ Clean</span>
                             )}
                           </td>
                           {/* VIEW COLUMN */}
@@ -1952,9 +1952,9 @@ export default function FacultyPortal({ account, onLogout }) {
               </div>
 
               {quizList.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
-                  <ClipboardList size={48} style={{ marginBottom: '12px', opacity: 0.3 }} />
-                  <h3 style={{ color: '#64748b', margin: '0 0 8px' }}>No quizzes yet</h3>
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+                  <ClipboardList size={48} style={{ marginBottom: '12px', opacity: 0.4 }} />
+                  <h3 style={{ color: '#334155', margin: '0 0 8px', fontWeight: 700 }}>No quizzes yet</h3>
                   <p style={{ margin: 0, fontSize: '0.88rem' }}>Click "Add Quiz" to create your first quiz.</p>
                 </div>
               )}
@@ -1988,7 +1988,7 @@ export default function FacultyPortal({ account, onLogout }) {
               <div style={{ marginTop: '4px', fontSize: '0.8rem', color: '#64748b' }}>
                 Lecture Date: <strong>{viewingNote.date}</strong> &nbsp;·&nbsp;
                 Uploaded by: <strong>{viewingNote.uploadedBy?.name}</strong>
-                <span style={{ color: '#94a3b8', marginLeft: '4px' }}>(Roll {viewingNote.uploadedBy?.rollNumber})</span>
+                <span style={{ color: '#64748b', marginLeft: '4px', fontWeight: 500 }}>(Roll {viewingNote.uploadedBy?.rollNumber})</span>
               </div>
             </div>
             {viewingNote.isFacultyVerified ? (
@@ -2331,14 +2331,14 @@ export default function FacultyPortal({ account, onLogout }) {
                           </div>
                           <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '0.95rem', color: '#0f172a', lineHeight: 1.3 }}>{doc.title}</h3>
                           <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.4 }}>{doc.description || 'No description.'}</p>
-                          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.6rem', fontSize: '0.72rem', color: '#94a3b8' }}>
-                            <span style={{ fontWeight: 600, color: '#475569' }}>{doc.uploadedBy}</span> · {doc.fileSize || '—'} · {new Date(doc.uploadedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.6rem', fontSize: '0.72rem', color: '#64748b' }}>
+                            <span style={{ fontWeight: 600, color: '#334155' }}>{doc.uploadedBy}</span> · {doc.fileSize || '—'} · {new Date(doc.uploadedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </div>
                         </div>
                       ))}
                       {filtered.length === 0 && (
-                        <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-                          <FileText size={40} style={{ opacity: 0.4, marginBottom: '0.75rem' }} />
+                        <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                          <FileText size={40} style={{ opacity: 0.5, marginBottom: '0.75rem' }} />
                           <p style={{ margin: 0, fontWeight: 600 }}>No documents available</p>
                         </div>
                       )}
@@ -2381,7 +2381,7 @@ export default function FacultyPortal({ account, onLogout }) {
               <div key={q.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '10px' }}>
                   <span style={{ flexShrink: 0, width: '24px', height: '24px', background: '#4338ca', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>Q{qi + 1}</span>
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#0f172a', fontWeight: 600, lineHeight: 1.4 }}>{q.question || <em style={{ color: '#94a3b8' }}>Question not set</em>}</p>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#0f172a', fontWeight: 600, lineHeight: 1.4 }}>{q.question || <em style={{ color: '#64748b' }}>Question not set</em>}</p>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px', marginLeft: '34px' }}>
                   {q.options.map((opt, oi) => (

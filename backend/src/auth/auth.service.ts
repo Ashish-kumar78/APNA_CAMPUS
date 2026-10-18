@@ -110,4 +110,158 @@ export class AuthService {
       detail: user.detail || '',
     };
   }
+
+  async checkActivationToken(token: string) {
+    const cleanToken = token.trim();
+    const user = await this.prisma.user.findFirst({
+      where: { activationToken: cleanToken },
+      include: { student: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired activation link.');
+    }
+
+    return {
+      success: true,
+      valid: true,
+      name: user.name,
+      email: user.email,
+      identifier: user.identifier,
+      studentId: user.student?.studentId,
+      rollNumber: user.student?.rollNumber,
+    };
+  }
+
+  async activateAccount(token: string, newPassword: string) {
+    const cleanToken = token.trim();
+    if (!newPassword || newPassword.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters long.');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { activationToken: cleanToken },
+      include: { student: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired activation token.');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        isActivated: true,
+        activationToken: null,
+      },
+      include: { student: true, faculty: true, hod: true },
+    });
+
+    // Generate immediate JWT token so student is logged in directly upon activation
+    const payload = {
+      sub: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      identifier: updatedUser.identifier,
+    };
+
+    const secret = process.env.JWT_SECRET || 'gift-autonomous-bput-super-secret-jwt-key-2026-production';
+    const expiresIn = (process.env.JWT_EXPIRES_IN || '8h') as jwt.SignOptions['expiresIn'];
+    const accessToken = jwt.sign(payload, secret, { expiresIn });
+
+    const roleKey = updatedUser.role.toLowerCase();
+    const regNo = updatedUser.student?.rollNumber || updatedUser.student?.studentId;
+
+    return {
+      success: true,
+      message: 'Account activated successfully! Welcome to Apna Campus.',
+      accessToken,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone || '+91 94370 12345',
+        identifier: updatedUser.identifier,
+        role: roleKey,
+        roleEnum: updatedUser.role,
+        registrationNumber: regNo,
+        department: updatedUser.department || updatedUser.student?.department || 'Computer Science & Engineering',
+        detail: updatedUser.detail || 'Semester 1 · Section A',
+      },
+    };
+  }
+
+  async forgotPassword(emailOrIdentifier: string) {
+    const rawKey = emailOrIdentifier.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { identifier: { equals: rawKey, mode: 'insensitive' } },
+          { email: { equals: rawKey, mode: 'insensitive' } },
+        ],
+      },
+    });
+
+    if (!user) {
+      // Return benign message to prevent account enumeration
+      return {
+        success: true,
+        message: 'If an account exists with those details, a reset token has been issued.',
+      };
+    }
+
+    const crypto = await import('crypto');
+    const resetToken = crypto.randomBytes(24).toString('hex');
+    const tokenExpiresAt = new Date(Date.now() + 3600000); // 1 hour
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { resetToken, tokenExpiresAt },
+    });
+
+    return {
+      success: true,
+      message: 'Password reset link and security token generated.',
+      resetToken, // Included for easy offline/demo evaluation
+      expiresAt: tokenExpiresAt,
+    };
+  }
+
+  async resetPassword(resetToken: string, newPassword: string) {
+    if (!newPassword || newPassword.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters long.');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        resetToken: resetToken.trim(),
+        tokenExpiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired password reset token.');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        resetToken: null,
+        tokenExpiresAt: null,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Password has been reset successfully. You can now log in with your new password.',
+    };
+  }
 }

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { downloadSyllabusPdf } from '../utils/pdfGenerator'
 import { notesApi } from '../services/notesApi'
+import { api } from '../services/api'
 import './AcademicsPage.css'
 
 const semesters = [
@@ -78,11 +79,29 @@ export default function AcademicsPage() {
   const [toastMsg, setToastMsg] = useState('')
   const [viewingNote, setViewingNote] = useState(null)
 
+  const [enrollments, setEnrollments] = useState([])
+  const [loadingEnrollments, setLoadingEnrollments] = useState(false)
+
   const cgpa = 8.42
 
   useEffect(() => {
     loadClassNotes()
+    loadEnrollments()
   }, [])
+
+  const loadEnrollments = async () => {
+    try {
+      setLoadingEnrollments(true)
+      const data = await api.getStudentEnrollments('2305201001')
+      if (Array.isArray(data) && data.length > 0) {
+        setEnrollments(data)
+      }
+    } catch {
+      // Keep default
+    } finally {
+      setLoadingEnrollments(false)
+    }
+  }
 
   const loadClassNotes = async () => {
     const list = await notesApi.getClassNotes({ subject: 'ALL' })
@@ -181,6 +200,7 @@ export default function AcademicsPage() {
         {[
           { id: 'subjects', label: 'Enrolled Subjects' },
           { id: 'results', label: 'Results & Grades' },
+          { id: 'progression', label: 'Programme & Term History' },
           { id: 'syllabus', label: 'Syllabus' },
           { id: 'notes', label: `Class Notes & Materials (${classNotes.length})` }
         ].map((tab) => (
@@ -256,7 +276,7 @@ export default function AcademicsPage() {
                                       {matchingNotes.length} Notes
                                     </span>
                                   ) : (
-                                    <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>No notes</span>
+                                    <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 500 }}>No notes</span>
                                   )}
 
                                   <button
@@ -498,6 +518,102 @@ export default function AcademicsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: PROGRAMME & PROGRESSION HISTORY */}
+      {activeTab === 'progression' && (
+        <div className="academics-progression-view" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registered Programme</div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>B.Tech Computer Science &amp; Engg.</div>
+              <div style={{ fontSize: '0.78rem', color: '#2563eb', fontWeight: 600, marginTop: '2px' }}>Code: BTECH-CSE · 4 Years (8 Semesters)</div>
+            </div>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Autonomous Affiliation</div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>GIFT Autonomous College</div>
+              <div style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 600, marginTop: '2px' }}>UGC &amp; BPUT Autonomous Curriculum</div>
+            </div>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Academic Batch</div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>2023 – 2027 Admission Cycle</div>
+              <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600, marginTop: '2px' }}>Section A · Regular Mode</div>
+            </div>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Enrollment Standing</div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#16a34a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle2 size={18} /> Active &amp; Good Standing
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600, marginTop: '2px' }}>Semester 5 in Progress (CGPA 8.42)</div>
+            </div>
+          </div>
+
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <GraduationCap size={20} color="#2563eb" />
+                  <span>Semester Progression Register</span>
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Full historical enrollment trail preserved across progression cycles
+                </p>
+              </div>
+              <span style={{ fontSize: '0.75rem', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '4px 10px', borderRadius: '20px', fontWeight: 700 }}>
+                {loadingEnrollments ? 'Connecting...' : `${enrollments.length > 0 ? enrollments.length : 5} Semesters Recorded`}
+              </span>
+            </div>
+
+            <div className="attendance-table-wrap" style={{ margin: 0 }}>
+              <table className="attendance-summary-table">
+                <thead>
+                  <tr>
+                    <th>Semester</th>
+                    <th>Academic Session</th>
+                    <th>Section</th>
+                    <th>Term SGPA</th>
+                    <th>Cumulative CGPA</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(enrollments.length > 0 ? enrollments : [
+                    { id: 'e1', semester: 'Semester 1', academicYear: '2023-2024', section: 'A', sgpa: 8.14, cgpa: 8.14, status: 'COMPLETED' },
+                    { id: 'e2', semester: 'Semester 2', academicYear: '2023-2024', section: 'A', sgpa: 8.42, cgpa: 8.28, status: 'COMPLETED' },
+                    { id: 'e3', semester: 'Semester 3', academicYear: '2024-2025', section: 'A', sgpa: 8.56, cgpa: 8.37, status: 'COMPLETED' },
+                    { id: 'e4', semester: 'Semester 4', academicYear: '2024-2025', section: 'A', sgpa: 8.60, cgpa: 8.43, status: 'COMPLETED' },
+                    { id: 'e5', semester: 'Semester 5', academicYear: '2025-2026', section: 'A', sgpa: null, cgpa: 8.42, status: 'ACTIVE' },
+                  ]).map((item) => (
+                    <tr key={item.id || item.semester}>
+                      <td style={{ fontWeight: 700, color: '#1e293b' }}>{item.semester}</td>
+                      <td>{item.academicYear}</td>
+                      <td>{item.section || 'A'}</td>
+                      <td style={{ fontWeight: 600 }}>{item.sgpa ? Number(item.sgpa).toFixed(2) : 'Awaiting exam'}</td>
+                      <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.cgpa ? Number(item.cgpa).toFixed(2) : '8.42'}</td>
+                      <td>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          background: item.status === 'ACTIVE' ? '#dcfce7' : '#f1f5f9',
+                          color: item.status === 'ACTIVE' ? '#15803d' : '#475569',
+                          border: item.status === 'ACTIVE' ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                        }}>
+                          {item.status === 'ACTIVE' && <CheckCircle2 size={11} />}
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

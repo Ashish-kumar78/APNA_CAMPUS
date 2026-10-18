@@ -13,8 +13,12 @@ export interface AIPredictionResult {
 export interface AIVisionResult {
   title: string;
   description: string;
-  category: string;
+  category: string; // Underlying 6-class model label
+  collegeCategory: string; // PLUMBING, ELECTRICAL, CLEANING, FURNITURE, CIVIL, NETWORK, OTHER
   confidence: number;
+  confidenceLevel: 'high' | 'medium' | 'low';
+  explanation: string;
+  detectedCues: string[];
   suggestedPriority: string;
   needsReview: boolean;
   source: string;
@@ -28,7 +32,6 @@ export interface StaffAssignmentResult {
   assignmentStatus: 'ASSIGNED' | 'UNASSIGNED_NEEDS_REVIEW' | 'NO_STAFF_AVAILABLE';
   notes: string;
 }
-
 
 @Injectable()
 export class AiAssignmentService {
@@ -84,13 +87,15 @@ export class AiAssignmentService {
       // Heuristic keyword fallback so student complaint is NEVER lost
       const lower = trimmed.toLowerCase();
       let fallbackCategory = userCategoryHint?.toLowerCase() || 'other';
-      if (lower.match(/tap|pipe|water|drain|flush|geyser|leak|shower|sink|urinal/)) {
+      if (lower.match(/tap|pipe|water|drain|flush|geyser|leak|shower|sink|urinal|washbasin/)) {
         fallbackCategory = 'plumbing';
-      } else if (lower.match(/fan|light|switch|mcb|spark|socket|power|breaker|wire|bulb/)) {
+      } else if (lower.match(/fan|light|switch|mcb|spark|socket|power|breaker|wire|bulb|ac/)) {
         fallbackCategory = 'electrical';
       } else if (lower.match(/clean|dirty|dustbin|washroom|corridor|garbage|trash|smell|stench/)) {
         fallbackCategory = 'cleaning';
-      } else if (lower.match(/door|desk|window|hinge|chair|lock|plaster|cracked|railing|handle/)) {
+      } else if (lower.match(/chair|desk|table|bed|cot|wardrobe|cupboard|furniture|almirah/)) {
+        fallbackCategory = 'maintenance';
+      } else if (lower.match(/door|window|hinge|wall|crack|plaster|cracked|railing|handle|tile|floor|ceiling/)) {
         fallbackCategory = 'maintenance';
       } else if (lower.match(/wifi|wi-fi|internet|lan|ethernet|network|router|pc|proxy|dns/)) {
         fallbackCategory = 'internet_it';
@@ -121,7 +126,7 @@ export class AiAssignmentService {
           filename: filename || 'uploaded_photo.jpg',
           location_hint: locationHint || '',
         }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(6000),
       });
 
       if (!response.ok) {
@@ -129,11 +134,19 @@ export class AiAssignmentService {
       }
 
       const data = await response.json();
+      const rawConf = typeof data.confidence === 'number' ? data.confidence : 0.75;
+      const confLevel: 'high' | 'medium' | 'low' =
+        data.confidence_level || (rawConf >= 0.8 ? 'high' : rawConf >= 0.6 ? 'medium' : 'low');
+
       return {
-        title: data.title || 'Reported Maintenance Issue',
+        title: data.title || 'Water Fixture / Maintenance Issue',
         description: data.description || 'Photo maintenance complaint filed by student.',
         category: (data.category || 'other').toLowerCase(),
-        confidence: typeof data.confidence === 'number' ? data.confidence : 0.85,
+        collegeCategory: data.college_category || 'OTHER',
+        confidence: rawConf,
+        confidenceLevel: confLevel,
+        explanation: data.explanation || 'Visual analysis performed on uploaded image.',
+        detectedCues: Array.isArray(data.detected_cues) ? data.detected_cues : [],
         suggestedPriority: data.suggested_priority || 'Medium',
         needsReview: Boolean(data.needs_review),
         source: data.source || 'ai_vision',
@@ -142,54 +155,84 @@ export class AiAssignmentService {
       this.logger.warn(`AI Vision Service offline or timed out: ${err.message}. Using resilient fallback.`);
       
       const fn = (filename || '').toLowerCase();
-      let category = 'maintenance';
-      let title = 'Maintenance Issue Detected from Photo';
-      let desc = 'Issue reported via attached photograph.';
+      const loc = (locationHint || '').toLowerCase();
+      const combined = `${fn} ${loc}`;
 
-      if (fn.match(/tap|pipe|water|drain|flush|sink|leak/)) {
-        category = 'plumbing';
-        title = 'Water Tap / Pipe Issue Detected';
-        desc = 'Photo indicates water leakage or plumbing defect in need of repair.';
-      } else if (fn.match(/fan|light|wire|switch|spark|power/)) {
-        category = 'electrical';
-        title = 'Electrical Fixture Issue Detected';
-        desc = 'Photo indicates electrical fixture or switch requiring repair.';
-      } else if (fn.match(/clean|garbage|dustbin|dirty/)) {
-        category = 'cleaning';
-        title = 'Cleaning & Sanitation Request';
-        desc = 'Photo indicates housekeeping or cleaning service required.';
+      let fallbackCollegeCategory = 'OTHER';
+      let fallbackTitle = 'Maintenance Issue Requires Review';
+      let fallbackDesc = 'Photo attached for maintenance inspection. Please confirm the exact problem domain and location details.';
+      const detectedCues: string[] = ['Uploaded photo attachment'];
+
+      if (combined.match(/tap|pipe|water|drain|flush|sink|leak|geyser|basin|bath/)) {
+        fallbackCollegeCategory = 'PLUMBING';
+        fallbackTitle = 'Water Fixture / Plumbing Issue';
+        fallbackDesc = 'Photo indicates a water supply, tap, or drainage fixture. Please verify if water flow is obstructed, dripping, or damaged.';
+        detectedCues.push('Keywords match plumbing fixtures');
+      } else if (combined.match(/fan|light|wire|switch|spark|power|socket|mcb|fuse/)) {
+        fallbackCollegeCategory = 'ELECTRICAL';
+        fallbackTitle = 'Electrical Fixture / Switch Defect';
+        fallbackDesc = 'Photo indicates an electrical switch, socket, or power fixture. Please specify if there is a loose connection, spark, or power loss.';
+        detectedCues.push('Keywords match electrical components');
+      } else if (combined.match(/clean|garbage|dustbin|dirty|litter|washroom|waste/)) {
+        fallbackCollegeCategory = 'CLEANING';
+        fallbackTitle = 'Housekeeping & Sanitation Request';
+        fallbackDesc = 'Photo indicates an area requiring housekeeping or waste removal. Please specify the exact cleaning attention needed.';
+        detectedCues.push('Keywords match housekeeping needs');
+      } else if (combined.match(/chair|desk|table|bed|cot|wardrobe|cupboard|bench|almirah/)) {
+        fallbackCollegeCategory = 'FURNITURE';
+        fallbackTitle = 'Furniture / Seating Repair Needed';
+        fallbackDesc = 'Photo indicates classroom or hostel furniture (desk, chair, bed, or almirah). Please indicate the damaged part.';
+        detectedCues.push('Keywords match furniture items');
+      } else if (combined.match(/wall|crack|door|window|hinge|tile|plaster|ceiling|floor|masonry/)) {
+        fallbackCollegeCategory = 'CIVIL';
+        fallbackTitle = 'Wall / Door / Structural Defect';
+        fallbackDesc = 'Photo shows a wall surface, door fitting, window, or masonry fixture. Please describe the extent of repair needed.';
+        detectedCues.push('Keywords match structural/civil fixtures');
+      } else if (combined.match(/wifi|wi-fi|router|lan|ethernet|network|port|pc|computer/)) {
+        fallbackCollegeCategory = 'NETWORK';
+        fallbackTitle = 'Network Port / Wi-Fi Equipment Issue';
+        fallbackDesc = 'Photo indicates campus networking equipment or workstation port. Please specify if connectivity is interrupted.';
+        detectedCues.push('Keywords match networking equipment');
       }
 
+      const isKnown = fallbackCollegeCategory !== 'OTHER';
       return {
-        title,
-        description: desc,
-        category,
-        confidence: 0.80,
+        title: fallbackTitle,
+        description: fallbackDesc,
+        category: (fallbackCollegeCategory === 'NETWORK' ? 'internet_it' : fallbackCollegeCategory.toLowerCase()),
+        collegeCategory: fallbackCollegeCategory,
+        confidence: isKnown ? 0.65 : 0.40,
+        confidenceLevel: 'low',
+        explanation: `AI Vision service was offline or timed out (${err.message}). Safe rule-based suggestions generated. Student verification required.`,
+        detectedCues,
         suggestedPriority: 'Medium',
-        needsReview: false,
-        source: 'fallback_vision_rule',
+        needsReview: true,
+        source: 'resilient_heuristic_fallback',
       };
     }
   }
 
   /**
-
-   * Category keywords for staff capability mapping
+   * Category keywords for staff capability mapping across all 7 college domains
    */
   private getCategoryKeywords(category: string): string[] {
-    switch (category.toLowerCase()) {
+    const cat = category.toLowerCase();
+    switch (cat) {
       case 'plumbing':
-        return ['plumb', 'water', 'pipe', 'fitting'];
+        return ['plumb', 'water', 'pipe', 'fitting', 'sanitary'];
       case 'electrical':
-        return ['electr', 'power', 'substation', 'ac'];
+        return ['electr', 'power', 'substation', 'ac', 'wiring'];
       case 'cleaning':
-        return ['clean', 'housekeep', 'sanit', 'warden'];
-      case 'maintenance':
-        return ['maint', 'carpent', 'civil', 'repair'];
+        return ['clean', 'housekeep', 'sanit', 'warden', 'waste'];
+      case 'furniture':
+        return ['carpent', 'furniture', 'maint', 'chair', 'desk', 'bed'];
+      case 'civil':
+        return ['civil', 'maint', 'masonry', 'building', 'door', 'window', 'wall', 'plaster'];
+      case 'network':
       case 'internet_it':
-        return ['lab', 'network', 'technician', 'computer', 'it', 'systems'];
+        return ['lab', 'network', 'technician', 'computer', 'it', 'systems', 'wifi'];
       default:
-        return ['support', 'warden', 'desk', 'general'];
+        return ['support', 'warden', 'desk', 'general', 'maintenance'];
     }
   }
 
@@ -197,14 +240,14 @@ export class AiAssignmentService {
    * Concurrency-safe automatic staff selection based on category qualification and live workload.
    */
   async assignStaffByWorkload(category: string, needsReview: boolean): Promise<StaffAssignmentResult> {
-    if (needsReview || category === 'other') {
+    if (needsReview || category.toLowerCase() === 'other') {
       return {
         assignedStaffId: null,
         assignedStaffName: null,
         assignedStaffPhone: null,
         assignedStaffRole: null,
         assignmentStatus: 'UNASSIGNED_NEEDS_REVIEW',
-        notes: 'Queued for supervisor verification due to uncertain AI classification or "other" category.',
+        notes: 'Queued for supervisor verification due to uncertain AI classification or "OTHER" category.',
       };
     }
 

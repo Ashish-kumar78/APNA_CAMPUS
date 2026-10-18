@@ -2096,7 +2096,7 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                         <td><code>CS501</code></td>
                         <td>Data Structures & Algorithms</td>
                         <td>Hall B-301</td>
-                        <td style={{ color: '#94a3b8' }}>[ Sign Here ]</td>
+                        <td style={{ color: '#475569', fontWeight: 500 }}>[ Sign Here ]</td>
                       </tr>
                       <tr>
                         <td>2</td>
@@ -2105,7 +2105,7 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                         <td><code>CS502</code></td>
                         <td>Operating Systems</td>
                         <td>Hall B-301</td>
-                        <td style={{ color: '#94a3b8' }}>[ Sign Here ]</td>
+                        <td style={{ color: '#475569', fontWeight: 500 }}>[ Sign Here ]</td>
                       </tr>
                       <tr>
                         <td>3</td>
@@ -2114,7 +2114,7 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                         <td><code>CS503</code></td>
                         <td>Database Management Systems</td>
                         <td>Hall B-301</td>
-                        <td style={{ color: '#94a3b8' }}>[ Sign Here ]</td>
+                        <td style={{ color: '#475569', fontWeight: 500 }}>[ Sign Here ]</td>
                       </tr>
                       <tr>
                         <td>4</td>
@@ -2123,7 +2123,7 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                         <td><code>CS504</code></td>
                         <td>Artificial Intelligence</td>
                         <td>Hall B-301</td>
-                        <td style={{ color: '#94a3b8' }}>[ Sign Here ]</td>
+                        <td style={{ color: '#475569', fontWeight: 500 }}>[ Sign Here ]</td>
                       </tr>
                       <tr>
                         <td>5</td>
@@ -2132,7 +2132,7 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                         <td><code>CS505</code></td>
                         <td>Machine Learning</td>
                         <td>Hall B-301</td>
-                        <td style={{ color: '#94a3b8' }}>[ Sign Here ]</td>
+                        <td style={{ color: '#475569', fontWeight: 500 }}>[ Sign Here ]</td>
                       </tr>
                     </tbody>
                   </table>

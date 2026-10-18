@@ -177,12 +177,17 @@ def predict_image_complaint(payload: ImagePredictRequest):
             detail=f"Invalid base64 image data: {str(e)}"
         )
 
-    result = analyze_image_bytes(img_bytes, filename=payload.filename or "")
+    result = analyze_image_bytes(
+        img_bytes,
+        filename=payload.filename or "",
+        location_hint=payload.location_hint or ""
+    )
     
-    # If location hint is provided, append context into description
+    # If location hint is provided, append context into description cleanly
     if payload.location_hint and payload.location_hint.strip():
         loc = payload.location_hint.strip()
-        result["description"] = f"{result['description']} (Location: {loc})"
+        if loc not in result["description"]:
+            result["description"] = f"{result['description']} (Location: {loc})"
 
     return ImagePredictResponse(**result)
 

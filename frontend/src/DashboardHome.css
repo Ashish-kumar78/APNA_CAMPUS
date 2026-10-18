@@ -717,7 +717,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .dash-cal-weekdays span:first-child { color: #f43f5e; }
@@ -972,7 +972,8 @@
   padding: 10px 0 4px;
   text-align: center;
   font-size: 12px;
-  color: #94a3b8;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .dash-footer span { margin: 0 6px; }

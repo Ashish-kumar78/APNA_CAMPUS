@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   BookOpen,
   ChevronDown,
@@ -17,11 +17,75 @@ import {
   Plus,
   Info,
   X,
-  MessageSquare
+  MessageSquare,
+  Printer
 } from 'lucide-react'
-import { downloadSyllabusPdf } from '../utils/pdfGenerator'
+import { downloadSyllabusPdf, downloadGiftAdmitCardPdf, openGiftAdmitCardPdf } from '../utils/pdfGenerator'
 import { notesApi } from '../services/notesApi'
 import './AcademicsPage.css'
+
+export const defaultAdmitCardExams = [
+  {
+    id: 'exam-4',
+    num: 1,
+    name: '4th Semester End Semester Examination 2025-26',
+    venue: 'Apna Campus Autonomous, Bhubaneswar',
+    batch: 'BTECH 2028-P',
+    semesterLabel: '4th Semester',
+    subjects: [
+      { sl: 1, date: '06-05-2026', dateFull: '06/05/2026 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-403', name: 'Programming with Python', section: 'CSE - Genius' },
+      { sl: 2, date: '07-05-2026', dateFull: '07/05/2026 (Thursday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-402', name: 'Computer Organization & Architecture', section: 'CSE - Genius' },
+      { sl: 3, date: '08-05-2026', dateFull: '08/05/2026 (Friday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-401', name: 'Design and Analysis of Algorithms', section: 'CSE - Genius' },
+      { sl: 4, date: '09-05-2026', dateFull: '09/05/2026 (Saturday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTEC-T-OE-401', name: 'Digital Signal Processing', section: 'CSE - Genius' },
+      { sl: 5, date: '11-05-2026', dateFull: '11/05/2026 (Monday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTBS-T-HS-302', name: 'Engineering Economics', section: 'CSE - Genius' },
+      { sl: 6, date: '12-05-2026', dateFull: '12/05/2026 (Tuesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTMC-T-MC-302', name: 'EIKT', section: 'CSE - Genius' },
+      { sl: 7, date: '13-05-2026', dateFull: '13/05/2026 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTSC-T-AE-401', name: 'Ability Enhancement Training -C', section: 'CSE - Genius' },
+    ]
+  },
+  {
+    id: 'exam-3',
+    num: 2,
+    name: '3rd Semester End Semester Examination 2025-26',
+    venue: 'Apna Campus Autonomous, Bhubaneswar',
+    batch: 'BTECH 2028-P',
+    semesterLabel: '3rd Semester',
+    subjects: [
+      { sl: 1, date: '15-12-2025', dateFull: '15/12/2025 (Monday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-301', name: 'Discrete Mathematics', section: 'CSE - Genius' },
+      { sl: 2, date: '17-12-2025', dateFull: '17/12/2025 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-302', name: 'Data Structures', section: 'CSE - Genius' },
+      { sl: 3, date: '19-12-2025', dateFull: '19/12/2025 (Friday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-303', name: 'Object Oriented Programming with Java', section: 'CSE - Genius' },
+      { sl: 4, date: '22-12-2025', dateFull: '22/12/2025 (Monday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTES-T-ES-301', name: 'Digital Electronics', section: 'CSE - Genius' },
+      { sl: 5, date: '24-12-2025', dateFull: '24/12/2025 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTHS-T-HS-301', name: 'Organizational Behavior', section: 'CSE - Genius' },
+    ]
+  },
+  {
+    id: 'exam-2',
+    num: 3,
+    name: '2nd Semester End Semester Examination (Regular), 2024-25',
+    venue: 'Apna Campus Autonomous, Bhubaneswar',
+    batch: 'BTECH 2028-P',
+    semesterLabel: '2nd Semester',
+    subjects: [
+      { sl: 1, date: '10-05-2025', dateFull: '10/05/2025 (Saturday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTBS-T-BS-201', name: 'Engineering Mathematics - II', section: 'CSE - Genius' },
+      { sl: 2, date: '12-05-2025', dateFull: '12/05/2025 (Monday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTBS-T-BS-202', name: 'Engineering Chemistry', section: 'CSE - Genius' },
+      { sl: 3, date: '14-05-2025', dateFull: '14/05/2025 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTES-T-ES-201', name: 'Basic Electrical Engineering', section: 'CSE - Genius' },
+      { sl: 4, date: '16-05-2025', dateFull: '16/05/2025 (Friday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-201', name: 'Programming in C', section: 'CSE - Genius' },
+    ]
+  },
+  {
+    id: 'exam-1',
+    num: 4,
+    name: 'End Semester Examination of 1st Semester B. Tech: 2024-25',
+    venue: 'Apna Campus Autonomous, Bhubaneswar',
+    batch: 'BTECH 2028-P',
+    semesterLabel: '1st Semester',
+    subjects: [
+      { sl: 1, date: '18-12-2024', dateFull: '18/12/2024 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTBS-T-BS-101', name: 'Engineering Mathematics - I', section: 'CSE - Genius' },
+      { sl: 2, date: '20-12-2024', dateFull: '20/12/2024 (Friday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTBS-T-BS-102', name: 'Engineering Physics', section: 'CSE - Genius' },
+      { sl: 3, date: '23-12-2024', dateFull: '23/12/2024 (Monday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTES-T-ES-101', name: 'Basic Electronics Engineering', section: 'CSE - Genius' },
+      { sl: 4, date: '26-12-2024', dateFull: '26/12/2024 (Thursday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTHS-T-HS-101', name: 'Communicative English', section: 'CSE - Genius' },
+    ]
+  }
+];
 
 const semesters = [
   {
@@ -60,10 +124,33 @@ const semesters = [
   },
 ]
 
-export default function AcademicsPage() {
+export default function AcademicsPage({ account }) {
   const [openSemester, setOpenSemester] = useState(0)
   const [activeTab, setActiveTab] = useState('subjects')
   const [classNotes, setClassNotes] = useState([])
+
+  // Student Identity for Admit Card & Academics
+  const studentDetails = {
+    name: (account?.name || 'BISHNU PRASAD SAHOO').toUpperCase(),
+    rollNumber: account?.rollNumber || account?.registrationNumber || '2401432265',
+    registrationNumber: '2401432265',
+    dobFormatted: '04/03/2007',
+    dob: '2007-03-04',
+    batch: 'BTECH 2028-P',
+    courseBatch: 'BTECH 2028-P',
+    courseBatchFull: 'BTECH 2028-P (Branch:- Computer Science & Engineering (Artificial Intelligence))',
+    section: 'CSE - Genius'
+  }
+
+  // Admit Card States (Matches User Images 2, 3, 4, 5)
+  const [admitExams] = useState(defaultAdmitCardExams)
+  const [expandedExamId, setExpandedExamId] = useState('exam-4') // 4th Semester expanded by default matching Image 3
+  const [filterExamName, setFilterExamName] = useState('')
+  const [filterExamVenue, setFilterExamVenue] = useState('')
+  const [filterBatch, setFilterBatch] = useState('')
+  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false)
+  const [selectedExamForAction, setSelectedExamForAction] = useState(defaultAdmitCardExams[0])
+  const [showDocPreviewModal, setShowDocPreviewModal] = useState(false)
 
   // Quick Upload Notes Modal in Academics
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -79,6 +166,13 @@ export default function AcademicsPage() {
   const [viewingNote, setViewingNote] = useState(null)
 
   const cgpa = 8.42
+
+  const filteredAdmitExams = admitExams.filter((exam) => {
+    const matchName = !filterExamName || exam.name.toLowerCase().includes(filterExamName.toLowerCase())
+    const matchVenue = !filterExamVenue || exam.venue.toLowerCase().includes(filterExamVenue.toLowerCase())
+    const matchBatch = !filterBatch || exam.batch.toLowerCase().includes(filterBatch.toLowerCase())
+    return matchName && matchVenue && matchBatch
+  })
 
   useEffect(() => {
     loadClassNotes()
@@ -182,7 +276,8 @@ export default function AcademicsPage() {
           { id: 'subjects', label: 'Enrolled Subjects' },
           { id: 'results', label: 'Results & Grades' },
           { id: 'syllabus', label: 'Syllabus' },
-          { id: 'notes', label: `Class Notes & Materials (${classNotes.length})` }
+          { id: 'notes', label: `Class Notes & Materials (${classNotes.length})` },
+          { id: 'admit-card', label: 'Download Admit Card' }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -525,6 +620,194 @@ export default function AcademicsPage() {
         </div>
       )}
 
+      {/* TAB 5: DOWNLOAD ADMIT CARD (Matches User Images 2 & 3) */}
+      {activeTab === 'admit-card' && (
+        <div className="admit-card-container">
+          {/* Header matching Image 2 */}
+          <div className="admit-section-header">
+            <div className="admit-header-title">
+              <span className="admit-header-icon-wrap" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="2" y="2" width="8" height="8" rx="1.5" />
+                  <rect x="14" y="2" width="8" height="8" rx="1.5" />
+                  <rect x="2" y="14" width="8" height="8" rx="1.5" />
+                  <rect x="14" y="14" width="8" height="8" rx="1.5" />
+                </svg>
+              </span>
+              <h3>Admit Card Download</h3>
+            </div>
+          </div>
+
+          {/* Main Table Card (Image 2 & 3) */}
+          <div className="admit-table-card">
+            <div className="admit-table-responsive">
+              <table className="admit-main-table">
+                <thead>
+                  <tr className="admit-head-row">
+                    <th style={{ width: '44px' }}></th>
+                    <th style={{ width: '50px', textAlign: 'center' }}>#</th>
+                    <th style={{ width: '42%' }}>Examination Name</th>
+                    <th style={{ width: '32%' }}>Examination Venue</th>
+                    <th style={{ width: '20%' }}>Batch</th>
+                  </tr>
+                  {/* Filter inputs row directly below headers */}
+                  <tr className="admit-filter-row">
+                    <th></th>
+                    <th></th>
+                    <th>
+                      <input
+                        type="text"
+                        className="admit-filter-input"
+                        placeholder=""
+                        value={filterExamName}
+                        onChange={(e) => setFilterExamName(e.target.value)}
+                      />
+                    </th>
+                    <th>
+                      <input
+                        type="text"
+                        className="admit-filter-input"
+                        placeholder=""
+                        value={filterExamVenue}
+                        onChange={(e) => setFilterExamVenue(e.target.value)}
+                      />
+                    </th>
+                    <th>
+                      <select
+                        className="admit-filter-input admit-filter-select"
+                        value={filterBatch}
+                        onChange={(e) => setFilterBatch(e.target.value)}
+                      >
+                        <option value=""></option>
+                        <option value="BTECH 2028-P">BTECH 2028-P</option>
+                      </select>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAdmitExams.map((exam) => {
+                    const isExpanded = expandedExamId === exam.id
+
+                    return (
+                      <React.Fragment key={exam.id}>
+                        <tr className={`admit-exam-row ${isExpanded ? 'row-expanded' : ''}`}>
+                          <td style={{ textAlign: 'center', verticalAlign: 'top', paddingTop: '10px' }}>
+                            <button
+                              type="button"
+                              className="btn-admit-toggle"
+                              onClick={() => setExpandedExamId(isExpanded ? null : exam.id)}
+                              title={isExpanded ? 'Collapse' : 'Expand'}
+                            >
+                              {isExpanded ? (
+                                <span className="admit-toggle-box minus">
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <rect x="2" y="2" width="20" height="20" rx="3" fill="#ffffff" />
+                                    <line x1="6" y1="12" x2="18" y2="12" stroke="#0f172a" strokeWidth="3" />
+                                  </svg>
+                                </span>
+                              ) : (
+                                <span className="admit-toggle-box play">
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <rect x="2" y="2" width="20" height="20" rx="3" fill="#ffffff" />
+                                    <polygon points="9,7 17,12 9,17" fill="#0f172a" />
+                                  </svg>
+                                </span>
+                              )}
+                            </button>
+                            {isExpanded && (
+                              <div style={{ marginTop: '3px' }}>
+                                <button
+                                  type="button"
+                                  className="btn-admit-collapse-tag"
+                                  onClick={() => setExpandedExamId(null)}
+                                >
+                                  Collapse
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center', verticalAlign: 'top', paddingTop: '11px', fontWeight: 600 }}>
+                            {exam.num}
+                          </td>
+                          <td style={{ verticalAlign: 'top', paddingTop: '11px' }}>
+                            <span className="exam-name-text">{exam.name}</span>
+                          </td>
+                          <td style={{ verticalAlign: 'top', paddingTop: '11px', color: '#334155' }}>
+                            {exam.venue}
+                          </td>
+                          <td style={{ verticalAlign: 'top', paddingTop: '11px', color: '#334155' }}>
+                            {exam.batch}
+                          </td>
+                        </tr>
+
+                        {/* Expanded Section with Cyan Top Border Line (Image 3) */}
+                        {isExpanded && (
+                          <tr className="admit-expanded-row">
+                            <td colSpan={5} className="admit-expanded-cell">
+                              <div className="admit-schedule-box">
+                                <div className="admit-schedule-table-wrap">
+                                  <table className="admit-schedule-table">
+                                    <thead>
+                                      <tr>
+                                        <th style={{ width: '40px', textAlign: 'center' }}>#</th>
+                                        <th style={{ width: '13%' }}>Date/Time</th>
+                                        <th style={{ width: '8%', textAlign: 'center' }}>Sitting</th>
+                                        <th style={{ width: '18%' }}>Time From and To</th>
+                                        <th style={{ width: '15%' }}>Subject Code</th>
+                                        <th style={{ width: '27%' }}>Subject Name</th>
+                                        <th style={{ width: '14%' }}>Section/House</th>
+                                        <th style={{ width: '50px', textAlign: 'center' }}></th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {exam.subjects.map((sub) => (
+                                        <tr key={sub.sl}>
+                                          <td style={{ textAlign: 'center', fontWeight: 600 }}>{sub.sl}</td>
+                                          <td>{sub.date}</td>
+                                          <td style={{ textAlign: 'center' }}>{sub.sitting}</td>
+                                          <td>{sub.time}</td>
+                                          <td><code className="admit-sub-code">{sub.code}</code></td>
+                                          <td><span className="admit-sub-name">{sub.name}</span></td>
+                                          <td>{sub.section}</td>
+                                          <td style={{ textAlign: 'center' }}>
+                                            <button
+                                              type="button"
+                                              className="btn-admit-row-print"
+                                              title="Download / Print Admit Card"
+                                              onClick={() => {
+                                                setSelectedExamForAction(exam)
+                                                setShowDownloadConfirm(true)
+                                              }}
+                                            >
+                                              <Printer size={15} color="#0284c7" />
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    )
+                  })}
+                  {filteredAdmitExams.length === 0 && (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
+                        No examination records found matching your filter criteria.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL 1: UPLOAD NOTES FROM ACADEMICS PAGE */}
       {showUploadModal && (
         <div className="academics-modal-backdrop" onClick={() => setShowUploadModal(false)}>
@@ -671,6 +954,223 @@ export default function AcademicsPage() {
               <button type="button" className="btn-academic-secondary" onClick={() => setViewingNote(null)}>
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 3: DOWNLOAD ADMIT CARD CONFIRMATION (Image 4) ── */}
+      {showDownloadConfirm && (
+        <div className="admit-confirm-backdrop" onClick={() => setShowDownloadConfirm(false)}>
+          <div className="admit-confirm-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="admit-confirm-close-btn"
+              onClick={() => setShowDownloadConfirm(false)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <div className="admit-confirm-text">
+              Are you sure you want to download this admitcard?
+            </div>
+            <div className="admit-confirm-actions">
+              <button
+                type="button"
+                className="btn-admit-modal-cancel"
+                onClick={() => setShowDownloadConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-admit-modal-ok"
+                onClick={() => {
+                  setShowDownloadConfirm(false)
+                  downloadGiftAdmitCardPdf(selectedExamForAction, studentDetails)
+                  setShowDocPreviewModal(true)
+                  showToast(`Admit card for ${selectedExamForAction.name} downloaded successfully!`)
+                }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 4: AUTHENTIC ADMIT CARD DOCUMENT PREVIEW & PRINT (Image 5) ── */}
+      {showDocPreviewModal && selectedExamForAction && (
+        <div className="admit-doc-backdrop" onClick={() => setShowDocPreviewModal(false)}>
+          <div className="admit-doc-card" onClick={(e) => e.stopPropagation()}>
+            {/* Top Toolbar */}
+            <div className="admit-doc-toolbar no-print">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="badge-official-verified">✓ Official Apna Campus Autonomous Document</span>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Ready for print &amp; official archival</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-toolbar-print"
+                  onClick={() => window.print()}
+                >
+                  <Printer size={14} /> Print Admit Card
+                </button>
+                <button
+                  type="button"
+                  className="btn-toolbar-download"
+                  onClick={() => {
+                    downloadGiftAdmitCardPdf(selectedExamForAction, studentDetails)
+                    showToast('PDF downloaded successfully!')
+                  }}
+                >
+                  <Download size={14} /> Download PDF
+                </button>
+                <button
+                  type="button"
+                  className="btn-toolbar-close"
+                  onClick={() => setShowDocPreviewModal(false)}
+                >
+                  <X size={15} /> Close
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Paper (A4 Style - Matches Image 5 Exactly) */}
+            <div className="admit-paper-sheet printable-admit-sheet">
+              {/* Central Watermark */}
+              <div className="admit-paper-watermark" aria-hidden="true">
+                <img src="/logo.png" alt="Apna Campus Watermark" />
+              </div>
+
+              {/* Sheet Content */}
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                {/* Header: Logo and Title */}
+                <div className="admit-paper-header">
+                  <div className="admit-paper-logo">
+                    <img src="/logo.png" alt="Apna Campus Logo" />
+                  </div>
+                  <div className="admit-paper-titles">
+                    <h2>APNA CAMPUS, BHUBANESWAR</h2>
+                    <h3 className="admit-card-title-underlined">ADMIT CARD</h3>
+                    <h4>{selectedExamForAction.name}</h4>
+                  </div>
+                </div>
+
+                {/* Candidate Details & Photo */}
+                <div className="admit-paper-candidate-row">
+                  <table className="admit-candidate-table">
+                    <tbody>
+                      <tr>
+                        <td className="candidate-field-label">Registration No.</td>
+                        <td className="candidate-field-val">- {studentDetails.registrationNumber}</td>
+                      </tr>
+                      <tr>
+                        <td className="candidate-field-label">Candidate's Name</td>
+                        <td className="candidate-field-val">- {studentDetails.name}</td>
+                      </tr>
+                      <tr>
+                        <td className="candidate-field-label">Date of Birth</td>
+                        <td className="candidate-field-val">- {studentDetails.dobFormatted}</td>
+                      </tr>
+                      <tr>
+                        <td className="candidate-field-label">Course/Batch</td>
+                        <td className="candidate-field-val">- {studentDetails.courseBatchFull}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div className="admit-candidate-photo-box">
+                    <div className="candidate-photo-frame">
+                      <img
+                        src="/candidate_photo_apna.png"
+                        alt="Candidate"
+                        onError={(e) => { e.target.src = '/candidate_photo_bishnu.png' }}
+                      />
+                    </div>
+                    <div className="candidate-sig-label">Candidate's Signature</div>
+                  </div>
+                </div>
+
+                {/* Centered Schedule Subtitle */}
+                <div className="admit-paper-schedule-title">
+                  Schedule of Examination
+                </div>
+
+                {/* Schedule Table */}
+                <table className="admit-paper-sched-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '8%', textAlign: 'center' }}>Sl.</th>
+                      <th style={{ width: '28%', textAlign: 'center' }}>Date</th>
+                      <th style={{ width: '12%', textAlign: 'center' }}>Sitting</th>
+                      <th style={{ width: '22%', textAlign: 'center' }}>Time</th>
+                      <th style={{ width: '15%', textAlign: 'center' }}>Subject Code</th>
+                      <th style={{ width: '35%', textAlign: 'left' }}>Subject Name</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedExamForAction.subjects.map((s) => (
+                      <tr key={s.sl}>
+                        <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{s.sl}</td>
+                        <td style={{ textAlign: 'center' }}>{s.dateFull || s.date}</td>
+                        <td style={{ textAlign: 'center' }}>{s.sitting}nd</td>
+                        <td style={{ textAlign: 'center' }}>{s.time}</td>
+                        <td style={{ textAlign: 'center' }}>{s.code}</td>
+                        <td style={{ textAlign: 'left', fontWeight: 'bold' }}>{s.name}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Signatures & Stamps Row */}
+                <div className="admit-paper-signatures-row">
+                  <div className="admit-sig-block">
+                    <img
+                      src="/admit_sig_center_sup.png"
+                      alt="Center Superintendent Signature"
+                      className="admit-sig-img"
+                    />
+                    <div className="admit-stamp-box">
+                      <div className="stamp-title">Center Superintendent</div>
+                      <div className="stamp-sub">Apna Campus, Bhubaneswar</div>
+                    </div>
+                  </div>
+
+                  <div className="admit-sig-block right">
+                    <img
+                      src="/admit_sig_controller.png"
+                      alt="Controller Signature"
+                      className="admit-sig-img"
+                    />
+                    <div className="admit-stamp-box">
+                      <div className="stamp-title">Controller of Examinations</div>
+                      <div className="stamp-sub">Apna Campus (Autonomous), Bhubaneswar</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instructions */}
+                <div className="admit-paper-instructions">
+                  <div className="instructions-title">*Instruction (s)</div>
+                  <ol className="instructions-list">
+                    <li>This Admit Card is issued on the basis of student data filled in on-line by the college.</li>
+                    <li>A Candidate is required to bring his / her Registration / Identity Card and Identity Proof to the Examination Hall.</li>
+                    <li>A Candidate detected with possession of Mobile Phone / Pager and any Objectionable Electronic Gadgets inside the Examination Hall will be debarred and punishable as per Regulation of the University.</li>
+                    <li>A candidate shall report the Invigilator and / Centre Superintendent in case of wrong photograph or discrepancies and the Centre Superintendent shall permit only after verification with the University Registration Card and valid Vote Id / Aadhar Card.</li>
+                    <li>The Centre Superintendent shall permit a candidate to appear in subject (s), if he / she has registered, eligible and subject (s) are available in the University Schedule and Admit Card.</li>
+                    <li>The Centre Superintendent shall make permissible arrangement for physically challenged / blind candidates with required supporting documents as per rules.</li>
+                    <li>The Result will be published subject to fulfilment of all academic regulations for the course in force of the university.</li>
+                  </ol>
+                </div>
+
+                {/* Footer Divider & Text */}
+                <div className="admit-paper-footer">
+                  <span>Apna Campus Autonomous Institution, Bhubaneswar</span>
+                  <span>Printed @ 18-10-2026</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

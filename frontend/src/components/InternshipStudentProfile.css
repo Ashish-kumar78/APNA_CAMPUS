@@ -1,0 +1,615 @@
+/* ==========================================================================
+   Internship Student Profile CSS
+   Exact match to User Screenshots (Info, Attendance, Marks, ID Card)
+   ========================================================================== */
+
+.isp-container {
+  background: #ffffff;
+  border: 1px solid #c7d8ed;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  margin-bottom: 24px;
+  font-family: inherit;
+  color: #1e293b;
+}
+
+/* ── Top Header Bar ── */
+.isp-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(180deg, #edf6ff 0%, #e1effe 100%);
+  border-bottom: 1px solid #bfdbfe;
+  padding: 12px 20px;
+}
+
+.isp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.isp-header-icon-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+}
+
+.isp-header-left h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e3a8a;
+  line-height: 1.2;
+}
+
+.isp-header-left p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.isp-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.isp-btn-back:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #94a3b8;
+}
+
+/* ── Main 2-Column Body Layout ── */
+.isp-main-layout {
+  display: grid;
+  grid-template-columns: 270px 1fr;
+  gap: 20px;
+  padding: 18px 20px 24px;
+  background: #fdfefe;
+}
+
+@media (max-width: 960px) {
+  .isp-main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Left Column: Student Bio Card ── */
+.isp-left-card {
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.04);
+}
+
+.isp-avatar-wrap {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.isp-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #eff6ff;
+}
+
+.isp-student-name {
+  margin: 0 0 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.isp-student-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.isp-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.isp-status-wrap {
+  margin-bottom: 14px;
+}
+
+.isp-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 12px;
+}
+
+/* Bio Info Table */
+.isp-bio-table-card {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.isp-bio-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  text-align: left;
+}
+
+.isp-bio-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  padding: 7px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #e2e8f0;
+  width: 44%;
+  white-space: nowrap;
+}
+
+.isp-bio-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #0f172a;
+  word-break: break-all;
+}
+
+.isp-bio-table tr:last-child th,
+.isp-bio-table tr:last-child td {
+  border-bottom: none;
+}
+
+.isp-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 10px;
+}
+
+.isp-link:hover {
+  text-decoration: underline;
+}
+
+.isp-mobile-text {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+/* ── Right Column: Tabs Navigation ── */
+.isp-right-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.isp-tabs-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.isp-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  padding: 8px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 6px 6px 0 0;
+}
+
+.isp-tab-btn:hover {
+  color: #2563eb;
+  background: #f8fafc;
+}
+
+.isp-tab-btn.active {
+  color: #1d4ed8;
+  border-bottom-color: #2563eb;
+  background: #eff6ff;
+  font-weight: 700;
+}
+
+/* ── TAB 1: INFO ── */
+.isp-details-box {
+  background: #ffffff;
+  border: 1.5px solid #93c5fd;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.05);
+}
+
+.isp-details-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 12px;
+}
+
+.isp-details-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.isp-subtle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f0f7ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 14px;
+}
+
+.isp-active-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 14px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+}
+
+/* 2x2 Grid Cards */
+.isp-info-grid-2x2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .isp-info-grid-2x2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.isp-card-block {
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.isp-card-block-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.isp-field-row {
+  display: flex;
+  align-items: flex-start;
+  font-size: 11.5px;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.isp-field-row:last-child {
+  margin-bottom: 0;
+}
+
+.isp-field-label {
+  width: 130px;
+  color: #64748b;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.isp-field-val {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* ── TAB 2 & 3: BLUE TITLE RIBBON ── */
+.isp-blue-ribbon {
+  background: #1f77b4;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 6px 6px 0 0;
+  margin-bottom: 14px;
+}
+
+.isp-sub-heading {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 12px;
+}
+
+/* Attendance Table */
+.isp-table-wrap {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  background: #ffffff;
+}
+
+.isp-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: center;
+}
+
+.isp-data-table th {
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 700;
+  padding: 9px 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.isp-data-table td {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+}
+
+.isp-data-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.isp-btn-toggle-view {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.isp-btn-toggle-view:hover {
+  background: #e2e8f0;
+}
+
+/* Day-wise Status Badges */
+.status-badge-p {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.status-badge-a {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.status-badge-h {
+  color: #64748b;
+  font-weight: 700;
+}
+
+/* Evaluation / Marks Table */
+.marks-subject-cell {
+  text-align: left;
+}
+
+.marks-subject-name {
+  font-weight: 700;
+  color: #0f172a;
+  display: block;
+}
+
+.marks-category {
+  font-size: 11px;
+  color: #475569;
+  display: block;
+}
+
+.marks-batch-tag {
+  font-size: 10px;
+  color: #64748b;
+  display: block;
+}
+
+/* ── TAB 4: ID CARD ── */
+.isp-idcard-tab-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.isp-idcard-top-action {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.isp-btn-download-idcard {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #034694;
+  color: #ffffff;
+  border: 1px solid #02336d;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(3, 70, 148, 0.25);
+  transition: all 0.15s ease;
+}
+
+.isp-btn-download-idcard:hover {
+  background: #02336d;
+}
+
+.isp-idcard-center-stage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0 30px;
+}
+
+/* Physical ID Card Badge Graphic */
+.isp-id-badge {
+  width: 360px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  font-family: inherit;
+}
+
+.isp-id-badge-header {
+  background: #004b87;
+  color: #ffffff;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.isp-id-header-text {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.isp-id-badge-body {
+  display: flex;
+  gap: 12px;
+  padding: 14px 12px;
+  background: #ffffff;
+}
+
+.isp-id-photo-frame {
+  width: 78px;
+  height: 96px;
+  border: 1px solid #94a3b8;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.isp-id-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.isp-id-fields-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5px;
+  font-size: 9.5px;
+  color: #1e293b;
+  line-height: 1.35;
+}
+
+.isp-id-fields-list strong {
+  color: #0f172a;
+}
+
+.isp-id-badge-footer {
+  background: #dc2626;
+  color: #ffffff;
+  text-align: center;
+  padding: 6px 8px;
+}
+
+.isp-id-footer-title {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.isp-id-footer-sub {
+  display: block;
+  font-size: 8px;
+  opacity: 0.9;
+}

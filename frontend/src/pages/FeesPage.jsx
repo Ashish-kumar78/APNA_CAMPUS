@@ -29,7 +29,7 @@ import {
   Check,
   Maximize2
 } from 'lucide-react'
-import { downloadFeeReceiptPdf, openFeeReceiptPdf, openPaymentProofPdf, downloadPaymentProofPdf } from '../utils/pdfGenerator'
+import { downloadFeeReceiptPdf, openFeeReceiptPdf, openPaymentProofPdf, downloadPaymentProofPdf, convertNumberToIndianWords } from '../utils/pdfGenerator'
 import { feesApi } from '../services/feesApi'
 import './FeesPage.css'
 
@@ -99,7 +99,120 @@ export const feeHistory = [
   { id: 'TXN-23011', term: 'Semester 1 (1st Year)', head: 'Admission & 1st Sem Tuition', amount: 40000, paid: 40000, status: 'Paid', date: '12 Aug 2023', mode: 'Online SBI' },
 ];
 
-export default function FeesPage() {
+export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studentCourseBatch, studentSection }) {
+  const r = receipt || {}
+  const regd = r.rollNumber || r.registrationNumber || studentRoll || '2401432265'
+  const name = (r.studentName || studentName || 'BISHNU PRASAD SAHOO').toUpperCase()
+  const batch = r.courseBatch || studentCourseBatch || 'BTECH 2028-P'
+  const sec = r.section || studentSection || 'CSE (AI) - Genius'
+  const rawNo = r.receiptNo || r.referenceNumber || (r.id ? String(r.id).replace(/\D/g, '') || '128680' : '128680')
+  const recNo = String(rawNo).startsWith('GIFT/ACC') ? rawNo : `GIFT/ACC/${rawNo}`
+  const recDate = r.paymentDate || r.receiptDate || r.date || '27-07-2026'
+  const amt = Number(r.amount || 20000)
+  const mode = r.paymentMethod || r.mode || 'Bank Transfer'
+  const txn = r.transactionId || r.txnId || '126928800409'
+  const head = r.head || r.remarks || 'Tuition Fee'
+  const words = convertNumberToIndianWords(amt)
+
+  return (
+    <div style={{
+      position: 'relative',
+      background: '#ffffff',
+      border: '1.5px solid #000000',
+      borderRadius: '2px',
+      padding: '22px 26px',
+      color: '#000000',
+      fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+      textAlign: 'left',
+      boxShadow: '0 4px 18px rgba(0,0,0,0.08)',
+      overflow: 'hidden'
+    }}>
+      {/* Central Watermark */}
+      <div style={{
+        position: 'absolute',
+        top: '52%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        opacity: 0.12,
+        pointerEvents: 'none',
+        zIndex: 0,
+        textAlign: 'center'
+      }}>
+        <img src="/gift_logo.svg" alt="Watermark" style={{ width: '220px', height: '220px' }} />
+      </div>
+
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        {/* Top Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '8px' }}>
+          <img src="/gift_logo.svg" alt="GIFT Logo" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
+          <div>
+            <div style={{ fontSize: '1.22rem', fontWeight: 800, color: '#000000', lineHeight: 1.2 }}>
+              Gandhi Institute for Technology (GIFT)
+            </div>
+            <div style={{ fontSize: '1.02rem', fontWeight: 700, color: '#000000', marginTop: '2px' }}>
+              (Autonomous)
+            </div>
+            <div style={{ fontSize: '0.82rem', color: '#333333', marginTop: '2px' }}>
+              At- Gramadiha, P.o- Gangapada
+            </div>
+          </div>
+        </div>
+
+        {/* Solid Line */}
+        <div style={{ width: '100%', height: '1.5px', background: '#000000', margin: '8px 0 10px' }}></div>
+
+        {/* Centered Title */}
+        <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '0.96rem', color: '#000000', marginBottom: '12px' }}>
+          Fees Receipt (Student Copy)
+        </div>
+
+        {/* 2-Column Metadata */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.35fr 1fr', gap: '7px 16px', fontSize: '0.85rem', color: '#000000', marginBottom: '14px' }}>
+          <div>
+            <strong>Regd. No : </strong> {regd}
+          </div>
+          <div>
+            <strong>No. : </strong> {recNo}
+          </div>
+          <div>
+            <strong>Name : </strong> {name}
+          </div>
+          <div>
+            <strong>Receipt Date : </strong> {recDate}
+          </div>
+          <div>
+            <strong>Course/Batch: </strong> {batch}
+          </div>
+          <div></div>
+          <div>
+            <strong>Section: </strong> {sec}
+          </div>
+          <div></div>
+        </div>
+
+        {/* Statement */}
+        <div style={{ fontSize: '0.87rem', color: '#000000', lineHeight: 1.6, marginBottom: '12px' }}>
+          Received <strong>RS. {amt.toLocaleString('en-IN')}.00</strong> (<em>{words}</em>) by {mode} transcation id-{txn} on {recDate} from {name} towards <strong>{head}</strong>.
+        </div>
+
+        {/* Solid Line */}
+        <div style={{ width: '100%', height: '1.5px', background: '#000000', margin: '10px 0' }}></div>
+
+        {/* Disclaimer */}
+        <div style={{ fontSize: '0.73rem', color: '#222222', lineHeight: 1.45 }}>
+          This money receipt is computer generated by the student through his/her CMS login and does not require the Accountant's signature or the Institute's stamp in order to be considered valid. This is a duplicate money receipt and the original receipt is available with Accounts Department.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function FeesPage({ account }) {
+  const studentName = account?.name || 'BISHNU PRASAD SAHOO'
+  const studentRoll = account?.rollNumber || account?.registrationNumber || '2401432265'
+  const studentCourseBatch = 'BTECH 2028-P'
+  const studentSection = 'CSE (AI) - Genius'
+
   const [activeTab, setActiveTab] = useState('current')
   const [showPayModal, setShowPayModal] = useState(false)
   const [showYearlyModal, setShowYearlyModal] = useState(false)
@@ -112,6 +225,7 @@ export default function FeesPage() {
   const [proofStep, setProofStep] = useState('form') // 'form' | 'preview'
   const [submittingProof, setSubmittingProof] = useState(false)
   const [selectedProofView, setSelectedProofView] = useState(null)
+  const [recentlyGeneratedReceipt, setRecentlyGeneratedReceipt] = useState(null)
 
   // Bank & QR Details State
   const [showEnlargedQr, setShowEnlargedQr] = useState(false)
@@ -228,25 +342,29 @@ export default function FeesPage() {
       amount: formAmount,
       paymentDate: formDate,
       paymentMethod: formMethod,
-      transactionId: formTxnId.trim(),
-      referenceNumber: formRefNo.trim(),
-      remarks: formRemarks.trim(),
+      transactionId: formTxnId.trim() || '126928800409',
+      referenceNumber: formRefNo.trim() || '128680',
+      remarks: formRemarks.trim() || 'Tuition Fee',
+      head: formRemarks.trim() || 'Tuition Fee',
       previewUrl: filePreviewUrl,
       fileName: selectedFile ? selectedFile.name : 'proof.png',
       fileType: selectedFile ? selectedFile.type : 'image/png',
-      studentName: 'Rakesh Das',
-      rollNumber: '2305201001',
-      department: 'Computer Science & Engineering'
+      studentName,
+      rollNumber: studentRoll,
+      courseBatch: studentCourseBatch,
+      section: studentSection,
+      department: 'Computer Science & Engineering (Artificial Intelligence)'
     }
 
     try {
       const res = await feesApi.uploadPaymentProof(payload)
       if (res && res.success) {
-        triggerToast('Payment proof submitted successfully for verification!')
+        triggerToast('Payment receipt uploaded successfully! Generating GIFT Autonomous Fee Receipt...')
         await loadFeeStatement()
         setShowProofModal(false)
         resetProofForm()
         setActiveTab('proofs')
+        setRecentlyGeneratedReceipt(payload)
       }
     } catch {
       triggerToast('Failed to submit payment proof. Please try again.')
@@ -257,12 +375,12 @@ export default function FeesPage() {
 
   const resetProofForm = () => {
     setProofStep('form')
-    setFormAmount('12000')
+    setFormAmount('20000')
     setFormDate(new Date().toISOString().split('T')[0])
-    setFormMethod('UPI')
+    setFormMethod('Bank Transfer')
     setFormTxnId('')
     setFormRefNo('')
-    setFormRemarks('')
+    setFormRemarks('Tuition Fee')
     setSelectedFile(null)
     setFilePreviewUrl('')
     setFileTypeError('')
@@ -278,20 +396,20 @@ export default function FeesPage() {
   }
 
   const handleDownload = (id) => {
-    const row = feeHistory.find(item => item.id === id) || { id, amount: 48500, head: 'Tuition Fee', mode: 'Net Banking' }
-    downloadFeeReceiptPdf(row, { name: 'Rakesh Das', rollNo: '2305201001' })
+    const row = feeHistory.find(item => item.id === id) || { id, amount: 20000, head: 'Tuition Fee', mode: 'Bank Transfer' }
+    downloadFeeReceiptPdf(row, { name: studentName, rollNo: studentRoll, batch: studentCourseBatch, section: studentSection })
   }
 
   const handleDownloadConsolidatedStatement = () => {
     downloadFeeReceiptPdf({
-      id: 'BPUT-CONS-FEE-2026',
-      term: '1st Year to Till Now (4-Year Consolidated)',
-      head: 'Overall Institutional BPUT Fee Clearance Statement',
+      id: 'GIFT-CONS-FEE-2026',
+      term: 'BTECH 2028-P (Consolidated Statement)',
+      head: 'Tuition Fee Clearance Statement',
       amount: totalOverallDues,
       paid: totalOverallPaid,
-      mode: 'Consolidated Electronic Transfer',
+      mode: 'Bank Transfer',
       date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    }, { name: 'Rakesh Das', rollNo: '2305201001' })
+    }, { name: studentName, rollNo: studentRoll, batch: studentCourseBatch, section: studentSection })
   }
 
   const getStatusBadge = (status) => {
@@ -314,10 +432,17 @@ export default function FeesPage() {
         </div>
       )}
 
-      <div className="fees-header">
-        <div>
-          <h1 className="fees-title">Fees & Accounts Portal</h1>
-          <p className="fees-subtitle">Track college fee dues, digital payment receipts, scholarship grants & upload transaction proofs</p>
+      <div className="fees-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <img src="/gift_logo.svg" alt="GIFT Autonomous Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
+          <div>
+            <h1 className="fees-title" style={{ margin: 0, fontSize: '1.35rem', color: '#0f172a' }}>
+              Gandhi Institute for Technology (GIFT) <span style={{ fontSize: '1.02rem', color: '#0284c7' }}>(Autonomous)</span>
+            </h1>
+            <p className="fees-subtitle" style={{ margin: '3px 0 0', color: '#64748b', fontSize: '0.84rem' }}>
+              At- Gramadiha, P.o- Gangapada &bull; Student Fee Receipts &amp; Accounts Portal
+            </p>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button 
@@ -1042,59 +1167,106 @@ export default function FeesPage() {
                 </div>
               </form>
             ) : (
-              /* FEATURE 1 — STEP 3: IMAGE / PROOF PREVIEW BEFORE SUBMIT */
+              /* FEATURE 1 — STEP 3: OFFICIAL GIFT FEE RECEIPT PREVIEW BEFORE SUBMIT */
               <div>
-                <div style={{ background: '#f1f5f9', borderRadius: '10px', padding: '12px', marginBottom: '14px', border: '1px solid #cbd5e1' }}>
-                  <h4 style={{ margin: '0 0 8px', fontSize: '0.9rem', color: '#0f172a', fontWeight: 700 }}>Transaction Proof Confirmation</h4>
-
-                  {/* Image / File Display */}
-                  <div style={{ textAlign: 'center', background: '#ffffff', borderRadius: '8px', padding: '10px', border: '1px solid #e2e8f0', marginBottom: '12px', maxHeight: '200px', overflow: 'hidden' }}>
-                    {(selectedFile?.type === 'application/pdf' || (typeof filePreviewUrl === 'string' && filePreviewUrl.startsWith('data:application/pdf'))) ? (
-                      <div style={{ padding: '20px', color: '#4338ca' }}>
-                        <FileText size={48} style={{ margin: '0 auto 8px', display: 'block' }} />
-                        <strong>{selectedFile?.name || 'Document.pdf'}</strong>
-                        <div style={{ fontSize: '0.78rem', color: '#64748b' }}>PDF Document Attached ({Math.round((selectedFile?.size || 0) / 1024)} KB)</div>
-                      </div>
-                    ) : (
-                      <img 
-                        src={filePreviewUrl} 
-                        alt="Transaction Proof Preview" 
-                        style={{ maxHeight: '180px', maxWidth: '100%', objectFit: 'contain', borderRadius: '6px' }}
-                      />
-                    )}
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.92rem', color: '#0f172a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CheckCircle2 size={16} color="#16a34a" /> Official Fee Receipt Generation Preview
+                    </h4>
+                    <span style={{ fontSize: '0.74rem', color: '#0284c7', background: '#f0f9ff', padding: '2px 8px', borderRadius: '4px', border: '1px solid #bae6fd', fontWeight: 600 }}>
+                      Image 5 Standard &bull; GIFT Autonomous
+                    </span>
                   </div>
 
-                  {/* Details Summary */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.82rem', color: '#334155' }}>
-                    <div><strong>Amount:</strong> ₹{Number(formAmount).toLocaleString('en-IN')}</div>
-                    <div><strong>Date:</strong> {formDate}</div>
-                    <div><strong>Method:</strong> {formMethod}</div>
-                    <div><strong>Txn ID:</strong> <code style={{ color: '#4338ca' }}>{formTxnId}</code></div>
-                    {formRefNo && <div><strong>Ref No:</strong> {formRefNo}</div>}
-                    {formRemarks && <div><strong>Remarks:</strong> {formRemarks}</div>}
-                  </div>
+                  <GiftReceiptPaperView
+                    receipt={{
+                      amount: formAmount,
+                      paymentDate: formDate,
+                      paymentMethod: formMethod,
+                      transactionId: formTxnId || '126928800409',
+                      referenceNumber: formRefNo || '128680',
+                      remarks: formRemarks || 'Tuition Fee',
+                      rollNumber: studentRoll,
+                      studentName: studentName,
+                      courseBatch: studentCourseBatch,
+                      section: studentSection
+                    }}
+                    studentName={studentName}
+                    studentRoll={studentRoll}
+                    studentCourseBatch={studentCourseBatch}
+                    studentSection={studentSection}
+                  />
+
+                  {/* Uploaded Counterfoil Attachment Thumbnail */}
+                  {filePreviewUrl && (
+                    <div style={{ marginTop: '12px', padding: '8px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        Uploaded Payment Counterfoil: <strong>{selectedFile?.name || 'receipt_proof.jpg'}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => openPaymentProofPdf({
+                          amount: formAmount,
+                          paymentDate: formDate,
+                          paymentMethod: formMethod,
+                          transactionId: formTxnId || '126928800409',
+                          referenceNumber: formRefNo || '128680',
+                          remarks: formRemarks || 'Tuition Fee',
+                          studentName,
+                          rollNumber: studentRoll,
+                          courseBatch: studentCourseBatch,
+                          section: studentSection
+                        })}
+                        style={{ border: 'none', background: 'transparent', color: '#0284c7', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <ExternalLink size={13} /> Open PDF Preview ↗
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ background: '#eff6ff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.78rem', color: '#1e40af', marginBottom: '14px', border: '1px solid #bfdbfe' }}>
-                  ℹ️ Payment details will be routed to Accounts for digital verification. Status will remain <strong>PENDING VERIFICATION</strong> until approved by Accounts.
+                  ℹ️ When submitted, the official <strong>GIFT Autonomous Fee Receipt (Student Copy) PDF</strong> matching Image 5 will be generated and ready for instant download and verification.
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', flexWrap: 'wrap' }}>
                   <button 
                     type="button" 
                     className="btn-receipt"
                     onClick={() => setProofStep('form')}
                   >
-                    ← Replace Image / Edit
+                    ← Edit Details / Uploaded File
                   </button>
-                  <button 
-                    type="button" 
-                    className="btn-pay-now"
-                    onClick={handleSubmitProof}
-                    disabled={submittingProof}
-                  >
-                    {submittingProof ? 'Submitting...' : 'Submit for Verification ✓'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="btn-receipt"
+                      style={{ background: '#f0f9ff', color: '#0369a1', borderColor: '#bae6fd' }}
+                      onClick={() => openPaymentProofPdf({
+                        amount: formAmount,
+                        paymentDate: formDate,
+                        paymentMethod: formMethod,
+                        transactionId: formTxnId || '126928800409',
+                        referenceNumber: formRefNo || '128680',
+                        remarks: formRemarks || 'Tuition Fee',
+                        studentName,
+                        rollNumber: studentRoll,
+                        courseBatch: studentCourseBatch,
+                        section: studentSection
+                      })}
+                    >
+                      <ExternalLink size={14} /> Open PDF ↗
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn-pay-now"
+                      onClick={handleSubmitProof}
+                      disabled={submittingProof}
+                    >
+                      {submittingProof ? 'Generating & Submitting...' : 'Submit & Generate Receipt PDF ✓'}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1102,93 +1274,151 @@ export default function FeesPage() {
         </div>
       )}
 
-      {/* MODAL 2: View Single Proof Details & Image Zoom */}
+      {/* MODAL 2: View Single Proof Details & GIFT Autonomous Money Receipt */}
       {selectedProofView && (
         <div className="payment-modal-backdrop" onClick={() => setSelectedProofView(null)}>
-          <div className="payment-modal" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+          <div className="payment-modal" style={{ maxWidth: '680px' }} onClick={e => e.stopPropagation()}>
             <button className="payment-modal-close" onClick={() => setSelectedProofView(null)}>×</button>
             
-            <h3 style={{ margin: '0 0 10px', fontSize: '1.2rem', color: '#0f172a' }}>Payment Proof Details</h3>
-            
-            <div style={{ textAlign: 'center', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '14px', maxHeight: '300px', overflowY: 'auto' }}>
-              {selectedProofView.fileType === 'application/pdf' ? (
-                <div style={{ padding: '24px', textAlign: 'center' }}>
-                  <div style={{ width: '52px', height: '52px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
-                    <FileText size={30} style={{ color: '#ef4444' }} />
-                  </div>
-                  <div><strong>{selectedProofView.fileName || 'Payment_Proof.pdf'}</strong></div>
-                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>Bank Transfer Counterfoil &bull; Ref: {selectedProofView.transactionId}</div>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      onClick={() => openPaymentProofPdf(selectedProofView)}
-                      style={{
-                        background: '#2563eb',
-                        color: '#fff',
-                        border: 'none',
-                        padding: '7px 14px',
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <ExternalLink size={14} /> Open PDF in New Window ↗
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => downloadPaymentProofPdf(selectedProofView)}
-                      style={{
-                        background: '#f1f5f9',
-                        color: '#334155',
-                        border: '1px solid #cbd5e1',
-                        padding: '7px 12px',
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <Download size={14} /> Download PDF
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <img 
-                  src={selectedProofView.proofUrl} 
-                  alt="Proof Document" 
-                  style={{ width: '100%', maxHeight: '280px', objectFit: 'contain', borderRadius: '6px' }}
-                />
-              )}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.84rem', background: '#f1f5f9', padding: '12px', borderRadius: '8px', marginBottom: '14px' }}>
-              <div><strong>Proof ID:</strong> {selectedProofView.id}</div>
-              <div><strong>Status:</strong> {getStatusBadge(selectedProofView.status)}</div>
-              <div><strong>Amount:</strong> ₹{Number(selectedProofView.amount).toLocaleString('en-IN')}</div>
-              <div><strong>Payment Date:</strong> {selectedProofView.paymentDate}</div>
-              <div><strong>Method:</strong> {selectedProofView.paymentMethod}</div>
-              <div><strong>Txn ID:</strong> <code style={{ color: '#4338ca' }}>{selectedProofView.transactionId}</code></div>
-              {selectedProofView.referenceNumber && <div><strong>Ref No:</strong> {selectedProofView.referenceNumber}</div>}
-              {selectedProofView.remarks && <div><strong>Remarks:</strong> {selectedProofView.remarks}</div>}
-            </div>
-
-            {selectedProofView.status === 'REJECTED' && selectedProofView.rejectionReason && (
-              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', padding: '10px 14px', borderRadius: '8px', color: '#991b1b', fontSize: '0.82rem', marginBottom: '14px' }}>
-                <strong>Rejection Reason:</strong> {selectedProofView.rejectionReason}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Receipt size={18} color="#0284c7" />
+                GIFT Autonomous Money Receipt
+              </h3>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => openPaymentProofPdf(selectedProofView)}
+                  style={{
+                    background: '#0284c7',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <ExternalLink size={14} /> Open PDF ↗
+                </button>
+                <button
+                  type="button"
+                  onClick={() => downloadPaymentProofPdf(selectedProofView)}
+                  style={{
+                    background: '#f1f5f9',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <Download size={14} /> Download PDF
+                </button>
               </div>
-            )}
+            </div>
+
+            <div style={{ maxHeight: '65vh', overflowY: 'auto', marginBottom: '14px', paddingRight: '4px' }}>
+              <GiftReceiptPaperView
+                receipt={selectedProofView}
+                studentName={selectedProofView.studentName || studentName}
+                studentRoll={selectedProofView.rollNumber || studentRoll}
+                studentCourseBatch={selectedProofView.courseBatch || studentCourseBatch}
+                studentSection={selectedProofView.section || studentSection}
+              />
+
+              {/* Status details */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.82rem', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
+                <div><strong>Transaction ID:</strong> <code style={{ color: '#0284c7' }}>{selectedProofView.transactionId}</code></div>
+                <div><strong>Verification Status:</strong> {getStatusBadge(selectedProofView.status)}</div>
+                <div><strong>Payment Method:</strong> {selectedProofView.paymentMethod || 'Bank Transfer'}</div>
+                <div><strong>Value Date:</strong> {selectedProofView.paymentDate}</div>
+              </div>
+            </div>
 
             <div style={{ textAlign: 'right' }}>
               <button type="button" className="btn-receipt" onClick={() => setSelectedProofView(null)}>
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Recently Generated Receipt Success Dialog */}
+      {recentlyGeneratedReceipt && (
+        <div className="payment-modal-backdrop" onClick={() => setRecentlyGeneratedReceipt(null)}>
+          <div className="payment-modal" style={{ maxWidth: '680px' }} onClick={e => e.stopPropagation()}>
+            <button className="payment-modal-close" onClick={() => setRecentlyGeneratedReceipt(null)}>×</button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#dcfce7', display: 'grid', placeItems: 'center', color: '#16a34a' }}>
+                <Check size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#14532d' }}>Payment Receipt Uploaded &amp; PDF Generated!</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                  Your official money receipt matching Gandhi Institute for Technology (GIFT) Autonomous format is ready.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ maxHeight: '60vh', overflowY: 'auto', marginBottom: '14px', paddingRight: '4px' }}>
+              <GiftReceiptPaperView
+                receipt={recentlyGeneratedReceipt}
+                studentName={recentlyGeneratedReceipt.studentName || studentName}
+                studentRoll={recentlyGeneratedReceipt.rollNumber || studentRoll}
+                studentCourseBatch={recentlyGeneratedReceipt.courseBatch || studentCourseBatch}
+                studentSection={recentlyGeneratedReceipt.section || studentSection}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <button 
+                type="button" 
+                className="btn-receipt" 
+                onClick={() => setRecentlyGeneratedReceipt(null)}
+              >
+                Close &amp; View Ledger
+              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  style={{
+                    background: '#f0f9ff',
+                    color: '#0369a1',
+                    border: '1px solid #bae6fd',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onClick={() => openPaymentProofPdf(recentlyGeneratedReceipt)}
+                >
+                  <ExternalLink size={15} /> Open PDF in New Window ↗
+                </button>
+                <button
+                  type="button"
+                  className="btn-pay-now"
+                  style={{ padding: '8px 18px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  onClick={() => downloadPaymentProofPdf(recentlyGeneratedReceipt)}
+                >
+                  <Download size={15} /> Download PDF Receipt (Image 5)
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -24,6 +24,7 @@ import './StaffPortal.css';
 import './SuperAdminPortal.css';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
+import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 import { erpStore } from '../services/erpStore.js';
 
 export default function StaffPortal({ account, onLogout, onSwitchRole }) {
@@ -122,6 +123,18 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
               <span>Take Attendance</span>
             </button>
             <button
+              className={`erp-nav-item ${activeTab === 'lab-evaluation' ? 'active' : ''}`}
+              onClick={() => setActiveTab('lab-evaluation')}
+              style={{
+                background: activeTab === 'lab-evaluation' ? undefined : 'linear-gradient(90deg, rgba(20, 184, 166, 0.12), rgba(59, 130, 246, 0.12))',
+                border: '1px solid rgba(20, 184, 166, 0.35)'
+              }}
+            >
+              <FileText size={18} style={{ color: '#2dd4bf' }} />
+              <span>Practical &amp; Lab Evaluation</span>
+              <span className="erp-nav-badge" style={{ background: '#14b8a6', color: '#ffffff' }}>New</span>
+            </button>
+            <button
               className={`erp-nav-item ${activeTab === 'tickets' ? 'active' : ''}`}
               onClick={() => setActiveTab('tickets')}
             >
@@ -211,8 +224,15 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
             </div>
           )}
 
+          {/* TAB: DIGITAL LAB / PRACTICAL EVALUATION */}
+          {activeTab === 'lab-evaluation' && (
+            <div style={{ marginTop: '-0.75rem', marginBottom: '20px' }}>
+              <DigitalAnswerSheetEvaluationSystem initialRole="staff" currentUser={account} />
+            </div>
+          )}
+
           {/* STATS */}
-          {activeTab !== 'take-attendance' && (
+          {activeTab !== 'take-attendance' && activeTab !== 'lab-evaluation' && (
           <div className="erp-stats-grid">
             <div className="erp-stat-card">
               <div className="erp-stat-card-header">

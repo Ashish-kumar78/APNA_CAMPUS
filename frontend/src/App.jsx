@@ -38,24 +38,32 @@ import StaffPortal from './components/StaffPortal.jsx'
 import UniversalWhatsAppLauncher from './components/CampusConnect/UniversalWhatsAppLauncher.jsx'
 import ApnaAIChatbot from './components/Chatbot/ApnaAIChatbot.jsx'
 import MarksManagementModule from './marks/MarksManagementModule.jsx'
+import DigitalAnswerSheetEvaluationSystem from './components/DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx'
 import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, findStudentByQuery } from './services/studentStore.js'
 import { getTimeGreeting } from './utils/timeGreeting.js'
 
 const accounts = {
+  '2401432265': {
+    role: 'student',
+    name: 'BISHNU PRASAD SAHOO',
+    registrationNumber: '2401432265',
+    department: 'Computer Science & Engineering (Artificial Intelligence)',
+    detail: 'BTECH 2028-P · CSE (AI) - Genius',
+  },
   '2305201001': {
     role: 'student',
-    name: 'Rakesh Das',
-    registrationNumber: '2305201001',
-    department: 'Computer Science & Engineering',
-    detail: 'Semester 5 · Section A',
+    name: 'BISHNU PRASAD SAHOO',
+    registrationNumber: '2401432265',
+    department: 'Computer Science & Engineering (Artificial Intelligence)',
+    detail: 'BTECH 2028-P · CSE (AI) - Genius',
   },
   'student': {
     role: 'student',
-    name: 'Rakesh Das',
-    registrationNumber: '2305201001',
-    department: 'Computer Science & Engineering',
-    detail: 'Semester 5 · Section A',
+    name: 'BISHNU PRASAD SAHOO',
+    registrationNumber: '2401432265',
+    department: 'Computer Science & Engineering (Artificial Intelligence)',
+    detail: 'BTECH 2028-P · CSE (AI) - Genius',
   },
   'superadmin': {
     role: 'super_admin',
@@ -225,6 +233,8 @@ function App() {
   const [account, setAccount] = useState(null)
   const [error, setError] = useState('')
   const [resetRequested, setResetRequested] = useState(false)
+  const [showDigitalEvaluation, setShowDigitalEvaluation] = useState(false)
+  const [digitalEvalRole, setDigitalEvalRole] = useState('faculty')
 
   async function handleLogin(event) {
     if (event) event.preventDefault()
@@ -410,6 +420,19 @@ function App() {
     setPassword('gift123')
     setError('')
     setResetRequested(false)
+  }
+
+  // Digital Answer Sheet Evaluation System Fullscreen Overlay
+  if (showDigitalEvaluation) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#090d16', overflow: 'hidden' }}>
+        <DigitalAnswerSheetEvaluationSystem
+          initialRole={digitalEvalRole}
+          currentUser={account}
+          onClose={() => setShowDigitalEvaluation(false)}
+        />
+      </div>
+    )
   }
 
   // Role-based Router Guard

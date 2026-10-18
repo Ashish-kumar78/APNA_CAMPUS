@@ -87,6 +87,32 @@ const campusSubViewMap = {
   'anonymous-complaints': 'complaints',
 }
 
+// Speech bubble outline symbol matching user request (shape outline only, transparent inside)
+export const ChatBubbleIcon = ({ size = 18, className = '', ...props }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={`campus-nav-chat-bubble ${className}`}
+    style={{
+      flexShrink: 0,
+      minWidth: `${size}px`,
+      minHeight: `${size}px`,
+      display: 'inline-block',
+      verticalAlign: 'middle',
+    }}
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+  </svg>
+);
+
 const navSections = [
   {
     title: 'OVERVIEW',
@@ -116,7 +142,7 @@ const navSections = [
     title: 'SUPPORT',
     items: [
       { label: 'Anonymous Complaints', icon: ShieldCheck, page: 'anonymous-complaints' },
-      { label: 'Feedback/Appraisal/Survey', icon: MessageSquare, page: 'feedback' },
+      { label: 'Feedback/Appraisal/Survey', icon: ChatBubbleIcon, page: 'feedback' },
       { label: 'Blogging & Stories', icon: Rss, page: 'blogging' },
     ]
   }
@@ -227,7 +253,7 @@ function StudentPortal({ account, onLogout }) {
       if (profilePageTabMap[hash]) {
         return { page: 'profile', link: 'View Profile', tab: profilePageTabMap[hash], quickView: '' };
       }
-      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal') {
+      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal' || hash === 'grievance' || hash === 'grievance-redressal') {
         return { page: 'feedback', link: 'Feedback/Appraisal/Survey', tab: '', quickView: '' };
       }
       const match = navigation.find((n) => n.page === hash);
@@ -315,7 +341,7 @@ function StudentPortal({ account, onLogout }) {
         setProfileQuickView('');
         return;
       }
-      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal') {
+      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal' || hash === 'grievance' || hash === 'grievance-redressal') {
         setActivePage('feedback');
         setActiveLink('Feedback/Appraisal/Survey');
         setProfileTab('');
@@ -578,7 +604,7 @@ function StudentPortal({ account, onLogout }) {
                         setSidebarOpen(false)
                       }}
                     >
-                      <Icon size={17} />
+                      <Icon size={18} />
                       <span>{label}</span>
                       {badge && <span className="cc-nav-badge">{badge}</span>}
                     </a>
@@ -836,16 +862,17 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'fees' && <FeesPage />}
               {activePage === 'canteen' && <CanteenPage />}
               {activePage === 'attendance' && <AttendancePage />}
-              {activePage === 'academics' && <AcademicsPage />}
+              {activePage === 'academics' && <AcademicsPage account={account} />}
               {activePage === 'timetable' && <TimetablePage />}
               {activePage === 'notices' && <NoticesPage />}
               {activePage === 'idcard' && <IDCardPage />}
               {activePage === 'library' && <LibraryPage />}
-              {activePage === 'internship' && <InternshipPage />}
+              {activePage === 'internship' && <InternshipPage account={account} />}
               {activePage === 'online-exam' && <OnlineExamPage />}
               {activePage === 'placement' && <PlacementPage />}
               {activePage === 'feedback' && (
                 <FeedbackPage
+                  account={account}
                   onBack={() => {
                     setActivePage('dashboard')
                     setActiveLink('Dashboard')

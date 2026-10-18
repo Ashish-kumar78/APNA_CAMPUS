@@ -23,6 +23,7 @@ import { getDocumentsForRole, getAllStudents, saveStudent } from '../services/st
 import { useTimeGreeting } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
+import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 
 // CSV Export Helper
 function exportToCsv(filename, rows) {
@@ -616,6 +617,16 @@ export default function FacultyPortal({ account, onLogout }) {
               <BookOpen size={17} /> My Subjects
             </button>
             <button
+              className={`faculty-nav-btn ${activeTab === 'digital-evaluation' ? 'active' : ''}`}
+              onClick={() => setActiveTab('digital-evaluation')}
+              style={{
+                background: activeTab === 'digital-evaluation' ? undefined : 'linear-gradient(90deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.12))',
+                border: '1px solid rgba(16, 185, 129, 0.35)'
+              }}
+            >
+              <FileText size={17} style={{ color: '#10b981' }} /> Answer Sheet Evaluation
+            </button>
+            <button
               className={`faculty-nav-btn ${activeTab === 'marks' ? 'active' : ''}`}
               onClick={() => setActiveTab('marks')}
             >
@@ -693,6 +704,13 @@ export default function FacultyPortal({ account, onLogout }) {
           {activeTab === 'awaiting-verification' && (
             <div style={{ marginBottom: '20px' }}>
               <AwaitingVerificationSection account={account} />
+            </div>
+          )}
+
+          {/* DIGITAL ANSWER SHEET EVALUATION SYSTEM */}
+          {activeTab === 'digital-evaluation' && (
+            <div style={{ marginTop: '-0.75rem', marginBottom: '20px' }}>
+              <DigitalAnswerSheetEvaluationSystem initialRole="faculty" currentUser={account} />
             </div>
           )}
 

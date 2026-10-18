@@ -624,12 +624,6 @@ export default function AccountsPortal({ account, onLogout }) {
             >
               <Download size={17} /> Student Documents
             </button>
-            <button
-              className={`accounts-nav-btn ${activeTab === 'campus-connect' ? 'active' : ''}`}
-              onClick={() => setActiveTab('campus-connect')}
-            >
-              <MessageSquare size={17} /> Campus Connect (WhatsApp)
-            </button>
           </aside>
         )}
 

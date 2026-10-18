@@ -597,7 +597,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
   const handleAttachDemoDocs = () => {
     setStudentFormData(prev => ({
       ...prev,
-      passportPhotoUrl: prev.passportPhotoUrl || (prev.gender === 'Female' ? '/passport_photo_female.svg' : '/passport_photo_male.svg'),
+      passportPhotoUrl: prev.passportPhotoUrl || '/passport_photo_male.svg',
       passportPhotoName: prev.passportPhotoName || 'passport_photo_sample.jpg',
       govtIdFileUrl: prev.govtIdFileUrl || '/sample_documents/sample_document.pdf',
       govtIdFileName: prev.govtIdFileName || 'aadhaar_card_verified.pdf',
@@ -6112,7 +6112,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               <div style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem' }}>
                 {studentDocPreview.document === 'Passport-size photograph' ? (
                   <img
-                    src={studentDocPreview.docObj?.fileUrl || (studentDocPreview.student?.gender === 'Female' ? '/passport_photo_female.svg' : '/passport_photo_male.svg')}
+                    src={studentDocPreview.docObj?.fileUrl || '/passport_photo_male.svg'}
                     alt="Passport photo"
                     style={{ width: '120px', height: '140px', objectFit: 'cover', borderRadius: '8px', border: '2px solid #2563eb', margin: '0 auto', display: 'block' }}
                   />

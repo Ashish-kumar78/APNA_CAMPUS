@@ -783,25 +783,56 @@ button {
 }
 
 .profile-overview-copy p {
-  font-size: 12px !important;
-  color: #475569 !important;
+  font-size: 13.5px !important;
+  color: #e0e7ff !important;
 }
 
 .profile-overview-facts small {
   font-size: 11px !important;
   font-weight: 700 !important;
-  color: #64748b !important;
+  color: #bfdbfe !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  line-height: 1.25 !important;
+  overflow: visible !important;
 }
 
 .profile-overview-facts strong {
-  font-size: 12.5px !important;
+  font-size: 13.5px !important;
   font-weight: 800 !important;
-  color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+.registry-summary-title,
+.registry-summary-title span,
+.profile-registry-summary summary span {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  outline: none !important;
 }
 
 .profile-quick-links button {
   font-size: 12px !important;
   font-weight: 700 !important;
+  color: #1d4ed8;
+}
+
+.profile-quick-links button:not(.active) {
   color: #1d4ed8 !important;
+}
+
+.profile-quick-links button.active,
+.profile-quick-links button.active span,
+.profile-quick-links button.active .quick-link-text {
+  color: #ffffff !important;
+}
+
+.profile-quick-links button.active svg {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
 }
 

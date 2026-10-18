@@ -837,12 +837,6 @@ export default function HostelPortal({ account, onLogout }) {
             >
               <FileSpreadsheet size={17} /> Report Generation
             </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'campus-connect' ? 'active' : ''}`}
-              onClick={() => setActiveTab('campus-connect')}
-            >
-              <MessageSquare size={17} /> Campus Connect (WhatsApp)
-            </button>
           </aside>
         )}
 

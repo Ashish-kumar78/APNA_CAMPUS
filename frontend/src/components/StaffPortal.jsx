@@ -16,8 +16,10 @@ import {
   Menu,
   X,
   FileSpreadsheet,
-  MessageSquare
+  MessageSquare,
+  ClipboardCheck
 } from 'lucide-react';
+import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
 import './StaffPortal.css';
 import './SuperAdminPortal.css';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
@@ -113,6 +115,13 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
 
           <nav className="erp-sidebar-nav">
             <button
+              className={`erp-nav-item ${activeTab === 'take-attendance' ? 'active' : ''}`}
+              onClick={() => setActiveTab('take-attendance')}
+            >
+              <ClipboardCheck size={18} />
+              <span>Take Attendance</span>
+            </button>
+            <button
               className={`erp-nav-item ${activeTab === 'tickets' ? 'active' : ''}`}
               onClick={() => setActiveTab('tickets')}
             >
@@ -139,13 +148,6 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
             >
               <FileSpreadsheet size={18} />
               <span>Report Generation</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'campus-connect' ? 'active' : ''}`}
-              onClick={() => setActiveTab('campus-connect')}
-            >
-              <MessageSquare size={18} />
-              <span>Campus Connect (WhatsApp)</span>
             </button>
           </nav>
         </aside>
@@ -198,7 +200,19 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
         </header>
 
         <div className="erp-content-body">
+          {/* TAB: TAKE ATTENDANCE */}
+          {activeTab === 'take-attendance' && (
+            <div style={{ marginBottom: '24px' }}>
+              <TakeAttendanceModule
+                account={account}
+                role="staff"
+                onBackToDashboard={() => setActiveTab('tickets')}
+              />
+            </div>
+          )}
+
           {/* STATS */}
+          {activeTab !== 'take-attendance' && (
           <div className="erp-stats-grid">
             <div className="erp-stat-card">
               <div className="erp-stat-card-header">
@@ -238,6 +252,7 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
               <div className="erp-stat-note">Within 4-hour window</div>
             </div>
           </div>
+          )}
 
           {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
           {activeTab === 'campus-connect' && (

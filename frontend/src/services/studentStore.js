@@ -25,6 +25,8 @@ export const defaultDemoStudent = {
   lifecycleStatus: 'ACTIVE',
   cgpa: '8.42',
   attendance: 92,
+  lastClassAttendanceDate: '14/10/2026',
+  lastHostelAttendanceDate: '16/10/2026',
   backlogCount: 0,
   enrolledSubjects: initialSubjects.filter(s => s.semester === 5 && (s.department === 'CSE' || s.deptCode === 'CSE')),
 
@@ -347,7 +349,7 @@ export function saveStudent(studentData) {
         passportPhoto: {
           name: 'Passport-size photograph',
           status: 'Uploaded',
-          url: studentData.passportPhotoUrl || (studentData.gender === 'Female' ? '/passport_photo.svg' : '/passport_photo_male.svg'),
+          url: studentData.passportPhotoUrl || '/passport_photo_male.svg',
           filename: studentData.passportPhotoName || 'passport_photo.jpg'
         },
         govtIdProof: {

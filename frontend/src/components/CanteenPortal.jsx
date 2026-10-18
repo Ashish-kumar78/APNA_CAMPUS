@@ -227,12 +227,6 @@ export default function CanteenPortal({ account, onLogout }) {
             >
               <FileText size={17} /> Daily Sales Reports
             </button>
-            <button
-              className={`canteen-nav-btn ${activeTab === 'campus-connect' ? 'active' : ''}`}
-              onClick={() => setActiveTab('campus-connect')}
-            >
-              <MessageSquare size={17} /> Campus Connect (WhatsApp)
-            </button>
           </aside>
         )}
 

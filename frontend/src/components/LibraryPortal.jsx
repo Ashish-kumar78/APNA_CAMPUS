@@ -690,14 +690,6 @@ export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
               <FileSpreadsheet size={18} />
               <span>Reports & Policies</span>
             </button>
-
-            <button
-              className={`erp-nav-item ${activeTab === 'campus-connect' ? 'active' : ''}`}
-              onClick={() => setActiveTab('campus-connect')}
-            >
-              <MessageSquare size={18} />
-              <span>Campus Connect (WhatsApp)</span>
-            </button>
           </nav>
         </aside>
       )}

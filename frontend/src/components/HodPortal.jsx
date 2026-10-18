@@ -32,8 +32,10 @@ import {
   AlertCircle,
   Sparkles,
   HelpCircle,
-  ChevronRight
+  ChevronRight,
+  ClipboardCheck
 } from 'lucide-react';
+import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
 import './HodPortal.css';
 import '../components/AdminPortal.css';
 import { downloadDepartmentGazettePdf } from '../utils/pdfGenerator';
@@ -460,6 +462,12 @@ export default function HodPortal({ account, onLogout }) {
               <Layers size={17} /> Dashboard
             </button>
             <button
+              className={`hod-nav-btn ${activeTab === 'take-attendance' ? 'active' : ''}`}
+              onClick={() => setActiveTab('take-attendance')}
+            >
+              <ClipboardCheck size={17} /> Take Attendance
+            </button>
+            <button
               className={`hod-nav-btn ${activeTab === 'approval' ? 'active' : ''}`}
               onClick={() => setActiveTab('approval')}
             >
@@ -515,17 +523,22 @@ export default function HodPortal({ account, onLogout }) {
                 {hodDocs.length}
               </span>
             </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'campus-connect' ? 'active' : ''}`}
-              onClick={() => setActiveTab('campus-connect')}
-            >
-              <MessageSquare size={17} /> Campus Connect (WhatsApp)
-            </button>
           </aside>
         )}
 
         {/* Content Pane */}
         <main className="hod-main">
+          {/* TAKE ATTENDANCE TAB */}
+          {activeTab === 'take-attendance' && (
+            <div style={{ marginBottom: '24px' }}>
+              <TakeAttendanceModule
+                account={account}
+                role="hod"
+                onBackToDashboard={() => setActiveTab('dashboard')}
+              />
+            </div>
+          )}
+
           {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
           {activeTab === 'campus-connect' && (
             <div style={{ height: 'calc(100vh - 120px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>

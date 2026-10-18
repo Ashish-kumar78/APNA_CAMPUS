@@ -628,14 +628,6 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               <span>Report Generation</span>
               <span className="erp-nav-badge" style={{ background: '#3b82f6', color: '#ffffff' }}>New</span>
             </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'campus-connect' ? 'active' : ''}`}
-              onClick={() => setActiveTab('campus-connect')}
-            >
-              <MessageSquare size={18} />
-              <span>Campus Connect (WhatsApp)</span>
-              <span className="erp-nav-badge" style={{ background: '#22c55e', color: '#ffffff' }}>Chat</span>
-            </button>
           </nav>
         </aside>
       )}

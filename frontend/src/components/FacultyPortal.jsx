@@ -6,8 +6,9 @@ import {
   Timer, X, ChevronDown, ShieldCheck, Eye, Flag, Trash2,
   MessageSquare, Menu, CheckSquare, Square, FileSpreadsheet,
   ArrowUpRight, HelpCircle, Send, Share2, HeartHandshake,
-  BookOpenCheck, UserCheck
+  BookOpenCheck, UserCheck, ClipboardCheck
 } from 'lucide-react';
+import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
 import './FacultyPortal.css';
 import '../components/AdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
@@ -597,10 +598,10 @@ export default function FacultyPortal({ account, onLogout }) {
               <Layers size={17} /> Dashboard
             </button>
             <button
-              className={`faculty-nav-btn ${activeTab === 'campus-connect' ? 'active' : ''}`}
-              onClick={() => setActiveTab('campus-connect')}
+              className={`faculty-nav-btn ${activeTab === 'take-attendance' ? 'active' : ''}`}
+              onClick={() => setActiveTab('take-attendance')}
             >
-              <MessageSquare size={17} /> Campus Connect (Chats)
+              <ClipboardCheck size={17} /> Take Attendance
             </button>
             <button
               className={`faculty-nav-btn ${activeTab === 'awaiting-verification' ? 'active' : ''}`}
@@ -670,6 +671,17 @@ export default function FacultyPortal({ account, onLogout }) {
 
         {/* Dynamic Content Pane */}
         <main className="faculty-main">
+          {/* TAKE ATTENDANCE TAB */}
+          {activeTab === 'take-attendance' && (
+            <div style={{ marginBottom: '24px' }}>
+              <TakeAttendanceModule
+                account={account}
+                role="faculty"
+                onBackToDashboard={() => setActiveTab('dashboard')}
+              />
+            </div>
+          )}
+
           {/* CAMPUS CONNECT TAB */}
           {activeTab === 'campus-connect' && (
             <div style={{ marginBottom: '20px' }}>

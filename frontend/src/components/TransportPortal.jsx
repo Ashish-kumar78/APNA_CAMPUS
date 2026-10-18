@@ -573,13 +573,6 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
             <CreditCard size={18} />
             <span>Reports &amp; Accounts Sync</span>
           </button>
-          <button
-            className={`erp-nav-item ${activeTab === 'campus-connect' ? 'active' : ''}`}
-            onClick={() => setActiveTab('campus-connect')}
-          >
-            <MessageSquare size={18} />
-            <span>Campus Connect (WhatsApp)</span>
-          </button>
         </nav>
       </aside>
 

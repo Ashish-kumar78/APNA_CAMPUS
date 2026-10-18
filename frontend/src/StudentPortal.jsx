@@ -14,6 +14,7 @@ import {
   CreditCard,
   ExternalLink,
   Home,
+  ArrowLeft,
   Briefcase,
   LibraryBig,
   LogOut,
@@ -226,6 +227,9 @@ function StudentPortal({ account, onLogout }) {
       if (profilePageTabMap[hash]) {
         return { page: 'profile', link: 'View Profile', tab: profilePageTabMap[hash], quickView: '' };
       }
+      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal') {
+        return { page: 'feedback', link: 'Feedback/Appraisal/Survey', tab: '', quickView: '' };
+      }
       const match = navigation.find((n) => n.page === hash);
       if (match) return { page: hash, link: match.label, tab: '', quickView: '' };
     }
@@ -311,6 +315,13 @@ function StudentPortal({ account, onLogout }) {
         setProfileQuickView('');
         return;
       }
+      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal') {
+        setActivePage('feedback');
+        setActiveLink('Feedback/Appraisal/Survey');
+        setProfileTab('');
+        setProfileQuickView('');
+        return;
+      }
       const match = navigation.find((n) => n.page === hash);
       if (match) {
         setActivePage(match.page);
@@ -355,10 +366,7 @@ function StudentPortal({ account, onLogout }) {
   }
 
   const studentPhoto = useMemo(() => {
-    if (account?.photo) return account.photo
-    if (account?.gender === 'Female' || /Priya|Sneha|Puja|Swati|Monika|Ipsita|Smruti|Lipika|Archana|Sonali|Niharika|Ananya|Pooja|Shreya|Ankita|Divya/i.test(account?.name || '')) {
-      return '/passport_photo_female.svg'
-    }
+    if (account?.photo && !account.photo.includes('female')) return account.photo
     return '/passport_photo_male.svg'
   }, [account])
 
@@ -768,18 +776,34 @@ function StudentPortal({ account, onLogout }) {
               <div className="portal-breadcrumb">
                 <button
                   type="button"
+                  className="portal-back-btn"
                   onClick={() => {
                     setActivePage('dashboard')
                     setActiveLink('Dashboard')
                     window.location.hash = 'dashboard'
                   }}
-                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', color: 'inherit' }}
-                  title="Return to Dashboard"
+                  title="Back to Dashboard"
+                  aria-label="Back to Dashboard"
                 >
-                  <Home size={13} />
+                  <ArrowLeft size={15} />
+                  <span>Back to Dashboard</span>
                 </button>
-                <span>/</span>
-                <strong>{activeLink}</strong>
+                <span className="portal-breadcrumb-sep">|</span>
+                <button
+                  type="button"
+                  className="portal-breadcrumb-home"
+                  onClick={() => {
+                    setActivePage('dashboard')
+                    setActiveLink('Dashboard')
+                    window.location.hash = 'dashboard'
+                  }}
+                  title="Return to Dashboard"
+                  aria-label="Dashboard"
+                >
+                  <Home size={14} />
+                </button>
+                <span className="portal-breadcrumb-slash">/</span>
+                <strong className="portal-breadcrumb-current">{activeLink}</strong>
               </div>
               {(activePage === 'campus-connect' ||
                 activePage === 'class-groups' ||
@@ -793,6 +817,11 @@ function StudentPortal({ account, onLogout }) {
                   initialConversationId={initialConvId}
                   initialCategory={activePage === 'class-groups' ? 'Classes' : 'All'}
                   initialView={campusSubView}
+                  onBack={() => {
+                    setActivePage('dashboard')
+                    setActiveLink('Dashboard')
+                    window.location.hash = 'dashboard'
+                  }}
                   onNavigateToModule={(mod) => {
                     setActivePage(mod);
                     setActiveLink(mod);
@@ -815,8 +844,15 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'internship' && <InternshipPage />}
               {activePage === 'online-exam' && <OnlineExamPage />}
               {activePage === 'placement' && <PlacementPage />}
-              {activePage === 'blogging' && <BloggingPage />}
-              {activePage === 'feedback' && <FeedbackPage />}
+              {activePage === 'feedback' && (
+                <FeedbackPage
+                  onBack={() => {
+                    setActivePage('dashboard')
+                    setActiveLink('Dashboard')
+                    window.location.hash = 'dashboard'
+                  }}
+                />
+              )}
             </div>
           ) : activePage === 'profile' ? (
             <StudentProfile

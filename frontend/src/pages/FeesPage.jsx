@@ -22,11 +22,18 @@ import {
   ShieldCheck,
   RefreshCw,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  QrCode,
+  Building2,
+  Copy,
+  Check,
+  Maximize2
 } from 'lucide-react'
 import { downloadFeeReceiptPdf, openFeeReceiptPdf, openPaymentProofPdf, downloadPaymentProofPdf } from '../utils/pdfGenerator'
 import { feesApi } from '../services/feesApi'
 import './FeesPage.css'
+
+const COLLEGE_PAYMENT_QR_URL = '/college_payment_qr_placeholder.svg'
 
 export const yearlyFeeLedger = [
   {
@@ -105,6 +112,18 @@ export default function FeesPage() {
   const [proofStep, setProofStep] = useState('form') // 'form' | 'preview'
   const [submittingProof, setSubmittingProof] = useState(false)
   const [selectedProofView, setSelectedProofView] = useState(null)
+
+  // Bank & QR Details State
+  const [showEnlargedQr, setShowEnlargedQr] = useState(false)
+  const [copiedField, setCopiedField] = useState(null)
+
+  const handleCopyText = (fieldKey, text) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text)
+    }
+    setCopiedField(fieldKey)
+    setTimeout(() => setCopiedField(null), 2000)
+  }
 
   // Form inputs
   const [formAmount, setFormAmount] = useState('12000')
@@ -420,6 +439,12 @@ export default function FeesPage() {
         >
           Consolidated Payment Receipts
         </button>
+        <button 
+          className={`fee-tab-btn ${activeTab === 'bank-qr' ? 'active' : ''}`}
+          onClick={() => setActiveTab('bank-qr')}
+        >
+          Bank &amp; QR Details
+        </button>
       </div>
 
       {/* Tab 1: Current Invoices */}
@@ -681,6 +706,187 @@ export default function FeesPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 5: Bank & QR Details */}
+      {activeTab === 'bank-qr' && (
+        <div className="bank-qr-grid">
+          {/* Card 1: College Payment QR Code */}
+          <div className="bank-qr-card">
+            <div>
+              <div className="bank-qr-header">
+                <h3>
+                  <QrCode size={20} color="#2563eb" /> Scan &amp; Pay College Fees
+                </h3>
+                <p>Unified UPI Gateway for Semester Fees, Caution Deposits &amp; Examination dues</p>
+              </div>
+
+              {/* QR Display Area */}
+              <div className="qr-display-box">
+                <div className="qr-image-container">
+                  <img
+                    src={COLLEGE_PAYMENT_QR_URL}
+                    alt="Scan & Pay College Fees Official QR Code"
+                    style={{ width: '220px', height: '220px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
+                  />
+                </div>
+                <p className="qr-caption-text">
+                  Scan this QR code using a supported UPI payment application.
+                </p>
+                <p className="qr-subcaption-text">
+                  Supports Google Pay, PhonePe, Paytm, BHIM, Cred, and all UPI-enabled banking apps.
+                </p>
+              </div>
+
+              {/* Buttons: Download QR Code & View QR Code */}
+              <div className="qr-buttons-row">
+                <a
+                  href={COLLEGE_PAYMENT_QR_URL}
+                  download="College_Payment_QR.svg"
+                  className="btn-qr-action download"
+                >
+                  <Download size={15} /> Download QR Code
+                </a>
+                <button
+                  type="button"
+                  className="btn-qr-action view"
+                  onClick={() => setShowEnlargedQr(true)}
+                >
+                  <Eye size={15} /> View QR Code
+                </button>
+              </div>
+            </div>
+
+            {/* Verification Reminder Note */}
+            <div className="qr-reminder-box">
+              <AlertTriangle size={17} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <strong>Important Verification Reminder:</strong> Before authorizing the payment, always verify that the beneficiary name displays as <strong>"APNA CAMPUS / COLLEGE ACCOUNTS"</strong> in your UPI application.
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Official College Bank Details */}
+          <div className="bank-qr-card">
+            <div>
+              <div className="bank-qr-header">
+                <h3>
+                  <Building2 size={20} color="#2563eb" /> Official College Bank Details
+                </h3>
+                <p>Direct Electronic Fund Transfer via NEFT / RTGS / IMPS</p>
+              </div>
+
+              {/* Bank Details List */}
+              <div className="bank-details-list">
+                {/* Account Holder */}
+                <div className="bank-detail-item">
+                  <div className="bank-detail-meta">
+                    <span className="bank-detail-label">Account Holder / College Name</span>
+                    <strong className="bank-detail-value">Apna Campus Autonomous College of Engineering &amp; Technology</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className={`btn-copy-mini ${copiedField === 'holder' ? 'copied' : ''}`}
+                    onClick={() => handleCopyText('holder', 'Apna Campus Autonomous College of Engineering & Technology')}
+                    title="Copy Account Holder Name"
+                  >
+                    {copiedField === 'holder' ? <Check size={12} /> : <Copy size={12} />}
+                    {copiedField === 'holder' ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+
+                {/* Bank Name */}
+                <div className="bank-detail-item">
+                  <div className="bank-detail-meta">
+                    <span className="bank-detail-label">Bank Name</span>
+                    <strong className="bank-detail-value">State Bank of India (SBI)</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className={`btn-copy-mini ${copiedField === 'bank' ? 'copied' : ''}`}
+                    onClick={() => handleCopyText('bank', 'State Bank of India')}
+                    title="Copy Bank Name"
+                  >
+                    {copiedField === 'bank' ? <Check size={12} /> : <Copy size={12} />}
+                    {copiedField === 'bank' ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+
+                {/* Branch Name */}
+                <div className="bank-detail-item">
+                  <div className="bank-detail-meta">
+                    <span className="bank-detail-label">Branch Name</span>
+                    <strong className="bank-detail-value">Campus Tech Complex Branch, Bhubaneswar</strong>
+                  </div>
+                </div>
+
+                {/* Account Number */}
+                <div className="bank-detail-item" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
+                  <div className="bank-detail-meta">
+                    <span className="bank-detail-label" style={{ color: '#1d4ed8' }}>Account Number</span>
+                    <strong className="bank-detail-value monospace">394200109842</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className={`btn-copy-mini ${copiedField === 'accountNo' ? 'copied' : ''}`}
+                    onClick={() => handleCopyText('accountNo', '394200109842')}
+                    title="Copy Account Number"
+                  >
+                    {copiedField === 'accountNo' ? <Check size={12} /> : <Copy size={12} />}
+                    {copiedField === 'accountNo' ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+
+                {/* Account Type */}
+                <div className="bank-detail-item">
+                  <div className="bank-detail-meta">
+                    <span className="bank-detail-label">Account Type</span>
+                    <strong className="bank-detail-value">Institutional Current Account</strong>
+                  </div>
+                </div>
+
+                {/* IFSC Code */}
+                <div className="bank-detail-item" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
+                  <div className="bank-detail-meta">
+                    <span className="bank-detail-label" style={{ color: '#1d4ed8' }}>IFSC Code</span>
+                    <strong className="bank-detail-value monospace">SBIN0010234</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className={`btn-copy-mini ${copiedField === 'ifsc' ? 'copied' : ''}`}
+                    onClick={() => handleCopyText('ifsc', 'SBIN0010234')}
+                    title="Copy IFSC Code"
+                  >
+                    {copiedField === 'ifsc' ? <Check size={12} /> : <Copy size={12} />}
+                    {copiedField === 'ifsc' ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+
+                {/* Bank Address */}
+                <div className="bank-detail-item">
+                  <div className="bank-detail-meta">
+                    <span className="bank-detail-label">Bank Address</span>
+                    <strong className="bank-detail-value" style={{ fontSize: '0.84rem', fontWeight: 600, color: '#475569' }}>
+                      Academic Block B, Infocity Avenue, Patia, Bhubaneswar, Odisha – 751024
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bank-verified-badge">
+                <ShieldCheck size={16} /> Verified Institutional Banking Partner
+              </div>
+            </div>
+
+            {/* Instruction for upload */}
+            <div className="bank-notice-card" style={{ marginTop: '16px' }}>
+              <FileCheck size={17} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <strong>Next Step After Transfer:</strong> After completing your transaction, note the <strong>UTR / Reference ID</strong> and upload your payment receipt in the <strong>"Digital Payment Proofs"</strong> tab above for automated accounts clearance.
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1116,6 +1322,54 @@ export default function FeesPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL 5: Enlarged QR Modal */}
+      {showEnlargedQr && (
+        <div className="payment-modal-backdrop" onClick={() => setShowEnlargedQr(false)}>
+          <div className="payment-modal" style={{ maxWidth: '440px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <button className="payment-modal-close" onClick={() => setShowEnlargedQr(false)}>×</button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
+              <QrCode size={22} color="#2563eb" />
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 800 }}>Scan &amp; Pay College Fees</h3>
+            </div>
+            <div style={{ background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '16px', padding: '16px', display: 'inline-block', marginBottom: '14px' }}>
+              <img 
+                src={COLLEGE_PAYMENT_QR_URL} 
+                alt="Scan & Pay College Fees Official QR Code" 
+                style={{ width: '280px', height: '280px', objectFit: 'contain', display: 'block', margin: '0 auto' }} 
+              />
+            </div>
+            <p style={{ fontSize: '0.88rem', color: '#334155', fontWeight: 600, margin: '0 0 12px' }}>
+              Scan this QR code using a supported UPI payment application.
+            </p>
+            <div className="qr-reminder-box" style={{ textAlign: 'left', marginBottom: '16px' }}>
+              <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <span style={{ fontSize: '0.78rem' }}>
+                Please verify recipient name as <strong>"APNA CAMPUS / COLLEGE ACCOUNTS"</strong> before confirming payment.
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <a 
+                href={COLLEGE_PAYMENT_QR_URL} 
+                download="College_Payment_QR.svg" 
+                className="btn-qr-action download"
+                style={{ flex: 1, justifyContent: 'center' }}
+              >
+                <Download size={15} /> Download QR Code
+              </a>
+              <button 
+                type="button" 
+                className="btn-qr-action view"
+                style={{ padding: '8px 18px' }}
+                onClick={() => setShowEnlargedQr(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+

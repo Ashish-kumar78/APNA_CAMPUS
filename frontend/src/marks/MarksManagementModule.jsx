@@ -41,12 +41,14 @@ import BulkMarksUploadModal from './BulkMarksUploadModal'
 import './MarksManagement.css'
 
 export default function MarksManagementModule({ initialRole = 'teacher', currentStudentId = 's-4' }) {
+  const isStudentOnly = initialRole === 'student'
+
   // Role Mode: 'teacher' | 'student'
   const [activeRole, setActiveRole] = useState(initialRole)
 
   // Sub-navigation view within module
   // 'overview' | 'matrix' | 'individual' | 'student-view' | 'analytics'
-  const [activeView, setActiveView] = useState('matrix')
+  const [activeView, setActiveView] = useState(isStudentOnly ? 'student-view' : 'matrix')
 
   // Filter state
   const [selectedSubjectId, setSelectedSubjectId] = useState('dsa')
@@ -174,31 +176,33 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
           </div>
         </div>
 
-        {/* Seamless Role View Switcher */}
-        <div className="mm-role-switcher" role="radiogroup" aria-label="Portal Mode">
-          <button
-            type="button"
-            className={`mm-role-btn ${activeRole === 'teacher' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveRole('teacher')
-              if (activeView === 'student-view') setActiveView('matrix')
-            }}
-          >
-            <UserCheck size={15} />
-            <span>Faculty / Teacher View</span>
-          </button>
-          <button
-            type="button"
-            className={`mm-role-btn ${activeRole === 'student' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveRole('student')
-              setActiveView('student-view')
-            }}
-          >
-            <GraduationCap size={15} />
-            <span>Student View ({currentStudent.name})</span>
-          </button>
-        </div>
+        {/* Seamless Role View Switcher - Only visible to Teacher, HOD, Faculty, Admin (Hidden from Student) */}
+        {!isStudentOnly && (
+          <div className="mm-role-switcher" role="radiogroup" aria-label="Portal Mode">
+            <button
+              type="button"
+              className={`mm-role-btn ${activeRole === 'teacher' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveRole('teacher')
+                if (activeView === 'student-view') setActiveView('matrix')
+              }}
+            >
+              <UserCheck size={15} />
+              <span>Faculty / Teacher View</span>
+            </button>
+            <button
+              type="button"
+              className={`mm-role-btn ${activeRole === 'student' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveRole('student')
+                setActiveView('student-view')
+              }}
+            >
+              <GraduationCap size={15} />
+              <span>Student View ({currentStudent.name})</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Top Level Section 1: Marks Management Dashboard Stats Bar */}
@@ -393,8 +397,10 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
             student={currentStudent}
             marksMap={marksMap}
             onOpenAnalytics={() => {
-              setActiveRole('teacher')
-              setActiveView('analytics')
+              if (!isStudentOnly) {
+                setActiveRole('teacher')
+                setActiveView('analytics')
+              }
             }}
           />
         ) : activeView === 'overview' ? (

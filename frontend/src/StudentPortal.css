@@ -1143,10 +1143,78 @@
 
 /* Breadcrumbs & Kicker */
 .portal-breadcrumb {
-  font-size: 12.5px !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px !important;
   font-weight: 700 !important;
   color: #64748b !important;
+  margin-bottom: 12px;
 }
+
+.portal-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #ffffff;
+  color: #1e293b !important;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.portal-back-btn:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #2563eb !important;
+  transform: translateX(-2px);
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.18);
+}
+
+.portal-back-btn svg {
+  color: inherit !important;
+  transition: transform 0.2s ease;
+}
+
+.portal-back-btn:hover svg {
+  transform: translateX(-2px);
+}
+
+.portal-breadcrumb-sep {
+  color: #cbd5e1 !important;
+  margin: 0 2px;
+  font-size: 13px;
+}
+
+.portal-breadcrumb-home {
+  background: none;
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  color: #64748b !important;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.portal-breadcrumb-home:hover {
+  color: #2563eb !important;
+  background: #eff6ff;
+}
+
+.portal-breadcrumb-slash {
+  color: #94a3b8 !important;
+  margin: 0 2px;
+  font-size: 13px;
+}
+
+.portal-breadcrumb-current,
 .portal-breadcrumb strong {
   font-size: 13px !important;
   font-weight: 800 !important;

@@ -1,0 +1,181 @@
+complaint,category
+"The water tap in my hostel bathroom is leaking continuously.",plumbing
+"The wash basin tap is broken and water is splashing everywhere.",plumbing
+"Hostel 1 floor 2 washroom pipe has burst, water flooding the corridor.",plumbing
+"Low water pressure in the shower on 3rd floor bathroom.",plumbing
+"The toilet flush tank is not filling up with water.",plumbing
+"Bathroom drain is severely clogged and dirty water is overflowing.",plumbing
+"Hot water geyser pipe is dripping water over the electrical socket.",plumbing
+"Water supply completely stopped in girls hostel block A since morning.",plumbing
+"The water filter on floor 1 has a broken faucet and is leaking onto the floor.",plumbing
+"The flush handle in toilet cubicle 3 is detached and not flushing.",plumbing
+"Sewage pipe leakage outside the hostel mess building smelling foul.",plumbing
+"Water leaking from ceiling right above the washroom mirror.",plumbing
+"Drain pipe underneath the lab sink is loose and dripping dirty water.",plumbing
+"There is no drinking water in the cooler near classroom 204.",plumbing
+"Overhead water tank in Kalam hostel is overflowing continuously onto the roof.",plumbing
+"Sink faucet is completely jammed and won't turn off, wasting water.",plumbing
+"Urinal sensor valve is continuously flushing water and won't stop.",plumbing
+"Water is dripping from the drain pipe under room 302 sink.",plumbing
+"Hostel shower head is cracked and spraying water at the ceiling.",plumbing
+"Bathroom pipe leakage causing slippery wet floor in the passage.",plumbing
+"Water pipe connected to the washing machine point in laundry room is loose.",plumbing
+"Toilet jet spray pipe is broken and leaking water on the floor.",plumbing
+"Clogged sink in the chemical lab with stagnant chemical water.",plumbing
+"Water pressure is zero in hostel room 204 attached bathroom.",plumbing
+"The main valve for washroom water line is rusted and dripping.",plumbing
+"Bathtub or basin drain blocked with hair and soap scum.",plumbing
+"Dripping faucet in the faculty staff room kitchenette.",plumbing
+"Water pipe joint has come apart in the hostel ground floor restroom.",plumbing
+"Tap handle broke off in my hand, water is gushing out uncontrollably.",plumbing
+"Geyser inlet pipe has a high pressure leak in hostel 2.",plumbing
+"Ceiling fan in room 204 is making an extremely loud screeching noise.",electrical
+"Tube light in classroom 302 is flickering violently and causing headache.",electrical
+"Power outlet / wall socket near my study table has burnt marks and sparks when plugged.",electrical
+"Main MCB circuit breaker trips repeatedly whenever AC is turned on.",electrical
+"The switch for the corridor light is completely jammed and won't turn on.",electrical
+"Exhaust fan in hostel bathroom stopped spinning completely.",electrical
+"Live wire exposed near the staircase switchboard in block B.",electrical
+"No power in room 105 while neighboring rooms have electricity.",electrical
+"Ceiling fan regulator is not controlling speed, stuck on high.",electrical
+"Air conditioning unit in computer lab 2 is not cooling and blowing warm air.",electrical
+"Electrical switchboard sparking whenever phone charger is inserted.",electrical
+"Street light outside girls hostel gate is not functioning, pitch dark at night.",electrical
+"Projector power cable in seminar hall has a short circuit.",electrical
+"Water cooler electrical plug is causing mild electric shock when touched.",electrical
+"Hostel corridor lights on 2nd floor are completely out.",electrical
+"Emergency exit light battery backup is dead and beeping.",electrical
+"Switch button cracked and electrical contacts visible inside.",electrical
+"Extension board in lab 4 smoked and power went off.",electrical
+"Power socket pin broken inside the outlet in study room.",electrical
+"Room fan is rotating at very slow speed even on maximum regulator level.",electrical
+"Short circuit smell coming from the hostel distribution panel.",electrical
+"Light bulb in the washroom fused and needs immediate replacement.",electrical
+"AC remote is not communicating with split AC in faculty room.",electrical
+"Voltage fluctuation in hostel block causing laptop charger to disconnect.",electrical
+"Solar water heater electrical backup element is not heating.",electrical
+"Corridor sensor light does not activate when people walk past.",electrical
+"Switch for the water dispenser in cafeteria is sparking.",electrical
+"Computer monitor power cable faulty and sparking at the rear.",electrical
+"Classroom 101 podium microphone power adapter is dead.",electrical
+"Three pin power receptacle loose in wall socket in room 310.",electrical
+"The hostel washroom on floor 3 is extremely dirty and smelling foul.",cleaning
+"Dustbin in the 2nd floor corridor is overflowing with garbage and attracting flies.",cleaning
+"Corridor floor is muddy and uncleaned after heavy rain.",cleaning
+"Stagnant dirty water accumulated near the hostel water cooler area.",cleaning
+"Hostel common room hasn't been swept or mopped for four days.",cleaning
+"Food waste dumped in the stairwell corner by students.",cleaning
+"Washroom mirrors and tiles are covered in grime and stains.",cleaning
+"Classroom 405 has dustbins full of empty food wrappers and plastic bottles.",cleaning
+"Spider webs and heavy dust on computer lab ceiling and window sills.",cleaning
+"Sanitary disposal bin in the girls washroom is full and needs clearing.",cleaning
+"Stray cat litter and dirt found inside the hostel corridor.",cleaning
+"Drinking water point has algae stains and requires deep sanitization.",cleaning
+"Hostel mess dining tables are sticky and dirty from yesterday lunch.",cleaning
+"Foul stench coming from dirty floor drains in the central corridor.",cleaning
+"Classroom desks have thick layer of dust and marker stains.",cleaning
+"Trash cans outside the cafeteria are overflowing and smelling terrible.",cleaning
+"Hostel room balcony filled with pigeon feathers and droppings.",cleaning
+"Stairway handrails are dusty and sticky, needs disinfection.",cleaning
+"Restroom soap dispenser is empty and floor is soaked with muddy footprints.",cleaning
+"Garbage bags left uncollected outside hostel block entrance for three days.",cleaning
+"Washroom toilet bowl is deeply stained and requires chemical scrub.",cleaning
+"Corridor tiles are extremely slippery due to spilled beverage.",cleaning
+"Classroom whiteboards are dirty and smeared with permanent marker.",cleaning
+"Hostel garden lawn has plastic waste and food containers strewn around.",cleaning
+"Mess hand wash basin area has accumulated leftover food scraps.",cleaning
+"Hostel 2 ground floor smells like rotting organic waste.",cleaning
+"Common study lounge table has spilled tea dried up for days.",cleaning
+"Dust and chalk residue all over the podium and front benches.",cleaning
+"Dead insect accumulation inside light fixtures in classroom 102.",cleaning
+"Hostel laundry area floor is muddy and covered in detergent grime.",cleaning
+"Hostel room door latch is broken and the door won't lock from inside.",maintenance
+"Wooden study desk in room 204 has a cracked leg and is wobbling.",maintenance
+"Window glass in classroom 201 is shattered and dangerous in wind.",maintenance
+"Cupboard door hinge has detached and is hanging loose.",maintenance
+"Main entrance door of block C has broken closer and bangs loudly.",maintenance
+"Ceiling plaster is peeling off and small chunks falling in room 112.",maintenance
+"Metal bed frame in hostel room 305 is squeaking loudly and missing screws.",maintenance
+"Curtain rod in hostel room 108 fell down from the wall anchors.",maintenance
+"Classroom 304 wooden door is swollen due to humidity and cannot be shut.",maintenance
+"Balcony railing paint is peeling and metal is rusting heavily.",maintenance
+"Tile on the corridor floor is loose and creating a tripping hazard.",maintenance
+"Classroom chair armrest is broken off, sharp edges exposed.",maintenance
+"Hostel room window mesh / net is torn, allowing mosquitoes to enter.",maintenance
+"Door lock cylinder jammed, key gets stuck when unlocking.",maintenance
+"Almirah lock handle broken, unable to secure personal belongings.",maintenance
+"Notice board glass sliding pane is cracked and jammed.",maintenance
+"Hostel staircase anti-slip rubber strip is torn and peeling off.",maintenance
+"Classroom wall has water seepage dampness causing paint to crumble.",maintenance
+"Bookshelf in department library is bent and about to collapse.",maintenance
+"False ceiling acoustic panel is sagging and about to fall in lecture hall.",maintenance
+"Door handle fell off completely in hostel room 215.",maintenance
+"Bed ladder for the top bunk bed is loose and unsafe to climb.",maintenance
+"Window sliding track is jammed with sand and window cannot close.",maintenance
+"Classroom desktop bench bench wood is splintered.",maintenance
+"Bathroom privacy door bolt is misaligned and will not latch.",maintenance
+"Hostel main gate iron hinge is rusty and scraping against the ground.",maintenance
+"Wall mirror in hostel washroom has broken corner.",maintenance
+"Hostel balcony drainage cover grill is rusted and broken.",maintenance
+"Notice board cork sheet is ripped and pins won't stay.",maintenance
+"Office chair hydraulic height cylinder is broken and sinking.",maintenance
+"Campus Wi-Fi network GIFT_STUDENT is not connecting in block A.",internet_it
+"Internet speed in the hostel is extremely slow, cannot load university portal.",internet_it
+"LAN Ethernet port in hostel room 204 is physically damaged or has no link.",internet_it
+"Wi-Fi access point in corridor 2nd floor is blinking red and offline.",internet_it
+"Computer lab machine #14 is stuck on blue screen of death during boot.",internet_it
+"Cannot access college ERP portal or marks system from student subnet.",internet_it
+"Hostel Wi-Fi keeps disconnecting every two minutes automatically.",internet_it
+"Ethernet cable wall jack in lab 3 has bent pins and no connectivity.",internet_it
+"DNS resolution failing when trying to connect to academic research portals.",internet_it
+"Campus proxy server is rejecting student login credentials.",internet_it
+"Desktop computer in library terminal 5 won't turn on at all.",internet_it
+"Wi-Fi signal strength is only 1 bar inside hostel rooms on the west wing.",internet_it
+"Printer in computer lab 1 is showing offline and not taking print jobs.",internet_it
+"Internet gateway packet loss is over 60%, online classes are buffering.",internet_it
+"Hostel router is showing connected without internet access.",internet_it
+"Ethernet switch in the server rack is making clicking noise and ports down.",internet_it
+"Cannot connect to the institutional VPN from hostel network.",internet_it
+"Lab PC keyboard and mouse are not being detected by the CPU.",internet_it
+"Wi-Fi authentication captive portal page is not loading on mobile phones.",internet_it
+"Broadband speed dropped below 100 kbps across the entire residence block.",internet_it
+"Computer lab 3 projector HDMI input port is not transmitting video signal.",internet_it
+"LAN socket near faculty desk has dead network connection.",internet_it
+"Wi-Fi password expired and new credentials are not being accepted.",internet_it
+"Network IP address conflict notification appearing on student laptops.",internet_it
+"Library RFID digital catalog kiosk software is frozen on error screen.",internet_it
+"Cisco access point on 4th floor rebooting continuously.",internet_it
+"Unable to access GitHub or coding websites through university firewall.",internet_it
+"Classroom smart interactive display board touch sensor is unresponsive.",internet_it
+"High ping and latency on campus network during evening hours.",internet_it
+"Optical fiber patch cable near the router is bent and showing signal loss.",internet_it
+"I lost my college ID card yesterday near the canteen and need a duplicate.",other
+"Hostel students playing loud loud music late night after midnight curfew.",other
+"The quality of rice served in the hostel dinner mess was undercooked.",other
+"Stray dogs roaming inside the campus ground barking at pedestrians.",other
+"Bus #7 arrived 35 minutes late at the morning transit stop.",other
+"Canteen counter staff was rude and refused to issue change.",other
+"Requesting permission for weekend hackathon project extension in the lab.",other
+"Query regarding scholarship application verification status at accounts.",other
+"Someone parked their two wheeler blocking the main hostel walkway.",other
+"Gym equipment dumbbells are missing from the hostel recreation room.",other
+"Hostel mess food menu has not changed as promised by student council.",other
+"Inquiry regarding duplicate semester grade sheet dispatch dates.",other
+"Campus security guard asked for gate pass after 6 PM.",other
+"Need refund for double deduction on canteen RFID smart card.",other
+"Lost my water bottle in seminar hall during the guest lecture.",other
+"Noise from construction work near hostel disturbing exam preparation.",other
+"Library fine erroneously deducted from my student balance.",other
+"Need endorsement stamp on railway concession travel pass.",other
+"College bus air conditioning was switched off despite humid weather.",other
+"Query regarding placement drive registration link not opening on portal.",other
+"Canteen lunch meal was cold and vegetables were stale.",other
+"Requesting change of hostel room for personal medical reasons.",other
+"Stray cattle entered the campus sports ground.",other
+"Lost wallet near the central auditorium with driving license inside.",other
+"Hostel night curfew timing clarification needed for final year students.",other
+"I want to complain about something but I am not sure who handles it.",other
+"Random issue in campus.",other
+"Can someone please help me with an issue?",other
+"Everything is not working properly here.",other
+"I need urgent assistance regarding general campus services.",other

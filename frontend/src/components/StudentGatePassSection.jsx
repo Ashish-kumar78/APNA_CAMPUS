@@ -313,7 +313,7 @@ export default function StudentGatePassSection({ student: propStudent }) {
                       <strong style={{ color: '#4338ca', fontFamily: 'monospace', fontSize: '0.92rem' }}>
                         {pass.id}
                       </strong>
-                      <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{pass.appliedAt}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '2px' }}>{pass.appliedAt}</div>
                     </td>
 
                     <td>
@@ -369,7 +369,7 @@ export default function StudentGatePassSection({ student: propStudent }) {
                           <span>{pass.uploadedApplicationDoc.fileName}</span>
                         </button>
                       ) : (
-                        <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>No document</span>
+                        <span style={{ color: '#64748b', fontSize: '0.78rem', fontWeight: 500 }}>No document</span>
                       )}
                     </td>
 

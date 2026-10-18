@@ -96,7 +96,7 @@ function openPrintReport(title, htmlBody) {
         .kpi-label { font-size: 10px; color: #3b82f6; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
         .kpi-value { font-size: 22px; font-weight: 800; color: #1e3a8a; margin: 4px 0 2px; }
         .kpi-sub { font-size: 10px; color: #64748b; }
-        .footer { margin-top: 32px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+        .footer { margin-top: 32px; font-size: 10px; color: #64748b; font-weight: 500; border-top: 1px solid #e2e8f0; padding-top: 12px; }
         @media print { .no-print { display: none; } body { padding: 16px; } }
       </style>
     </head>
@@ -437,7 +437,7 @@ export default function ManagementPortal({ account, onLogout }) {
               </div>
 
               {/* Row 3 — Additional Stats */}
-              <div className="mgmt-kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+              <div className="mgmt-kpi-grid-6">
                 <KPI label="Library Volumes" value="32,450" sub="4,120 Active Circulations" icon={<BookOpen />} color="#0891b2" bg="#ecfeff" topBar="linear-gradient(90deg, #0891b2, #22d3ee)" trend="neutral" />
                 <KPI label="Research Papers" value="87" sub="Published · 23 Scopus/WoS" icon={<Globe />} color="#7c3aed" bg="#f5f3ff" topBar="linear-gradient(90deg, #7c3aed, #a78bfa)" />
                 <KPI label="Bus Fleet" value="36" sub="Routes Covering 18 Zones" icon={<Bus />} color="#059669" bg="#ecfdf5" topBar="linear-gradient(90deg, #059669, #34d399)" trend="neutral" />
@@ -559,7 +559,7 @@ export default function ManagementPortal({ account, onLogout }) {
                             background: '#f8faff', borderRadius: 8, padding: '0.65rem 0.85rem',
                             border: '1px solid rgba(15,23,42,0.06)',
                           }}>
-                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{stat.label}</div>
+                            <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{stat.label}</div>
                             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
                           </div>
                         ))}
@@ -912,7 +912,7 @@ export default function ManagementPortal({ account, onLogout }) {
                           }}>{n.tag}</span>
                         </div>
                         <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a', marginBottom: 3 }}>{n.title}</div>
-                        <div style={{ fontSize: '0.73rem', color: '#94a3b8', fontWeight: 600 }}>{n.date}</div>
+                        <div style={{ fontSize: '0.73rem', color: '#64748b', fontWeight: 600 }}>{n.date}</div>
                       </div>
                     ))}
                   </div>
@@ -939,7 +939,7 @@ export default function ManagementPortal({ account, onLogout }) {
                       ].map((item, i) => (
                         <div key={i} className="mgmt-timeline-item">
                           <div className="mgmt-timeline-dot" style={{ color: item.color, background: '#fff' }} />
-                          <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700, marginBottom: 2 }}>{item.date}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, marginBottom: 2 }}>{item.date}</div>
                           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>{item.title}</div>
                           <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{item.sub}</div>
                         </div>

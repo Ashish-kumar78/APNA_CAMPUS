@@ -226,8 +226,8 @@
 }
 
 .form-control-time-btn .time-placeholder {
-  color: #94a3b8;
-  font-weight: normal;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .form-control-textarea {
@@ -912,7 +912,7 @@
   border-radius: 8px;
   border: 1.5px solid transparent;
   background: transparent;
-  color: #94a3b8;
+  color: #cbd5e1;
   cursor: pointer;
   transition: all 0.2s;
   line-height: 1;
@@ -933,7 +933,7 @@
 .clock-colon {
   font-size: 2.2rem;
   font-weight: 800;
-  color: #64748b;
+  color: #94a3b8;
   line-height: 1;
 }
 
@@ -951,7 +951,7 @@
   border-radius: 6px;
   border: 1px solid #334155;
   background: #1e293b;
-  color: #94a3b8;
+  color: #cbd5e1;
   cursor: pointer;
   transition: all 0.15s;
 }

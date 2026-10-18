@@ -1870,7 +1870,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#38bdf8' }}>{selectedPassForPrint.passNumber || selectedPassForPrint.id}</div>
-                    <small style={{ fontSize: '0.65rem', color: '#94a3b8' }}>Session 2026-27</small>
+                    <small style={{ fontSize: '0.65rem', color: '#cbd5e1', fontWeight: 600 }}>Session 2026-27</small>
                   </div>
                 </div>
 
@@ -1905,7 +1905,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                   </div>
                 </div>
 
-                <div style={{ borderTop: '1px dashed rgba(255,255,255,0.2)', paddingTop: '0.75rem', marginTop: '0.75rem', fontSize: '0.7rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ borderTop: '1px dashed rgba(255,255,255,0.2)', paddingTop: '0.75rem', marginTop: '0.75rem', fontSize: '0.7rem', color: '#cbd5e1', fontWeight: 500, display: 'flex', justifyContent: 'space-between' }}>
                   <span>Validity: {selectedPassForPrint.validity || 'Autumn 2026'}</span>
                   <span>Non-Transferable Official Pass</span>
                 </div>

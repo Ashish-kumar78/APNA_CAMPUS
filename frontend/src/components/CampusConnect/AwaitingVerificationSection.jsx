@@ -145,19 +145,19 @@ export default function AwaitingVerificationSection({ account, onOpenConversatio
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, background: 'rgba(0,0,0,0.25)', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
                 <div>
-                  <strong style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', display: 'block' }}>Originally Requested By</strong>
+                  <strong style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block' }}>Originally Requested By</strong>
                   <span style={{ fontSize: '0.82rem', color: '#f8fafc', fontWeight: 600 }}>{item.request.studentName} ({item.request.studentRoll})</span>
                 </div>
                 <div>
-                  <strong style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', display: 'block' }}>Uploaded Contributor</strong>
+                  <strong style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block' }}>Uploaded Contributor</strong>
                   <span style={{ fontSize: '0.82rem', color: '#38bdf8', fontWeight: 600 }}>{item.request.uploadedBy?.name} ({item.request.uploadedBy?.roll})</span>
                 </div>
                 <div>
-                  <strong style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', display: 'block' }}>Attached Document</strong>
+                  <strong style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block' }}>Attached Document</strong>
                   <span style={{ fontSize: '0.82rem', color: '#f8fafc', fontWeight: 600 }}>{item.request.uploadFile?.title} ({item.request.uploadFile?.size})</span>
                 </div>
                 <div>
-                  <strong style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', display: 'block' }}>Submission Timestamp</strong>
+                  <strong style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', display: 'block' }}>Submission Timestamp</strong>
                   <span style={{ fontSize: '0.82rem', color: '#f8fafc', fontWeight: 600 }}>{item.request.uploadedBy?.time || 'Today'}</span>
                 </div>
               </div>

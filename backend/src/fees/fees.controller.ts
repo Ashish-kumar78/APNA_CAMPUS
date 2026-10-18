@@ -180,9 +180,20 @@ export class FeesController {
   }
 
   @Get('documents')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get student financial documents and fee receipts' })
-  async getStudentDocuments(@Query('rollNumber') rollNumber?: string) {
-    const data = await this.feesService.getStudentFinancialDocuments(rollNumber);
+  async getStudentDocuments(@CurrentUser() user: any, @Query('rollNumber') rollNumber?: string) {
+    const role = normalizeRole(user.role);
+    let targetRoll = rollNumber;
+    if (role === 'student') {
+      const studentRoll = user.student?.rollNumber || user.identifier;
+      if (rollNumber && rollNumber.toLowerCase() !== studentRoll.toLowerCase()) {
+        throw new ForbiddenException('Access denied. You can only view your own financial documents.');
+      }
+      targetRoll = studentRoll;
+    }
+    const data = await this.feesService.getStudentFinancialDocuments(targetRoll);
     return { success: true, count: data.length, data };
   }
 }

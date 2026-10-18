@@ -369,6 +369,84 @@ async function main() {
       phone: '+91 94370 00015',
       passwordHash: defaultHash,
     },
+
+    // 15. Admissions Staff
+    {
+      identifier: 'ADM-OFF-01',
+      email: 'admissions@gift.edu.in',
+      name: 'Ms. Sasmita Mohapatra',
+      role: Role.ADMISSIONS,
+      department: 'Admissions & Student Intake Office',
+      designation: 'Senior Admissions Officer',
+      detail: 'Counseling, Verification & Enrollment',
+      phone: '+91 94370 00016',
+      passwordHash: defaultHash,
+      permissions: ['admission.view', 'admission.verify', 'admission.approve', 'students.create'],
+    },
+    {
+      identifier: 'admissions',
+      email: 'admissions.demo@gift.edu.in',
+      name: 'Ms. Sasmita Mohapatra',
+      role: Role.ADMISSIONS,
+      department: 'Admissions & Student Intake Office',
+      designation: 'Senior Admissions Officer',
+      detail: 'Counseling, Verification & Enrollment',
+      phone: '+91 94370 00016',
+      passwordHash: defaultHash,
+      permissions: ['admission.view', 'admission.verify', 'admission.approve', 'students.create'],
+    },
+
+    // 16. Maintenance Staff
+    {
+      identifier: 'MTN-OPS-01',
+      email: 'maintenance@gift.edu.in',
+      name: 'Mr. Pradeep Kumar Barik',
+      role: Role.MAINTENANCE,
+      department: 'Estate Maintenance & Civil Works',
+      designation: 'Estate Maintenance Supervisor',
+      detail: 'Plumbing, Electrical, Civil & Repairs',
+      phone: '+91 94370 00017',
+      passwordHash: defaultHash,
+      permissions: ['complaints.view', 'complaints.update', 'maintenance.manage'],
+    },
+    {
+      identifier: 'maintenance',
+      email: 'maintenance.demo@gift.edu.in',
+      name: 'Mr. Pradeep Kumar Barik',
+      role: Role.MAINTENANCE,
+      department: 'Estate Maintenance & Civil Works',
+      designation: 'Estate Maintenance Supervisor',
+      detail: 'Plumbing, Electrical, Civil & Repairs',
+      phone: '+91 94370 00017',
+      passwordHash: defaultHash,
+      permissions: ['complaints.view', 'complaints.update', 'maintenance.manage'],
+    },
+
+    // 17. Non-teaching Staff
+    {
+      identifier: 'NT-OFF-01',
+      email: 'nonteaching@gift.edu.in',
+      name: 'Mr. Ramesh Chandra Jena',
+      role: Role.NON_TEACHING,
+      department: 'General Administrative Services',
+      designation: 'Administrative Officer',
+      detail: 'Records, Despatch & Campus Coordination',
+      phone: '+91 94370 00018',
+      passwordHash: defaultHash,
+      permissions: ['records.view', 'general.manage'],
+    },
+    {
+      identifier: 'non_teaching',
+      email: 'nonteaching.demo@gift.edu.in',
+      name: 'Mr. Ramesh Chandra Jena',
+      role: Role.NON_TEACHING,
+      department: 'General Administrative Services',
+      designation: 'Administrative Officer',
+      detail: 'Records, Despatch & Campus Coordination',
+      phone: '+91 94370 00018',
+      passwordHash: defaultHash,
+      permissions: ['records.view', 'general.manage'],
+    },
   ];
 
   for (const u of usersToCreate) {
@@ -696,7 +774,469 @@ async function main() {
     ],
   });
 
-  console.log('✅ Successfully seeded ALL 14 ROLES, complete Autonomous College entities, exam schedules, library catalog, placement drives, transit fleet, labs, and system settings!');
+  // 11. Seed Campus Staff Roster (Plumbers, Electricians, Cleaning, Maintenance, IT)
+  await prisma.staffRoster.deleteMany();
+  await prisma.staffRoster.createMany({
+    data: [
+      {
+        id: 'STF-PLUMB-01',
+        staffType: 'SUPPORT',
+        name: 'Suresh Mohapatra',
+        gender: 'Male',
+        roleOrCategory: 'Plumber & Water Works',
+        speciality: 'Plumbing & Sanitary Systems',
+        outletOrZone: 'Hostels & Academic Blocks',
+        roomOffice: 'Central Maintenance Yard #03',
+        phone: '+91 94379 11231',
+        email: 'suresh.plumber@apnacampus.edu.in',
+        shift: 'Morning Shift (07:00 AM - 03:30 PM)',
+        status: 'Active',
+        qualification: 'ITI Plumbing & Water Fitting (Govt Certified)',
+      },
+      {
+        id: 'STF-PLUMB-02',
+        staffType: 'SUPPORT',
+        name: 'Bikram Keshari Jena',
+        gender: 'Male',
+        roleOrCategory: 'Plumber & Water Works',
+        speciality: 'Plumbing',
+        outletOrZone: 'Boys & Girls Residences',
+        roomOffice: 'Hostel Maintenance Cell',
+        phone: '+91 94379 11232',
+        email: 'bikram.plumber@apnacampus.edu.in',
+        shift: 'Evening Shift (01:00 PM - 09:00 PM)',
+        status: 'Active',
+        qualification: 'ITI Pipe & Drainage Engineering',
+      },
+      {
+        id: 'STF-ELEC-01',
+        staffType: 'SUPPORT',
+        name: 'Pramod Panda',
+        gender: 'Male',
+        roleOrCategory: 'Electrician & Power Maintenance',
+        speciality: 'Electrical & Substation',
+        outletOrZone: 'Entire Campus & Power Substation',
+        roomOffice: 'Substation Control Room',
+        phone: '+91 94378 99120',
+        email: 'pramod.electrician@apnacampus.edu.in',
+        shift: 'General Shift (08:30 AM - 05:00 PM)',
+        status: 'Active',
+        qualification: 'ITI Electrical & Industrial Wiring',
+      },
+      {
+        id: 'STF-ELEC-02',
+        staffType: 'SUPPORT',
+        name: 'Manas Ranjan Sahu',
+        gender: 'Male',
+        roleOrCategory: 'Electrician & Power Maintenance',
+        speciality: 'Electrical Appliances',
+        outletOrZone: 'Hostel Wings & Mess Blocks',
+        roomOffice: 'Electrical Bay B-02',
+        phone: '+91 94378 99121',
+        email: 'manas.electrician@apnacampus.edu.in',
+        shift: 'Afternoon Shift (12:00 PM - 08:30 PM)',
+        status: 'Active',
+        qualification: 'Diploma in Electrical Engineering',
+      },
+      {
+        id: 'STF-CLEAN-01',
+        staffType: 'SUPPORT',
+        name: 'Laxmi Parida',
+        gender: 'Female',
+        roleOrCategory: 'Housekeeping Supervisor',
+        speciality: 'Cleaning & Sanitation',
+        outletOrZone: 'Sarojini Girls Residence & Block A',
+        roomOffice: 'Housekeeping Desk G-01',
+        phone: '+91 94380 22342',
+        email: 'laxmi.clean@apnacampus.edu.in',
+        shift: 'Morning Shift (06:30 AM - 03:00 PM)',
+        status: 'Active',
+        qualification: 'Senior Facility Management Certificate',
+      },
+      {
+        id: 'STF-CLEAN-02',
+        staffType: 'SUPPORT',
+        name: 'Gopal Charan Das',
+        gender: 'Male',
+        roleOrCategory: 'Housekeeping Supervisor',
+        speciality: 'Cleaning & Waste Management',
+        outletOrZone: 'Gandhi Boys Residence & Block B',
+        roomOffice: 'Housekeeping Desk B-01',
+        phone: '+91 94381 33453',
+        email: 'gopal.clean@apnacampus.edu.in',
+        shift: 'Morning Shift (06:30 AM - 03:00 PM)',
+        status: 'Active',
+        qualification: 'Certified Campus Sanitation Lead',
+      },
+      {
+        id: 'STF-MAINT-01',
+        staffType: 'SUPPORT',
+        name: 'Santosh Kumar Swain',
+        gender: 'Male',
+        roleOrCategory: 'Civil & Carpentry Maintenance',
+        speciality: 'Maintenance & Furniture',
+        outletOrZone: 'Campus Wide Buildings',
+        roomOffice: 'Carpentry & Civil Workshop #01',
+        phone: '+91 94382 77881',
+        email: 'santosh.carpenter@apnacampus.edu.in',
+        shift: 'General Shift (08:30 AM - 05:00 PM)',
+        status: 'Active',
+        qualification: 'Vocational Carpentry & Civil Works',
+      },
+      {
+        id: 'STF-IT-01',
+        staffType: 'SUPPORT',
+        name: 'Tapan Barik',
+        gender: 'Male',
+        roleOrCategory: 'Senior Lab & Network Technician',
+        speciality: 'Internet/IT & Lab Systems',
+        outletOrZone: 'Computer Science Labs & Hostel Wi-Fi',
+        roomOffice: 'Server Room & Lab Complex 2',
+        phone: '+91 94382 44564',
+        email: 'tapan.it@apnacampus.edu.in',
+        shift: 'General Shift (09:00 AM - 05:30 PM)',
+        status: 'Active',
+        qualification: 'B.Sc IT & Cisco CCNA Certified',
+      },
+    ],
+  });
+
+  // 12. Seed Demonstration AI-Assigned Complaints
+  await prisma.hostelComplaint.deleteMany();
+  await prisma.hostelComplaint.createMany({
+    data: [
+      {
+        id: 'CMP-2026-101',
+        studentName: 'Rakesh Das',
+        rollNumber: '01',
+        hostel: 'Sarojini Girls Residence (Block A)',
+        roomNumber: '204',
+        location: 'Room 204 Attached Bathroom',
+        category: 'Plumbing',
+        predictedCategory: 'plumbing',
+        confidence: 0.88,
+        needsReview: false,
+        title: 'Water tap leaking continuously in bathroom',
+        description: 'The bathroom wash basin tap is broken at the valve and dripping water constantly.',
+        priority: 'High',
+        status: 'In Progress',
+        assignedStaffId: 'STF-PLUMB-01',
+        assignedStaffName: 'Suresh Mohapatra',
+        assignedStaffPhone: '+91 94379 11231',
+        assignedStaffRole: 'Plumber & Water Works',
+        assignedAt: new Date(Date.now() - 3600000 * 2),
+        filedDate: '18 Oct 2026',
+        resolutionNotes: 'Assigned to Suresh Mohapatra. Replacement ceramic washer scheduled for 11:30 AM.',
+      },
+      {
+        id: 'CMP-2026-102',
+        studentName: 'Rakesh Das',
+        rollNumber: '01',
+        hostel: 'Sarojini Girls Residence (Block A)',
+        roomNumber: '204',
+        location: 'Study Area Desk #02',
+        category: 'Electrical',
+        predictedCategory: 'electrical',
+        confidence: 0.82,
+        needsReview: false,
+        title: 'Ceiling fan making screeching noise',
+        description: 'The ceiling fan bearing has deteriorated and makes a loud squeaking sound on speed 4 and 5.',
+        priority: 'Medium',
+        status: 'Assigned',
+        assignedStaffId: 'STF-ELEC-01',
+        assignedStaffName: 'Pramod Panda',
+        assignedStaffPhone: '+91 94378 99120',
+        assignedStaffRole: 'Electrician & Power Maintenance',
+        assignedAt: new Date(Date.now() - 3600000 * 4),
+        filedDate: '18 Oct 2026',
+        resolutionNotes: 'Allocated to Pramod Panda based on lowest pending electrical workload.',
+      },
+      {
+        id: 'CMP-2026-103',
+        studentName: 'Amit Nayak',
+        rollNumber: '02',
+        hostel: 'Gandhi Boys Residence',
+        roomNumber: '102',
+        location: 'Corridor 2nd Floor West Wing',
+        category: 'Cleaning',
+        predictedCategory: 'cleaning',
+        confidence: 0.91,
+        needsReview: false,
+        title: 'Overflowing dustbin outside room 102',
+        description: 'Trash can has not been cleared since Saturday morning and is attracting insects.',
+        priority: 'Medium',
+        status: 'Resolved',
+        assignedStaffId: 'STF-CLEAN-02',
+        assignedStaffName: 'Gopal Charan Das',
+        assignedStaffPhone: '+91 94381 33453',
+        assignedStaffRole: 'Housekeeping Supervisor',
+        assignedAt: new Date(Date.now() - 3600000 * 8),
+        resolvedAt: new Date(Date.now() - 3600000 * 1),
+        filedDate: '17 Oct 2026',
+        resolutionNotes: 'Sanitized corridor and emptied industrial bins. Inspected by floor warden.',
+      },
+      {
+        id: 'CMP-2026-104',
+        studentName: 'Raj Sahoo',
+        rollNumber: '03',
+        hostel: 'Gandhi Boys Residence',
+        roomNumber: '305',
+        location: 'Hostel 1 Common Hall',
+        category: 'Other',
+        predictedCategory: 'other',
+        confidence: 0.42,
+        needsReview: true,
+        reviewReason: 'Uncertain classification (conf=0.42 < 0.65). Requires supervisor category tagging.',
+        title: 'Some disturbance happening in common area',
+        description: 'There is general noise and issues near the entrance hallway after dinner hours.',
+        priority: 'Low',
+        status: 'Needs Review',
+        assignedStaffId: null,
+        assignedStaffName: null,
+        assignedStaffPhone: null,
+        assignedStaffRole: null,
+        filedDate: '18 Oct 2026',
+        resolutionNotes: 'Pending administrator review in triage queue.',
+      },
+    ],
+  });
+
+  // 17. Seed Institution & Campuses
+  const inst = await prisma.institution.upsert({
+    where: { code: 'GIFT-AUTO' },
+    update: {},
+    create: {
+      code: 'GIFT-AUTO',
+      name: 'Gandhi Institute For Technology (Autonomous)',
+      tagline: 'Autonomous Institution Affiliated to BPUT, Accredited NAAC Grade A++',
+      address: 'Gramadiha, Gangapada, PO: Janla, Bhubaneswar, Odisha 752054',
+      website: 'https://gift.edu.in',
+      phone: '+91 674 2111666',
+      email: 'admissions@gift.edu.in',
+      affiliations: ['UGC Autonomous', 'BPUT Odisha', 'AICTE Approved', 'NAAC A++ Grade'],
+    },
+  });
+
+  const mainCampus = await prisma.campus.upsert({
+    where: { code: 'CAMPUS-MAIN' },
+    update: {},
+    create: {
+      institutionId: inst.id,
+      code: 'CAMPUS-MAIN',
+      name: 'Bhubaneswar Main Campus',
+      city: 'Bhubaneswar',
+      state: 'Odisha',
+      isMainCampus: true,
+    },
+  });
+
+  await prisma.campus.upsert({
+    where: { code: 'CAMPUS-CITY' },
+    update: {},
+    create: {
+      institutionId: inst.id,
+      code: 'CAMPUS-CITY',
+      name: 'Executive City Learning Campus',
+      city: 'Bhubaneswar',
+      state: 'Odisha',
+      isMainCampus: false,
+    },
+  });
+
+  // 18. Seed Programmes (Configurable durations & degree types)
+  const programmes = [
+    { code: 'BTECH-CSE', name: 'Bachelor of Technology in Computer Science & Engineering', degreeType: 'UG', departmentCode: 'CSE', durationYears: 4, totalSemesters: 8, creditsRequired: 160 },
+    { code: 'BTECH-AIML', name: 'Bachelor of Technology in Artificial Intelligence & Machine Learning', degreeType: 'UG', departmentCode: 'AIML', durationYears: 4, totalSemesters: 8, creditsRequired: 160 },
+    { code: 'BTECH-ECE', name: 'Bachelor of Technology in Electronics & Communication', degreeType: 'UG', departmentCode: 'ECE', durationYears: 4, totalSemesters: 8, creditsRequired: 160 },
+    { code: 'BCA', name: 'Bachelor of Computer Applications', degreeType: 'UG', departmentCode: 'CSE', durationYears: 3, totalSemesters: 6, creditsRequired: 120 },
+    { code: 'BBA', name: 'Bachelor of Business Administration', degreeType: 'UG', departmentCode: 'MBA', durationYears: 3, totalSemesters: 6, creditsRequired: 120 },
+    { code: 'DIPLOMA-EE', name: 'Diploma in Electrical Engineering', degreeType: 'Diploma', departmentCode: 'EEE', durationYears: 3, totalSemesters: 6, creditsRequired: 110 },
+  ];
+
+  for (const prog of programmes) {
+    await prisma.programme.upsert({
+      where: { code: prog.code },
+      update: prog,
+      create: prog,
+    });
+  }
+
+  // 19. Seed Academic Years
+  await prisma.academicYear.upsert({
+    where: { year: '2026-27' },
+    update: { isCurrent: true },
+    create: { year: '2026-27', isCurrent: true, startDate: '01-07-2026', endDate: '30-06-2027' },
+  });
+  await prisma.academicYear.upsert({
+    where: { year: '2025-26' },
+    update: { isCurrent: false },
+    create: { year: '2025-26', isCurrent: false, startDate: '01-07-2025', endDate: '30-06-2026' },
+  });
+
+  // 20. Seed Applicants (Multi-stage admission pipeline)
+  const cseProg = await prisma.programme.findUnique({ where: { code: 'BTECH-CSE' } });
+  const bcaProg = await prisma.programme.findUnique({ where: { code: 'BCA' } });
+  const bbaProg = await prisma.programme.findUnique({ where: { code: 'BBA' } });
+
+  const applicantsToSeed = [
+    {
+      applicationNo: 'APP-2026-001',
+      name: 'Subhashree Behera',
+      email: 'subhashree.app@gmail.com',
+      phone: '+91 94371 99011',
+      gender: 'Female',
+      dob: '12-08-2005',
+      category: 'General',
+      programmeId: cseProg?.id,
+      programmeName: 'B.Tech Computer Science & Engineering',
+      academicYear: '2026-27',
+      tenthMarks: 88.5,
+      twelfthMarks: 86.0,
+      entranceExam: 'JEE Main 2026',
+      entranceRank: 34120,
+      status: 'APPLIED' as any,
+    },
+    {
+      applicationNo: 'APP-2026-002',
+      name: 'Manish Kumar Pradhan',
+      email: 'manish.app@gmail.com',
+      phone: '+91 94371 99022',
+      gender: 'Male',
+      dob: '05-11-2004',
+      category: 'OBC',
+      programmeId: cseProg?.id,
+      programmeName: 'B.Tech Computer Science & Engineering',
+      academicYear: '2026-27',
+      tenthMarks: 91.0,
+      twelfthMarks: 89.2,
+      entranceExam: 'OJEE 2026',
+      entranceRank: 1204,
+      status: 'VERIFIED' as any,
+      verifiedBy: 'Ms. Sasmita Mohapatra (Admissions Officer)',
+    },
+    {
+      applicationNo: 'APP-2026-003',
+      name: 'Aditi Priyadarshini',
+      email: 'aditi.app@gmail.com',
+      phone: '+91 94371 99033',
+      gender: 'Female',
+      dob: '20-04-2005',
+      category: 'General',
+      programmeId: bcaProg?.id,
+      programmeName: 'Bachelor of Computer Applications',
+      academicYear: '2026-27',
+      tenthMarks: 84.0,
+      twelfthMarks: 81.5,
+      entranceExam: 'Direct Merit',
+      status: 'APPROVED' as any,
+      verifiedBy: 'Ms. Sasmita Mohapatra',
+      approvedBy: 'Sri Manoranjan Tripathy (CAO)',
+    },
+  ];
+
+  for (const app of applicantsToSeed) {
+    await prisma.applicant.upsert({
+      where: { applicationNo: app.applicationNo },
+      update: app,
+      create: app,
+    });
+  }
+
+  // 21. Link existing seeded Student (Rakesh Das) to BTECH-CSE and seed StudentEnrollments
+  const enrolledStudent = await prisma.student.findFirst({ where: { rollNumber: '01' } });
+  if (enrolledStudent && cseProg) {
+    await prisma.student.update({
+      where: { id: enrolledStudent.id },
+      data: { programmeId: cseProg.id },
+    });
+
+    // Seed historical enrollments for semesters 1-4 and current semester 5
+    const semestersToEnroll = [
+      { semester: 'Semester 1', year: '2024-25', status: 'Completed', sgpa: 8.2, cgpa: 8.2, attendance: 94.0 },
+      { semester: 'Semester 2', year: '2024-25', status: 'Completed', sgpa: 8.5, cgpa: 8.35, attendance: 93.5 },
+      { semester: 'Semester 3', year: '2025-26', status: 'Completed', sgpa: 8.3, cgpa: 8.33, attendance: 91.0 },
+      { semester: 'Semester 4', year: '2025-26', status: 'Completed', sgpa: 8.6, cgpa: 8.40, attendance: 92.5 },
+      { semester: 'Semester 5', year: '2026-27', status: 'Enrolled', sgpa: null, cgpa: 8.42, attendance: 92.0 },
+    ];
+
+    for (const se of semestersToEnroll) {
+      const existingEnrollment = await prisma.studentEnrollment.findFirst({
+        where: { studentId: enrolledStudent.id, semester: se.semester, academicYear: se.year },
+      });
+      if (!existingEnrollment) {
+        await prisma.studentEnrollment.create({
+          data: {
+            studentId: enrolledStudent.id,
+            programmeId: cseProg.id,
+            academicYear: se.year,
+            semester: se.semester,
+            section: 'Section A',
+            status: se.status,
+            sgpa: se.sgpa,
+            cgpa: se.cgpa,
+            attendanceRate: se.attendance,
+          },
+        });
+      }
+    }
+  }
+
+  // 22. Seed Course Offerings and Faculty Assignments
+  const facultyMember = await prisma.faculty.findFirst({ where: { employeeId: 'FAC-042' } });
+  const subjectsToOffer = [
+    { code: 'CS501', name: 'Database Management Systems', credits: 4, type: 'Theory + Lab' },
+    { code: 'CS502', name: 'Design and Analysis of Algorithms', credits: 4, type: 'Theory + Lab' },
+    { code: 'CS503', name: 'Software Engineering & Agile', credits: 3, type: 'Theory' },
+    { code: 'CS504', name: 'Computer Networks', credits: 4, type: 'Theory + Lab' },
+    { code: 'CS505', name: 'Artificial Intelligence & Systems', credits: 3, type: 'Theory' },
+    { code: 'CS506', name: 'Web Engineering & Cloud Architecture', credits: 4, type: 'Theory + Lab' },
+  ];
+
+  for (const s of subjectsToOffer) {
+    const offering = await prisma.courseOffering.upsert({
+      where: {
+        subjectCode_academicYear_semester: {
+          subjectCode: s.code,
+          academicYear: '2026-27',
+          semester: 'Semester 5',
+        },
+      },
+      update: {},
+      create: {
+        subjectCode: s.code,
+        subjectName: s.name,
+        programmeId: cseProg?.id,
+        department: 'CSE',
+        semester: 'Semester 5',
+        academicYear: '2026-27',
+        credits: s.credits,
+        type: s.type,
+      },
+    });
+
+    if (facultyMember && (s.code === 'CS501' || s.code === 'CS506')) {
+      await prisma.facultyAssignment.upsert({
+        where: {
+          courseOfferingId_facultyId_section: {
+            courseOfferingId: offering.id,
+            facultyId: facultyMember.id,
+            section: 'Section A',
+          },
+        },
+        update: {},
+        create: {
+          courseOfferingId: offering.id,
+          facultyId: facultyMember.id,
+          section: 'Section A',
+          academicYear: '2026-27',
+          role: 'Lead Instructor',
+          allocatedHours: 4,
+        },
+      });
+    }
+  }
+
+  console.log('✅ Successfully seeded ALL 17 ROLES, normalized academic structures, admission applicants, semester enrollments, and course allocations!');
 }
 
 main()

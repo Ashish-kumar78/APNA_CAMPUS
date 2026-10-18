@@ -26,6 +26,7 @@ import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 import { erpStore } from '../services/erpStore.js';
+import { api } from '../services/api.js';
 
 export default function StaffPortal({ account, onLogout, onSwitchRole }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -39,17 +40,91 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
     { id: 'VIS-903', name: 'Mr. Rajesh Jena', org: 'Voltas HVAC Services', purpose: 'Central AC Maintenance', phone: '+91 94378 22114', inTime: '08:00 AM', status: 'Departed (Checked Out 12:45 PM)' },
   ]);
 
+  const [liveComplaints, setLiveComplaints] = useState([
+    {
+      id: 'CMP-2026-101',
+      studentName: 'Rakesh Das',
+      rollNumber: '01',
+      location: 'Room 204 Attached Bathroom',
+      category: 'Plumbing',
+      predictedCategory: 'plumbing',
+      confidence: 0.88,
+      title: 'Water tap leaking continuously in bathroom',
+      description: 'The bathroom wash basin tap is broken at the valve and dripping water constantly.',
+      priority: 'High',
+      status: 'In Progress',
+      assignedStaffName: 'Suresh Mohapatra',
+      assignedStaffRole: 'Plumber & Water Works',
+      filedDate: '18 Oct 2026',
+      resolutionNotes: 'Assigned to Suresh Mohapatra. Ceramic washer replacement scheduled for 11:30 AM.',
+    },
+    {
+      id: 'CMP-2026-102',
+      studentName: 'Rakesh Das',
+      rollNumber: '01',
+      location: 'Study Area Desk #02',
+      category: 'Electrical',
+      predictedCategory: 'electrical',
+      confidence: 0.82,
+      title: 'Ceiling fan making screeching noise',
+      description: 'The ceiling fan bearing has deteriorated and makes a loud squeaking sound on speed 4 and 5.',
+      priority: 'Medium',
+      status: 'Assigned',
+      assignedStaffName: 'Pramod Panda',
+      assignedStaffRole: 'Electrician & Power Maintenance',
+      filedDate: '18 Oct 2026',
+      resolutionNotes: 'Allocated to Pramod Panda based on lowest pending electrical workload.',
+    }
+  ]);
+  const [resolvingTicket, setResolvingTicket] = useState(null);
+  const [resolutionInput, setResolutionInput] = useState('');
+
+  const loadLiveComplaints = async () => {
+    try {
+      const res = await api.getComplaints();
+      if (res && res.data && res.data.length > 0) {
+        setLiveComplaints(res.data);
+      }
+    } catch {
+      // keep fallback data
+    }
+  };
+
   useEffect(() => {
-    const handleUpdate = () => {
-      setStaffWorkspaces([...erpStore.getStaffWorkspaces()]);
-    };
-    window.addEventListener('erp_store_updated', handleUpdate);
-    return () => window.removeEventListener('erp_store_updated', handleUpdate);
+    loadLiveComplaints();
   }, []);
 
-  const triggerToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3500);
+  const handleStartWork = async (ticket) => {
+    try {
+      await api.updateComplaintStatus(ticket.id, {
+        status: 'In Progress',
+        resolutionNotes: `Technician accepted work order and commenced on-site diagnosis at ${new Date().toLocaleTimeString()}.`,
+      });
+      triggerToast(`Ticket #${ticket.id} accepted! Status: In Progress`);
+      loadLiveComplaints();
+    } catch {
+      setLiveComplaints(prev => prev.map(t => t.id === ticket.id ? { ...t, status: 'In Progress' } : t));
+      triggerToast(`Ticket #${ticket.id} marked In Progress!`);
+    }
+  };
+
+  const handleResolveTicket = async () => {
+    if (!resolvingTicket) return;
+    const notes = resolutionInput.trim() || 'Work completed and verified on-site by maintenance staff.';
+    try {
+      await api.updateComplaintStatus(resolvingTicket.id, {
+        status: 'Resolved',
+        resolutionNotes: notes,
+      });
+      triggerToast(`Ticket #${resolvingTicket.id} marked as RESOLVED!`);
+      loadLiveComplaints();
+    } catch {
+      setLiveComplaints(prev => prev.map(t => t.id === resolvingTicket.id ? { ...t, status: 'Resolved', resolutionNotes: notes } : t));
+      triggerToast(`Ticket #${resolvingTicket.id} marked as Resolved!`);
+    } finally {
+      setResolvingTicket(null);
+      setResolutionInput('');
+    }
   };
 
   const handleUpdateTicketStatus = (id, newStatus) => {
@@ -284,69 +359,123 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
           {/* TAB 1: TICKETS */}
           {activeTab === 'tickets' && (
             <div className="erp-panel">
-              <div className="erp-panel-header">
+              <div className="erp-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <div className="erp-panel-title">
-                  <h3>Campus Maintenance & Laboratory Work Orders</h3>
-                  <p>Real-time technical tasks allocated across campus blocks</p>
+                  <h3>AI-Assigned Campus Maintenance &amp; Work Orders</h3>
+                  <p>Real-time tasks allocated automatically based on AI classification and technician workload</p>
                 </div>
+                <button
+                  className="erp-btn erp-btn-secondary"
+                  onClick={loadLiveComplaints}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
+                >
+                  <RotateCcw size={14} /> Refresh Tasks
+                </button>
               </div>
 
+              {/* LIVE COMPLAINTS TABLE */}
               <div className="erp-table-responsive">
                 <table className="erp-table">
                   <thead>
                     <tr>
-                      <th>Ticket ID & Title</th>
-                      <th>Work Category</th>
+                      <th>Ticket ID &amp; Location</th>
+                      <th>Issue &amp; Details</th>
+                      <th>Category &amp; AI Confidence</th>
                       <th>Assigned Member</th>
                       <th>Priority</th>
-                      <th>Created Date</th>
                       <th>Current Status</th>
-                      <th>Action</th>
+                      <th>Resolution / Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {staffWorkspaces.map(t => (
+                    {liveComplaints.map(t => (
                       <tr key={t.id}>
-                        <td><strong>{t.title}</strong></td>
                         <td>
-                          <span style={{ background: 'rgba(20, 184, 166, 0.12)', color: '#2dd4bf', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
-                            {t.category}
-                          </span>
+                          <strong style={{ color: '#0f172a' }}>{t.id}</strong>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                            📍 {t.location || 'Campus Residence'}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: '#475569' }}>
+                            Student: {t.studentName} ({t.rollNumber || '01'})
+                          </div>
                         </td>
-                        <td style={{ color: '#cbd5e1' }}>{t.assignedTo}</td>
+                        <td style={{ maxWidth: '280px' }}>
+                          <strong style={{ color: '#0f172a', fontSize: '0.88rem' }}>{t.title}</strong>
+                          {t.description && (
+                            <p style={{ margin: '3px 0 0', fontSize: '0.76rem', color: '#475569', lineHeight: 1.35 }}>
+                              {t.description}
+                            </p>
+                          )}
+                          {t.resolutionNotes && (
+                            <div style={{ marginTop: '4px', fontSize: '0.72rem', color: '#0f766e', fontStyle: 'italic' }}>
+                              Note: {t.resolutionNotes}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <span style={{ background: '#ccfbf1', color: '#0f766e', border: '1px solid #99f6e4', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, display: 'inline-block', width: 'fit-content' }}>
+                              {t.category}
+                            </span>
+                            {t.predictedCategory && (
+                              <span style={{ fontSize: '0.7rem', color: '#7e22ce', fontWeight: 600 }}>
+                                ✨ AI: {t.predictedCategory} ({Math.round((t.confidence || 0.85) * 100)}%)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ color: '#0f172a', fontSize: '0.84rem' }}>
+                          <strong>{t.assignedStaffName || 'Unassigned (In Review)'}</strong>
+                          {t.assignedStaffRole && (
+                            <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '2px' }}>{t.assignedStaffRole}</div>
+                          )}
+                        </td>
                         <td>
                           <span style={{
-                            background: t.priority === 'High' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(56, 189, 248, 0.15)',
-                            color: t.priority === 'High' ? '#f87171' : '#38bdf8',
+                            background: t.priority === 'High' ? '#fee2e2' : '#e0f2fe',
+                            color: t.priority === 'High' ? '#b91c1c' : '#0369a1',
+                            border: t.priority === 'High' ? '1px solid #fecaca' : '1px solid #bae6fd',
                             padding: '2px 8px',
                             borderRadius: '4px',
                             fontSize: '0.75rem',
-                            fontWeight: 600,
+                            fontWeight: 700,
                           }}>
                             {t.priority}
                           </span>
                         </td>
-                        <td style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{t.createdAt}</td>
                         <td>
                           <span style={{
-                            color: t.status === 'Completed' ? '#22c55e' : t.status === 'In Progress' ? '#38bdf8' : '#f59e0b',
-                            fontWeight: 600,
+                            color: t.status === 'Resolved' ? '#15803d' : t.status === 'In Progress' ? '#0284c7' : t.status === 'Needs Review' ? '#b45309' : '#6d28d9',
+                            fontWeight: 700,
                             fontSize: '0.82rem',
                           }}>
                             {t.status}
                           </span>
                         </td>
                         <td>
-                          {t.status !== 'Completed' ? (
+                          {t.status === 'Assigned' || t.status === 'Pending' ? (
                             <button
                               className="erp-btn erp-btn-secondary"
-                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
-                              onClick={() => handleUpdateTicketStatus(t.id, 'Completed')}
+                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', background: '#0284c7', color: '#fff', border: 'none' }}
+                              onClick={() => handleStartWork(t)}
                             >
-                              Mark Done
+                              Accept &amp; Start Work
+                            </button>
+                          ) : t.status === 'In Progress' ? (
+                            <button
+                              className="erp-btn erp-btn-secondary"
+                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', background: '#059669', color: '#fff', border: 'none' }}
+                              onClick={() => {
+                                setResolvingTicket(t);
+                                setResolutionInput('');
+                              }}
+                            >
+                              Resolve Ticket
                             </button>
                           ) : (
-                            <span style={{ fontSize: '0.8rem', color: '#22c55e' }}>Resolved</span>
+                            <span style={{ fontSize: '0.8rem', color: '#22c55e', fontWeight: 600 }}>
+                              ✓ Resolved
+                            </span>
                           )}
                         </td>
                       </tr>
@@ -354,6 +483,82 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
                   </tbody>
                 </table>
               </div>
+
+              {/* Modal for adding resolution notes */}
+              {resolvingTicket && (
+                <div style={{
+                  position: 'fixed',
+                  inset: 0,
+                  background: 'rgba(0,0,0,0.65)',
+                  backdropFilter: 'blur(4px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 9999,
+                  padding: '1rem',
+                }}>
+                  <div style={{
+                    background: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '14px',
+                    padding: '1.5rem',
+                    maxWidth: '480px',
+                    width: '100%',
+                    color: '#f8fafc',
+                  }}>
+                    <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem', color: '#38bdf8' }}>
+                      Complete Work Order: #{resolvingTicket.id}
+                    </h3>
+                    <p style={{ margin: '0 0 1rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
+                      {resolvingTicket.title} · 📍 {resolvingTicket.location}
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '1rem' }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Resolution Notes &amp; Verification Action</label>
+                      <textarea
+                        rows={3}
+                        value={resolutionInput}
+                        onChange={e => setResolutionInput(e.target.value)}
+                        placeholder="e.g. Replaced faulty washer and tested tap under full pressure. Verified zero leakage."
+                        style={{
+                          background: '#0f172a',
+                          border: '1px solid #334155',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          padding: '8px 10px',
+                          fontSize: '0.85rem',
+                          resize: 'vertical',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className="erp-btn erp-btn-secondary"
+                        onClick={() => setResolvingTicket(null)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        style={{
+                          background: '#10b981',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '0.45rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                        onClick={handleResolveTicket}
+                      >
+                        ✓ Mark Resolved &amp; Close Order
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -383,16 +588,16 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
                   <tbody>
                     {visitorsList.map(v => (
                       <tr key={v.id}>
-                        <td><strong>{v.id}</strong></td>
-                        <td><strong>{v.name}</strong></td>
-                        <td style={{ color: '#cbd5e1' }}>{v.org}</td>
-                        <td>{v.purpose}</td>
-                        <td style={{ color: '#38bdf8' }}>{v.phone}</td>
-                        <td style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{v.inTime}</td>
+                        <td><strong style={{ color: '#0f172a' }}>{v.id}</strong></td>
+                        <td><strong style={{ color: '#0f172a' }}>{v.name}</strong></td>
+                        <td style={{ color: '#475569', fontWeight: 500 }}>{v.org}</td>
+                        <td style={{ color: '#1e293b' }}>{v.purpose}</td>
+                        <td style={{ color: '#0284c7', fontWeight: 600 }}>{v.phone}</td>
+                        <td style={{ fontSize: '0.8rem', color: '#475569' }}>{v.inTime}</td>
                         <td>
                           <span style={{
-                            color: v.status.includes('Inside') ? '#22c55e' : '#94a3b8',
-                            fontWeight: 600,
+                            color: v.status.includes('Inside') ? '#16a34a' : '#64748b',
+                            fontWeight: 700,
                             fontSize: '0.8rem',
                           }}>
                             {v.status}
@@ -415,7 +620,7 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
                   <p>Council letters, university degree certificates, and speed-post dispatches</p>
                 </div>
               </div>
-              <p style={{ color: '#94a3b8' }}>
+              <p style={{ color: '#475569', fontSize: '0.9rem', lineHeight: 1.5 }}>
                 All physical and postal documents are indexed with speed post tracking IDs and synchronized with administrative document vault.
               </p>
             </div>

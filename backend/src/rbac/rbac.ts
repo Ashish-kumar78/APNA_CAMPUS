@@ -356,6 +356,50 @@ export const rolePolicies: Record<string, RolePolicy> = {
     scope: 'MODULE',
     permissions: ['canteen.manage', 'canteen.orders'],
   },
+
+  // 15. Admissions Staff
+  admissions: {
+    scope: 'COLLEGE',
+    permissions: [
+      'admission.view',
+      'admission.verify',
+      'admission.approve',
+      'admission.manage',
+      'students.view_all',
+      'students.create',
+      'reports.view',
+      'reports.generate',
+    ],
+  },
+
+  // 16. Maintenance Staff
+  maintenance: {
+    scope: 'COLLEGE',
+    permissions: [
+      'complaints.view_all',
+      'complaints.update',
+      'maintenance.manage',
+      'staff.maintenance',
+      'staff.manage_equipment',
+      'reports.view',
+    ],
+  },
+
+  // 17. Non-teaching Staff
+  non_teaching: {
+    scope: 'MODULE',
+    permissions: [
+      'records.view',
+      'general.manage',
+      'visitors.view',
+      'visitors.checkin',
+      'visitors.checkout',
+      'dispatch.view',
+      'dispatch.create',
+      'dispatch.update',
+      'reports.view',
+    ],
+  },
 };
 
 /**
@@ -368,12 +412,15 @@ export function normalizeRole(role: string): string {
   if (cleaned === 'principal' || cleaned === 'director') return 'principal';
   if (cleaned === 'management' || cleaned === 'trustee' || cleaned === 'chairman') return 'management';
   if (cleaned === 'admin' || cleaned === 'admin_ops' || cleaned === 'college_admin') return 'admin';
+  if (cleaned === 'admissions' || cleaned === 'admission' || cleaned === 'admission_staff') return 'admissions';
   if (cleaned === 'exam_cell' || cleaned === 'exam' || cleaned === 'exam_staff' || cleaned === 'coe' || cleaned === 'controller_of_examinations') return 'exam_cell';
   if (cleaned === 'accounts' || cleaned === 'finance' || cleaned === 'accounts_staff') return 'accounts';
   if (cleaned === 'library' || cleaned === 'librarian') return 'library';
   if (cleaned === 'placement' || cleaned === 'training_placement' || cleaned === 'placement_officer') return 'placement';
   if (cleaned === 'transport' || cleaned === 'transport_staff') return 'transport';
   if (cleaned === 'hostel' || cleaned === 'warden' || cleaned === 'hostel_staff') return 'hostel';
+  if (cleaned === 'maintenance' || cleaned === 'maintenance_staff') return 'maintenance';
+  if (cleaned === 'non_teaching' || cleaned === 'nonteaching') return 'non_teaching';
   if (cleaned === 'staff' || cleaned === 'labs' || cleaned === 'lab_staff') return 'staff';
   if (cleaned === 'hod' || cleaned === 'head_of_department') return 'hod';
   if (cleaned === 'faculty' || cleaned === 'teacher' || cleaned === 'professor' || cleaned === 'assistant_professor' || cleaned === 'associate_professor' || cleaned === 'lecturer') return 'faculty';

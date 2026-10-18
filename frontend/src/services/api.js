@@ -146,24 +146,53 @@ export const api = {
       body: JSON.stringify({ studentRoll, reason }),
     }),
   getMyResidence: (rollNumber = '01') => request(`/hostel/my-residence?rollNumber=${rollNumber}`),
-  getComplaints: (rollNumber, category, status) => {
-    const q = new URLSearchParams();
-    if (rollNumber) q.append('rollNumber', rollNumber);
-    if (category) q.append('category', category);
-    if (status) q.append('status', status);
+  getComplaints: (params = {}) => {
+    // Supports both legacy string (rollNumber) or object payload with filters
+    let q = new URLSearchParams();
+    if (typeof params === 'string') {
+      q.append('rollNumber', params);
+    } else if (typeof params === 'object' && params !== null) {
+      if (params.rollNumber) q.append('rollNumber', params.rollNumber);
+      if (params.category && params.category !== 'ALL') q.append('category', params.category);
+      if (params.status && params.status !== 'ALL') q.append('status', params.status);
+      if (params.assignedStaffId) q.append('assignedStaffId', params.assignedStaffId);
+      if (params.needsReview !== undefined) q.append('needsReview', String(params.needsReview));
+      if (params.search) q.append('search', params.search);
+    }
     const qs = q.toString();
     return request(`/hostel/complaints${qs ? '?' + qs : ''}`);
   },
+  previewAIComplaint: (text, categoryHint) =>
+    request('/hostel/complaints/preview-ai', {
+      method: 'POST',
+      body: JSON.stringify({ text, categoryHint }),
+    }),
+  previewVisionComplaint: (imageBase64, filename, locationHint) =>
+    request('/hostel/complaints/preview-vision', {
+      method: 'POST',
+      body: JSON.stringify({ imageBase64, filename, locationHint }),
+    }),
   lodgeComplaint: (payload) =>
     request('/hostel/complaints', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  updateComplaintStatus: (id, status, assignedStaff, resolutionNotes) =>
-    request(`/hostel/complaints/${id}/status`, {
+  getTriageComplaints: () => request('/hostel/complaints/triage'),
+  updateComplaintStatus: (id, statusOrPayload, assignedStaff, resolutionNotes) => {
+    const body = typeof statusOrPayload === 'object'
+      ? statusOrPayload
+      : { status: statusOrPayload, assignedStaff, resolutionNotes };
+    return request(`/hostel/complaints/${id}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status, assignedStaff, resolutionNotes }),
+      body: JSON.stringify(body),
+    });
+  },
+  reassignComplaint: (id, payload) =>
+    request(`/hostel/complaints/${id}/reassign`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
     }),
+  getStaffRosterWithWorkload: () => request('/hostel/staff-roster'),
   getVisitors: () => request('/hostel/visitors'),
   issueVisitorPass: (payload) =>
     request('/hostel/visitors', {
@@ -743,7 +772,91 @@ export const api = {
     window.URL.revokeObjectURL(downloadUrl);
     return { success: true, filename };
   },
+
+  // 25. Admissions & Intake Pipeline
+  getAdmissionStats: () => request('/admission/stats'),
+  getApplicants: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admission/applicants${q ? '?' + q : ''}`);
+  },
+  getApplicantById: (id) => request(`/admission/applicants/${id}`),
+  createApplicant: (data) =>
+    request('/admission/applicants', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  verifyApplicant: (id) =>
+    request(`/admission/applicants/${id}/verify`, {
+      method: 'PATCH',
+    }),
+  rejectApplicant: (id, reason) =>
+    request(`/admission/applicants/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  approveAndEnrollApplicant: (id) =>
+    request(`/admission/applicants/${id}/approve`, {
+      method: 'POST',
+    }),
+
+  // 26. Account Activation & Password Recovery
+  verifyActivationToken: (token) => request(`/auth/verify-activation-token?token=${encodeURIComponent(token)}`),
+  activateAccount: (token, newPassword) =>
+    request('/auth/activate-account', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }),
+  forgotPassword: (identifier) =>
+    request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ identifier }),
+    }),
+  resetPassword: (resetToken, newPassword) =>
+    request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ resetToken, newPassword }),
+    }),
+
+  // 27. Normalized Academic Hierarchy & Course Allocation
+  getProgrammes: () => request('/academics/programmes'),
+  createProgramme: (data) =>
+    request('/academics/programmes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateProgramme: (id, data) =>
+    request(`/academics/programmes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  getAcademicYears: () => request('/academics/academic-years'),
+  createAcademicYear: (data) =>
+    request('/academics/academic-years', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getCourseOfferings: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/academics/course-offerings${q ? '?' + q : ''}`);
+  },
+  createCourseOffering: (data) =>
+    request('/academics/course-offerings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  assignFacultyToCourse: (data) =>
+    request('/academics/faculty-assignments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getStudentEnrollments: (studentId) => request(`/academics/enrollments/${studentId}`),
+  promoteStudentSemester: (data) =>
+    request('/academics/progression/promote', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
+
 
 export { feesApi } from './feesApi';
 export { notesApi } from './notesApi';

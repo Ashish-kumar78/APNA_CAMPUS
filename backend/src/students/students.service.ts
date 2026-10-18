@@ -52,6 +52,10 @@ export class StudentsService {
         guardians: true,
         addresses: true,
         documents: true,
+        programme: true,
+        enrollments: {
+          orderBy: { enrolledAt: 'asc' },
+        },
       },
     });
 
@@ -59,7 +63,15 @@ export class StudentsService {
       // Fallback: return primary student (Roll 01)
       return this.prisma.student.findFirst({
         where: { rollNumber: '01' },
-        include: { guardians: true, addresses: true, documents: true },
+        include: {
+          guardians: true,
+          addresses: true,
+          documents: true,
+          programme: true,
+          enrollments: {
+            orderBy: { enrolledAt: 'asc' },
+          },
+        },
       });
     }
 

@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AiAssignmentService } from './ai-assignment.service';
 
 @Injectable()
 export class HostelService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(HostelService.name);
+
+  constructor(
+    public readonly prisma: PrismaService,
+    public readonly aiAssignmentService: AiAssignmentService,
+  ) {}
 
   // ==========================================
   // 1. HOSTEL & INFRASTRUCTURE MANAGEMENT
@@ -271,13 +277,31 @@ export class HostelService {
   }
 
   // ==========================================
-  // 4. MAINTENANCE COMPLAINTS WORKFLOW
+  // 4. MAINTENANCE COMPLAINTS WORKFLOW (AI-POWERED)
   // ==========================================
-  async getComplaints(rollNumber?: string, category?: string, status?: string) {
+  async getComplaints(filter: {
+    rollNumber?: string;
+    category?: string;
+    status?: string;
+    assignedStaffId?: string;
+    needsReview?: boolean;
+    search?: string;
+  } = {}) {
     const where: any = {};
-    if (rollNumber) where.rollNumber = rollNumber;
-    if (category && category !== 'ALL') where.category = category;
-    if (status && status !== 'ALL') where.status = status;
+    if (filter.rollNumber) where.rollNumber = filter.rollNumber;
+    if (filter.category && filter.category !== 'ALL') where.category = filter.category;
+    if (filter.status && filter.status !== 'ALL') where.status = filter.status;
+    if (filter.assignedStaffId) where.assignedStaffId = filter.assignedStaffId;
+    if (typeof filter.needsReview === 'boolean') where.needsReview = filter.needsReview;
+
+    if (filter.search) {
+      where.OR = [
+        { title: { contains: filter.search, mode: 'insensitive' } },
+        { description: { contains: filter.search, mode: 'insensitive' } },
+        { studentName: { contains: filter.search, mode: 'insensitive' } },
+        { location: { contains: filter.search, mode: 'insensitive' } },
+      ];
+    }
 
     return this.prisma.hostelComplaint.findMany({
       where,
@@ -286,43 +310,196 @@ export class HostelService {
   }
 
   async lodgeComplaint(data: {
+    studentId?: string;
     studentName?: string;
     rollNumber?: string;
     hostel?: string;
     roomNumber?: string;
-    category: string;
-    title: string;
+    location?: string;
+    category?: string;
+    title?: string;
     description?: string;
     priority?: string;
+    attachmentUrl?: string;
+    filename?: string;
   }) {
-    return this.prisma.hostelComplaint.create({
+    let resolvedTitle = (data.title || '').trim();
+    let resolvedDesc = (data.description || '').trim();
+    let resolvedPriority = data.priority || 'Medium';
+
+    // Duplicate submission suppression (same student + title within last 60s)
+    if (resolvedTitle) {
+      const oneMinuteAgo = new Date(Date.now() - 60000);
+      const existingRecent = await this.prisma.hostelComplaint.findFirst({
+        where: {
+          rollNumber: data.rollNumber || '01',
+          title: resolvedTitle,
+          createdAt: { gte: oneMinuteAgo },
+        },
+      });
+      if (existingRecent) {
+        this.logger.warn(`Duplicate complaint suppressed for ${data.rollNumber}: "${resolvedTitle}". Returning existing record.`);
+        return existingRecent;
+      }
+    }
+
+    let aiResult: any;
+
+    // If an image is attached and title/description are empty or brief, run AI Vision first
+    if (data.attachmentUrl && (!resolvedTitle || !resolvedDesc)) {
+      this.logger.log('Detecting maintenance problem directly from uploaded photo...');
+      const visionRes = await this.aiAssignmentService.predictFromImage(
+        data.attachmentUrl,
+        data.filename,
+        data.location
+      );
+      if (!resolvedTitle) resolvedTitle = visionRes.title;
+      if (!resolvedDesc) resolvedDesc = visionRes.description;
+      resolvedPriority = visionRes.suggestedPriority || resolvedPriority;
+      aiResult = {
+        category: visionRes.collegeCategory || visionRes.category,
+        confidence: visionRes.confidence,
+        needsReview: visionRes.needsReview,
+        reviewReason: visionRes.needsReview ? 'Flagged for human supervisor verification' : undefined,
+        source: visionRes.source,
+      };
+    } else {
+      const complaintText = [resolvedTitle, resolvedDesc].filter(Boolean).join('. ');
+      aiResult = await this.aiAssignmentService.predictCategory(complaintText, data.category);
+    }
+
+    // Standardize 7 college categories taxonomy
+    const categoryMap: Record<string, string> = {
+      plumbing: 'Plumbing',
+      electrical: 'Electrical',
+      cleaning: 'Cleaning',
+      furniture: 'Furniture',
+      civil: 'Civil',
+      maintenance: 'Civil',
+      network: 'Network',
+      internet_it: 'Network',
+      other: 'Other',
+    };
+
+    // Student confirmed category always takes precedence over AI prediction
+    const studentSelected = data.category ? (categoryMap[data.category.toLowerCase()] || data.category) : null;
+    const aiSuggested = categoryMap[aiResult.category?.toLowerCase()] || 'Other';
+    const finalCategory = studentSelected || aiSuggested;
+
+    // 2. Run Automatic Staff Assignment engine using final verified category
+    const assignmentResult = await this.aiAssignmentService.assignStaffByWorkload(
+      finalCategory,
+      aiResult.needsReview
+    );
+
+    // 3. Determine lifecycle status
+    let initialStatus = 'Pending';
+    if (aiResult.needsReview) {
+      initialStatus = 'Needs Review';
+    } else if (assignmentResult.assignedStaffId) {
+      initialStatus = 'Assigned';
+    }
+
+    const resolutionNotes = assignmentResult.notes || (
+      aiResult.needsReview
+        ? 'Flagged for supervisor triage: ' + (aiResult.reviewReason || 'Uncertain classification')
+        : `Assigned to ${assignmentResult.assignedStaffName || 'maintenance staff'}.`
+    );
+
+    // 4. Save to PostgreSQL database safely
+    const complaint = await this.prisma.hostelComplaint.create({
       data: {
+        studentId: data.studentId || null,
         studentName: data.studentName || 'Rakesh Das',
         rollNumber: data.rollNumber || '01',
         hostel: data.hostel || 'Sarojini Girls Residence',
         roomNumber: data.roomNumber || '204',
-        category: data.category,
-        title: data.title,
-        priority: data.priority || 'Medium',
-        status: 'Pending',
+        location: data.location || (data.hostel ? `${data.hostel} · Rm ${data.roomNumber || 'N/A'}` : 'Campus'),
+        category: finalCategory,
+        predictedCategory: aiResult.category || finalCategory,
+        confidence: aiResult.confidence,
+        needsReview: aiResult.needsReview,
+        reviewReason: aiResult.reviewReason || null,
+        title: resolvedTitle || 'Maintenance Request',
+        description: resolvedDesc || resolvedTitle || 'Maintenance request submitted by student.',
+        priority: resolvedPriority,
+        status: initialStatus,
+        assignedStaffId: assignmentResult.assignedStaffId,
+        assignedStaffName: assignmentResult.assignedStaffName,
+        assignedStaffPhone: assignmentResult.assignedStaffPhone,
+        assignedStaffRole: assignmentResult.assignedStaffRole,
+        assignedAt: assignmentResult.assignedStaffId ? new Date() : null,
+        attachmentUrl: data.attachmentUrl || null,
         filedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        resolutionNotes: 'Assigned to resident warden for contractor scheduling.',
+        resolutionNotes,
       },
     });
+
+    this.logger.log(`Created Complaint #${complaint.id} [${finalCategory}] - Status: ${initialStatus}, Staff: ${assignmentResult.assignedStaffName || 'Unassigned'}`);
+    return complaint;
   }
+
+  async previewVisionComplaint(imageBase64: string, filename?: string, locationHint?: string) {
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      throw new BadRequestException('Image data (base64 string) is required for analysis.');
+    }
+
+    // Limit base64 length to ~7MB (~5MB raw image)
+    if (imageBase64.length > 7 * 1024 * 1024) {
+      throw new BadRequestException('Image payload exceeds maximum allowed size (5MB). Please upload a smaller photo.');
+    }
+
+    return this.aiAssignmentService.predictFromImage(imageBase64, filename, locationHint);
+  }
+
 
   async updateComplaintStatus(
     id: string,
     status: string,
     assignedStaff?: string,
     resolutionNotes?: string,
+    assignedStaffId?: string,
   ) {
+    const existing = await this.prisma.hostelComplaint.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`Complaint ticket with ID #${id} not found.`);
+    }
+
+    const updateData: any = { status };
+
+    if (resolutionNotes) {
+      updateData.resolutionNotes = resolutionNotes;
+    } else if (status === 'Resolved' && !existing.resolutionNotes?.includes('Resolved')) {
+      updateData.resolutionNotes = 'Work verified and marked resolved by maintenance supervisor.';
+    }
+
+    if (status === 'Resolved') {
+      updateData.resolvedAt = new Date();
+    }
+
+    // Support admin reassignment or manual staff assignment
+    if (assignedStaff) {
+      updateData.assignedStaffName = assignedStaff;
+      updateData.assignedAt = new Date();
+    }
+    if (assignedStaffId) {
+      updateData.assignedStaffId = assignedStaffId;
+      const staffMember = await this.prisma.staffRoster.findUnique({ where: { id: assignedStaffId } });
+      if (staffMember) {
+        updateData.assignedStaffName = staffMember.name;
+        updateData.assignedStaffPhone = staffMember.phone;
+        updateData.assignedStaffRole = staffMember.roleOrCategory;
+      }
+    }
+
+    // If supervisor manually approves/assigns a ticket previously in "Needs Review"
+    if (existing.needsReview && (status === 'Assigned' || status === 'In Progress')) {
+      updateData.needsReview = false;
+    }
+
     return this.prisma.hostelComplaint.update({
       where: { id },
-      data: {
-        status,
-        resolutionNotes: resolutionNotes || (status === 'Resolved' ? 'Verified by hostel maintenance supervisor.' : undefined),
-      },
+      data: updateData,
     });
   }
 

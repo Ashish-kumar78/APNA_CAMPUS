@@ -38,6 +38,7 @@ import HealthPage from './pages/HealthPage.jsx'
 import UniversityMarksView from './components/UniversityMarksView.jsx'
 
 import { findStudentByQuery, defaultDemoStudent, getStudentDocuments, addStudentDocument } from './services/studentStore.js'
+import { api } from './services/api.js'
 
 const profileTabs = [
   { label: 'Personal', icon: UserRound },
@@ -1034,6 +1035,39 @@ function PersonalDetails({ student }) {
 
 function AcademicDetails({ student }) {
   const s = student || {}
+  const [enrollments, setEnrollments] = useState([])
+  const [loadingEnrollments, setLoadingEnrollments] = useState(false)
+
+  useEffect(() => {
+    let isMounted = true
+    const query = s.registrationNumber || s.rollNumber || s.id
+    if (query) {
+      setLoadingEnrollments(true)
+      api.getStudentEnrollments(query)
+        .then((res) => {
+          if (isMounted && Array.isArray(res) && res.length > 0) {
+            setEnrollments(res)
+          }
+        })
+        .catch(() => {
+          // Keep default fallback
+        })
+        .finally(() => {
+          if (isMounted) setLoadingEnrollments(false)
+        })
+    }
+    return () => { isMounted = false }
+  }, [s.registrationNumber, s.rollNumber, s.id])
+
+  // Fallback demo enrollments if none returned yet from database
+  const displayEnrollments = enrollments.length > 0 ? enrollments : [
+    { id: 'enr-1', semester: 'Semester 1', academicYear: '2023-2024', section: 'A', sgpa: 8.14, cgpa: 8.14, status: 'COMPLETED', programme: { name: 'B.Tech Computer Science & Engineering', code: 'BTECH-CSE' } },
+    { id: 'enr-2', semester: 'Semester 2', academicYear: '2023-2024', section: 'A', sgpa: 8.42, cgpa: 8.28, status: 'COMPLETED', programme: { name: 'B.Tech Computer Science & Engineering', code: 'BTECH-CSE' } },
+    { id: 'enr-3', semester: 'Semester 3', academicYear: '2024-2025', section: 'A', sgpa: 8.56, cgpa: 8.37, status: 'COMPLETED', programme: { name: 'B.Tech Computer Science & Engineering', code: 'BTECH-CSE' } },
+    { id: 'enr-4', semester: 'Semester 4', academicYear: '2024-2025', section: 'A', sgpa: 8.60, cgpa: 8.43, status: 'COMPLETED', programme: { name: 'B.Tech Computer Science & Engineering', code: 'BTECH-CSE' } },
+    { id: 'enr-5', semester: 'Semester 5', academicYear: '2025-2026', section: 'A', sgpa: null, cgpa: 8.42, status: 'ACTIVE', programme: { name: 'B.Tech Computer Science & Engineering', code: 'BTECH-CSE' } },
+  ]
+
   const fields = [
     ['Course', s.course || 'Bachelor of Technology'],
     ['Batch', s.batch || 'BTECH 2028-P'],
@@ -1081,6 +1115,105 @@ function AcademicDetails({ student }) {
             ))}
           </tbody>
         </table>
+    ['Course', s.course || s.programme?.name || 'Bachelor of Technology (Autonomous)'],
+    ['Batch', s.batch || 'BTECH 2023–2027'],
+    ['Branch', s.branch || s.department || 'Computer Science & Engineering'],
+    ['Section', s.academicSection || s.section || 'CSE · Section A'],
+    ['House', s.house || 'Not assigned'],
+    ['Lab Group', s.labGroup || '1'],
+    ['Honors', s.honors || 'No'],
+    ['Minor', s.minor || 'No'],
+    ['Value added course-1', s.valueAdded1 || 'Cloud Architecture & DevOps'],
+    ['Value added course-2', s.valueAdded2 || 'Full-Stack React & NestJS'],
+    ['Value added course-3', s.valueAdded3 || 'Not selected'],
+    ['Admission Date', s.admissionDateFormatted || s.admissionDate || '05-08-2023'],
+    ['Entrance Examination', s.entranceExam || 'JEE (Main) / OJEE'],
+    ['Rank', s.rank || '2140 (State Merit)'],
+  ]
+  const qualifications = (s.qualifications && s.qualifications.length > 0)
+    ? s.qualifications.map(q => [q.qualification, q.institute, q.year, q.marks])
+    : [
+        ['10th', s.qual10thInstitute || 'Demo Secondary School', s.qual10thYear || '2021', s.qual10thMarks || '82.00%'],
+        ['12th', s.qual12thInstitute || 'Demo Senior Secondary School', s.qual12thYear || '2023', s.qual12thMarks || '86.00%'],
+        ['ITI', s.qualItiInstitute || 'Not applicable', s.qualItiYear || '—', s.qualItiMarks || '—'],
+        ['Diploma', s.qualDiplomaInstitute || 'Not applicable', s.qualDiplomaYear || '—', s.qualDiplomaMarks || '—'],
+        ['+3', s.qualPlus3Institute || 'Not applicable', s.qualPlus3Year || '—', s.qualPlus3Marks || '—'],
+        ['BCA', s.qualBcaInstitute || 'Not applicable', s.qualBcaYear || '—', s.qualBcaMarks || '—'],
+        ['BBA', s.qualBbaInstitute || 'Not applicable', s.qualBbaYear || '—', s.qualBbaMarks || '—'],
+        ['BTECH', s.qualBtechInstitute || 'Apna Campus Autonomous', s.qualBtechYear || '2027', s.qualBtechMarks || 'In progress (CGPA 8.42)'],
+      ]
+
+  return (
+    <div className="academic-details">
+      {/* Normalized Degree Programme & Semester Progression Section */}
+      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <GraduationCap size={18} color="#2563eb" />
+              <span>Academic Programme &amp; Semester Progression History</span>
+            </h3>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+              Normalized records synchronized with Autonomous Examination &amp; Admissions Database
+            </p>
+          </div>
+          <span style={{ fontSize: '0.75rem', background: '#dbeafe', color: '#1e40af', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
+            {loadingEnrollments ? 'Syncing...' : `${displayEnrollments.length} Enrolled Terms`}
+          </span>
+        </div>
+
+        <div className="attendance-table-wrap" style={{ margin: 0, boxShadow: 'none' }}>
+          <table className="attendance-summary-table" style={{ fontSize: '0.84rem' }}>
+            <thead>
+              <tr>
+                <th style={{ background: '#f1f5f9', color: '#334155' }}>Semester Term</th>
+                <th style={{ background: '#f1f5f9', color: '#334155' }}>Programme</th>
+                <th style={{ background: '#f1f5f9', color: '#334155' }}>Academic Year</th>
+                <th style={{ background: '#f1f5f9', color: '#334155' }}>Section</th>
+                <th style={{ background: '#f1f5f9', color: '#334155' }}>SGPA</th>
+                <th style={{ background: '#f1f5f9', color: '#334155' }}>CGPA</th>
+                <th style={{ background: '#f1f5f9', color: '#334155' }}>Enrollment Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayEnrollments.map((enr) => (
+                <tr key={enr.id || enr.semester}>
+                  <td style={{ fontWeight: 700, color: '#1e293b' }}>{enr.semester}</td>
+                  <td>{enr.programme?.name || s.department || 'B.Tech CSE'}</td>
+                  <td>{enr.academicYear}</td>
+                  <td>{enr.section || 'Section A'}</td>
+                  <td style={{ fontWeight: 600 }}>{enr.sgpa ? Number(enr.sgpa).toFixed(2) : '—'}</td>
+                  <td style={{ fontWeight: 700, color: '#0f172a' }}>{enr.cgpa ? Number(enr.cgpa).toFixed(2) : (s.cgpa || '8.42')}</td>
+                  <td>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      background: enr.status === 'ACTIVE' ? '#dcfce7' : '#f1f5f9',
+                      color: enr.status === 'ACTIVE' ? '#15803d' : '#475569',
+                      border: enr.status === 'ACTIVE' ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                    }}>
+                      {enr.status === 'ACTIVE' && <Check size={11} />}
+                      {enr.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="profile-data-table academic-data-table">
+        {fields.map(([label, value]) => (
+          <div className="profile-data-row wide-row" key={label}>
+            <div className="profile-data-field"><span>{label}</span><strong>{value}</strong></div>
+          </div>
+        ))}
       </div>
 
       <div className="erp-table-responsive" style={{ marginBottom: '20px' }}>

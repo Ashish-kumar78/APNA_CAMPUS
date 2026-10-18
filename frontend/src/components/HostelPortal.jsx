@@ -1808,7 +1808,7 @@ export default function HostelPortal({ account, onLogout }) {
                             <strong style={{ color: '#4338ca', fontFamily: 'monospace', fontSize: '0.88rem' }}>
                               {pass.id}
                             </strong>
-                            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{pass.appliedAt}</div>
+                            <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '2px' }}>{pass.appliedAt}</div>
                           </td>
 
                           <td>

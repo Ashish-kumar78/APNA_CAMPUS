@@ -48,6 +48,7 @@ import {
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import './AdminPortal.css';
 import AdminCommunicationControl from './CampusConnect/AdminCommunicationControl.jsx';
+import AdminComplaintsConsole from './AdminComplaintsConsole.jsx';
 import { downloadAdminReportPdf } from '../utils/pdfGenerator';
 import {
   initialDepartments,
@@ -1207,8 +1208,8 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                   { label: 'Roll Number', value: admissionCredential.rollNumber },
                 ].map(row => (
                   <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#64748b', fontSize: '12px', fontWeight: 500 }}>{row.label}</span>
-                    <span style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 600 }}>{row.value}</span>
+                    <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 600 }}>{row.label}</span>
+                    <span style={{ color: '#f8fafc', fontSize: '13px', fontWeight: 600 }}>{row.value}</span>
                   </div>
                 ))}
               </div>
@@ -1225,7 +1226,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
-                  <p style={{ color: '#64748b', fontSize: '11px', fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Registration Number (Login ID)</p>
+                  <p style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Registration Number (Login ID)</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <code style={{
                       flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
@@ -1241,7 +1242,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                   </div>
                 </div>
                 <div>
-                  <p style={{ color: '#64748b', fontSize: '11px', fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Default Password (must be changed on first login)</p>
+                  <p style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Default Password (must be changed on first login)</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <code style={{
                       flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
@@ -1505,6 +1506,15 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
             >
               <Wrench size={16} /> Other Members
             </button>
+            <button
+              className={`admin-nav-btn roster-child ${activeTab === 'ai-complaints' ? 'active' : ''}`}
+              onClick={() => setActiveTab('ai-complaints')}
+            >
+              <Wrench size={16} /> AI Complaints &amp; Assignment
+              <span className="admin-badge pending" style={{ marginLeft: 'auto', fontSize: '0.62rem', padding: '1px 5px', borderRadius: '10px' }}>
+                AI Smart
+              </span>
+            </button>
           </div>
 
           {/* ── 3. STRUCTURE & CURRICULA DROPDOWN ── */}
@@ -1629,6 +1639,13 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
           {activeTab === 'campus-connect-admin' && (
             <div style={{ marginBottom: '20px' }}>
               <AdminCommunicationControl account={account} />
+            </div>
+          )}
+
+          {/* TAB: AI COMPLAINT MANAGEMENT CONSOLE */}
+          {activeTab === 'ai-complaints' && (
+            <div style={{ marginBottom: '20px' }}>
+              <AdminComplaintsConsole />
             </div>
           )}
 
@@ -2302,7 +2319,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                         </td>
                         <td>
                           <span style={{ fontWeight: 600, color: '#059669' }}>{w.residentsCount}</span>
-                          <span style={{ color: '#94a3b8' }}> / {w.totalBeds} beds</span>
+                          <span style={{ color: '#64748b', fontWeight: 500 }}> / {w.totalBeds} beds</span>
                         </td>
                         <td>
                           <span className={`admin-badge ${w.status === 'Active' ? 'active' : 'inactive'}`}>
@@ -2488,7 +2505,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                         <td style={{ fontWeight: 600 }}>
                           {g.name}
                           {g.bloodGroup && (
-                            <span style={{ marginLeft: '6px', fontSize: '0.7rem', color: '#94a3b8' }}>({g.bloodGroup})</span>
+                            <span style={{ marginLeft: '6px', fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>({g.bloodGroup})</span>
                           )}
                         </td>
                         <td>
@@ -3607,9 +3624,9 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                       </p>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '0.65rem' }}>
-                        <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                           <div><span style={{ fontWeight: 600, color: '#475569' }}>{doc.uploadedBy}</span> · {doc.fileSize || '—'}</div>
-                          <div style={{ marginTop: '2px' }}>{new Date(doc.uploadedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                          <div style={{ marginTop: '2px', fontWeight: 500 }}>{new Date(doc.uploadedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                         </div>
                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           {(doc.visibleTo || []).map(role => (
@@ -3623,9 +3640,9 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                   ))}
 
                   {filteredDocs.length === 0 && (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-                      <FileText size={40} style={{ marginBottom: '0.75rem', opacity: 0.4 }} />
-                      <p style={{ margin: 0, fontWeight: 600 }}>No documents found</p>
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                      <FileText size={40} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
+                      <p style={{ margin: 0, fontWeight: 700, color: '#334155' }}>No documents found</p>
                       <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>Upload a document using the "Add Document" button above.</p>
                     </div>
                   )}
@@ -3677,9 +3694,9 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                               </div>
                             ) : (
                               <div>
-                                <Download size={28} color="#93c5fd" style={{ marginBottom: '0.4rem' }} />
-                                <div style={{ fontWeight: 600, color: '#3b82f6', fontSize: '0.9rem' }}>Click to select a file</div>
-                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>PDF, DOCX, XLSX, PPTX, JPG, PNG supported</div>
+                                <Download size={28} color="#3b82f6" style={{ marginBottom: '0.4rem' }} />
+                                <div style={{ fontWeight: 600, color: '#2563eb', fontSize: '0.9rem' }}>Click to select a file</div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>PDF, DOCX, XLSX, PPTX, JPG, PNG supported</div>
                               </div>
                             )}
                           </div>

@@ -24,28 +24,36 @@ enum Role {
   STAFF
   WARDEN
   CANTEEN
+  ADMISSIONS
+  MAINTENANCE
+  NON_TEACHING
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  identifier   String    @unique
-  passwordHash String
-  name         String
-  role         Role
-  department   String?
-  designation  String?
-  phone        String?
-  detail       String?
-  permissions  String[]  @default([])
-  lastLogin    DateTime?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id              String     @id @default(cuid())
+  email           String     @unique
+  identifier      String     @unique
+  passwordHash    String
+  name            String
+  role            Role
+  department      String?
+  designation     String?
+  phone           String?
+  detail          String?
+  permissions     String[]   @default([])
+  lastLogin       DateTime?
+  isActive        Boolean    @default(true)
+  activationToken String?    @unique
+  resetToken      String?    @unique
+  tokenExpiresAt  DateTime?
+  isActivated     Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
-  student      Student?
-  faculty      Faculty?
-  hod          Hod?
+  student         Student?
+  faculty         Faculty?
+  hod             Hod?
+  userRoles       UserRole[]
 
   @@index([identifier])
   @@index([email])
@@ -94,6 +102,9 @@ model Student {
   biometrics         BiometricLog[]
   complaints         HostelComplaint[]
   orders             CanteenOrder[]
+  programmeId        String?
+  programme          Programme?         @relation(fields: [programmeId], references: [id], onDelete: SetNull)
+  enrollments        StudentEnrollment[]
 
   @@index([rollNumber])
   @@index([studentId])
@@ -148,6 +159,8 @@ model Faculty {
   status           String   @default("Active")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  courseAssignments FacultyAssignment[]
 }
 
 model Hod {
@@ -369,21 +382,39 @@ model HostelRoom {
 }
 
 model HostelComplaint {
-  id              String   @id @default(cuid())
-  studentId       String?
-  student         Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  studentName     String
-  rollNumber      String
-  hostel          String
-  roomNumber      String
-  category        String
-  title           String
-  priority        String   @default("Medium")
-  status          String   @default("Pending")
-  filedDate       String
-  resolutionNotes String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  studentId          String?
+  student            Student?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  studentName        String
+  rollNumber         String
+  hostel             String
+  roomNumber         String
+  category           String
+  title              String
+  description        String?   @db.Text
+  location           String?   // Hostel, Classroom, Washroom, Laboratory, Library, etc.
+  predictedCategory  String?   // plumbing, electrical, cleaning, maintenance, internet_it, other
+  confidence         Float?    @default(0.0)
+  needsReview        Boolean   @default(false)
+  reviewReason       String?
+  assignedStaffId    String?
+  assignedStaffName  String?
+  assignedStaffPhone String?
+  assignedStaffRole  String?
+  attachmentUrl      String?   @db.Text
+  assignedAt         DateTime?
+  resolvedAt         DateTime?
+  priority           String    @default("Medium")
+  status             String    @default("Pending") // Pending, Assigned, In Progress, Needs Review, Resolved, Rejected
+  filedDate          String
+  resolutionNotes    String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([rollNumber])
+  @@index([category])
+  @@index([status])
+  @@index([assignedStaffId])
 }
 
 model HostelVisitor {
@@ -639,4 +670,180 @@ model WorkflowRequest {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
+model Institution {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  name         String
+  tagline      String?
+  address      String?
+  website      String?
+  phone        String?
+  email        String?
+  affiliations String[] @default([])
+  campuses     Campus[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Campus {
+  id            String      @id @default(cuid())
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  code          String      @unique
+  name          String
+  city          String
+  state         String
+  isMainCampus  Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Programme {
+  id              String              @id @default(cuid())
+  code            String              @unique
+  name            String
+  degreeType      String              @default("UG")
+  departmentCode  String              @default("CSE")
+  durationYears   Int                 @default(4)
+  totalSemesters  Int                 @default(8)
+  creditsRequired Int                 @default(160)
+  status          String              @default("Active")
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  students        Student[]
+  enrollments     StudentEnrollment[]
+  applicants      Applicant[]
+  courseOfferings CourseOffering[]
+}
+
+model AcademicYear {
+  id        String   @id @default(cuid())
+  year      String   @unique
+  startDate String?
+  endDate   String?
+  isCurrent Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+enum ApplicantStatus {
+  APPLIED
+  VERIFIED
+  APPROVED
+  REJECTED
+  ENROLLED
+}
+
+model Applicant {
+  id              String          @id @default(cuid())
+  applicationNo   String          @unique
+  name            String
+  email           String
+  phone           String
+  gender          String          @default("Not Specified")
+  dob             String?
+  category        String          @default("General")
+  programmeId     String?
+  programme       Programme?      @relation(fields: [programmeId], references: [id], onDelete: SetNull)
+  programmeName   String
+  academicYear    String          @default("2026-27")
+  tenthMarks      Float?
+  twelfthMarks    Float?
+  entranceExam    String?
+  entranceRank    Int?
+  status          ApplicantStatus @default(APPLIED)
+  verifiedBy      String?
+  approvedBy      String?
+  rejectionReason String?
+  documents       Json?           @default("[]")
+  studentId       String?
+  enrolledUserId  String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([applicationNo])
+  @@index([status])
+}
+
+model StudentEnrollment {
+  id             String     @id @default(cuid())
+  studentId      String
+  student        Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  programmeId    String?
+  programme      Programme? @relation(fields: [programmeId], references: [id], onDelete: SetNull)
+  academicYear   String     @default("2026-27")
+  semester       String
+  section        String     @default("Section A")
+  status         String     @default("Enrolled")
+  sgpa           Float?
+  cgpa           Float?
+  attendanceRate Float?
+  enrolledAt     DateTime   @default(now())
+  promotedAt     DateTime?
+
+  @@index([studentId])
+  @@index([academicYear])
+  @@index([semester])
+}
+
+model CourseOffering {
+  id           String     @id @default(cuid())
+  subjectCode  String
+  subjectName  String
+  programmeId  String?
+  programme    Programme? @relation(fields: [programmeId], references: [id], onDelete: SetNull)
+  department   String     @default("CSE")
+  semester     String     @default("Semester 5")
+  academicYear String     @default("2026-27")
+  credits      Int        @default(4)
+  type         String     @default("Theory + Lab")
+  status       String     @default("Active")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  facultyAssignments FacultyAssignment[]
+
+  @@unique([subjectCode, academicYear, semester])
+}
+
+model FacultyAssignment {
+  id               String         @id @default(cuid())
+  courseOfferingId String
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+  facultyId        String
+  faculty          Faculty        @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  section          String         @default("Section A")
+  academicYear     String         @default("2026-27")
+  role             String         @default("Lead Instructor")
+  allocatedHours   Int            @default(4)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([courseOfferingId, facultyId, section])
+}
+
+model Permission {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  name        String
+  module      String
+  description String?
+  userRoles   UserRole[]
+}
+
+model UserRole {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role
+  department   String?
+  permissionId String?
+  permission   Permission? @relation(fields: [permissionId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+
+  @@index([userId])
+  @@index([role])
+}
+
 

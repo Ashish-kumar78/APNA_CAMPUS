@@ -46,6 +46,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import './AdminPortal.css';
 import AdminCommunicationControl from './CampusConnect/AdminCommunicationControl.jsx';
 import AdminComplaintsConsole from './AdminComplaintsConsole.jsx';
@@ -1656,6 +1657,20 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
+            <RoleDashboardLanding
+              account={account}
+              roleKey="admin"
+              onLogout={onLogout}
+              onSwitchRole={onSwitchRole}
+              onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+              onNavigateTab={(tabId) => {
+                if (tabId === 'verify') setActiveTab('documents');
+                else if (tabId === 'certificates') setActiveTab('students');
+                else if (tabId === 'requests') setActiveTab('ai-complaints');
+              }}
+            />
+          )}
+          {false && activeTab === 'dashboard' && (
             <div>
               <div className="admin-view-header">
                 <div>

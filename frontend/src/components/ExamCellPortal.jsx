@@ -46,6 +46,7 @@ import './SuperAdminPortal.css';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import { erpStore } from '../services/erpStore.js';
 import { examsApi } from '../services/examsApi.js';
 import {
@@ -747,6 +748,21 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               TAB 0: CoE OPERATIONS DASHBOARD
              ========================================================================= */}
           {activeTab === 'dashboard' && (
+            <RoleDashboardLanding
+              roleKey="exam_cell"
+              account={account}
+              onLogout={onLogout}
+              onSwitchRole={onSwitchRole}
+              onNavigate={(target) => {
+                if (target === 'exam-sched') setActiveTab('timetable');
+                else if (target === 'exam-eval') setActiveTab('digital_evaluation');
+                else if (target === 'exam-subs') setActiveTab('moderation');
+                else setActiveTab('timetable');
+              }}
+            />
+          )}
+
+          {false && activeTab === 'dashboard' && (
             <div>
               {/* Top Operational KPI Grid */}
               <div className="erp-stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>

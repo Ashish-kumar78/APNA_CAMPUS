@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import './ManagementPortal.css';
 
 const DEPT_DATA = [
@@ -352,7 +353,22 @@ export default function ManagementPortal({ account, onLogout }) {
 
       {/* ─── Main ────────────────────────────────── */}
       <main className="mgmt-main">
-        <header className="mgmt-header">
+        {activeTab === 'executive' ? (
+          <RoleDashboardLanding
+            account={account}
+            roleKey="management"
+            onLogout={onLogout}
+            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            onNavigateTab={(tabId) => {
+              if (tabId === 'reports') exportExecutiveReport();
+              else if (tabId === 'kpi' || tabId === 'departments') setActiveTab('departments');
+              else if (tabId === 'circulars' || tabId === 'governance') setActiveTab('governance');
+              else if (tabId === 'approvals') setActiveTab('approvals');
+            }}
+          />
+        ) : (
+          <>
+            <header className="mgmt-header">
           <div className="mgmt-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             {!sidebarOpen && (
               <button
@@ -1010,6 +1026,8 @@ export default function ManagementPortal({ account, onLogout }) {
           )}
 
         </div>
+          </>
+        )}
       </main>
     </div>
   );

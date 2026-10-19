@@ -44,6 +44,11 @@ export default function ReportGenerationModule({ account, role }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
+  // Attendance-specific manual percentage filter & sort states
+  const [attendanceFilterMode, setAttendanceFilterMode] = useState('all'); // 'all' | 'lte' | 'gte' | 'eq'
+  const [manualAttendancePct, setManualAttendancePct] = useState('75');
+  const [allMatchingRecords, setAllMatchingRecords] = useState([]);
+
   // Data & Status States
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -133,6 +138,8 @@ export default function ReportGenerationModule({ account, role }) {
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
         search: search || undefined,
+        attendanceFilterMode: reportType === 'attendance' ? attendanceFilterMode : undefined,
+        manualAttendancePct: reportType === 'attendance' && attendanceFilterMode !== 'all' ? manualAttendancePct : undefined,
         sortBy,
         sortOrder,
         page,
@@ -151,7 +158,21 @@ export default function ReportGenerationModule({ account, role }) {
       }
 
       if (res && res.success) {
-        setReportData(res.data || []);
+        let rawList = res.data || [];
+        // Apply client-side manual attendance filter guarantee if backend doesn't support the param
+        if (reportType === 'attendance' && attendanceFilterMode !== 'all' && manualAttendancePct !== '') {
+          const target = Number(manualAttendancePct);
+          rawList = rawList.filter((item) => {
+            const val = item.rawPct ?? parseFloat(item.attendancePercentage);
+            if (isNaN(val)) return true;
+            if (attendanceFilterMode === 'lte') return val <= target;
+            if (attendanceFilterMode === 'gte') return val >= target;
+            if (attendanceFilterMode === 'eq') return Math.abs(val - target) <= 2.5;
+            return true;
+          });
+        }
+        setAllMatchingRecords(rawList);
+        setReportData(rawList.slice((page - 1) * pageSize, page * pageSize));
         setSummary(res.summary || null);
         setMeta(res.meta || null);
       } else {
@@ -164,7 +185,7 @@ export default function ReportGenerationModule({ account, role }) {
     } finally {
       setLoading(false);
     }
-  }, [branch, semester, batch, section, reportType, dateFrom, dateTo, search, sortBy, sortOrder, page, pageSize]);
+  }, [branch, semester, batch, section, reportType, dateFrom, dateTo, search, sortBy, sortOrder, page, pageSize, attendanceFilterMode, manualAttendancePct]);
 
   // Generate on mount and when filters change
   useEffect(() => {
@@ -233,14 +254,10 @@ export default function ReportGenerationModule({ account, role }) {
       let totalHeld = 0;
       let shortage = 0;
 
-      finalRecords = items.map((it, idx) => {
+      let mappedRecords = items.map((it, idx) => {
         const present = Math.min(classesHeld, Math.round((classesHeld * it.attendance) / 100));
         const absent = classesHeld - present;
         const pct = classesHeld > 0 ? (present / classesHeld) * 100 : 0;
-        if (pct < 75) shortage++;
-        totalPresent += present;
-        totalHeld += classesHeld;
-
         return {
           slNo: idx + 1,
           studentName: it.studentName,
@@ -252,9 +269,28 @@ export default function ReportGenerationModule({ account, role }) {
           present,
           absent,
           attendancePercentage: pct.toFixed(2) + '%',
-          rawPct: pct,
+          rawPct: Number(pct.toFixed(2)),
         };
       });
+
+      // Apply manual attendance percentage filter if specified
+      if (attendanceFilterMode !== 'all' && manualAttendancePct !== '') {
+        const target = Number(manualAttendancePct);
+        mappedRecords = mappedRecords.filter((r) => {
+          if (attendanceFilterMode === 'lte') return r.rawPct <= target;
+          if (attendanceFilterMode === 'gte') return r.rawPct >= target;
+          if (attendanceFilterMode === 'eq') return Math.abs(r.rawPct - target) <= 2.5;
+          return true;
+        });
+      }
+
+      mappedRecords.forEach((r) => {
+        if (r.rawPct < 75) shortage++;
+        totalPresent += r.present;
+        totalHeld += r.totalClassesHeld;
+      });
+
+      finalRecords = mappedRecords;
 
       sumData = {
         totalStudents: finalRecords.length,
@@ -387,6 +423,11 @@ export default function ReportGenerationModule({ account, role }) {
     // Apply sorting
     if (sortBy) {
       finalRecords.sort((a, b) => {
+        if (sortBy === 'attendancePercentage' || sortBy === 'rawPct') {
+          const valA = a.rawPct ?? parseFloat(a.attendancePercentage ?? 0);
+          const valB = b.rawPct ?? parseFloat(b.attendancePercentage ?? 0);
+          return sortOrder === 'asc' ? valA - valB : valB - valA;
+        }
         let vA = a[sortBy];
         let vB = b[sortBy];
         if (typeof vA === 'number' && typeof vB === 'number') {
@@ -402,6 +443,7 @@ export default function ReportGenerationModule({ account, role }) {
       finalRecords.forEach((r, i) => { r.slNo = i + 1; });
     }
 
+    setAllMatchingRecords(finalRecords);
     const startIdx = (page - 1) * pageSize;
     setReportData(finalRecords.slice(startIdx, startIdx + pageSize));
     setSummary(sumData);
@@ -442,6 +484,8 @@ export default function ReportGenerationModule({ account, role }) {
     setDateFrom('');
     setDateTo('');
     setSearch('');
+    setAttendanceFilterMode('all');
+    setManualAttendancePct('75');
     setSortBy('slNo');
     setSortOrder('asc');
     setPage(1);
@@ -462,6 +506,8 @@ export default function ReportGenerationModule({ account, role }) {
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
         search: search || undefined,
+        attendanceFilterMode: reportType === 'attendance' ? attendanceFilterMode : undefined,
+        manualAttendancePct: reportType === 'attendance' && attendanceFilterMode !== 'all' ? manualAttendancePct : undefined,
         sortBy,
         sortOrder,
       };
@@ -476,13 +522,17 @@ export default function ReportGenerationModule({ account, role }) {
         console.warn('Backend export failed, falling back to client-side XLSX generation:', apiErr.message);
       }
 
-      // Client-side fallback workbook generation
+      // Client-side fallback workbook generation using all matching filtered/sorted records
+      const dataset = allMatchingRecords.length > 0 ? allMatchingRecords : reportData;
       const wb = XLSX.utils.book_new();
       const titleBanner = [
-        ['APNA CAMPUS — ENTERPRISE REPORT'],
+        ['APNA CAMPUS — ENTERPRISE ACADEMIC REPORT'],
         [`REPORT TYPE: ${reportType.toUpperCase()}`],
         [`Generated On: ${new Date().toLocaleString()} | User: ${account?.name || 'Authorized Official'} (${userRole})`],
         [`Filters: Branch: ${branch} | Sem: ${semester} | Batch: ${batch} | Section: ${section} | Date: ${dateFrom || 'N/A'} to ${dateTo || 'N/A'}`],
+        reportType === 'attendance' && attendanceFilterMode !== 'all'
+          ? [`Attendance Cutoff: ${attendanceFilterMode === 'lte' ? '≤' : attendanceFilterMode === 'gte' ? '≥' : '≈'} ${manualAttendancePct}% | Sort Order: ${sortBy === 'attendancePercentage' ? `Attendance % (${sortOrder.toUpperCase()})` : sortBy} | Total Exported Students: ${dataset.length}`]
+          : [`Sort Order: ${sortBy === 'attendancePercentage' ? `Attendance % (${sortOrder.toUpperCase()})` : sortBy} | Total Exported Students: ${dataset.length}`],
         [],
       ];
 
@@ -491,26 +541,28 @@ export default function ReportGenerationModule({ account, role }) {
 
       if (reportType === 'attendance') {
         headers = ['Sl. No.', 'Student Name', 'Registration Number', 'Branch', 'Semester', 'Section', 'Total Classes Held', 'Present', 'Absent', 'Attendance Percentage'];
-        rows = reportData.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.totalClassesHeld, r.present, r.absent, r.attendancePercentage]);
+        rows = dataset.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.totalClassesHeld, r.present, r.absent, r.attendancePercentage]);
       } else if (reportType === 'cgpa') {
         headers = ['Sl. No.', 'Student Name', 'Registration Number', 'Branch', 'Semester', 'Section', 'Batch', 'CGPA', 'Academic Status'];
-        rows = reportData.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.batch, r.cgpa, r.academicStatus]);
+        rows = dataset.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.batch, r.cgpa, r.academicStatus]);
       } else if (reportType === 'sgpa') {
         headers = ['Sl. No.', 'Student Name', 'Registration Number', 'Branch', 'Semester', 'Section', 'Batch', 'SGPA', 'Result Status'];
-        rows = reportData.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.batch, r.sgpa, r.resultStatus]);
+        rows = dataset.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.batch, r.sgpa, r.resultStatus]);
       } else if (reportType === 'document') {
         headers = ['Sl. No.', 'Student Name', 'Registration Number', 'Branch', 'Semester', 'Section', 'Batch', 'Total Documents Required', 'Documents Submitted', 'Documents Verified', 'Documents Pending', 'Verification Status'];
-        rows = reportData.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.batch, r.totalRequired, r.submitted, r.verified, r.pending, r.verificationStatus]);
+        rows = dataset.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.batch, r.totalRequired, r.submitted, r.verified, r.pending, r.verificationStatus]);
       }
 
       const ws = XLSX.utils.aoa_to_sheet([...titleBanner, headers, ...rows]);
       XLSX.utils.book_append_sheet(wb, ws, 'ReportData');
 
       const dateStr = new Date().toISOString().split('T')[0];
-      const filename = `ApnaCampus_${reportType.toUpperCase()}_${branch}_${dateStr}.xlsx`;
+      const filterTag = reportType === 'attendance' && attendanceFilterMode !== 'all' ? `_${attendanceFilterMode}_${manualAttendancePct}pct` : '';
+      const sortTag = sortBy === 'attendancePercentage' ? `_sort-${sortOrder}` : '';
+      const filename = `ApnaCampus_${reportType.toUpperCase()}_${branch}${filterTag}${sortTag}_${dateStr}.xlsx`;
       XLSX.writeFile(wb, filename);
 
-      triggerToast(`Downloaded: ${filename}`);
+      triggerToast(`Downloaded: ${filename} (${dataset.length} students)`);
     } catch (err) {
       alert('Failed to generate Excel download: ' + err.message);
     } finally {
@@ -597,124 +649,244 @@ export default function ReportGenerationModule({ account, role }) {
         </div>
 
         <div className="rg-filter-grid">
-          {/* 1. Branch Filter */}
-          <div className="rg-field">
-            <label htmlFor="filter-branch">Branch / Department</label>
-            <select
-              id="filter-branch"
-              className="rg-select"
-              value={branch}
-              disabled={isLockedScope}
-              onChange={(e) => { setBranch(e.target.value); setPage(1); }}
-            >
-              {(filterConfig?.branches || [
-                { code: 'CSE', name: 'Computer Science & Engineering' },
-                { code: 'AIML', name: 'AI & Machine Learning' },
-                { code: 'ECE', name: 'Electronics & Communication' },
-                { code: 'EEE', name: 'Electrical & Electronics' },
-                { code: 'MECH', name: 'Mechanical Engineering' },
-                { code: 'CIVIL', name: 'Civil Engineering' },
-              ]).map((b) => (
-                <option key={b.code} value={b.code} disabled={b.isAllowed === false}>
-                  {b.code} — {b.name}
-                </option>
-              ))}
-            </select>
+          {/* Row 1: Academic Scope (4 fields spanning full width) */}
+          <div className="rg-filter-row rg-filter-row-1">
+            {/* 1. Branch Filter */}
+            <div className="rg-field">
+              <label htmlFor="filter-branch">Branch / Department</label>
+              <select
+                id="filter-branch"
+                className="rg-select"
+                value={branch}
+                disabled={isLockedScope}
+                onChange={(e) => { setBranch(e.target.value); setPage(1); }}
+              >
+                {(filterConfig?.branches || [
+                  { code: 'CSE', name: 'Computer Science & Engineering' },
+                  { code: 'AIML', name: 'AI & Machine Learning' },
+                  { code: 'ECE', name: 'Electronics & Communication' },
+                  { code: 'EEE', name: 'Electrical & Electronics' },
+                  { code: 'MECH', name: 'Mechanical Engineering' },
+                  { code: 'CIVIL', name: 'Civil Engineering' },
+                ]).map((b) => (
+                  <option key={b.code} value={b.code} disabled={b.isAllowed === false}>
+                    {b.code} — {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 2. Semester Filter */}
+            <div className="rg-field">
+              <label htmlFor="filter-semester">Semester</label>
+              <select
+                id="filter-semester"
+                className="rg-select"
+                value={semester}
+                onChange={(e) => { setSemester(e.target.value); setPage(1); }}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                  <option key={num} value={`Semester ${num}`}>
+                    Semester {num}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 3. Batch Filter */}
+            <div className="rg-field">
+              <label htmlFor="filter-batch">Admission Batch</label>
+              <select
+                id="filter-batch"
+                className="rg-select"
+                value={batch}
+                onChange={(e) => { setBatch(e.target.value); setPage(1); }}
+              >
+                <option value="2024–2028">2024–2028 (1st/2nd Year)</option>
+                <option value="2023–2027">2023–2027 (3rd Year)</option>
+                <option value="2022–2026">2022–2026 (4th Year)</option>
+                <option value="2021–2025">2021–2025 (Graduating)</option>
+              </select>
+            </div>
+
+            {/* 4. Section Filter */}
+            <div className="rg-field">
+              <label htmlFor="filter-section">Section</label>
+              <select
+                id="filter-section"
+                className="rg-select"
+                value={section}
+                onChange={(e) => { setSection(e.target.value); setPage(1); }}
+              >
+                <option value="Section A">Section A</option>
+                <option value="Section B">Section B</option>
+                <option value="Section C">Section C</option>
+              </select>
+            </div>
           </div>
 
-          {/* 2. Semester Filter */}
-          <div className="rg-field">
-            <label htmlFor="filter-semester">Semester</label>
-            <select
-              id="filter-semester"
-              className="rg-select"
-              value={semester}
-              onChange={(e) => { setSemester(e.target.value); setPage(1); }}
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                <option key={num} value={`Semester ${num}`}>
-                  Semester {num}
-                </option>
-              ))}
-            </select>
+          {/* Row 2: Report Type & Date Range (3 fields covering total area) */}
+          <div className="rg-filter-row rg-filter-row-2">
+            {/* 5. Report Type Selector */}
+            <div className="rg-field">
+              <label htmlFor="filter-type">Report Type</label>
+              <select
+                id="filter-type"
+                className="rg-select"
+                value={reportType}
+                onChange={(e) => {
+                  setReportType(e.target.value);
+                  setSortBy('slNo');
+                  setSortOrder('asc');
+                  setPage(1);
+                }}
+                style={{ fontWeight: 700, color: '#1e40af' }}
+              >
+                <option value="attendance">📊 Attendance Report</option>
+                <option value="cgpa">🎓 Cumulative CGPA Report</option>
+                <option value="sgpa">📝 Semester SGPA Report</option>
+                <option value="document">📑 Document Compliance Report</option>
+              </select>
+            </div>
+
+            {/* 6. Date From Filter */}
+            <div className="rg-field">
+              <label htmlFor="filter-date-from">Date From</label>
+              <input
+                id="filter-date-from"
+                type="date"
+                className="rg-input"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </div>
+
+            {/* 7. Date To Filter */}
+            <div className="rg-field">
+              <label htmlFor="filter-date-to">Date To</label>
+              <input
+                id="filter-date-to"
+                type="date"
+                className="rg-input"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </div>
           </div>
 
-          {/* 3. Batch Filter */}
-          <div className="rg-field">
-            <label htmlFor="filter-batch">Admission Batch</label>
-            <select
-              id="filter-batch"
-              className="rg-select"
-              value={batch}
-              onChange={(e) => { setBatch(e.target.value); setPage(1); }}
-            >
-              <option value="2024–2028">2024–2028 (1st/2nd Year)</option>
-              <option value="2023–2027">2023–2027 (3rd Year)</option>
-              <option value="2022–2026">2022–2026 (4th Year)</option>
-              <option value="2021–2025">2021–2025 (Graduating)</option>
-            </select>
-          </div>
+          {/* Row 3: Manual Attendance Percentage Filter & Sort (Active for Attendance Report) */}
+          {reportType === 'attendance' && (
+            <div className="rg-filter-row rg-filter-row-3" aria-label="Manual Attendance Cutoff and Sorting Controls">
+              {/* Filter Operator / Mode */}
+              <div className="rg-field">
+                <label htmlFor="filter-att-mode">
+                  Attendance Criteria / Cutoff
+                </label>
+                <select
+                  id="filter-att-mode"
+                  className="rg-select"
+                  value={attendanceFilterMode}
+                  onChange={(e) => {
+                    const mode = e.target.value;
+                    setAttendanceFilterMode(mode);
+                    if (mode === 'lte') {
+                      setSortBy('attendancePercentage');
+                      setSortOrder('asc'); // Lowest attendance first for shortage list
+                    } else if (mode === 'gte') {
+                      setSortBy('attendancePercentage');
+                      setSortOrder('desc'); // Highest attendance first
+                    }
+                    setPage(1);
+                  }}
+                  style={{ fontWeight: 600 }}
+                >
+                  <option value="all">👥 All Students (No Percentage Cutoff)</option>
+                  <option value="lte">⚠️ Less than or equal to (≤ Shortage / Defaulters)</option>
+                  <option value="gte">✅ Greater than or equal to (≥ Eligible / Good Standing)</option>
+                  <option value="eq">🎯 Target Band (≈ ±2.5% Target)</option>
+                </select>
+              </div>
 
-          {/* 4. Section Filter */}
-          <div className="rg-field">
-            <label htmlFor="filter-section">Section</label>
-            <select
-              id="filter-section"
-              className="rg-select"
-              value={section}
-              onChange={(e) => { setSection(e.target.value); setPage(1); }}
-            >
-              <option value="Section A">Section A</option>
-              <option value="Section B">Section B</option>
-              <option value="Section C">Section C</option>
-            </select>
-          </div>
+              {/* Manual Attendance Percentage Input */}
+              <div className="rg-field">
+                <label htmlFor="filter-att-pct">
+                  Manual Attendance Percentage (%)
+                </label>
+                <div className="rg-input-suffix-wrap">
+                  <input
+                    id="filter-att-pct"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    className="rg-input"
+                    placeholder="e.g. 75"
+                    disabled={attendanceFilterMode === 'all'}
+                    value={manualAttendancePct}
+                    onChange={(e) => {
+                      setManualAttendancePct(e.target.value);
+                      setPage(1);
+                    }}
+                    style={{
+                      fontWeight: 700,
+                      color: attendanceFilterMode === 'lte' ? '#dc2626' : attendanceFilterMode === 'gte' ? '#16a34a' : '#0f172a',
+                    }}
+                  />
+                  <span className="rg-input-suffix">%</span>
+                </div>
+                {attendanceFilterMode !== 'all' && (
+                  <div className="rg-preset-chips">
+                    <span className="rg-preset-label">Quick:</span>
+                    <button type="button" className="rg-preset-chip" onClick={() => { setManualAttendancePct('75'); setPage(1); }}>75% (Norm)</button>
+                    <button type="button" className="rg-preset-chip" onClick={() => { setManualAttendancePct('60'); setPage(1); }}>60% (Critical)</button>
+                    <button type="button" className="rg-preset-chip" onClick={() => { setManualAttendancePct('65'); setPage(1); }}>65% (Border)</button>
+                    <button type="button" className="rg-preset-chip" onClick={() => { setManualAttendancePct('85'); setPage(1); }}>85% (High)</button>
+                  </div>
+                )}
+              </div>
 
-          {/* 5. Report Type Selector */}
-          <div className="rg-field">
-            <label htmlFor="filter-type">Report Type</label>
-            <select
-              id="filter-type"
-              className="rg-select"
-              value={reportType}
-              onChange={(e) => {
-                setReportType(e.target.value);
-                setSortBy('slNo');
-                setSortOrder('asc');
-                setPage(1);
-              }}
-              style={{ fontWeight: 700, color: '#1e40af' }}
-            >
-              <option value="attendance">📊 Attendance Report</option>
-              <option value="cgpa">🎓 Cumulative CGPA Report</option>
-              <option value="sgpa">📝 Semester SGPA Report</option>
-              <option value="document">📑 Document Compliance Report</option>
-            </select>
-          </div>
-
-          {/* 6. Date From Filter */}
-          <div className="rg-field">
-            <label htmlFor="filter-date-from">Date From</label>
-            <input
-              id="filter-date-from"
-              type="date"
-              className="rg-input"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-          </div>
-
-          {/* 7. Date To Filter */}
-          <div className="rg-field">
-            <label htmlFor="filter-date-to">Date To</label>
-            <input
-              id="filter-date-to"
-              type="date"
-              className="rg-input"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-          </div>
+              {/* Sort by Attendance Percentage */}
+              <div className="rg-field">
+                <label htmlFor="filter-att-sort">
+                  Sort By Attendance %
+                </label>
+                <select
+                  id="filter-att-sort"
+                  className="rg-select"
+                  value={
+                    sortBy === 'attendancePercentage'
+                      ? sortOrder === 'asc' ? 'att_asc' : 'att_desc'
+                      : sortBy === 'studentName'
+                      ? 'name_asc'
+                      : 'slNo'
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'att_asc') {
+                      setSortBy('attendancePercentage');
+                      setSortOrder('asc');
+                    } else if (val === 'att_desc') {
+                      setSortBy('attendancePercentage');
+                      setSortOrder('desc');
+                    } else if (val === 'name_asc') {
+                      setSortBy('studentName');
+                      setSortOrder('asc');
+                    } else {
+                      setSortBy('slNo');
+                      setSortOrder('asc');
+                    }
+                    setPage(1);
+                  }}
+                  style={{ fontWeight: 600 }}
+                >
+                  <option value="att_asc">📉 Lowest to Highest % (Defaulters First)</option>
+                  <option value="att_desc">📈 Highest to Lowest % (Top Attendees First)</option>
+                  <option value="slNo">🔢 Default (Roll Number / Serial No)</option>
+                  <option value="name_asc">🔤 Student Name (A → Z)</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Filter Action Buttons */}
@@ -813,6 +985,16 @@ export default function ReportGenerationModule({ account, role }) {
               {dateFrom && dateTo && (
                 <span className="rg-pill" style={{ background: '#e0e7ff', color: '#3730a3' }}>
                   📅 {dateFrom} to {dateTo}
+                </span>
+              )}
+              {reportType === 'attendance' && attendanceFilterMode !== 'all' && manualAttendancePct && (
+                <span className="rg-pill" style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', fontWeight: 700 }}>
+                  🎯 Attendance {attendanceFilterMode === 'lte' ? '≤' : attendanceFilterMode === 'gte' ? '≥' : '≈'} {manualAttendancePct}%
+                </span>
+              )}
+              {sortBy === 'attendancePercentage' && (
+                <span className="rg-pill" style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontWeight: 600 }}>
+                  ⇅ Attendance % ({sortOrder === 'asc' ? 'Low → High' : 'High → Low'})
                 </span>
               )}
             </div>

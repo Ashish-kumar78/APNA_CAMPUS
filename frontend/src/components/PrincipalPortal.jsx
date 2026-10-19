@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import './PrincipalPortal.css';
 import './SuperAdminPortal.css';
 import { erpStore } from '../services/erpStore.js';
@@ -192,7 +193,22 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
 
       {/* Main Content */}
       <main className="erp-main-content">
-        <header className="erp-header">
+        {activeTab === 'governance' ? (
+          <RoleDashboardLanding
+            account={account}
+            roleKey="principal"
+            onLogout={onLogout}
+            onSwitchRole={onSwitchRole}
+            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            onNavigateTab={(tabId) => {
+              if (tabId === 'academic') setActiveTab('academic_health');
+              else if (tabId === 'approvals') setActiveTab('leaves');
+              else if (tabId === 'reports') setActiveTab('report-generation');
+            }}
+          />
+        ) : (
+          <>
+            <header className="erp-header">
           <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             {!sidebarOpen && (
               <button
@@ -547,6 +563,8 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
             </div>
           )}
         </div>
+          </>
+        )}
       </main>
     </div>
   );

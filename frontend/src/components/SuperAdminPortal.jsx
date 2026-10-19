@@ -32,6 +32,7 @@ import {
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import './SuperAdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import { erpStore, permissionDefinitions, initialRolesList } from '../services/erpStore.js';
 
 export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
@@ -214,183 +215,97 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
 
       {/* Main Content */}
       <main className="erp-main-content">
-        <header className="erp-header">
-          <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {!sidebarOpen && (
-              <button
-                className="campus-nav-toggle-btn"
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                title="Show Navigation"
-                aria-label="Show Navigation"
-              >
-                <Menu size={20} />
-              </button>
-            )}
-            <div>
-              <h1>Enterprise Governance & Security Console</h1>
-              <p>Super Administrator · Complete System-Level Control</p>
-            </div>
-          </div>
-
-          <div className="erp-header-actions">
-            {onSwitchRole && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>Preview:</span>
-                <select
-                  className="erp-role-switcher-select"
-                  value="super_admin"
-                  onChange={(e) => onSwitchRole(e.target.value)}
-                >
-                  <option value="super_admin">Super Administrator</option>
-                  <option value="management">Management / Trustee</option>
-                  <option value="principal">Principal / Director</option>
-                  <option value="admin">Admin Operations</option>
-                  <option value="hod">HOD</option>
-                  <option value="faculty">Faculty Portal</option>
-                  <option value="student">Student Portal</option>
-                  <option value="accounts">Accounts & Finance</option>
-                  <option value="exam_cell">Examination Cell</option>
-                  <option value="library">Library Staff</option>
-                  <option value="warden">Hostel Warden</option>
-                  <option value="transport">Transport Fleet</option>
-                  <option value="placement">Placement Cell</option>
-                  <option value="staff">Non-Teaching Staff</option>
-                </select>
-              </div>
-            )}
-            <div className="erp-role-badge">
-              <ShieldCheck size={14} /> Full Access Grant
-            </div>
-
-            {/* Top Right Campus OS User Profile Pill with Sign Out */}
-            <div className="campus-user-pill">
-              <div className="campus-user-avatar">SA</div>
-              <div className="campus-user-details">
-                <strong>{account?.name || 'Chief Systems Architect'}</strong>
-                <small>Super Admin • {account?.identity || 'SYS-SUPER-01'}</small>
-              </div>
-              <button
-                className="campus-logout-btn"
-                type="button"
-                onClick={onLogout}
-                title="Sign out"
-                aria-label="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div className="erp-content-body">
-          {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
-          {activeTab === 'campus-connect' && (
-            <div style={{ height: 'calc(100vh - 140px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>
-              <CampusConnect account={account} />
-            </div>
-          )}
-
-          {/* TAB 1: OVERVIEW */}
-          {activeTab === 'overview' && (
-            <div>
-              <div className="erp-stats-grid">
-                <div className="erp-stat-card">
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">System Status</span>
-                    <div className="erp-stat-icon" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' }}>
-                      <Server size={18} />
-                    </div>
-                  </div>
-                  <div className="erp-stat-val">Operational</div>
-                  <div className="erp-stat-note">Uptime 99.98% · 0 Critical Incidents</div>
-                </div>
-
-                <div className="erp-stat-card">
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">Managed Roles</span>
-                    <div className="erp-stat-icon" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}>
-                      <KeyRound size={18} />
-                    </div>
-                  </div>
-                  <div className="erp-stat-val">14 Roles</div>
-                  <div className="erp-stat-note">22 Granular Access Policies</div>
-                </div>
-
-                <div className="erp-stat-card">
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">Registered Accounts</span>
-                    <div className="erp-stat-icon" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}>
-                      <Users size={18} />
-                    </div>
-                  </div>
-                  <div className="erp-stat-val">2,698</div>
-                  <div className="erp-stat-note">2,480 Students · 146 Faculty · 72 Staff</div>
-                </div>
-
-                <div className="erp-stat-card">
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">Audit Trail Events</span>
-                    <div className="erp-stat-icon" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#facc15' }}>
-                      <History size={18} />
-                    </div>
-                  </div>
-                  <div className="erp-stat-val">{auditLogs.length}</div>
-                  <div className="erp-stat-note">Real-time immutable logging active</div>
+        {activeTab === 'overview' ? (
+          <RoleDashboardLanding
+            account={account}
+            roleKey="super_admin"
+            onLogout={onLogout}
+            onSwitchRole={onSwitchRole}
+            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            onNavigateTab={(tabId) => {
+              if (tabId === 'users') setActiveTab('users');
+              else if (tabId === 'approvals' || tabId === 'activity') setActiveTab('audit');
+              else if (tabId === 'campus-connect') setActiveTab('campus-connect');
+            }}
+          />
+        ) : (
+          <>
+            <header className="erp-header">
+              <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                {!sidebarOpen && (
+                  <button
+                    className="campus-nav-toggle-btn"
+                    type="button"
+                    onClick={() => setSidebarOpen(true)}
+                    title="Show Navigation"
+                    aria-label="Show Navigation"
+                  >
+                    <Menu size={20} />
+                  </button>
+                )}
+                <div>
+                  <h1>Enterprise Governance & Security Console</h1>
+                  <p>Super Administrator · Complete System-Level Control</p>
                 </div>
               </div>
 
-              <div className="erp-panel">
-                <div className="erp-panel-header">
-                  <div className="erp-panel-title">
-                    <h3>Enterprise Security Architecture Status</h3>
-                    <p>Current runtime policies and cryptographic compliance</p>
+              <div className="erp-header-actions">
+                {onSwitchRole && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>Preview:</span>
+                    <select
+                      className="erp-role-switcher-select"
+                      value="super_admin"
+                      onChange={(e) => onSwitchRole(e.target.value)}
+                    >
+                      <option value="super_admin">Super Administrator</option>
+                      <option value="management">Management / Trustee</option>
+                      <option value="principal">Principal / Director</option>
+                      <option value="admin">Admin Operations</option>
+                      <option value="hod">HOD</option>
+                      <option value="faculty">Faculty Portal</option>
+                      <option value="student">Student Portal</option>
+                      <option value="accounts">Accounts & Finance</option>
+                      <option value="exam_cell">Examination Cell</option>
+                      <option value="library">Library Staff</option>
+                      <option value="warden">Hostel Warden</option>
+                      <option value="transport">Transport Fleet</option>
+                      <option value="placement">Placement Cell</option>
+                      <option value="staff">Non-Teaching Staff</option>
+                    </select>
                   </div>
-                  <button className="erp-btn erp-btn-secondary" onClick={() => triggerToast('Security audit complete: All endpoints compliant')}>
-                    <CheckCircle2 size={16} /> Run Diagnostics
+                )}
+                <div className="erp-role-badge">
+                  <ShieldCheck size={14} /> Full Access Grant
+                </div>
+
+                {/* Top Right Campus OS User Profile Pill with Sign Out */}
+                <div className="campus-user-pill">
+                  <div className="campus-user-avatar">SA</div>
+                  <div className="campus-user-details">
+                    <strong>{account?.name || 'Chief Systems Architect'}</strong>
+                    <small>Super Admin • {account?.identity || 'SYS-SUPER-01'}</small>
+                  </div>
+                  <button
+                    className="campus-logout-btn"
+                    type="button"
+                    onClick={onLogout}
+                    title="Sign out"
+                    aria-label="Sign out"
+                  >
+                    <LogOut size={16} />
                   </button>
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #bbf7d0', flexShrink: 0 }}>
-                        <Lock size={16} color="#15803d" />
-                      </div>
-                      <strong style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 700 }}>Token Signature & Encryption</strong>
-                    </div>
-                    <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: 1.5 }}>
-                      HMAC SHA-256 JWT with automated token refresh rotation. Sensitive fields salt-hashed with bcrypt.
-                    </p>
-                  </div>
-
-                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #bfdbfe', flexShrink: 0 }}>
-                        <ShieldCheck size={16} color="#1d4ed8" />
-                      </div>
-                      <strong style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 700 }}>Strict RBAC Isolation</strong>
-                    </div>
-                    <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: 1.5 }}>
-                      Multi-tier permission gates on each REST endpoint. No client-side bypass; IDOR and broken access protected.
-                    </p>
-                  </div>
-
-                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fde68a', flexShrink: 0 }}>
-                        <History size={16} color="#b45309" />
-                      </div>
-                      <strong style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 700 }}>State-Machine Workflow Engine</strong>
-                    </div>
-                    <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: 1.5 }}>
-                      Enforces non-skippable approval states for leaves, marks moderation, fee reconciliations, and exam results.
-                    </p>
-                  </div>
-                </div>
               </div>
-            </div>
-          )}
+            </header>
+
+            <div className="erp-content-body">
+              {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
+              {activeTab === 'campus-connect' && (
+                <div style={{ height: 'calc(100vh - 140px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>
+                  <CampusConnect account={account} />
+                </div>
+              )}
 
           {/* TAB 2: RBAC MATRIX */}
           {activeTab === 'rbac' && (
@@ -752,7 +667,9 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
           {activeTab === 'report-generation' && (
             <ReportGenerationModule account={account} role="super_admin" />
           )}
-        </div>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

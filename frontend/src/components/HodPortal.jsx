@@ -49,6 +49,7 @@ import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 
 function exportToCsv(filename, rows) {
   if (!rows || !rows.length) return;
@@ -566,6 +567,20 @@ export default function HodPortal({ account, onLogout }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
+            <RoleDashboardLanding
+              roleKey="hod"
+              account={account}
+              onLogout={onLogout}
+              onNavigate={(target) => {
+                if (target === 'hod-review') setActiveTab('approval');
+                else if (target === 'hod-faculty') setActiveTab('faculty');
+                else if (target === 'hod-dept') setActiveTab('students');
+                else setActiveTab('approval');
+              }}
+            />
+          )}
+
+          {false && activeTab === 'dashboard' && (
             <div>
               <div className="hod-view-header">
                 <div>

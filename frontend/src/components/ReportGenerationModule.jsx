@@ -24,15 +24,21 @@ import {
 import './ReportGenerationModule.css';
 import { api } from '../services/api.js';
 import * as XLSX from 'xlsx';
+import { initialFacultyAssignments, generateAllStudents } from '../data/collegeData.js';
 
 export default function ReportGenerationModule({ account, role }) {
   const userRole = (role || account?.role || '').toLowerCase();
+  const isFaculty = userRole === 'faculty';
 
   // Filter States
   const [branch, setBranch] = useState('CSE');
+  const [academicYear, setAcademicYear] = useState('2026-27');
   const [semester, setSemester] = useState('Semester 5');
   const [batch, setBatch] = useState('2023–2027');
   const [section, setSection] = useState('Section A');
+  const [subjectCode, setSubjectCode] = useState('CS501');
+  const [scopeMode, setScopeMode] = useState(isFaculty ? 'all_assigned' : 'section');
+  const [individualStudentRoll, setIndividualStudentRoll] = useState('');
   const [reportType, setReportType] = useState('attendance'); // attendance | cgpa | sgpa | document
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -53,6 +59,54 @@ export default function ReportGenerationModule({ account, role }) {
   const [filterConfig, setFilterConfig] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
+
+  // Extract official teaching assignments for faculty
+  const facultyAssignments = useMemo(() => {
+    if (filterConfig?.assignedClasses && filterConfig.assignedClasses.length > 0) {
+      return filterConfig.assignedClasses;
+    }
+    return initialFacultyAssignments.filter(
+      (fa) => fa.facultyName.includes('Mohanty') || fa.facultyId === 'FAC-042',
+    );
+  }, [filterConfig]);
+
+  // Dependent options for faculty based on teaching responsibilities
+  const availableYears = useMemo(() => {
+    return Array.from(new Set(facultyAssignments.map((a) => a.academicYear || '2026-27'))).sort().reverse();
+  }, [facultyAssignments]);
+
+  const availableSemesters = useMemo(() => {
+    const sems = facultyAssignments
+      .filter((a) => (a.academicYear || '2026-27') === academicYear)
+      .map((a) => a.semester);
+    return Array.from(new Set(sems)).sort((a, b) => {
+      const numA = parseInt(a.replace(/[^0-9]/g, ''), 10) || 0;
+      const numB = parseInt(b.replace(/[^0-9]/g, ''), 10) || 0;
+      return numA - numB;
+    });
+  }, [facultyAssignments, academicYear]);
+
+  const availableSections = useMemo(() => {
+    const secs = facultyAssignments
+      .filter((a) => (a.academicYear || '2026-27') === academicYear && a.semester === semester)
+      .map((a) => a.section);
+    return Array.from(new Set(secs)).sort();
+  }, [facultyAssignments, academicYear, semester]);
+
+  const availableSubjects = useMemo(() => {
+    const list = facultyAssignments.filter(
+      (a) =>
+        (a.academicYear || '2026-27') === academicYear &&
+        (scopeMode === 'subject' || scopeMode === 'all_assigned' || a.semester === semester),
+    );
+    const seen = new Set();
+    return list.filter((a) => {
+      if (seen.has(a.subjectCode)) return false;
+      seen.add(a.subjectCode);
+      return true;
+    });
+  }, [facultyAssignments, academicYear, semester, scopeMode]);
+
 
   const triggerToast = (msg, type = 'success') => {
     setToastMessage(msg);
@@ -129,6 +183,10 @@ export default function ReportGenerationModule({ account, role }) {
         semester,
         batch,
         section,
+        academicYear: isFaculty ? academicYear : undefined,
+        subjectCode: isFaculty ? subjectCode : undefined,
+        scopeMode: isFaculty ? scopeMode : undefined,
+        rollNumber: isFaculty && scopeMode === 'individual' ? (individualStudentRoll || search) : undefined,
         reportType,
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
@@ -164,7 +222,25 @@ export default function ReportGenerationModule({ account, role }) {
     } finally {
       setLoading(false);
     }
-  }, [branch, semester, batch, section, reportType, dateFrom, dateTo, search, sortBy, sortOrder, page, pageSize]);
+  }, [
+    branch,
+    semester,
+    batch,
+    section,
+    academicYear,
+    subjectCode,
+    scopeMode,
+    individualStudentRoll,
+    reportType,
+    dateFrom,
+    dateTo,
+    search,
+    sortBy,
+    sortOrder,
+    page,
+    pageSize,
+    isFaculty,
+  ]);
 
   // Generate on mount and when filters change
   useEffect(() => {
@@ -173,47 +249,201 @@ export default function ReportGenerationModule({ account, role }) {
 
   // Client Fallback Report Generator (Ensures zero UI downtime)
   const generateLocalReport = () => {
-    const studentCount = 91;
-    const names = [
-      'Rakesh Das', 'Amit Nayak', 'Raj Sahoo', 'Priya Patra', 'Sourav Mohanty',
-      'Sneha Barik', 'Deepak Rout', 'Puja Behera', 'Bikash Pradhan', 'Swati Samal',
-      'Rohit Panda', 'Monika Mishra', 'Subham Tripathy', 'Ipsita Parida', 'Alok Jena',
-      'Smruti Swain', 'Chandan Mangaraj', 'Tanmay Muduli', 'Lipika Kar', 'Manas Acharya',
-      'Pragyan Das', 'Biswajit Nayak', 'Archana Sahoo', 'Gourab Patra', 'Satyajit Mohanty',
-      'Sonali Barik', 'Ashish Rout', 'Kiran Behera', 'Pranab Pradhan', 'Niharika Samal',
-    ];
-
     let items = [];
-    for (let i = 1; i <= studentCount; i++) {
-      const roll = String(i).padStart(2, '0');
-      const name = names[(i - 1) % names.length];
-      const regNo = `23052010${roll}`;
-      const attRate = 65 + ((i * 13) % 34);
-      const cgpaVal = Number((7.0 + ((i * 17) % 280) / 100).toFixed(2));
-      const variation = (((i * 17) % 30) - 15) / 100;
-      const sgpaVal = Math.min(10.0, Math.max(4.5, Number((cgpaVal + variation).toFixed(2))));
 
-      items.push({
-        slNo: i,
-        studentName: name,
-        registrationNumber: regNo,
-        branch: branch || 'CSE',
-        semester: semester || 'Semester 5',
-        section: section || 'Section A',
-        batch: batch || '2023–2027',
-        attendance: attRate,
-        cgpa: cgpaVal,
-        sgpa: sgpaVal,
-      });
+    if (isFaculty) {
+      const allGenStudents = generateAllStudents();
+
+      if (scopeMode === 'all_assigned') {
+        // Consolidated Whole-Group across all assigned classes without student duplication
+        const seen = new Set();
+        items = allGenStudents
+          .filter((st) => {
+            if (seen.has(st.studentId)) return false;
+            seen.add(st.studentId);
+            return true;
+          })
+          .map((st, i) => {
+            const fa = facultyAssignments.find(
+              (a) => (a.academicYear || '2026-27') === st.academicYear && a.semester === st.semester && a.section === st.section,
+            ) || facultyAssignments[0];
+            return {
+              slNo: i + 1,
+              studentName: st.name,
+              registrationNumber: st.studentId,
+              rollNumber: st.rollNumber,
+              branch: st.deptCode || 'CSE',
+              academicYear: st.academicYear,
+              semester: st.semester,
+              section: st.section,
+              batch: st.academicYear === '2025-26' ? '2022–2026' : '2023–2027',
+              subjectCode: fa?.subjectCode || subjectCode || 'CS501',
+              subjectName: fa?.subjectName || 'Data Structures & Algorithms',
+              attendance: st.attendance,
+              cgpa: st.cgpa,
+              sgpa: Math.min(10.0, Math.max(5.0, Number((st.cgpa + ((((i + 1) * 11) % 30) - 15) / 100).toFixed(2)))),
+            };
+          });
+      } else if (scopeMode === 'subject') {
+        // Specific subject taught across assigned sections
+        const matchedClasses = facultyAssignments.filter(
+          (a) => a.subjectCode === subjectCode && (a.academicYear || '2026-27') === academicYear,
+        );
+        const matchKeys = new Set(
+          matchedClasses.map((c) => `${c.academicYear || '2026-27'}-${c.semester}-${c.section}`),
+        );
+        const subjName = matchedClasses[0]?.subjectName || 'Assigned Course';
+
+        items = allGenStudents
+          .filter((st) => matchKeys.has(`${st.academicYear}-${st.semester}-${st.section}`))
+          .map((st, i) => ({
+            slNo: i + 1,
+            studentName: st.name,
+            registrationNumber: st.studentId,
+            rollNumber: st.rollNumber,
+            branch: st.deptCode || 'CSE',
+            academicYear: st.academicYear,
+            semester: st.semester,
+            section: st.section,
+            batch: st.academicYear === '2025-26' ? '2022–2026' : '2023–2027',
+            subjectCode,
+            subjectName: subjName,
+            attendance: st.attendance,
+            cgpa: st.cgpa,
+            sgpa: Math.min(10.0, Math.max(5.0, Number((st.cgpa + ((((i + 1) * 11) % 30) - 15) / 100).toFixed(2)))),
+          }));
+      } else if (scopeMode === 'class') {
+        // Selected class or semester cohort across assigned sections
+        const matchedClasses = facultyAssignments.filter(
+          (a) => a.semester === semester && (a.academicYear || '2026-27') === academicYear,
+        );
+        const matchSections = new Set(matchedClasses.map((c) => c.section));
+        const subj = matchedClasses.find((c) => c.subjectCode === subjectCode) || matchedClasses[0];
+
+        items = allGenStudents
+          .filter((st) => st.academicYear === academicYear && st.semester === semester && matchSections.has(st.section))
+          .map((st, i) => ({
+            slNo: i + 1,
+            studentName: st.name,
+            registrationNumber: st.studentId,
+            rollNumber: st.rollNumber,
+            branch: st.deptCode || 'CSE',
+            academicYear: st.academicYear,
+            semester: st.semester,
+            section: st.section,
+            batch: st.academicYear === '2025-26' ? '2022–2026' : '2023–2027',
+            subjectCode: subj?.subjectCode || subjectCode,
+            subjectName: subj?.subjectName || 'Assigned Subject',
+            attendance: st.attendance,
+            cgpa: st.cgpa,
+            sgpa: Math.min(10.0, Math.max(5.0, Number((st.cgpa + ((((i + 1) * 11) % 30) - 15) / 100).toFixed(2)))),
+          }));
+      } else if (scopeMode === 'individual') {
+        // Individual student
+        const qRoll = (individualStudentRoll || search || '').trim().toLowerCase();
+        const subj = facultyAssignments.find((a) => a.subjectCode === subjectCode) || facultyAssignments[0];
+
+        items = allGenStudents
+          .filter((st) => {
+            if (!qRoll) return true;
+            return (
+              st.rollNumber.toLowerCase().includes(qRoll) ||
+              st.studentId.toLowerCase().includes(qRoll) ||
+              st.name.toLowerCase().includes(qRoll)
+            );
+          })
+          .map((st, i) => ({
+            slNo: i + 1,
+            studentName: st.name,
+            registrationNumber: st.studentId,
+            rollNumber: st.rollNumber,
+            branch: st.deptCode || 'CSE',
+            academicYear: st.academicYear,
+            semester: st.semester,
+            section: st.section,
+            batch: st.academicYear === '2025-26' ? '2022–2026' : '2023–2027',
+            subjectCode: subj?.subjectCode || subjectCode,
+            subjectName: subj?.subjectName || 'Assigned Subject',
+            attendance: st.attendance,
+            cgpa: st.cgpa,
+            sgpa: Math.min(10.0, Math.max(5.0, Number((st.cgpa + ((((i + 1) * 11) % 30) - 15) / 100).toFixed(2)))),
+          }));
+      } else {
+        // Selected section cohort
+        const subj =
+          facultyAssignments.find(
+            (a) =>
+              (a.academicYear || '2026-27') === academicYear &&
+              a.semester === semester &&
+              a.section === section,
+          ) || facultyAssignments[0];
+
+        items = allGenStudents
+          .filter((st) => st.academicYear === academicYear && st.semester === semester && st.section === section)
+          .map((st, i) => ({
+            slNo: i + 1,
+            studentName: st.name,
+            registrationNumber: st.studentId,
+            rollNumber: st.rollNumber,
+            branch: st.deptCode || 'CSE',
+            academicYear: st.academicYear,
+            semester: st.semester,
+            section: st.section,
+            batch: st.academicYear === '2025-26' ? '2022–2026' : '2023–2027',
+            subjectCode: subj?.subjectCode || subjectCode,
+            subjectName: subj?.subjectName || 'Assigned Subject',
+            attendance: st.attendance,
+            cgpa: st.cgpa,
+            sgpa: Math.min(10.0, Math.max(5.0, Number((st.cgpa + ((((i + 1) * 11) % 30) - 15) / 100).toFixed(2)))),
+          }));
+      }
+    } else {
+      const studentCount = 91;
+      const names = [
+        'Rakesh Das', 'Amit Nayak', 'Raj Sahoo', 'Priya Patra', 'Sourav Mohanty',
+        'Sneha Barik', 'Deepak Rout', 'Puja Behera', 'Bikash Pradhan', 'Swati Samal',
+        'Rohit Panda', 'Monika Mishra', 'Subham Tripathy', 'Ipsita Parida', 'Alok Jena',
+        'Smruti Swain', 'Chandan Mangaraj', 'Tanmay Muduli', 'Lipika Kar', 'Manas Acharya',
+        'Pragyan Das', 'Biswajit Nayak', 'Archana Sahoo', 'Gourab Patra', 'Satyajit Mohanty',
+        'Sonali Barik', 'Ashish Rout', 'Kiran Behera', 'Pranab Pradhan', 'Niharika Samal',
+      ];
+
+      for (let i = 1; i <= studentCount; i++) {
+        const roll = String(i).padStart(2, '0');
+        const name = names[(i - 1) % names.length];
+        const regNo = `23052010${roll}`;
+        const attRate = 65 + ((i * 13) % 34);
+        const cgpaVal = Number((7.0 + ((i * 17) % 280) / 100).toFixed(2));
+        const variation = (((i * 17) % 30) - 15) / 100;
+        const sgpaVal = Math.min(10.0, Math.max(4.5, Number((cgpaVal + variation).toFixed(2))));
+
+        items.push({
+          slNo: i,
+          studentName: name,
+          registrationNumber: regNo,
+          rollNumber: roll,
+          branch: branch || 'CSE',
+          academicYear: '2026-27',
+          semester: semester || 'Semester 5',
+          section: section || 'Section A',
+          batch: batch || '2023–2027',
+          subjectCode: 'CS501',
+          subjectName: 'Data Structures & Algorithms',
+          attendance: attRate,
+          cgpa: cgpaVal,
+          sgpa: sgpaVal,
+        });
+      }
     }
 
     // Apply search filter
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       items = items.filter(
-        item =>
+        (item) =>
           item.studentName.toLowerCase().includes(q) ||
-          item.registrationNumber.toLowerCase().includes(q)
+          item.registrationNumber.toLowerCase().includes(q) ||
+          (item.rollNumber && item.rollNumber.toLowerCase().includes(q)),
       );
     }
 
@@ -245,9 +475,13 @@ export default function ReportGenerationModule({ account, role }) {
           slNo: idx + 1,
           studentName: it.studentName,
           registrationNumber: it.registrationNumber,
+          rollNumber: it.rollNumber,
           branch: it.branch,
+          academicYear: it.academicYear || academicYear,
           semester: it.semester,
           section: it.section,
+          subjectCode: it.subjectCode || subjectCode,
+          subjectName: it.subjectName,
           totalClassesHeld: classesHeld,
           present,
           absent,
@@ -283,9 +517,13 @@ export default function ReportGenerationModule({ account, role }) {
           slNo: idx + 1,
           studentName: it.studentName,
           registrationNumber: it.registrationNumber,
+          rollNumber: it.rollNumber,
           branch: it.branch,
+          academicYear: it.academicYear || academicYear,
           semester: it.semester,
           section: it.section,
+          subjectCode: it.subjectCode || subjectCode,
+          subjectName: it.subjectName,
           batch: it.batch,
           cgpa: it.cgpa,
           academicStatus: status,
@@ -318,9 +556,13 @@ export default function ReportGenerationModule({ account, role }) {
           slNo: idx + 1,
           studentName: it.studentName,
           registrationNumber: it.registrationNumber,
+          rollNumber: it.rollNumber,
           branch: it.branch,
+          academicYear: it.academicYear || academicYear,
           semester: it.semester,
           section: it.section,
+          subjectCode: it.subjectCode || subjectCode,
+          subjectName: it.subjectName,
           batch: it.batch,
           sgpa: it.sgpa,
           resultStatus: status,
@@ -362,9 +604,13 @@ export default function ReportGenerationModule({ account, role }) {
           slNo: idx + 1,
           studentName: it.studentName,
           registrationNumber: it.registrationNumber,
+          rollNumber: it.rollNumber,
           branch: it.branch,
+          academicYear: it.academicYear || academicYear,
           semester: it.semester,
           section: it.section,
+          subjectCode: it.subjectCode || subjectCode,
+          subjectName: it.subjectName,
           batch: it.batch,
           totalRequired: 5,
           submitted,
@@ -399,16 +645,31 @@ export default function ReportGenerationModule({ account, role }) {
         const sB = String(vB || '').toLowerCase();
         return sortOrder === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA);
       });
-      finalRecords.forEach((r, i) => { r.slNo = i + 1; });
+      finalRecords.forEach((r, i) => {
+        r.slNo = i + 1;
+      });
     }
 
     const startIdx = (page - 1) * pageSize;
     setReportData(finalRecords.slice(startIdx, startIdx + pageSize));
     setSummary(sumData);
     setMeta({
-      title: reportType.toUpperCase() + ' REPORT',
-      appliedFilters: { branch, semester, batch, section, dateFrom, dateTo },
-      dateBasis: dateFrom && dateTo ? `Instructional sessions between ${dateFrom} and ${dateTo}` : 'Current Autonomous Academic Term',
+      title: reportType.toUpperCase() + ' REPORT' + (isFaculty ? ` — ${scopeMode.toUpperCase().replace('_', ' ')}` : ''),
+      appliedFilters: {
+        branch,
+        semester,
+        batch,
+        section,
+        academicYear,
+        subjectCode,
+        scopeMode,
+        dateFrom,
+        dateTo,
+      },
+      dateBasis:
+        dateFrom && dateTo
+          ? `Instructional sessions between ${dateFrom} and ${dateTo}`
+          : 'Current Autonomous Academic Term',
       pagination: {
         page,
         limit: pageSize,
@@ -421,7 +682,7 @@ export default function ReportGenerationModule({ account, role }) {
   // 3. Sorting Handler
   const handleSort = (columnKey) => {
     if (sortBy === columnKey) {
-      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortBy(columnKey);
       setSortOrder('asc');
@@ -435,9 +696,13 @@ export default function ReportGenerationModule({ account, role }) {
     if (!isDeptLocked) {
       setBranch('CSE');
     }
+    setAcademicYear('2026-27');
     setSemester('Semester 5');
     setBatch('2023–2027');
     setSection('Section A');
+    setSubjectCode('CS501');
+    setScopeMode(isFaculty ? 'all_assigned' : 'section');
+    setIndividualStudentRoll('');
     setReportType('attendance');
     setDateFrom('');
     setDateTo('');
@@ -458,6 +723,10 @@ export default function ReportGenerationModule({ account, role }) {
         semester,
         batch,
         section,
+        academicYear: isFaculty ? academicYear : undefined,
+        subjectCode: isFaculty ? subjectCode : undefined,
+        scopeMode: isFaculty ? scopeMode : undefined,
+        rollNumber: isFaculty && scopeMode === 'individual' ? (individualStudentRoll || search) : undefined,
         reportType,
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
@@ -478,11 +747,16 @@ export default function ReportGenerationModule({ account, role }) {
 
       // Client-side fallback workbook generation
       const wb = XLSX.utils.book_new();
+      const scopeLabel = isFaculty ? ` | Scope: ${scopeMode.toUpperCase().replace('_', ' ')}` : '';
       const titleBanner = [
         ['APNA CAMPUS — ENTERPRISE REPORT'],
-        [`REPORT TYPE: ${reportType.toUpperCase()}`],
+        [`REPORT TYPE: ${reportType.toUpperCase()}${scopeLabel}`],
         [`Generated On: ${new Date().toLocaleString()} | User: ${account?.name || 'Authorized Official'} (${userRole})`],
-        [`Filters: Branch: ${branch} | Sem: ${semester} | Batch: ${batch} | Section: ${section} | Date: ${dateFrom || 'N/A'} to ${dateTo || 'N/A'}`],
+        [
+          isFaculty
+            ? `Filters: Scope: ${scopeMode} | Academic Year: ${academicYear} | Sem: ${semester} | Sec: ${section} | Subject: ${subjectCode} | Date: ${dateFrom || 'N/A'} to ${dateTo || 'N/A'}`
+            : `Filters: Branch: ${branch} | Sem: ${semester} | Batch: ${batch} | Section: ${section} | Date: ${dateFrom || 'N/A'} to ${dateTo || 'N/A'}`,
+        ],
         [],
       ];
 
@@ -490,24 +764,126 @@ export default function ReportGenerationModule({ account, role }) {
       let rows = [];
 
       if (reportType === 'attendance') {
-        headers = ['Sl. No.', 'Student Name', 'Registration Number', 'Branch', 'Semester', 'Section', 'Total Classes Held', 'Present', 'Absent', 'Attendance Percentage'];
-        rows = reportData.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.totalClassesHeld, r.present, r.absent, r.attendancePercentage]);
+        headers = [
+          'Sl. No.',
+          'Student Name',
+          'Registration Number',
+          'Branch',
+          'Academic Year',
+          'Semester',
+          'Section',
+          'Subject',
+          'Total Classes Held',
+          'Present',
+          'Absent',
+          'Attendance Percentage',
+        ];
+        rows = reportData.map((r) => [
+          r.slNo,
+          r.studentName,
+          r.registrationNumber,
+          r.branch,
+          r.academicYear || academicYear,
+          r.semester,
+          r.section,
+          r.subjectName ? `${r.subjectCode} - ${r.subjectName}` : subjectCode || 'N/A',
+          r.totalClassesHeld,
+          r.present,
+          r.absent,
+          r.attendancePercentage,
+        ]);
       } else if (reportType === 'cgpa') {
-        headers = ['Sl. No.', 'Student Name', 'Registration Number', 'Branch', 'Semester', 'Section', 'Batch', 'CGPA', 'Academic Status'];
-        rows = reportData.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.batch, r.cgpa, r.academicStatus]);
+        headers = [
+          'Sl. No.',
+          'Student Name',
+          'Registration Number',
+          'Branch',
+          'Academic Year',
+          'Semester',
+          'Section',
+          'Subject',
+          'Batch',
+          'CGPA',
+          'Academic Status',
+        ];
+        rows = reportData.map((r) => [
+          r.slNo,
+          r.studentName,
+          r.registrationNumber,
+          r.branch,
+          r.academicYear || academicYear,
+          r.semester,
+          r.section,
+          r.subjectName ? `${r.subjectCode} - ${r.subjectName}` : subjectCode || 'N/A',
+          r.batch,
+          r.cgpa,
+          r.academicStatus,
+        ]);
       } else if (reportType === 'sgpa') {
-        headers = ['Sl. No.', 'Student Name', 'Registration Number', 'Branch', 'Semester', 'Section', 'Batch', 'SGPA', 'Result Status'];
-        rows = reportData.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.batch, r.sgpa, r.resultStatus]);
+        headers = [
+          'Sl. No.',
+          'Student Name',
+          'Registration Number',
+          'Branch',
+          'Academic Year',
+          'Semester',
+          'Section',
+          'Subject',
+          'Batch',
+          'SGPA',
+          'Result Status',
+        ];
+        rows = reportData.map((r) => [
+          r.slNo,
+          r.studentName,
+          r.registrationNumber,
+          r.branch,
+          r.academicYear || academicYear,
+          r.semester,
+          r.section,
+          r.subjectName ? `${r.subjectCode} - ${r.subjectName}` : subjectCode || 'N/A',
+          r.batch,
+          r.sgpa,
+          r.resultStatus,
+        ]);
       } else if (reportType === 'document') {
-        headers = ['Sl. No.', 'Student Name', 'Registration Number', 'Branch', 'Semester', 'Section', 'Batch', 'Total Documents Required', 'Documents Submitted', 'Documents Verified', 'Documents Pending', 'Verification Status'];
-        rows = reportData.map(r => [r.slNo, r.studentName, r.registrationNumber, r.branch, r.semester, r.section, r.batch, r.totalRequired, r.submitted, r.verified, r.pending, r.verificationStatus]);
+        headers = [
+          'Sl. No.',
+          'Student Name',
+          'Registration Number',
+          'Branch',
+          'Academic Year',
+          'Semester',
+          'Section',
+          'Batch',
+          'Total Documents Required',
+          'Documents Submitted',
+          'Documents Verified',
+          'Documents Pending',
+          'Verification Status',
+        ];
+        rows = reportData.map((r) => [
+          r.slNo,
+          r.studentName,
+          r.registrationNumber,
+          r.branch,
+          r.academicYear || academicYear,
+          r.semester,
+          r.section,
+          r.batch,
+          r.totalRequired,
+          r.submitted,
+          r.verified,
+          r.pending,
+          r.verificationStatus,
+        ]);
       }
 
       const ws = XLSX.utils.aoa_to_sheet([...titleBanner, headers, ...rows]);
       XLSX.utils.book_append_sheet(wb, ws, 'ReportData');
 
       const dateStr = new Date().toISOString().split('T')[0];
-      const filename = `ApnaCampus_${reportType.toUpperCase()}_${branch}_${dateStr}.xlsx`;
+      const filename = `ApnaCampus_${reportType.toUpperCase()}_${isFaculty ? scopeMode : branch}_${dateStr}.xlsx`;
       XLSX.writeFile(wb, filename);
 
       triggerToast(`Downloaded: ${filename}`);
@@ -597,80 +973,220 @@ export default function ReportGenerationModule({ account, role }) {
         </div>
 
         <div className="rg-filter-grid">
-          {/* 1. Branch Filter */}
-          <div className="rg-field">
-            <label htmlFor="filter-branch">Branch / Department</label>
-            <select
-              id="filter-branch"
-              className="rg-select"
-              value={branch}
-              disabled={isLockedScope}
-              onChange={(e) => { setBranch(e.target.value); setPage(1); }}
-            >
-              {(filterConfig?.branches || [
-                { code: 'CSE', name: 'Computer Science & Engineering' },
-                { code: 'AIML', name: 'AI & Machine Learning' },
-                { code: 'ECE', name: 'Electronics & Communication' },
-                { code: 'EEE', name: 'Electrical & Electronics' },
-                { code: 'MECH', name: 'Mechanical Engineering' },
-                { code: 'CIVIL', name: 'Civil Engineering' },
-              ]).map((b) => (
-                <option key={b.code} value={b.code} disabled={b.isAllowed === false}>
-                  {b.code} — {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isFaculty ? (
+            <>
+              {/* Faculty Scope Mode */}
+              <div className="rg-field" style={{ minWidth: '220px' }}>
+                <label htmlFor="filter-scope-mode">Reporting Scope Mode</label>
+                <select
+                  id="filter-scope-mode"
+                  className="rg-select"
+                  value={scopeMode}
+                  onChange={(e) => {
+                    setScopeMode(e.target.value);
+                    setPage(1);
+                  }}
+                  style={{ fontWeight: 700, color: '#1e40af' }}
+                >
+                  <option value="all_assigned">🌐 Consolidated (All Assigned Classes)</option>
+                  <option value="section">👥 Selected Section Cohort</option>
+                  <option value="class">🏛️ Selected Class / Semester Cohort</option>
+                  <option value="subject">📚 Specific Subject Across Sections</option>
+                  <option value="individual">👤 Individual Student</option>
+                </select>
+              </div>
 
-          {/* 2. Semester Filter */}
-          <div className="rg-field">
-            <label htmlFor="filter-semester">Semester</label>
-            <select
-              id="filter-semester"
-              className="rg-select"
-              value={semester}
-              onChange={(e) => { setSemester(e.target.value); setPage(1); }}
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                <option key={num} value={`Semester ${num}`}>
-                  Semester {num}
-                </option>
-              ))}
-            </select>
-          </div>
+              {/* Academic Year */}
+              <div className="rg-field">
+                <label htmlFor="filter-academic-year">Academic Year</label>
+                <select
+                  id="filter-academic-year"
+                  className="rg-select"
+                  value={academicYear}
+                  onChange={(e) => {
+                    setAcademicYear(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  {availableYears.map((yr) => (
+                    <option key={yr} value={yr}>
+                      {yr}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          {/* 3. Batch Filter */}
-          <div className="rg-field">
-            <label htmlFor="filter-batch">Admission Batch</label>
-            <select
-              id="filter-batch"
-              className="rg-select"
-              value={batch}
-              onChange={(e) => { setBatch(e.target.value); setPage(1); }}
-            >
-              <option value="2024–2028">2024–2028 (1st/2nd Year)</option>
-              <option value="2023–2027">2023–2027 (3rd Year)</option>
-              <option value="2022–2026">2022–2026 (4th Year)</option>
-              <option value="2021–2025">2021–2025 (Graduating)</option>
-            </select>
-          </div>
+              {/* Semester */}
+              <div className="rg-field">
+                <label htmlFor="filter-semester">Semester</label>
+                <select
+                  id="filter-semester"
+                  className="rg-select"
+                  value={semester}
+                  disabled={scopeMode === 'all_assigned'}
+                  onChange={(e) => {
+                    setSemester(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  {availableSemesters.map((sem) => (
+                    <option key={sem} value={sem}>
+                      {sem}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          {/* 4. Section Filter */}
-          <div className="rg-field">
-            <label htmlFor="filter-section">Section</label>
-            <select
-              id="filter-section"
-              className="rg-select"
-              value={section}
-              onChange={(e) => { setSection(e.target.value); setPage(1); }}
-            >
-              <option value="Section A">Section A</option>
-              <option value="Section B">Section B</option>
-              <option value="Section C">Section C</option>
-            </select>
-          </div>
+              {/* Section */}
+              <div className="rg-field">
+                <label htmlFor="filter-section">Section</label>
+                <select
+                  id="filter-section"
+                  className="rg-select"
+                  value={section}
+                  disabled={scopeMode === 'all_assigned' || scopeMode === 'class'}
+                  onChange={(e) => {
+                    setSection(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  {availableSections.map((sec) => (
+                    <option key={sec} value={sec}>
+                      {sec}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          {/* 5. Report Type Selector */}
+              {/* Subject Taught */}
+              <div className="rg-field" style={{ minWidth: '200px' }}>
+                <label htmlFor="filter-subject">Subject Taught</label>
+                <select
+                  id="filter-subject"
+                  className="rg-select"
+                  value={subjectCode}
+                  disabled={scopeMode === 'all_assigned'}
+                  onChange={(e) => {
+                    setSubjectCode(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  {availableSubjects.map((sub) => (
+                    <option key={sub.subjectCode} value={sub.subjectCode}>
+                      {sub.subjectCode} — {sub.subjectName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Individual Student Input */}
+              {scopeMode === 'individual' && (
+                <div className="rg-field" style={{ minWidth: '180px' }}>
+                  <label htmlFor="filter-individual-roll">Student Roll / Reg. No</label>
+                  <input
+                    id="filter-individual-roll"
+                    type="text"
+                    className="rg-input"
+                    placeholder="e.g. 01 or GIFT-2305..."
+                    value={individualStudentRoll}
+                    onChange={(e) => {
+                      setIndividualStudentRoll(e.target.value);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* 1. Branch Filter */}
+              <div className="rg-field">
+                <label htmlFor="filter-branch">Branch / Department</label>
+                <select
+                  id="filter-branch"
+                  className="rg-select"
+                  value={branch}
+                  disabled={isLockedScope}
+                  onChange={(e) => {
+                    setBranch(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  {(filterConfig?.branches || [
+                    { code: 'CSE', name: 'Computer Science & Engineering' },
+                    { code: 'AIML', name: 'AI & Machine Learning' },
+                    { code: 'ECE', name: 'Electronics & Communication' },
+                    { code: 'EEE', name: 'Electrical & Electronics' },
+                    { code: 'MECH', name: 'Mechanical Engineering' },
+                    { code: 'CIVIL', name: 'Civil Engineering' },
+                  ]).map((b) => (
+                    <option key={b.code} value={b.code} disabled={b.isAllowed === false}>
+                      {b.code} — {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 2. Semester Filter */}
+              <div className="rg-field">
+                <label htmlFor="filter-semester">Semester</label>
+                <select
+                  id="filter-semester"
+                  className="rg-select"
+                  value={semester}
+                  onChange={(e) => {
+                    setSemester(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                    <option key={num} value={`Semester ${num}`}>
+                      Semester {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 3. Batch Filter */}
+              <div className="rg-field">
+                <label htmlFor="filter-batch">Admission Batch</label>
+                <select
+                  id="filter-batch"
+                  className="rg-select"
+                  value={batch}
+                  onChange={(e) => {
+                    setBatch(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="2024–2028">2024–2028 (1st/2nd Year)</option>
+                  <option value="2023–2027">2023–2027 (3rd Year)</option>
+                  <option value="2022–2026">2022–2026 (4th Year)</option>
+                  <option value="2021–2025">2021–2025 (Graduating)</option>
+                </select>
+              </div>
+
+              {/* 4. Section Filter */}
+              <div className="rg-field">
+                <label htmlFor="filter-section">Section</label>
+                <select
+                  id="filter-section"
+                  className="rg-select"
+                  value={section}
+                  onChange={(e) => {
+                    setSection(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="Section A">Section A</option>
+                  <option value="Section B">Section B</option>
+                  <option value="Section C">Section C</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Report Type Selector */}
           <div className="rg-field">
             <label htmlFor="filter-type">Report Type</label>
             <select
@@ -692,7 +1208,7 @@ export default function ReportGenerationModule({ account, role }) {
             </select>
           </div>
 
-          {/* 6. Date From Filter */}
+          {/* Date From Filter */}
           <div className="rg-field">
             <label htmlFor="filter-date-from">Date From</label>
             <input
@@ -704,7 +1220,7 @@ export default function ReportGenerationModule({ account, role }) {
             />
           </div>
 
-          {/* 7. Date To Filter */}
+          {/* Date To Filter */}
           <div className="rg-field">
             <label htmlFor="filter-date-to">Date To</label>
             <input
@@ -807,9 +1323,32 @@ export default function ReportGenerationModule({ account, role }) {
           <div className="rg-toolbar-left">
             <h2 className="rg-report-title">{meta?.title || 'Report Results'}</h2>
             <div className="rg-filter-pills">
-              <span className="rg-pill">{branch}</span>
-              <span className="rg-pill">{semester}</span>
-              <span className="rg-pill">{section}</span>
+              {isFaculty ? (
+                <>
+                  <span className="rg-pill" style={{ background: '#eff6ff', color: '#1e40af', fontWeight: 700 }}>
+                    Scope: {scopeMode.toUpperCase().replace('_', ' ')}
+                  </span>
+                  <span className="rg-pill">{academicYear}</span>
+                  {scopeMode !== 'all_assigned' && <span className="rg-pill">{semester}</span>}
+                  {scopeMode !== 'all_assigned' && scopeMode !== 'class' && <span className="rg-pill">{section}</span>}
+                  {scopeMode !== 'all_assigned' && (
+                    <span className="rg-pill" style={{ background: '#f5f3ff', color: '#6d28d9' }}>
+                      Subject: {subjectCode}
+                    </span>
+                  )}
+                  {scopeMode === 'individual' && individualStudentRoll && (
+                    <span className="rg-pill" style={{ background: '#fef3c7', color: '#92400e' }}>
+                      Roll: {individualStudentRoll}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="rg-pill">{branch}</span>
+                  <span className="rg-pill">{semester}</span>
+                  <span className="rg-pill">{section}</span>
+                </>
+              )}
               {dateFrom && dateTo && (
                 <span className="rg-pill" style={{ background: '#e0e7ff', color: '#3730a3' }}>
                   📅 {dateFrom} to {dateTo}
@@ -906,11 +1445,17 @@ export default function ReportGenerationModule({ account, role }) {
                     <th className="center sortable" onClick={() => handleSort('branch')}>
                       <span className="rg-th-content">Branch {renderSortIndicator('branch')}</span>
                     </th>
+                    <th className="center sortable" onClick={() => handleSort('academicYear')}>
+                      <span className="rg-th-content">Academic Year {renderSortIndicator('academicYear')}</span>
+                    </th>
                     <th className="center sortable" onClick={() => handleSort('semester')}>
                       <span className="rg-th-content">Semester {renderSortIndicator('semester')}</span>
                     </th>
                     <th className="center sortable" onClick={() => handleSort('section')}>
                       <span className="rg-th-content">Section {renderSortIndicator('section')}</span>
+                    </th>
+                    <th className="sortable" onClick={() => handleSort('subjectCode')}>
+                      <span className="rg-th-content">Subject {renderSortIndicator('subjectCode')}</span>
                     </th>
                     <th className="right sortable" onClick={() => handleSort('totalClassesHeld')}>
                       <span className="rg-th-content">Total Classes Held {renderSortIndicator('totalClassesHeld')}</span>
@@ -941,11 +1486,17 @@ export default function ReportGenerationModule({ account, role }) {
                     <th className="center sortable" onClick={() => handleSort('branch')}>
                       <span className="rg-th-content">Branch {renderSortIndicator('branch')}</span>
                     </th>
+                    <th className="center sortable" onClick={() => handleSort('academicYear')}>
+                      <span className="rg-th-content">Academic Year {renderSortIndicator('academicYear')}</span>
+                    </th>
                     <th className="center sortable" onClick={() => handleSort('semester')}>
                       <span className="rg-th-content">Semester {renderSortIndicator('semester')}</span>
                     </th>
                     <th className="center sortable" onClick={() => handleSort('section')}>
                       <span className="rg-th-content">Section {renderSortIndicator('section')}</span>
+                    </th>
+                    <th className="sortable" onClick={() => handleSort('subjectCode')}>
+                      <span className="rg-th-content">Subject {renderSortIndicator('subjectCode')}</span>
                     </th>
                     <th className="center sortable" onClick={() => handleSort('batch')}>
                       <span className="rg-th-content">Batch {renderSortIndicator('batch')}</span>
@@ -973,11 +1524,17 @@ export default function ReportGenerationModule({ account, role }) {
                     <th className="center sortable" onClick={() => handleSort('branch')}>
                       <span className="rg-th-content">Branch {renderSortIndicator('branch')}</span>
                     </th>
+                    <th className="center sortable" onClick={() => handleSort('academicYear')}>
+                      <span className="rg-th-content">Academic Year {renderSortIndicator('academicYear')}</span>
+                    </th>
                     <th className="center sortable" onClick={() => handleSort('semester')}>
                       <span className="rg-th-content">Semester {renderSortIndicator('semester')}</span>
                     </th>
                     <th className="center sortable" onClick={() => handleSort('section')}>
                       <span className="rg-th-content">Section {renderSortIndicator('section')}</span>
+                    </th>
+                    <th className="sortable" onClick={() => handleSort('subjectCode')}>
+                      <span className="rg-th-content">Subject {renderSortIndicator('subjectCode')}</span>
                     </th>
                     <th className="center sortable" onClick={() => handleSort('batch')}>
                       <span className="rg-th-content">Batch {renderSortIndicator('batch')}</span>
@@ -1004,6 +1561,9 @@ export default function ReportGenerationModule({ account, role }) {
                     </th>
                     <th className="center sortable" onClick={() => handleSort('branch')}>
                       <span className="rg-th-content">Branch {renderSortIndicator('branch')}</span>
+                    </th>
+                    <th className="center sortable" onClick={() => handleSort('academicYear')}>
+                      <span className="rg-th-content">Academic Year {renderSortIndicator('academicYear')}</span>
                     </th>
                     <th className="center sortable" onClick={() => handleSort('semester')}>
                       <span className="rg-th-content">Semester {renderSortIndicator('semester')}</span>
@@ -1048,8 +1608,17 @@ export default function ReportGenerationModule({ account, role }) {
                         </code>
                       </td>
                       <td className="center"><strong>{row.branch}</strong></td>
+                      <td className="center"><span className="rg-pill-sub">{row.academicYear || academicYear}</span></td>
                       <td className="center">{row.semester}</td>
                       <td className="center">{row.section}</td>
+                      <td>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#2563eb' }}>
+                          {row.subjectCode || subjectCode}
+                        </span>
+                        {row.subjectName && (
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{row.subjectName}</div>
+                        )}
+                      </td>
                       <td className="right" style={{ fontWeight: 600 }}>{row.totalClassesHeld}</td>
                       <td className="right" style={{ color: '#047857', fontWeight: 700 }}>{row.present}</td>
                       <td className="right" style={{ color: '#b91c1c', fontWeight: 700 }}>{row.absent}</td>
@@ -1080,8 +1649,17 @@ export default function ReportGenerationModule({ account, role }) {
                         </code>
                       </td>
                       <td className="center"><strong>{row.branch}</strong></td>
+                      <td className="center"><span className="rg-pill-sub">{row.academicYear || academicYear}</span></td>
                       <td className="center">{row.semester}</td>
                       <td className="center">{row.section}</td>
+                      <td>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#2563eb' }}>
+                          {row.subjectCode || subjectCode}
+                        </span>
+                        {row.subjectName && (
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{row.subjectName}</div>
+                        )}
+                      </td>
                       <td className="center">{row.batch}</td>
                       <td className="right" style={{ fontWeight: 800, color: row.cgpa >= 8.0 ? '#047857' : row.cgpa >= 6.5 ? '#1d4ed8' : '#b45309' }}>
                         {row.cgpa}
@@ -1101,8 +1679,17 @@ export default function ReportGenerationModule({ account, role }) {
                         </code>
                       </td>
                       <td className="center"><strong>{row.branch}</strong></td>
+                      <td className="center"><span className="rg-pill-sub">{row.academicYear || academicYear}</span></td>
                       <td className="center">{row.semester}</td>
                       <td className="center">{row.section}</td>
+                      <td>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#2563eb' }}>
+                          {row.subjectCode || subjectCode}
+                        </span>
+                        {row.subjectName && (
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{row.subjectName}</div>
+                        )}
+                      </td>
                       <td className="center">{row.batch}</td>
                       <td className="right" style={{ fontWeight: 800, color: row.sgpa >= 8.0 ? '#047857' : row.sgpa >= 6.5 ? '#1d4ed8' : '#b91c1c' }}>
                         {row.sgpa}
@@ -1122,6 +1709,7 @@ export default function ReportGenerationModule({ account, role }) {
                         </code>
                       </td>
                       <td className="center"><strong>{row.branch}</strong></td>
+                      <td className="center"><span className="rg-pill-sub">{row.academicYear || academicYear}</span></td>
                       <td className="center">{row.semester}</td>
                       <td className="center">{row.section}</td>
                       <td className="center">{row.batch}</td>

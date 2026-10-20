@@ -1104,47 +1104,6 @@ function AcademicDetails({ student }) {
       </div>
       <div className="erp-cyan-divider-bar"></div>
 
-      <div className="erp-table-responsive" style={{ marginBottom: '20px' }}>
-        <table className="erp-grid-table">
-          <tbody>
-            {fields.map(([label, value]) => (
-              <tr key={label}>
-                <td className="erp-th-cell" style={{ width: '32%' }}>{label}</td>
-                <td className="erp-td-cell">{value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-    ['Course', s.course || s.programme?.name || 'Bachelor of Technology (Autonomous)'],
-    ['Batch', s.batch || 'BTECH 2023–2027'],
-    ['Branch', s.branch || s.department || 'Computer Science & Engineering'],
-    ['Section', s.academicSection || s.section || 'CSE · Section A'],
-    ['House', s.house || 'Not assigned'],
-    ['Lab Group', s.labGroup || '1'],
-    ['Honors', s.honors || 'No'],
-    ['Minor', s.minor || 'No'],
-    ['Value added course-1', s.valueAdded1 || 'Cloud Architecture & DevOps'],
-    ['Value added course-2', s.valueAdded2 || 'Full-Stack React & NestJS'],
-    ['Value added course-3', s.valueAdded3 || 'Not selected'],
-    ['Admission Date', s.admissionDateFormatted || s.admissionDate || '05-08-2023'],
-    ['Entrance Examination', s.entranceExam || 'JEE (Main) / OJEE'],
-    ['Rank', s.rank || '2140 (State Merit)'],
-  ]
-  const qualifications = (s.qualifications && s.qualifications.length > 0)
-    ? s.qualifications.map(q => [q.qualification, q.institute, q.year, q.marks])
-    : [
-        ['10th', s.qual10thInstitute || 'Demo Secondary School', s.qual10thYear || '2021', s.qual10thMarks || '82.00%'],
-        ['12th', s.qual12thInstitute || 'Demo Senior Secondary School', s.qual12thYear || '2023', s.qual12thMarks || '86.00%'],
-        ['ITI', s.qualItiInstitute || 'Not applicable', s.qualItiYear || '—', s.qualItiMarks || '—'],
-        ['Diploma', s.qualDiplomaInstitute || 'Not applicable', s.qualDiplomaYear || '—', s.qualDiplomaMarks || '—'],
-        ['+3', s.qualPlus3Institute || 'Not applicable', s.qualPlus3Year || '—', s.qualPlus3Marks || '—'],
-        ['BCA', s.qualBcaInstitute || 'Not applicable', s.qualBcaYear || '—', s.qualBcaMarks || '—'],
-        ['BBA', s.qualBbaInstitute || 'Not applicable', s.qualBbaYear || '—', s.qualBbaMarks || '—'],
-        ['BTECH', s.qualBtechInstitute || 'Apna Campus Autonomous', s.qualBtechYear || '2027', s.qualBtechMarks || 'In progress (CGPA 8.42)'],
-      ]
-
-  return (
-    <div className="academic-details">
       {/* Normalized Degree Programme & Semester Progression Section */}
       <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
@@ -1208,12 +1167,17 @@ function AcademicDetails({ student }) {
         </div>
       </div>
 
-      <div className="profile-data-table academic-data-table">
-        {fields.map(([label, value]) => (
-          <div className="profile-data-row wide-row" key={label}>
-            <div className="profile-data-field"><span>{label}</span><strong>{value}</strong></div>
-          </div>
-        ))}
+      <div className="erp-table-responsive" style={{ marginBottom: '20px' }}>
+        <table className="erp-grid-table">
+          <tbody>
+            {fields.map(([label, value]) => (
+              <tr key={label}>
+                <td className="erp-th-cell" style={{ width: '32%' }}>{label}</td>
+                <td className="erp-td-cell">{value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <div className="erp-table-responsive" style={{ marginBottom: '20px' }}>

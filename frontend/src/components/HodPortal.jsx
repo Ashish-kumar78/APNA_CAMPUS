@@ -33,7 +33,8 @@ import {
   Sparkles,
   HelpCircle,
   ChevronRight,
-  ClipboardCheck
+  ClipboardCheck,
+  ShieldAlert
 } from 'lucide-react';
 import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
 import './HodPortal.css';
@@ -49,6 +50,8 @@ import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
+import HodGrievanceMonitoringModule from './HodGrievanceMonitoringModule.jsx';
+import { complaintsApi } from '../services/complaintsApi.js';
 
 function exportToCsv(filename, rows) {
   if (!rows || !rows.length) return;
@@ -134,6 +137,30 @@ export default function HodPortal({ account, onLogout }) {
   const [hodDocs, setHodDocs] = useState(() => getDocumentsForRole('hod'));
   const [hodDocsSearch, setHodDocsSearch] = useState('');
   const [docsViewMode, setDocsViewMode] = useState('student_docs');
+
+  // Anonymous Student Grievance Monitoring state
+  const [pendingGrievancesCount, setPendingGrievancesCount] = useState(2);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchGrievanceCount = async () => {
+      try {
+        const items = await complaintsApi.getHodComplaints();
+        if (isMounted && Array.isArray(items)) {
+          const pending = items.filter(c => c.status !== 'RESOLVED' && c.status !== 'REJECTED').length;
+          setPendingGrievancesCount(pending);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch grievance count in HOD portal', e);
+      }
+    };
+    fetchGrievanceCount();
+    window.addEventListener('apna_campus_complaints_updated', fetchGrievanceCount);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('apna_campus_complaints_updated', fetchGrievanceCount);
+    };
+  }, []);
 
   useEffect(() => {
     const handleDocsChange = () => setHodDocs(getDocumentsForRole('hod'));
@@ -279,6 +306,21 @@ export default function HodPortal({ account, onLogout }) {
         nextAction: 'Inspect 4 missing marks and approve or return for correction',
         linkTab: 'approval'
       },
+      ...(pendingGrievancesCount > 0 ? [{
+        id: 'wq-grievance',
+        title: 'Evaluate Anonymous Student Grievance & Faculty Corrective Action',
+        subjectCode: 'CS501',
+        subjectName: 'Data Structures & Algorithms',
+        cohort: 'Semester 5 · Section A',
+        facultyName: 'Dr. S. Mohanty',
+        submissionDate: 'Recent',
+        dueDate: 'Within 48 hrs',
+        priority: 'CRITICAL',
+        status: 'Action Required',
+        reviewer: 'Dr. P. K. Pattnaik (HOD)',
+        nextAction: 'Review faculty compensatory tutorial proposal and record observations',
+        linkTab: 'complaints'
+      }] : []),
       {
         id: 'wq-102',
         title: 'Conduct Academic Support Review for At-Risk Students',
@@ -526,6 +568,12 @@ export default function HodPortal({ account, onLogout }) {
               <FileText size={17} /> Department Gazette
             </button>
             <button
+              className={`hod-nav-btn ${activeTab === 'complaints' ? 'active' : ''}`}
+              onClick={() => setActiveTab('complaints')}
+            >
+              <ShieldAlert size={17} /> Grievance Monitoring
+            </button>
+            <button
               className={`hod-nav-btn ${activeTab === 'documents' ? 'active' : ''}`}
               onClick={() => { setHodDocs(getDocumentsForRole('hod')); setActiveTab('documents'); }}
             >
@@ -539,6 +587,13 @@ export default function HodPortal({ account, onLogout }) {
 
         {/* Content Pane */}
         <main className="hod-main">
+          {/* TAB: GRIEVANCE MONITORING */}
+          {activeTab === 'complaints' && (
+            <div style={{ marginBottom: '24px' }}>
+              <HodGrievanceMonitoringModule account={account} />
+            </div>
+          )}
+
           {/* TAKE ATTENDANCE TAB */}
           {activeTab === 'take-attendance' && (
             <div style={{ marginBottom: '24px' }}>
@@ -626,6 +681,15 @@ export default function HodPortal({ account, onLogout }) {
                   </div>
                   <div className="admin-kpi-val" style={{ color: '#d97706' }}>{pendingCount}</div>
                   <small style={{ color: '#d97706', fontWeight: 600 }}>Action Required →</small>
+                </div>
+
+                <div className="admin-kpi-card clickable-kpi" onClick={() => setActiveTab('complaints')} title="Click to monitor Student Grievances & Faculty Corrective Actions">
+                  <div className="admin-kpi-card-header">
+                    <span className="admin-kpi-label">Student Grievances</span>
+                    <div className="admin-kpi-card-icon amber"><ShieldAlert size={18} /></div>
+                  </div>
+                  <div className="admin-kpi-val" style={{ color: '#d97706' }}>{pendingGrievancesCount}</div>
+                  <small style={{ color: '#d97706', fontWeight: 600 }}>Review Queue &amp; Analytics →</small>
                 </div>
 
                 <div className="admin-kpi-card clickable-kpi" onClick={() => setActiveTab('approval')} title="Click to view finalized marks">

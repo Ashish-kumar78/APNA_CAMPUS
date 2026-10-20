@@ -24,6 +24,7 @@
 .notice-tag-badge.scholarship { background: #ecfdf5; color: #047857; }
 .notice-tag-badge.placement { background: #faf5ff; color: #7e22ce; }
 .notice-tag-badge.event { background: #fffbeb; color: #b45309; }
+.notice-tag-badge.faculty { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 800; }
 
 .notice-card-body h3 { font-size: 1.15rem; font-weight: 700; color: #0a0f1e; margin: 0 0 8px; cursor: pointer; }
 .notice-card-body h3:hover { color: #2563eb; }

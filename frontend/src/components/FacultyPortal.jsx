@@ -6,10 +6,13 @@ import {
   Timer, X, ChevronDown, ShieldCheck, Eye, Flag, Trash2,
   MessageSquare, Menu, CheckSquare, Square, FileSpreadsheet,
   ArrowUpRight, HelpCircle, Send, Share2, HeartHandshake,
-  BookOpenCheck, UserCheck, ClipboardCheck
+  BookOpenCheck, UserCheck, ClipboardCheck,
+  ChevronRight, ChevronLeft, PartyPopper, MapPin, Megaphone,
+  Check, CalendarDays, ShieldAlert
 } from 'lucide-react';
 import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
 import './FacultyPortal.css';
+import '../DashboardHome.css';
 import '../components/AdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import AwaitingVerificationSection from './CampusConnect/AwaitingVerificationSection.jsx';
@@ -24,6 +27,9 @@ import { useTimeGreeting } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
+import FacultyClassSelector from './FacultyClassSelector.jsx';
+import FacultyComplaintsModule from './FacultyComplaintsModule.jsx';
+import FacultyNotificationsModule from './FacultyNotificationsModule.jsx';
 
 // CSV Export Helper
 function exportToCsv(filename, rows) {
@@ -56,6 +62,61 @@ function exportToCsv(filename, rows) {
   document.body.removeChild(link);
 }
 
+const holidays = [
+  ['14-01-2026', 'Makar Sankranti / Pongal'],
+  ['23-01-2026', 'Netaji Jayanti / Veer Surendra Sai Jayanti'],
+  ['26-01-2026', 'Republic Day'],
+  ['15-02-2026', 'Maha Shivratri'],
+  ['04-03-2026', 'Dola Purnima / Holi Eve'],
+  ['05-03-2026', 'Holi Festival'],
+  ['20-03-2026', 'Id-ul-Fitr (Ramzan Id)'],
+  ['27-03-2026', 'Sri Ram Navami'],
+  ['01-04-2026', 'Utkal Divas (Odisha Day)'],
+  ['03-04-2026', 'Good Friday'],
+  ['14-04-2026', 'Dr. B.R. Ambedkar Jayanti / Maha Vishuba Sankranti'],
+  ['01-05-2026', 'May Day (International Workers\' Day)'],
+  ['27-05-2026', 'Bakrid / Eid-ul-Adha'],
+  ['16-07-2026', 'Rath Yatra (Car Festival)'],
+  ['24-07-2026', 'Bahuda Yatra'],
+  ['26-07-2026', 'Muharram'],
+  ['15-08-2026', 'Independence Day'],
+  ['04-09-2026', 'Sri Krishna Janmashtami'],
+  ['14-09-2026', 'Ganesh Chaturthi / Vinayaka Puja'],
+  ['16-09-2026', 'Nuakhai (Western Odisha Festival)'],
+  ['02-10-2026', 'Mahatma Gandhi Jayanti'],
+  ['10-10-2026', 'Mahalaya'],
+  ['14-10-2026', 'Durga Puja (Maha Saptami)'],
+  ['15-10-2026', 'Durga Puja (Maha Ashtami)'],
+  ['16-10-2026', 'Durga Puja (Maha Navami)'],
+  ['17-10-2026', 'Vijaya Dashami (Dussehra)'],
+  ['20-10-2026', 'Diwali / Kali Puja'],
+  ['24-11-2026', 'Guru Nanak Jayanti / Rahas Purnima'],
+  ['25-12-2026', 'Christmas Day'],
+];
+
+function createCalendarDays(month, today) {
+  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+  const gridStart = new Date(firstDay);
+  gridStart.setDate(firstDay.getDate() - firstDay.getDay());
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    return {
+      key,
+      day: date.getDate(),
+      inMonth: date.getMonth() === month.getMonth(),
+      isToday: date.toDateString() === today.toDateString(),
+      isSunday: date.getDay() === 0,
+    };
+  });
+}
+
+function DetailRow({ label, value }) {
+  return <div className="student-detail-row"><dt>{label}</dt><dd>{value}</dd></div>;
+}
+
 export default function FacultyPortal({ account, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const greeting = useTimeGreeting();
@@ -65,6 +126,161 @@ export default function FacultyPortal({ account, onLogout }) {
   const [studentSearch, setStudentSearch] = useState('');
   const [attendanceFilter, setAttendanceFilter] = useState('ALL'); // ALL, SHORTAGE, GOOD, HIGH
   const [riskFilter, setRiskFilter] = useState('ALL'); // ALL, AT_RISK
+
+  // Live clock, hero time greeting, and calendar state
+  const [today] = useState(() => new Date());
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const timeGreeting = useMemo(() => {
+    const hour = currentTime.getHours();
+    if (hour >= 5 && hour < 12) {
+      return {
+        wish: 'Good morning',
+        emoji: '🌅',
+        period: 'Morning',
+        caption: 'Rise and shine! Have an inspiring, energetic, and productive academic day ahead.',
+        motd: 'Morning lectures commence at 09:00 AM. Check your class timetable for room assignments.',
+        themeClass: 'dash-hero-morning',
+      };
+    }
+    if (hour >= 12 && hour < 17) {
+      return {
+        wish: 'Good afternoon',
+        emoji: '☀️',
+        period: 'Afternoon',
+        caption: 'Keep up the strong teaching momentum in your afternoon lectures, lab practicals, and assessments.',
+        motd: 'Computing lab facilities and evaluation center remain open till 06:00 PM.',
+        themeClass: 'dash-hero-afternoon',
+      };
+    }
+    if (hour >= 17 && hour < 22) {
+      return {
+        wish: 'Good evening',
+        emoji: '🌇',
+        period: 'Evening',
+        caption: 'Review today’s lecture coverage, verify attendance entries, and enjoy your evening.',
+        motd: 'Continuous assessment evaluation marks entry deadline is active.',
+        themeClass: 'dash-hero-evening',
+      };
+    }
+    return {
+      wish: 'Good night',
+      emoji: '🌙',
+      period: 'Night',
+      caption: 'Rest well tonight and recharge your energy for tomorrow’s classes.',
+      motd: 'Campus quiet hours are in effect. Ensure evaluation grades are saved.',
+      themeClass: 'dash-hero-night',
+    };
+  }, [currentTime]);
+
+  const formattedLiveTime = useMemo(() => {
+    return currentTime.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    });
+  }, [currentTime]);
+
+  const todayLabel = new Intl.DateTimeFormat('en-IN', {
+    weekday: 'short', month: 'short', day: '2-digit', year: 'numeric',
+  }).format(today);
+
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const monthLabel = new Intl.DateTimeFormat('en-IN', {
+    month: 'long', year: 'numeric',
+  }).format(currentMonth);
+
+  const [holidayView, setHolidayView] = useState('all');
+
+  const calendarDays = useMemo(() => createCalendarDays(currentMonth, today), [currentMonth, today]);
+
+  const holidayItems = useMemo(() => {
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return holidays.map(([raw, name]) => {
+      const [d, m, y] = raw.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      const daysLeft = Math.round((date - startOfToday) / 86400000);
+      return { raw, name, date, daysLeft, key: `${y}-${m - 1}-${d}` };
+    });
+  }, [today]);
+
+  const displayedHolidays = useMemo(() => {
+    if (holidayView === 'upcoming') {
+      return holidayItems.filter((h) => h.daysLeft >= 0);
+    }
+    return holidayItems;
+  }, [holidayView, holidayItems]);
+
+  const holidayMap = useMemo(() => Object.fromEntries(holidayItems.map((h) => [h.key, h.name])), [holidayItems]);
+  const nextHoliday = useMemo(() => holidayItems.find((h) => h.daysLeft >= 0), [holidayItems]);
+
+  function updateMonth(direction) {
+    setCurrentMonth((month) => new Date(month.getFullYear(), month.getMonth() + direction, 1));
+  }
+
+  const facultyPhoto = useMemo(() => {
+    if (account?.photo && !account.photo.includes('female')) return account.photo;
+    return '/passport_photo_male.svg';
+  }, [account]);
+
+  const todayTeachingSchedule = useMemo(() => [
+    {
+      id: 'sched-1',
+      period: 'Period 1 (09:00 - 10:00 AM)',
+      time: '09:00 AM',
+      subjectCode: 'CS501',
+      subjectName: 'Data Structures (Theory)',
+      section: 'Section A',
+      semester: 'Semester 5',
+      room: 'Block B - 302',
+      status: 'Completed',
+      attendanceLogged: true,
+      stats: '30/32 Present · 93.8%',
+    },
+    {
+      id: 'sched-2',
+      period: 'Period 3 (11:15 - 12:15 PM)',
+      time: '11:15 AM',
+      subjectCode: 'CS502',
+      subjectName: 'Operating Systems (Theory)',
+      section: 'Section A',
+      semester: 'Semester 5',
+      room: 'Block B - 304',
+      status: 'Next Session',
+      topic: 'Virtual Memory & Inverted Page Tables',
+      attendanceLogged: false,
+      isNext: true,
+    },
+    {
+      id: 'sched-3',
+      period: 'Period 5 & 6 (02:00 - 04:00 PM)',
+      time: '02:00 PM',
+      subjectCode: 'CS501',
+      subjectName: 'Data Structures Lab (Practical)',
+      section: 'Section A (Batch A1: 16 Students)',
+      semester: 'Semester 5',
+      room: 'Computing Lab 3',
+      status: 'Lab Practical',
+      topic: 'Lab Work Assessment 4',
+      attendanceLogged: false,
+    },
+  ], []);
+
+  const nextClass = useMemo(() => {
+    return todayTeachingSchedule.find(s => s.isNext) || todayTeachingSchedule[0];
+  }, [todayTeachingSchedule]);
 
   // Interactive Modals State
   const [selectedSubjectModal, setSelectedSubjectModal] = useState(null); // subject obj + modal active tab
@@ -134,16 +350,43 @@ export default function FacultyPortal({ account, onLogout }) {
     };
   }, [facultyAssignments, selectedAssignmentId]);
 
-  // Scoped strictly to the faculty's assigned class cohort
+  const [isConsolidatedScope, setIsConsolidatedScope] = useState(false);
+
+  // Scoped strictly to the faculty's assigned class cohort or consolidated across assigned classes
   const scopedStudents = useMemo(() => {
+    if (isConsolidatedScope) {
+      const matching = allStudents.filter(s => {
+        return facultyAssignments.some(fa => {
+          const semMatch = (s.semester || '').toLowerCase() === fa.semester.toLowerCase();
+          const secLetter = fa.section.replace('Section ', '').trim().toUpperCase();
+          const studentSecLetter = (s.section || '').replace('Section ', '').trim().toUpperCase();
+          const secMatch = studentSecLetter === secLetter;
+          const yrMatch = !fa.academicYear || s.academicYear === fa.academicYear;
+          return semMatch && secMatch && yrMatch;
+        });
+      });
+      // Deduplicate by student id or rollNumber
+      const seen = new Set();
+      return matching.filter(s => {
+        const key = s.id || s.studentId || s.rollNumber;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
     const sem = currentAssignment.semester || 'Semester 5';
-    const secLetter = (currentAssignment.section || 'Section A').replace('Section ', '').trim();
+    const secLetter = (currentAssignment.section || 'Section A').replace('Section ', '').trim().toUpperCase();
+    const yr = currentAssignment.academicYear || '2026-27';
+
     return allStudents.filter(s => {
-      const semMatch = (s.semester || 'Semester 5') === sem;
-      const secMatch = (s.section || 'Section A').includes(secLetter);
-      return semMatch && secMatch;
+      const semMatch = (s.semester || '').toLowerCase() === sem.toLowerCase();
+      const studentSecLetter = (s.section || '').replace('Section ', '').trim().toUpperCase();
+      const secMatch = studentSecLetter === secLetter;
+      const yrMatch = !s.academicYear || s.academicYear === yr;
+      return semMatch && secMatch && yrMatch;
     });
-  }, [allStudents, currentAssignment]);
+  }, [allStudents, facultyAssignments, currentAssignment, isConsolidatedScope]);
 
   const atRiskStudents = useMemo(() => {
     return scopedStudents.filter(s => erpStore.calculateStudentRisk(s).isAtRisk);
@@ -669,6 +912,18 @@ export default function FacultyPortal({ account, onLogout }) {
               <ClipboardList size={17} /> Quiz Management
             </button>
             <button
+              className={`faculty-nav-btn ${activeTab === 'complaints' ? 'active' : ''}`}
+              onClick={() => setActiveTab('complaints')}
+            >
+              <ShieldAlert size={17} /> Student Complaints
+            </button>
+            <button
+              className={`faculty-nav-btn ${activeTab === 'notifications' ? 'active' : ''}`}
+              onClick={() => setActiveTab('notifications')}
+            >
+              <Megaphone size={17} /> Notifications &amp; Broadcasts
+            </button>
+            <button
               className={`faculty-nav-btn ${activeTab === 'documents' ? 'active' : ''}`}
               onClick={() => { setCampusDocs(getDocumentsForRole('faculty')); setActiveTab('documents'); }}
             >
@@ -682,6 +937,20 @@ export default function FacultyPortal({ account, onLogout }) {
 
         {/* Dynamic Content Pane */}
         <main className="faculty-main">
+          {/* STUDENT COMPLAINTS TAB */}
+          {activeTab === 'complaints' && (
+            <div style={{ marginBottom: '24px' }}>
+              <FacultyComplaintsModule account={account} />
+            </div>
+          )}
+
+          {/* NOTIFICATIONS TAB */}
+          {activeTab === 'notifications' && (
+            <div style={{ marginBottom: '24px' }}>
+              <FacultyNotificationsModule account={account} />
+            </div>
+          )}
+
           {/* TAKE ATTENDANCE TAB */}
           {activeTab === 'take-attendance' && (
             <div style={{ marginBottom: '24px' }}>
@@ -716,19 +985,162 @@ export default function FacultyPortal({ account, onLogout }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
-            <div>
-              {/* Welcome Header */}
-              <div className="admin-view-header">
-                <div>
-                  <h2>{greeting}, {account?.name || 'Dr. S. Mohanty'}</h2>
-                  <p>Faculty Continuous Assessment &amp; Evaluation Workspace · Assigned: {currentAssignment.subjectName} ({currentAssignment.subjectCode})</p>
+            <div className="dash">
+              {/* 1. Dynamic Hero Greeting matching Student Dashboard */}
+              <section className={`dash-hero ${timeGreeting.themeClass}`} aria-label="Welcome">
+                <div className="dash-hero-glow" aria-hidden="true" />
+                <div className="dash-hero-main">
+                  <p className="dash-hero-kicker"><Sparkles size={13} /> Faculty workspace · {currentAssignment.deptCode || 'CSE'} Department</p>
+                  <h2 className="dash-hero-title">{timeGreeting.wish}, {(account?.name || 'Dr. S. Mohanty').split(' ')[0]} {timeGreeting.emoji}</h2>
+                  <p className="dash-hero-caption">{timeGreeting.caption}</p>
+                  <div className="dash-motd" role="note" aria-label="Message of the day">
+                    <span className="dash-motd-icon"><Megaphone size={14} /></span>
+                    <strong>Academic Notice</strong>
+                    <span>Continuous evaluation &amp; CIA register active for {currentAssignment.subjectName} ({currentAssignment.subjectCode}) · {currentAssignment.semester}</span>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="dash-hero-meta">
+                  <span className="dash-chip">Academic year <strong>2026–27</strong></span>
+                  <time className="dash-date"><CalendarDays size={14} /> {todayLabel}</time>
+                  <span className="dash-chip" style={{ background: 'rgba(0,0,0,0.22)' }}>
+                    <Clock size={11} /> {formattedLiveTime}
+                  </span>
+                </div>
+              </section>
+
+              {/* 2. Top Hero Split: Faculty Profile on LEFT (50%) + 2x2 Stats Grid on RIGHT (50%) */}
+              <div className="dash-hero-split">
+                {/* Faculty Profile Card (Exact Student Dashboard Card Layout & Passport Photo Frame) */}
+                <aside className="dash-card dash-info dash-info-hero" id="faculty-information" aria-label="Faculty account information">
+                  <div className="dash-info-cover">
+                    <div className="dash-passport-photo-frame" title={`${account?.name || 'Faculty'} Official Photograph (35mm x 45mm)`}>
+                      <img src={facultyPhoto} alt={account?.name || 'Faculty'} className="dash-passport-img" />
+                    </div>
+                    <div>
+                      <strong>{account?.name || 'Dr. S. Mohanty'}</strong>
+                      <small>{account?.identity || 'FAC-042'} · Assistant Professor</small>
+                    </div>
+                    <span className="dash-status"><i /> Active</span>
+                  </div>
+                  <dl className="dash-info-list">
+                    <DetailRow label="Employee Code" value={account?.identity || 'FAC-042'} />
+                    <DetailRow label="Name" value={account?.name || 'Dr. S. Mohanty'} />
+                    <DetailRow label="Designation" value="Assistant Professor" />
+                    <DetailRow label="Department" value={account?.department || 'Computer Science & Engineering'} />
+                    <DetailRow label="Assigned Cohort" value={`${currentAssignment.semester} · ${currentAssignment.section}`} />
+                    <DetailRow label="Cabin / Office" value={currentAssignment.room || 'Room 312 · Block B'} />
+                    <DetailRow label="Email ID" value={account?.email || `${(account?.name || 's.mohanty').toLowerCase().replace(/\s+/g, '.').replace('dr.', '')}@apnacampus.edu.in`} />
+                    <DetailRow label="Mobile No." value={account?.phone || '+91 94370 12844'} />
+                  </dl>
+                  <button
+                    className="dash-btn dash-btn-primary dash-info-btn"
+                    type="button"
+                    onClick={() => setActiveTab('subjects')}
+                  >
+                    View Teaching Portfolio <ChevronRight size={15} />
+                  </button>
+                </aside>
+
+                {/* 2x2 Stats Grid on RIGHT - Equivalent to Student Dashboard with Next Class Included */}
+                <section className="dash-stats-2x2" aria-label="Faculty teaching snapshot">
+                  {/* Card 1: Assigned Courses */}
+                  <article className="dash-stat tone-blue">
+                    <div className="dash-stat-head">
+                      <div className="dash-stat-head-left">
+                        <span className="dash-stat-icon"><BookOpen size={18} /></span>
+                        <span className="dash-stat-label">Assigned courses</span>
+                      </div>
+                      <span className="dash-stat-badge tone-blue-badge">{currentAssignment.semester}</span>
+                    </div>
+                    <div className="dash-stat-body">
+                      <strong className="dash-stat-value">{String(facultyAssignments.length).padStart(2, '0')}</strong>
+                      <p className="dash-stat-desc">{currentAssignment.subjectName} ({currentAssignment.subjectCode})</p>
+                    </div>
+                    <div className="dash-stat-foot">
+                      <span className="dash-stat-pill">{currentAssignment.program || 'B.Tech'}</span>
+                      <span className="dash-stat-pill">{currentAssignment.section}</span>
+                      <span className="dash-stat-pill tone-green-pill">Active Teaching</span>
+                    </div>
+                  </article>
+
+                  {/* Card 2: Attendance Eligibility / Cohort Attendance */}
+                  <article className="dash-stat tone-green">
+                    <div className="dash-stat-head">
+                      <div className="dash-stat-head-left">
+                        <span className="dash-stat-icon"><CheckCircle2 size={18} /></span>
+                        <span className="dash-stat-label">Cohort Attendance</span>
+                      </div>
+                      <span className="dash-stat-badge tone-green-badge">Eligible (93.8%)</span>
+                    </div>
+                    <div className="dash-stat-body">
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <strong className="dash-stat-value">93.8%</strong>
+                        <span className="dash-stat-ratio">{scopedStudents.length - atRiskStudents.length} / {scopedStudents.length} Regular</span>
+                      </div>
+                      <div className="dash-progress" aria-hidden="true">
+                        <i style={{ width: '93.8%' }} />
+                      </div>
+                    </div>
+                    <div className="dash-stat-foot">
+                      <small className="dash-stat-sub text-green">
+                        <Check size={13} /> {atRiskStudents.length === 0 ? 'All cohort students above 75% threshold' : `${atRiskStudents.length} student${atRiskStudents.length > 1 ? 's' : ''} require attendance remediation`}
+                      </small>
+                    </div>
+                  </article>
+
+                  {/* Card 3: Next Class (Requirement 3: Included in Top Appearance Box) */}
+                  <article className="dash-stat tone-violet">
+                    <div className="dash-stat-head">
+                      <div className="dash-stat-head-left">
+                        <span className="dash-stat-icon"><Clock size={18} /></span>
+                        <span className="dash-stat-label">Next class</span>
+                      </div>
+                      <span className="dash-stat-badge tone-violet-badge">Starts {nextClass.time}</span>
+                    </div>
+                    <div className="dash-stat-body">
+                      <strong className="dash-stat-value">{nextClass.time} <em>Today</em></strong>
+                      <p className="dash-stat-desc">{nextClass.subjectName}</p>
+                    </div>
+                    <div className="dash-stat-foot">
+                      <span className="dash-stat-sub">
+                        <MapPin size={13} /> {nextClass.room} · {nextClass.section} ({nextClass.semester})
+                      </span>
+                    </div>
+                  </article>
+
+                  {/* Card 4: Next Holiday */}
+                  <article className="dash-stat tone-amber">
+                    <div className="dash-stat-head">
+                      <div className="dash-stat-head-left">
+                        <span className="dash-stat-icon"><PartyPopper size={18} /></span>
+                        <span className="dash-stat-label">Next holiday</span>
+                      </div>
+                      <span className="dash-stat-badge tone-amber-badge">Govt Gazetted</span>
+                    </div>
+                    <div className="dash-stat-body">
+                      <strong className="dash-stat-value">{nextHoliday ? (nextHoliday.daysLeft === 0 ? 'Today' : nextHoliday.daysLeft === 1 ? 'Tomorrow' : `${nextHoliday.daysLeft} days`) : '5 days'}</strong>
+                      <p className="dash-stat-desc">{nextHoliday ? nextHoliday.name : 'Mahalaya'}</p>
+                    </div>
+                    <div className="dash-stat-foot">
+                      <span className="dash-stat-sub">
+                        {nextHoliday?.date ? nextHoliday.date.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : 'Sat, 10 Oct, 2026'} · Campus closed
+                      </span>
+                    </div>
+                  </article>
+                </section>
+              </div>
+
+              {/* 3. Teaching Cohort Selector & Quick Actions Strip */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', background: '#ffffff', border: '1px solid var(--d-line)', borderRadius: '14px', padding: '12px 18px', boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Teaching Cohort:
+                  </span>
                   <select
                     className="admin-select"
                     value={selectedAssignmentId}
                     onChange={e => setSelectedAssignmentId(e.target.value)}
-                    style={{ fontWeight: 600, background: '#eff6ff', borderColor: '#bfdbfe', color: '#1e40af' }}
+                    style={{ fontWeight: 600, background: '#eff6ff', borderColor: '#bfdbfe', color: '#1e40af', padding: '6px 12px', borderRadius: '8px' }}
                     title="Switch Assigned Teaching Cohort"
                   >
                     {facultyAssignments.map(fa => (
@@ -737,32 +1149,37 @@ export default function FacultyPortal({ account, onLogout }) {
                       </option>
                     ))}
                   </select>
-                  <button className="admin-action-btn-primary" onClick={handleOpenAttendanceModal}>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button className="admin-action-btn-primary" onClick={handleOpenAttendanceModal} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px' }}>
                     <Calendar size={15} /> Mark Attendance
                   </button>
-                  <button className="admin-action-btn-primary" onClick={() => setActiveTab('marks')}>
+                  <button className="admin-action-btn-primary" onClick={() => setActiveTab('marks')} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px' }}>
                     <BarChart2 size={15} /> Enter Marks
+                  </button>
+                  <button className="admin-action-btn-secondary" onClick={() => setActiveTab('students')} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px' }}>
+                    <Users size={15} /> View Roster ({scopedStudents.length})
                   </button>
                 </div>
               </div>
 
-              {/* At-Risk Attendance Alert Banner */}
+              {/* 4. Alert Banners (Preserved from existing Faculty functionality) */}
               {atRiskStudents.length > 0 && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 16px', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <AlertCircle size={20} color="#dc2626" style={{ flexShrink: 0 }} />
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <AlertCircle size={22} color="#dc2626" style={{ flexShrink: 0 }} />
                     <div>
-                      <strong style={{ color: '#991b1b', fontSize: '0.9rem' }}>
+                      <strong style={{ color: '#991b1b', fontSize: '0.92rem' }}>
                         Statutory Attendance Shortage Alert ({atRiskStudents.length} Students &lt; 75%)
                       </strong>
-                      <div style={{ color: '#b91c1c', fontSize: '0.8rem' }}>
+                      <div style={{ color: '#b91c1c', fontSize: '0.82rem' }}>
                         Autonomous regulation requires mandatory minimum 75% attendance to sit for end-semester examinations.
                       </div>
                     </div>
                   </div>
                   <button
                     className="admin-action-btn-secondary"
-                    style={{ fontSize: '0.78rem', padding: '4px 10px', color: '#991b1b', borderColor: '#fca5a5', background: '#fff' }}
+                    style={{ fontSize: '0.8rem', padding: '6px 12px', color: '#991b1b', borderColor: '#fca5a5', background: '#fff' }}
                     onClick={() => { setActiveTab('students'); setStudentSearch(''); }}
                   >
                     Review At-Risk Students →
@@ -770,7 +1187,6 @@ export default function FacultyPortal({ account, onLogout }) {
                 </div>
               )}
 
-              {/* HOD Feedback Notice Banner */}
               <div className="faculty-rejection-banner">
                 <AlertCircle size={22} color="#e11d48" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
@@ -783,121 +1199,8 @@ export default function FacultyPortal({ account, onLogout }) {
                 </div>
               </div>
 
-              {/* Data Integrity Explanation Note */}
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 14px', marginBottom: '1.25rem', fontSize: '0.8rem', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-                <div>
-                  <strong>Academic Scope Reconciled:</strong> Assigned teaching cohort is <strong>{currentAssignment.semester} · {currentAssignment.section}</strong> ({scopedStudents.length} Students). Total course enrollment across all sections is <strong>91 students</strong>.
-                </div>
-                <span className="admin-badge active" style={{ fontSize: '0.72rem' }}>Academic Year 2026-27</span>
-              </div>
-
-              {/* 8 Clickable Database-Driven KPI Cards */}
-              <div className="admin-kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', marginBottom: '1.5rem' }}>
-                <div className="admin-kpi-card clickable-kpi" onClick={() => setActiveTab('subjects')} title="Click to view assigned subjects">
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Assigned Courses</span>
-                    <div className="admin-kpi-card-icon blue"><BookOpen size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">{facultyAssignments.length} Courses</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                    <small style={{ color: '#64748b' }}>{currentAssignment.subjectCode} ({currentAssignment.room})</small>
-                    <ArrowUpRight size={13} color="#2563eb" />
-                  </div>
-                </div>
-
-                <div className="admin-kpi-card clickable-kpi" onClick={() => setActiveTab('students')} title="Click to view class roster">
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Cohort Roster</span>
-                    <div className="admin-kpi-card-icon emerald"><Users size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">{scopedStudents.length} Students</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                    <small style={{ color: '#059669', fontWeight: 600 }}>{currentAssignment.section} (91 Course Total)</small>
-                    <ArrowUpRight size={13} color="#059669" />
-                  </div>
-                </div>
-
-                <div
-                  className="admin-kpi-card clickable-kpi"
-                  onClick={() => { setActiveTab('students'); setRiskFilter('AT_RISK'); }}
-                  title="Click to view at-risk students"
-                >
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">At-Risk Students</span>
-                    <div className="admin-kpi-card-icon amber"><AlertCircle size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val" style={{ color: atRiskStudents.length > 0 ? '#dc2626' : '#059669' }}>
-                    {atRiskStudents.length} Alert{atRiskStudents.length === 1 ? '' : 's'}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                    <small style={{ color: '#b91c1c' }}>Attendance &lt; 75% or Backlogs</small>
-                    <ArrowUpRight size={13} color="#dc2626" />
-                  </div>
-                </div>
-
-                <div className="admin-kpi-card clickable-kpi" onClick={handleOpenAttendanceModal} title="Click to log period attendance">
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Attendance Pending</span>
-                    <div className="admin-kpi-card-icon blue"><Calendar size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">2 Periods</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                    <small style={{ color: '#2563eb', fontWeight: 600 }}>Period 2 &amp; Lab Today</small>
-                    <ArrowUpRight size={13} color="#2563eb" />
-                  </div>
-                </div>
-
-                <div className="admin-kpi-card clickable-kpi" onClick={() => setActiveTab('marks')} title="Click to enter assessment marks">
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Marks Pending Entry</span>
-                    <div className="admin-kpi-card-icon amber"><BarChart2 size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">14 Entries</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                    <small style={{ color: '#d97706', fontWeight: 600 }}>Modular 2 &amp; Lab Practical</small>
-                    <ArrowUpRight size={13} color="#d97706" />
-                  </div>
-                </div>
-
-                <div className="admin-kpi-card clickable-kpi" onClick={() => setActiveTab('quiz')} title="Click to manage quizzes">
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Quizzes Live / Sched</span>
-                    <div className="admin-kpi-card-icon emerald"><ClipboardList size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">1 Live · 3 Sched</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                    <small style={{ color: '#059669' }}>Total 4 Assessments</small>
-                    <ArrowUpRight size={13} color="#059669" />
-                  </div>
-                </div>
-
-                <div className="admin-kpi-card clickable-kpi" onClick={() => setActiveTab('awaiting-verification')} title="Click to verify student resources">
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Resources Moderation</span>
-                    <div className="admin-kpi-card-icon blue"><ShieldCheck size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">4 Pending</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                    <small style={{ color: '#4338ca' }}>Awaiting Faculty Sign-off</small>
-                    <ArrowUpRight size={13} color="#4338ca" />
-                  </div>
-                </div>
-
-                <div className="admin-kpi-card clickable-kpi" onClick={() => setActiveTab('marks')} title="Click to view assessment deadlines">
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Next Milestone</span>
-                    <div className="admin-kpi-card-icon amber"><Clock size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">15 Oct</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                    <small style={{ color: '#d97706', fontWeight: 600 }}>Modular 2 CIE Exams</small>
-                    <ArrowUpRight size={13} color="#d97706" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Prioritized Faculty Work Queue */}
-              <div className="faculty-work-queue-container">
+              {/* 5. Prioritized Faculty Work Queue */}
+              <div className="faculty-work-queue-container" style={{ borderRadius: '16px', border: '1px solid var(--d-line)', boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)' }}>
                 <div className="work-queue-header">
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -967,15 +1270,15 @@ export default function FacultyPortal({ account, onLogout }) {
                 </div>
               </div>
 
-              {/* Today's Teaching Schedule */}
-              <div className="admin-card" style={{ marginBottom: '1.5rem' }}>
+              {/* 6. Today's Detailed Teaching Schedule */}
+              <div className="admin-card" style={{ borderRadius: '16px', border: '1px solid var(--d-line)', boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)' }}>
                 <div className="admin-card-header">
                   <div>
                     <h3 className="admin-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Calendar size={17} color="#2563eb" /> Today's Teaching &amp; Assessment Schedule
                     </h3>
                     <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                      Official timetable sessions for Dr. S. Mohanty (Autumn Semester 2026-27).
+                      Official timetable sessions for {account?.name || 'Dr. S. Mohanty'} (Autumn Semester 2026-27).
                     </p>
                   </div>
                   <span className="admin-badge approved">3 Scheduled Sessions</span>
@@ -1047,16 +1350,16 @@ export default function FacultyPortal({ account, onLogout }) {
                 </div>
               </div>
 
-              {/* My Assigned Subjects Section */}
-              <div className="admin-card">
+              {/* 7. My Assigned Subjects Section */}
+              <div className="admin-card" style={{ borderRadius: '16px', border: '1px solid var(--d-line)', boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)' }}>
                 <div className="admin-card-header">
                   <div>
-                    <h3 className="admin-card-title">My Assigned Subjects</h3>
+                    <h3 className="admin-card-title">My Assigned Teaching Subjects</h3>
                     <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                      Official academic teaching assignments certified by HOD.
+                      Official academic teaching assignments certified by Head of Department.
                     </p>
                   </div>
-                  <span className="admin-badge active">Semester 5 - Section A</span>
+                  <span className="admin-badge active">{currentAssignment.semester} - {currentAssignment.section}</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
@@ -1107,6 +1410,84 @@ export default function FacultyPortal({ account, onLogout }) {
                   ))}
                 </div>
               </div>
+
+              {/* 8. Bottom Grid: Calendar & Holiday List Side-by-Side (Identical to Student Dashboard) */}
+              <div className="dash-grid-duo">
+                <section className="dash-card dash-calendar" id="calendar">
+                  <header className="dash-card-head">
+                    <h3><span className="dash-head-icon"><CalendarDays size={15} /></span>Academic Calendar</h3>
+                    <div className="dash-cal-controls">
+                      <button type="button" onClick={() => updateMonth(-1)} aria-label="Previous month"><ChevronLeft size={15} /></button>
+                      <strong>{monthLabel}</strong>
+                      <button type="button" onClick={() => updateMonth(1)} aria-label="Next month"><ChevronRight size={15} /></button>
+                    </div>
+                  </header>
+                  <div className="dash-cal-weekdays">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}</div>
+                  <div className="dash-cal-days">
+                    {calendarDays.map(({ key, day, inMonth, isToday, isSunday }) => {
+                      const holidayName = holidayMap[key];
+                      return (
+                        <span
+                          className={['dash-day', inMonth ? '' : 'is-outside', isToday ? 'is-today' : '', holidayName ? 'is-holiday' : '', isSunday ? 'is-sunday' : ''].join(' ')}
+                          title={holidayName || undefined}
+                          key={key}
+                        >{day}</span>
+                      );
+                    })}
+                  </div>
+                  <div className="dash-legend">
+                    <span><i className="lg-holiday" />Holiday</span>
+                    <span><i className="lg-sunday" />Sunday</span>
+                    <span><i className="lg-today" />Today</span>
+                  </div>
+                </section>
+
+                <section className="dash-card dash-holidays" id="holidays">
+                  <header className="dash-card-head">
+                    <h3><span className="dash-head-icon tone-amber"><PartyPopper size={15} /></span>Holiday &amp; Recess List</h3>
+                    <div className="dash-holiday-controls">
+                      <div className="dash-holiday-filter-pills">
+                        <button
+                          type="button"
+                          className={`dash-filter-pill ${holidayView === 'all' ? 'active' : ''}`}
+                          onClick={() => setHolidayView('all')}
+                        >
+                          All 2026 ({holidayItems.length})
+                        </button>
+                        <button
+                          type="button"
+                          className={`dash-filter-pill ${holidayView === 'upcoming' ? 'active' : ''}`}
+                          onClick={() => setHolidayView('upcoming')}
+                        >
+                          Upcoming ({holidayItems.filter((h) => h.daysLeft >= 0).length})
+                        </button>
+                      </div>
+                    </div>
+                  </header>
+                  <ul className="dash-holiday-list dash-holiday-scroll" aria-label="Government holidays 2026">
+                    {displayedHolidays.map((h) => (
+                      <li className={`dash-holiday ${h.daysLeft < 0 ? 'is-past' : ''} ${nextHoliday && nextHoliday.raw === h.raw ? 'is-next' : ''}`} key={h.raw}>
+                        <span className="dash-holiday-date">
+                          <strong>{h.date.getDate()}</strong>
+                          <small>{h.date.toLocaleString('en-IN', { month: 'short' })}</small>
+                        </span>
+                        <span className="dash-holiday-info">
+                          <strong>{h.name}</strong>
+                          <small>{h.date.toLocaleString('en-IN', { weekday: 'long' })} · {h.raw}</small>
+                        </span>
+                        <span className="dash-holiday-badge">
+                          {h.daysLeft < 0 ? 'Passed' : h.daysLeft === 0 ? 'Today' : h.daysLeft === 1 ? 'Tomorrow' : `in ${h.daysLeft}d`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+
+              {/* 9. Dashboard Footer */}
+              <footer className="dash-footer">
+                Apna Campus <span>·</span> Faculty academic management portal <span>·</span> {today.getFullYear()}
+              </footer>
             </div>
           )}
 
@@ -1223,34 +1604,53 @@ export default function FacultyPortal({ account, onLogout }) {
           {/* TAB 4: MY STUDENTS */}
           {activeTab === 'students' && (
             <div>
-              <div className="admin-view-header">
-                <div>
-                  <h2>Class Roster ({scopedStudents.length} Students in Cohort · 91 Course Total)</h2>
-                  <p>
-                    Assigned Cohort: <strong>{currentAssignment.program}</strong> · {currentAssignment.deptCode} · <strong>{currentAssignment.semester} · {currentAssignment.section}</strong> · Venue: {currentAssignment.room}
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <select
-                    className="admin-select"
-                    value={selectedAssignmentId}
-                    onChange={e => setSelectedAssignmentId(e.target.value)}
-                    style={{ fontWeight: 600, background: '#eff6ff', borderColor: '#bfdbfe', color: '#1e40af' }}
-                  >
-                    {facultyAssignments.map(fa => (
-                      <option key={fa.id} value={fa.id}>
-                        {fa.subjectName} ({fa.subjectCode}) · {fa.program} {fa.semester} {fa.section}
-                      </option>
-                    ))}
-                  </select>
-                  <button className="admin-action-btn-secondary" onClick={() => exportToCsv(`${currentAssignment.subjectCode}_Class_Roster.csv`, filteredStudents)}>
-                    <FileSpreadsheet size={14} /> Export CSV Roster
-                  </button>
-                  <button className="admin-action-btn-primary" onClick={handleOpenAttendanceModal}>
-                    <Calendar size={14} /> Record Attendance
-                  </button>
-                </div>
-              </div>
+              {/* Class-Selection Interface at Top of My Students (Requirement 1, 4, 5) */}
+              <FacultyClassSelector
+                assignments={facultyAssignments}
+                selectedAssignmentId={selectedAssignmentId}
+                onSelectAssignment={(asgn) => {
+                  setSelectedAssignmentId(asgn.id);
+                  setIsConsolidatedScope(false);
+                }}
+                isConsolidated={isConsolidatedScope}
+                onToggleConsolidated={(val) => setIsConsolidatedScope(val)}
+                totalStudentsCount={scopedStudents.length}
+                pendingMarksCount={atRiskStudents.length}
+                moduleTitle="My Students Roster"
+                moduleSubtitle="Class-wise, section-wise, semester-wise and subject-wise student categorization"
+                actions={
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="admin-action-btn-secondary"
+                      onClick={() =>
+                        exportToCsv(
+                          `${isConsolidatedScope ? 'All_Assigned_Classes' : currentAssignment.subjectCode}_Class_Roster.csv`,
+                          filteredStudents.map((s) => ({
+                            Roll: s.rollNumber,
+                            Name: s.name,
+                            Registration: s.registrationNumber || s.studentId,
+                            Semester: s.semester || currentAssignment.semester,
+                            Section: s.section || currentAssignment.section,
+                            Subject: s.subjectCode || currentAssignment.subjectCode,
+                            Attendance: `${s.attendance || 85}%`,
+                            CGPA: s.cgpa,
+                          })),
+                        )
+                      }
+                    >
+                      <FileSpreadsheet size={14} /> Export CSV Roster
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-action-btn-primary"
+                      onClick={handleOpenAttendanceModal}
+                    >
+                      <Calendar size={14} /> Record Attendance
+                    </button>
+                  </div>
+                }
+              />
 
               {/* Filters Bar */}
               <div style={{ display: 'flex', gap: '10px', background: '#ffffff', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '1.25rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
@@ -1315,6 +1715,8 @@ export default function FacultyPortal({ account, onLogout }) {
                       <th>Roll #</th>
                       <th>Student Name</th>
                       <th>Registration / ID</th>
+                      {isConsolidatedScope && <th>Semester &amp; Section</th>}
+                      {isConsolidatedScope && <th>Assigned Subject</th>}
                       <th>Attendance %</th>
                       <th>CGPA</th>
                       <th>Academic Health &amp; Risks</th>
@@ -1336,6 +1738,20 @@ export default function FacultyPortal({ account, onLogout }) {
                           <td>
                             <code>{s.registrationNumber || s.studentId}</code>
                           </td>
+                          {isConsolidatedScope && (
+                            <td>
+                              <span className="admin-badge info" style={{ whiteSpace: 'nowrap' }}>
+                                {s.semester || currentAssignment.semester} · {s.section || currentAssignment.section}
+                              </span>
+                            </td>
+                          )}
+                          {isConsolidatedScope && (
+                            <td>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155' }}>
+                                {s.subjectCode || currentAssignment.subjectCode} ({s.subjectName || currentAssignment.subjectName})
+                              </span>
+                            </td>
+                          )}
                           <td>
                             <strong style={{ color: isShortage ? '#dc2626' : '#2563eb' }}>
                               {s.attendance || 85}%
@@ -1398,8 +1814,12 @@ export default function FacultyPortal({ account, onLogout }) {
                     })}
                     {filteredStudents.length === 0 && (
                       <tr>
-                        <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
-                          No students found matching your selected criteria in this cohort.
+                        <td colSpan={isConsolidatedScope ? 10 : 8} style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
+                          <AlertCircle size={28} color="#94a3b8" style={{ margin: '0 auto 8px', display: 'block' }} />
+                          <strong>No students found in this category</strong>
+                          <p style={{ margin: '4px 0 0', fontSize: '0.82rem' }}>
+                            No student records match the selected class, section, semester, and filter criteria.
+                          </p>
                         </td>
                       </tr>
                     )}

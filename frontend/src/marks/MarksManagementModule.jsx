@@ -26,6 +26,7 @@ import {
   SEMESTERS,
   SECTIONS,
   ACADEMIC_YEARS,
+  ASSIGNED_CLASSES,
   ASSESSMENT_CONFIG,
   generateStudents,
   generateInitialMarks,
@@ -38,6 +39,7 @@ import IndividualAssessmentView from './IndividualAssessmentView'
 import StudentMarksView from './StudentMarksView'
 import MarksAnalytics from './MarksAnalytics'
 import BulkMarksUploadModal from './BulkMarksUploadModal'
+import FacultyClassSelector from '../components/FacultyClassSelector.jsx'
 import './MarksManagement.css'
 
 export default function MarksManagementModule({ initialRole = 'teacher', currentStudentId = 's-4' }) {
@@ -50,6 +52,10 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
   // 'overview' | 'matrix' | 'individual' | 'student-view' | 'analytics'
   const [activeView, setActiveView] = useState(isStudentOnly ? 'student-view' : 'matrix')
 
+  // Faculty Assignment State (Requirement 3 & 4)
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState('fa-1')
+  const [isConsolidatedScope, setIsConsolidatedScope] = useState(false)
+
   // Filter state
   const [selectedSubjectId, setSelectedSubjectId] = useState('dsa')
   const [selectedSemester, setSelectedSemester] = useState('5th')
@@ -57,9 +63,16 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
   const [selectedAcademicYear, setSelectedAcademicYear] = useState('2026-27')
   const [selectedAssessmentKey, setSelectedAssessmentKey] = useState('q3')
 
-  // 91 Students and continuous marks state
-  const [students] = useState(() => generateStudents())
-  const [marksMap, setMarksMap] = useState(() => generateInitialMarks(generateStudents()))
+  // Cohort students dynamically loaded based on selected class, section, semester (Requirement 3)
+  const students = useMemo(() => {
+    if (isConsolidatedScope) {
+      return generateStudents('all', 'all', selectedAcademicYear)
+    }
+    return generateStudents(selectedSemester, selectedSection, selectedAcademicYear)
+  }, [selectedSemester, selectedSection, selectedAcademicYear, isConsolidatedScope])
+
+  // Continuous marks state (pre-populated across all students)
+  const [marksMap, setMarksMap] = useState(() => generateInitialMarks(generateStudents('all', 'all', 'all')))
   const [assessmentStatus, setAssessmentStatus] = useState(INITIAL_ASSESSMENT_STATUS)
 
   // Bulk Upload Modal state
@@ -75,6 +88,16 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
     }, 3500)
   }
 
+  // Handle assigned class selection from FacultyClassSelector
+  function handleSelectAssignment(asgn) {
+    setSelectedAssignmentId(asgn.id)
+    setSelectedSubjectId(asgn.subjectId || 'dsa')
+    setSelectedSemester(asgn.semester || '5th')
+    setSelectedSection(asgn.section || 'A')
+    setSelectedAcademicYear(asgn.academicYear || '2026-27')
+    setIsConsolidatedScope(false)
+  }
+
   // Active Subject object
   const currentSubject = useMemo(() => {
     return SUBJECTS.find((s) => s.id === selectedSubjectId) || SUBJECTS[0]
@@ -85,9 +108,9 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
     return ASSESSMENT_CONFIG.find((a) => a.key === selectedAssessmentKey) || ASSESSMENT_CONFIG[0]
   }, [selectedAssessmentKey])
 
-  // Current active student for Student View (defaults to Rakesh Das)
+  // Current active student for Student View
   const currentStudent = useMemo(() => {
-    return students.find((s) => s.id === currentStudentId) || students[3] // Rakesh Das is index 3
+    return students.find((s) => s.id === currentStudentId) || students[0] || { name: 'Rakesh Das', id: 's-1' }
   }, [students, currentStudentId])
 
   // Compute Class Overview Stats (Requirement Section 1)
@@ -205,24 +228,68 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
         )}
       </div>
 
+      {/* Top Class-Selection Interface (Requirement 3, 4, 5) */}
+      {activeRole === 'teacher' && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <FacultyClassSelector
+            assignments={ASSIGNED_CLASSES}
+            selectedAssignmentId={selectedAssignmentId}
+            onSelectAssignment={handleSelectAssignment}
+            isConsolidated={isConsolidatedScope}
+            onToggleConsolidated={(val) => {
+              setIsConsolidatedScope(val)
+              if (val) setActiveView('overview')
+            }}
+            totalStudentsCount={students.length}
+            pendingMarksCount={classStats.pendingTotal}
+            moduleTitle="Class-Wise Marks Management"
+            moduleSubtitle="Autonomous Continuous Internal Assessment (CIA) & Evaluation Grading"
+            actions={
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="mm-btn mm-btn-secondary"
+                  onClick={() => setActiveView('overview')}
+                  style={{ fontSize: '0.82rem', padding: '6px 12px' }}
+                >
+                  <Award size={14} />
+                  <span>Consolidated Overview</span>
+                </button>
+                <button
+                  type="button"
+                  className="mm-btn mm-btn-primary"
+                  onClick={() => setIsBulkModalOpen(true)}
+                  style={{ fontSize: '0.82rem', padding: '6px 12px' }}
+                >
+                  <Upload size={14} />
+                  <span>Bulk Upload Marks</span>
+                </button>
+              </div>
+            }
+          />
+        </div>
+      )}
+
       {/* Top Level Section 1: Marks Management Dashboard Stats Bar */}
       {activeRole === 'teacher' && (
         <div className="mm-stats-overview-grid">
           <div className="mm-kpi-card tone-blue">
             <div className="mm-kpi-icon"><Users size={20} /></div>
             <div>
-              <span className="mm-kpi-label">Total Students</span>
+              <span className="mm-kpi-label">Class Cohort Students</span>
               <strong className="mm-kpi-value">{students.length}</strong>
-              <small className="mm-kpi-sub">Enrolled in 5th Sem</small>
+              <small className="mm-kpi-sub">
+                {isConsolidatedScope ? 'All Assigned Classes' : `${selectedSemester} · Sec ${selectedSection}`}
+              </small>
             </div>
           </div>
 
           <div className="mm-kpi-card tone-purple">
             <div className="mm-kpi-icon"><BookOpen size={20} /></div>
             <div>
-              <span className="mm-kpi-label">Total Subjects</span>
-              <strong className="mm-kpi-value">{SUBJECTS.length}</strong>
-              <small className="mm-kpi-sub">Continuous Evaluation</small>
+              <span className="mm-kpi-label">Assigned Classes</span>
+              <strong className="mm-kpi-value">{ASSIGNED_CLASSES.length}</strong>
+              <small className="mm-kpi-sub">Multi-Class Responsibilities</small>
             </div>
           </div>
 
@@ -240,110 +307,25 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
             <div>
               <span className="mm-kpi-label">Pending Marks</span>
               <strong className="mm-kpi-value">{classStats.pendingTotal}</strong>
-              <small className="mm-kpi-sub">Awaiting Entry</small>
+              <small className="mm-kpi-sub">Awaiting Evaluation</small>
             </div>
           </div>
 
           <div className="mm-kpi-card tone-teal">
             <div className="mm-kpi-icon"><TrendingUp size={20} /></div>
             <div>
-              <span className="mm-kpi-label">Average Class Marks</span>
+              <span className="mm-kpi-label">Class Average</span>
               <strong className="mm-kpi-value">{classStats.avgPct}%</strong>
-              <small className="mm-kpi-sub">{currentSubject.shortName} Class Cohort</small>
+              <small className="mm-kpi-sub">{currentSubject.shortName} Performance</small>
             </div>
           </div>
 
           <div className="mm-kpi-card tone-indigo">
             <div className="mm-kpi-icon"><Award size={20} /></div>
             <div>
-              <span className="mm-kpi-label">Overall Performance</span>
+              <span className="mm-kpi-label">Highest Attainment</span>
               <strong className="mm-kpi-value">{classStats.highestPct}%</strong>
-              <small className="mm-kpi-sub">Top Score in Course</small>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Global Filter Bar (Requirement Section 1 & 8) */}
-      {activeRole === 'teacher' && (
-        <div className="mm-filter-bar-card">
-          <div className="mm-filter-bar-grid">
-            {/* Subject Selector */}
-            <div className="mm-select-field">
-              <label>Select Subject</label>
-              <div className="mm-select-wrap">
-                <select
-                  value={selectedSubjectId}
-                  onChange={(e) => setSelectedSubjectId(e.target.value)}
-                >
-                  {SUBJECTS.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="mm-select-arrow" />
-              </div>
-            </div>
-
-            {/* Semester Selector */}
-            <div className="mm-select-field">
-              <label>Semester</label>
-              <div className="mm-select-wrap">
-                <select
-                  value={selectedSemester}
-                  onChange={(e) => setSelectedSemester(e.target.value)}
-                >
-                  {SEMESTERS.map((sem) => (
-                    <option key={sem} value={sem}>{sem}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="mm-select-arrow" />
-              </div>
-            </div>
-
-            {/* Section Selector */}
-            <div className="mm-select-field">
-              <label>Section</label>
-              <div className="mm-select-wrap">
-                <select
-                  value={selectedSection}
-                  onChange={(e) => setSelectedSection(e.target.value)}
-                >
-                  {SECTIONS.map((sec) => (
-                    <option key={sec} value={sec}>{sec}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="mm-select-arrow" />
-              </div>
-            </div>
-
-            {/* Academic Year Selector */}
-            <div className="mm-select-field">
-              <label>Academic Year</label>
-              <div className="mm-select-wrap">
-                <select
-                  value={selectedAcademicYear}
-                  onChange={(e) => setSelectedAcademicYear(e.target.value)}
-                >
-                  {ACADEMIC_YEARS.map((yr) => (
-                    <option key={yr} value={yr}>{yr}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="mm-select-arrow" />
-              </div>
-            </div>
-
-            {/* Reset Filters button */}
-            <div className="mm-filter-reset-wrap">
-              <button
-                type="button"
-                className="mm-btn mm-btn-ghost"
-                onClick={handleResetFilters}
-              >
-                <RotateCcw size={14} />
-                <span>Reset Filters</span>
-              </button>
+              <small className="mm-kpi-sub">Top Cohort Score</small>
             </div>
           </div>
         </div>
@@ -358,7 +340,7 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
             onClick={() => setActiveView('overview')}
           >
             <Sparkles size={16} />
-            <span>Teacher Overview</span>
+            <span>Consolidated Marks Overview</span>
           </button>
 
           <button
@@ -367,7 +349,7 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
             onClick={() => setActiveView('matrix')}
           >
             <Layers size={16} />
-            <span>Marks Entry Matrix (All Assessments)</span>
+            <span>Marks Entry Matrix ({currentSubject.shortName} · {selectedSection})</span>
           </button>
 
           <button
@@ -385,7 +367,7 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
             onClick={() => setActiveView('analytics')}
           >
             <BarChart3 size={16} />
-            <span>Marks Analytics</span>
+            <span>Cohort Analytics</span>
           </button>
         </div>
       )}
@@ -406,8 +388,13 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
         ) : activeView === 'overview' ? (
           <TeacherOverview
             subjects={SUBJECTS}
+            assignedClasses={ASSIGNED_CLASSES}
             currentSubjectId={selectedSubjectId}
             onSelectSubject={(id) => setSelectedSubjectId(id)}
+            onSelectClass={(cls) => {
+              handleSelectAssignment(cls)
+              setActiveView('matrix')
+            }}
             studentsCount={students.length}
             onSwitchToTable={() => setActiveView('matrix')}
           />

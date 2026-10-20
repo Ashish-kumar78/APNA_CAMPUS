@@ -1790,6 +1790,8 @@ button, .btn-pay-now, .btn-receipt, .btn-notice-action {
 .notif-tag-exam { background: #fee2e2; color: #b91c1c; }
 .notif-tag-library { background: #fef3c7; color: #b45309; }
 .notif-tag-accounts { background: #e0e7ff; color: #4338ca; }
+.notif-tag-faculty { background: #fef3c7; color: #b45309; }
+.notif-tag-urgent { background: #fee2e2; color: #b91c1c; font-weight: 800; border: 1px solid #fca5a5; }
 
 .notif-time {
   font-size: 10.5px;

@@ -198,16 +198,26 @@ export const initialSubjects = [
 
 // Relational Mapping: Faculty -> Subject -> Program -> Semester -> Section -> Room
 export const initialFacultyAssignments = [
-  { id: 'fa-1', facultyId: 'FAC-042', facultyName: 'Dr. S. Mohanty', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS501', subjectName: 'Data Structures', room: 'Block B - 302', periodsPerWeek: 5 },
-  { id: 'fa-2', facultyId: 'FAC-044', facultyName: 'Prof. Amit Mishra', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS502', subjectName: 'Operating Systems', room: 'Block B - 302', periodsPerWeek: 4 },
-  { id: 'fa-3', facultyId: 'FAC-045', facultyName: 'Dr. Priya Ranjan', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS503', subjectName: 'Database Management Systems', room: 'Block B - 302', periodsPerWeek: 5 },
-  { id: 'fa-4', facultyId: 'FAC-046', facultyName: 'Dr. Sneha Ray', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS504', subjectName: 'Artificial Intelligence', room: 'Block B - 302', periodsPerWeek: 4 },
-  { id: 'fa-5', facultyId: 'FAC-047', facultyName: 'Prof. Debashis Jena', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS505', subjectName: 'Machine Learning', room: 'Block B - 302', periodsPerWeek: 5 },
-  { id: 'fa-6', facultyId: 'FAC-048', facultyName: 'Prof. Smita Sahoo', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS506', subjectName: 'Software Engineering', room: 'Block B - 302', periodsPerWeek: 3 },
-  { id: 'fa-7', facultyId: 'FAC-043', facultyName: 'Prof. Rahul Sharma', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 1', section: 'Section A', subjectCode: 'CS101', subjectName: 'Programming in C & Logic', room: 'Block B - 101', periodsPerWeek: 4 },
-  { id: 'fa-8', facultyId: 'FAC-049', facultyName: 'Prof. K. K. Sahoo', program: 'BCA', deptCode: 'CA', semester: 'Semester 1', section: 'Section A', subjectCode: 'BCA101', subjectName: 'Fundamentals of Computing & IT', room: 'Block C - 201', periodsPerWeek: 4 },
-  { id: 'fa-9', facultyId: 'FAC-050', facultyName: 'Dr. Ananya Mishra', program: 'MBA', deptCode: 'MGMT', semester: 'Semester 1', section: 'Section A', subjectCode: 'MBA101', subjectName: 'Organizational Behavior & HR Dynamics', room: 'MBA Exec Hall 1', periodsPerWeek: 4 },
-  { id: 'fa-10', facultyId: 'FAC-051', facultyName: 'Prof. T. K. Das', program: 'Diploma', deptCode: 'DIPLOMA', semester: 'Semester 1', section: 'Section A', subjectCode: 'DIP101', subjectName: 'Applied Physics & Technical Measurements', room: 'Poly Block - 104', periodsPerWeek: 4 },
+  // Dr. S. Mohanty (FAC-042) - Multi-Class, Multi-Section, Multi-Semester Teaching Assignments
+  { id: 'fa-1', facultyId: 'FAC-042', facultyName: 'Dr. S. Mohanty', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS501', subjectName: 'Data Structures & Algorithms', room: 'Block B - 302', periodsPerWeek: 5, sectionEnrollment: 32, type: 'Theory + Lab' },
+  { id: 'fa-1b', facultyId: 'FAC-042', facultyName: 'Dr. S. Mohanty', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section B', subjectCode: 'CS501', subjectName: 'Data Structures & Algorithms', room: 'Block B - 303', periodsPerWeek: 5, sectionEnrollment: 30, type: 'Theory + Lab' },
+  { id: 'fa-2', facultyId: 'FAC-042', facultyName: 'Dr. S. Mohanty', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS502', subjectName: 'Operating Systems', room: 'Block B - 304', periodsPerWeek: 4, sectionEnrollment: 32, type: 'Theory' },
+  { id: 'fa-3', facultyId: 'FAC-042', facultyName: 'Dr. S. Mohanty', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 3', section: 'Section A', subjectCode: 'CS301', subjectName: 'Object Oriented Programming with Java', room: 'Block B - 201', periodsPerWeek: 4, sectionEnrollment: 34, type: 'Theory + Lab' },
+  { id: 'fa-3b', facultyId: 'FAC-042', facultyName: 'Dr. S. Mohanty', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 3', section: 'Section B', subjectCode: 'CS301', subjectName: 'Object Oriented Programming with Java', room: 'Block B - 202', periodsPerWeek: 4, sectionEnrollment: 32, type: 'Theory + Lab' },
+  { id: 'fa-4', facultyId: 'FAC-042', facultyName: 'Dr. S. Mohanty', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 1', section: 'Section A', subjectCode: 'CS101', subjectName: 'Problem Solving & C Programming', room: 'Block B - 101', periodsPerWeek: 4, sectionEnrollment: 36, type: 'Theory + Lab' },
+  { id: 'fa-5', facultyId: 'FAC-042', facultyName: 'Dr. S. Mohanty', academicYear: '2025-26', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 4', section: 'Section A', subjectCode: 'CS402', subjectName: 'Design & Analysis of Algorithms', room: 'Block B - 205', periodsPerWeek: 4, sectionEnrollment: 30, type: 'Theory + Lab' },
+  { id: 'fa-6', facultyId: 'FAC-042', facultyName: 'Dr. S. Mohanty', academicYear: '2025-26', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 6', section: 'Section A', subjectCode: 'CS601', subjectName: 'Compiler Design & Automata', room: 'Block B - 305', periodsPerWeek: 4, sectionEnrollment: 28, type: 'Theory' },
+
+  // Other Department Faculty Assignments
+  { id: 'fa-other-2', facultyId: 'FAC-044', facultyName: 'Prof. Amit Mishra', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section B', subjectCode: 'CS502', subjectName: 'Operating Systems', room: 'Block B - 304', periodsPerWeek: 4, sectionEnrollment: 30, type: 'Theory' },
+  { id: 'fa-other-3', facultyId: 'FAC-045', facultyName: 'Dr. Priya Ranjan', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS503', subjectName: 'Database Management Systems', room: 'Block B - 302', periodsPerWeek: 5, sectionEnrollment: 32, type: 'Theory + Lab' },
+  { id: 'fa-other-4', facultyId: 'FAC-046', facultyName: 'Dr. Sneha Ray', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS504', subjectName: 'Artificial Intelligence', room: 'Block B - 302', periodsPerWeek: 4, sectionEnrollment: 32, type: 'Theory' },
+  { id: 'fa-other-5', facultyId: 'FAC-047', facultyName: 'Prof. Debashis Jena', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS505', subjectName: 'Machine Learning', room: 'Block B - 302', periodsPerWeek: 5, sectionEnrollment: 32, type: 'Theory + Lab' },
+  { id: 'fa-other-6', facultyId: 'FAC-048', facultyName: 'Prof. Smita Sahoo', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 5', section: 'Section A', subjectCode: 'CS506', subjectName: 'Software Engineering', room: 'Block B - 302', periodsPerWeek: 3, sectionEnrollment: 32, type: 'Theory' },
+  { id: 'fa-other-7', facultyId: 'FAC-043', facultyName: 'Prof. Rahul Sharma', academicYear: '2026-27', program: 'B.Tech', deptCode: 'CSE', semester: 'Semester 1', section: 'Section B', subjectCode: 'CS101', subjectName: 'Problem Solving & C Programming', room: 'Block B - 102', periodsPerWeek: 4, sectionEnrollment: 34, type: 'Theory + Lab' },
+  { id: 'fa-other-8', facultyId: 'FAC-049', facultyName: 'Prof. K. K. Sahoo', academicYear: '2026-27', program: 'BCA', deptCode: 'CA', semester: 'Semester 1', section: 'Section A', subjectCode: 'BCA101', subjectName: 'Fundamentals of Computing & IT', room: 'Block C - 201', periodsPerWeek: 4, sectionEnrollment: 40, type: 'Theory' },
+  { id: 'fa-other-9', facultyId: 'FAC-050', facultyName: 'Dr. Ananya Mishra', academicYear: '2026-27', program: 'MBA', deptCode: 'MGMT', semester: 'Semester 1', section: 'Section A', subjectCode: 'MBA101', subjectName: 'Organizational Behavior & HR Dynamics', room: 'MBA Exec Hall 1', periodsPerWeek: 4, sectionEnrollment: 45, type: 'Theory' },
+  { id: 'fa-other-10', facultyId: 'FAC-051', facultyName: 'Prof. T. K. Das', academicYear: '2026-27', program: 'Diploma', deptCode: 'DIPLOMA', semester: 'Semester 1', section: 'Section A', subjectCode: 'DIP101', subjectName: 'Applied Physics & Technical Measurements', room: 'Poly Block - 104', periodsPerWeek: 4, sectionEnrollment: 35, type: 'Theory + Lab' },
 ];
 
 // Configurable Marking Scheme
@@ -237,34 +247,59 @@ export const initialApprovalQueue = [
   { id: 'appr-06', subjectCode: 'CS506', subject: 'Software Engineering', faculty: 'Prof. Smita Sahoo', semester: 'Semester 5', section: 'Section A', submittedDate: '02 Oct 2026', status: 'Pending', hodRemarks: 'Awaiting submission of Lab marks verification.', reviewedAt: null },
 ];
 
-// Initial 91 Students generator for admin rosters
-const studentFirstNames = ['Rakesh', 'Amit', 'Raj', 'Priya', 'Sourav', 'Sneha', 'Deepak', 'Puja', 'Bikash', 'Swati', 'Rohit', 'Monika', 'Subham', 'Ipsita', 'Alok', 'Smruti', 'Chandan', 'Tanmay', 'Lipika', 'Manas', 'Pragyan', 'Biswajit', 'Archana', 'Gourab', 'Satyajit', 'Sonali', 'Ashish', 'Kiran', 'Pranab', 'Niharika'];
+// Multi-Cohort Students generator across academic classes, semesters & sections
+const studentFirstNames = ['Rakesh', 'Amit', 'Raj', 'Priya', 'Sourav', 'Sneha', 'Deepak', 'Puja', 'Bikash', 'Swati', 'Rohit', 'Monika', 'Subham', 'Ipsita', 'Alok', 'Smruti', 'Chandan', 'Tanmay', 'Lipika', 'Manas', 'Pragyan', 'Biswajit', 'Archana', 'Gourab', 'Satyajit', 'Sonali', 'Ashish', 'Kiran', 'Pranab', 'Niharika', 'Debasis', 'Kavita', 'Manoj', 'Anjali', 'Tapan', 'Rupali'];
 const studentLastNames = ['Das', 'Nayak', 'Sahoo', 'Patra', 'Mohanty', 'Barik', 'Rout', 'Behera', 'Pradhan', 'Samal', 'Panda', 'Mishra', 'Tripathy', 'Parida', 'Jena', 'Swain', 'Mangaraj', 'Muduli', 'Kar', 'Acharya'];
 
 export function generateAllStudents() {
+  const cohortConfigs = [
+    { semester: 'Semester 5', section: 'Section A', academicYear: '2026-27', count: 32, prefix: '5A' },
+    { semester: 'Semester 5', section: 'Section B', academicYear: '2026-27', count: 30, prefix: '5B' },
+    { semester: 'Semester 3', section: 'Section A', academicYear: '2026-27', count: 34, prefix: '3A' },
+    { semester: 'Semester 3', section: 'Section B', academicYear: '2026-27', count: 32, prefix: '3B' },
+    { semester: 'Semester 1', section: 'Section A', academicYear: '2026-27', count: 36, prefix: '1A' },
+    { semester: 'Semester 4', section: 'Section A', academicYear: '2025-26', count: 30, prefix: '4A' },
+    { semester: 'Semester 6', section: 'Section A', academicYear: '2025-26', count: 28, prefix: '6A' },
+  ];
+
   const students = [];
-  for (let i = 1; i <= 91; i++) {
-    const rollStr = String(i).padStart(2, '0');
-    const fName = studentFirstNames[(i - 1) % studentFirstNames.length];
-    const lName = studentLastNames[(i - 1 + Math.floor(i / studentFirstNames.length)) % studentLastNames.length];
-    const name = i === 1 ? 'Rakesh Das' : `${fName} ${lName}`;
-    students.push({
-      id: `std-${i}`,
-      studentId: `GIFT-2023-${1000 + i}`,
-      rollNumber: rollStr,
-      name,
-      email: `${name.toLowerCase().replace(/\s+/g, '.')}${i}@apnacampus.edu.in`,
-      phone: `+91 ${9861000000 + (i * 111) % 900000}`,
-      department: 'Computer Science & Engineering',
-      deptCode: 'CSE',
-      semester: 'Semester 5',
-      section: 'Section A',
-      academicYear: '2026-27',
-      status: i % 25 === 0 ? 'Inactive' : 'Active',
-      cgpa: (7.2 + ((i * 3.7) % 2.6)).toFixed(2),
-      attendance: Math.min(100, Math.floor(75 + ((i * 7) % 25))),
-    });
-  }
+
+  cohortConfigs.forEach(cohort => {
+    const semNum = cohort.semester.replace(/[^0-9]/g, '');
+    const yrCode = cohort.academicYear === '2025-26' ? '22' : '23';
+
+    for (let i = 1; i <= cohort.count; i++) {
+      const rollStr = String(i).padStart(2, '0');
+      const fName = studentFirstNames[(i - 1 + parseInt(semNum, 10) * 3) % studentFirstNames.length];
+      const lName = studentLastNames[(i * 2 + (cohort.section === 'Section B' ? 5 : 0)) % studentLastNames.length];
+      const isLead = i === 1 && cohort.semester === 'Semester 5' && cohort.section === 'Section A';
+      const name = isLead ? 'Rakesh Das' : `${fName} ${lName}`;
+      const studentId = `GIFT-${yrCode}05-${cohort.prefix}${rollStr}`;
+
+      const attendance = Math.min(100, Math.max(58, Math.floor(70 + ((i * 13 + parseInt(semNum, 10) * 7) % 29))));
+      const cgpa = Number((7.1 + (((i * 17 + parseInt(semNum, 10) * 9) % 270) / 100)).toFixed(2));
+
+      students.push({
+        id: `std-${cohort.prefix}-${rollStr}`,
+        studentId,
+        registrationNumber: studentId,
+        rollNumber: rollStr,
+        name,
+        email: `${fName.toLowerCase()}.${rollStr.toLowerCase()}@apnacampus.edu.in`,
+        phone: `+91 ${9861000000 + (i * 111 + parseInt(semNum, 10) * 1000) % 900000}`,
+        department: 'Computer Science & Engineering',
+        deptCode: 'CSE',
+        program: 'B.Tech',
+        semester: cohort.semester,
+        section: cohort.section,
+        academicYear: cohort.academicYear,
+        status: i % 25 === 0 ? 'On Leave' : 'Active',
+        cgpa,
+        attendance,
+      });
+    }
+  });
+
   return students;
 }
 

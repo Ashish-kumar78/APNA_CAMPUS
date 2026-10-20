@@ -1,6 +1,10 @@
 // Central API Client connecting Frontend to NestJS Backend (http://localhost:4000/api)
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? 'https://apna-campus-12lt.onrender.com/api'
+    : 'http://localhost:4000/api');
 
 function getAuthHeader() {
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('collegeflow_token') : null;

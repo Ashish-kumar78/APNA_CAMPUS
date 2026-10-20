@@ -916,8 +916,15 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
               className={`erp-nav-item ${activeTab === 'overview' ? 'active' : ''}`}
               onClick={() => setActiveTab('overview')}
             >
+              <Layers size={18} />
+              <span>Role Dashboard</span>
+            </button>
+            <button
+              className={`erp-nav-item ${activeTab === 'health' ? 'active' : ''}`}
+              onClick={() => setActiveTab('health')}
+            >
               <Server size={18} />
-              <span>Overview & Health</span>
+              <span>System Health &amp; KPIs</span>
             </button>
             <button
               className={`erp-nav-item ${activeTab === 'security-incidents' ? 'active' : ''}`}
@@ -1032,97 +1039,106 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
 
       {/* Main Content */}
       <main className="erp-main-content">
-<<<<<<< HEAD
-        <header className="erp-header">
-          <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {!sidebarOpen && (
-              <button
-                className="campus-nav-toggle-btn"
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                title="Show Navigation"
-                aria-label="Show Navigation"
-              >
-                <Menu size={20} />
-              </button>
-            )}
-            <div>
-              <h1>Enterprise Governance & Security Console</h1>
-              <p>Super Administrator · Complete System-Level Control</p>
-            </div>
-          </div>
+        {activeTab === 'overview' ? (
+          <RoleDashboardLanding
+            account={account}
+            roleKey="super_admin"
+            onLogout={onLogout}
+            onSwitchRole={onSwitchRole}
+            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            onNavigateTab={(tabId) => {
+              if (tabId === 'users') setActiveTab('users');
+              else if (tabId === 'approvals') setActiveTab('approvals');
+              else if (tabId === 'activity' || tabId === 'audit') setActiveTab('audit');
+              else if (tabId === 'campus-connect') setActiveTab('campus-connect');
+              else if (tabId === 'system' || tabId === 'diagnostics') setActiveTab('health');
+            }}
+          />
+        ) : (
+          <>
+            <header className="erp-header">
+              <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                {!sidebarOpen && (
+                  <button
+                    className="campus-nav-toggle-btn"
+                    type="button"
+                    onClick={() => setSidebarOpen(true)}
+                    title="Show Navigation"
+                    aria-label="Show Navigation"
+                  >
+                    <Menu size={20} />
+                  </button>
+                )}
+                <div>
+                  <h1>Enterprise Governance & Security Console</h1>
+                  <p>Super Administrator · Complete System-Level Control</p>
+                </div>
+              </div>
 
-          <div className="erp-header-actions">
-            {onSwitchRole && (
-              <div className="erp-preview-container" title="Role Preview (Sandbox simulation mode for governance review)">
-                <span className="erp-preview-label">
-                  <Sparkles size={13} color="#b45309" />
-                  Role Preview:
-                </span>
-                <span className="erp-preview-pill-badge">Simulation</span>
-                <select
-                  className="erp-role-switcher-select"
-                  value="super_admin"
-                  onChange={(e) => onSwitchRole(e.target.value)}
-                  aria-label="Role Preview Selector (Simulation Mode)"
+              <div className="erp-header-actions">
+                {onSwitchRole && (
+                  <div className="erp-preview-container" title="Role Preview (Sandbox simulation mode for governance review)">
+                    <span className="erp-preview-label">
+                      <Sparkles size={13} color="#b45309" />
+                      Role Preview:
+                    </span>
+                    <span className="erp-preview-pill-badge">Simulation</span>
+                    <select
+                      className="erp-role-switcher-select"
+                      value="super_admin"
+                      onChange={(e) => onSwitchRole(e.target.value)}
+                      aria-label="Role Preview Selector (Simulation Mode)"
+                    >
+                      <option value="super_admin">Super Administrator</option>
+                      <option value="management">Management / Trustee</option>
+                      <option value="principal">Principal / Director</option>
+                      <option value="admin">Admin Operations</option>
+                      <option value="hod">HOD</option>
+                      <option value="faculty">Faculty Portal</option>
+                      <option value="student">Student Portal</option>
+                      <option value="accounts">Accounts & Finance</option>
+                      <option value="exam_cell">Examination Cell</option>
+                      <option value="library">Library Staff</option>
+                      <option value="warden">Hostel Warden</option>
+                      <option value="transport">Transport Fleet</option>
+                      <option value="placement">Placement Cell</option>
+                      <option value="staff">Non-Teaching Staff</option>
+                    </select>
+                  </div>
+                )}
+                
+                <button
+                  type="button"
+                  className="erp-access-privileges-btn"
+                  onClick={() => setActiveTab('rbac')}
+                  title="Open Role-Based Access Control and Granular Permissions Matrix"
                 >
-                  <option value="super_admin">Super Administrator</option>
-                  <option value="management">Management / Trustee</option>
-                  <option value="principal">Principal / Director</option>
-                  <option value="admin">Admin Operations</option>
-                  <option value="hod">HOD</option>
-                  <option value="faculty">Faculty Portal</option>
-                  <option value="student">Student Portal</option>
-                  <option value="accounts">Accounts & Finance</option>
-                  <option value="exam_cell">Examination Cell</option>
-                  <option value="library">Library Staff</option>
-                  <option value="warden">Hostel Warden</option>
-                  <option value="transport">Transport Fleet</option>
-                  <option value="placement">Placement Cell</option>
-                  <option value="staff">Non-Teaching Staff</option>
-                </select>
+                  <ShieldCheck size={14} /> Access & Privileges
+                </button>
+
+                {/* Top Right Campus OS User Profile Pill with Sign Out */}
+                <div className="campus-user-pill">
+                  <div className="campus-user-avatar">SA</div>
+                  <div className="campus-user-details">
+                    <strong>{account?.name || 'Chief Systems Architect'}</strong>
+                    <small>Super Admin • {account?.identity || 'SYS-SUPER-01'}</small>
+                  </div>
+                  <button
+                    className="campus-logout-btn"
+                    type="button"
+                    onClick={onLogout}
+                    title="Sign out"
+                    aria-label="Sign out"
+                  >
+                    <LogOut size={16} />
+                  </button>
+                </div>
               </div>
-            )}
-            
-            <button
-              type="button"
-              className="erp-access-privileges-btn"
-              onClick={() => setActiveTab('rbac')}
-              title="Open Role-Based Access Control and Granular Permissions Matrix"
-            >
-              <ShieldCheck size={14} /> Access & Privileges
-            </button>
+            </header>
 
-            {/* Top Right Campus OS User Profile Pill with Sign Out */}
-            <div className="campus-user-pill">
-              <div className="campus-user-avatar">SA</div>
-              <div className="campus-user-details">
-                <strong>{account?.name || 'Chief Systems Architect'}</strong>
-                <small>Super Admin • {account?.identity || 'SYS-SUPER-01'}</small>
-              </div>
-              <button
-                className="campus-logout-btn"
-                type="button"
-                onClick={onLogout}
-                title="Sign out"
-                aria-label="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div className="erp-content-body">
-          {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
-          {activeTab === 'campus-connect' && (
-            <div style={{ height: 'calc(100vh - 140px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>
-              <CampusConnect account={account} />
-            </div>
-          )}
-
-          {/* TAB 1: OVERVIEW */}
-          {activeTab === 'overview' && (
+            <div className="erp-content-body">
+              {/* TAB 1: SYSTEM HEALTH & METRICS */}
+              {activeTab === 'health' && (
             <div>
               {/* Compact Quick Actions Bar */}
               <div className="erp-quick-actions-bar">
@@ -1553,93 +1569,9 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                     <div style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 600, marginTop: '4px' }}>Constraint engine initialized</div>
                   </div>
                 </div>
-=======
-        {activeTab === 'overview' ? (
-          <RoleDashboardLanding
-            account={account}
-            roleKey="super_admin"
-            onLogout={onLogout}
-            onSwitchRole={onSwitchRole}
-            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-            onNavigateTab={(tabId) => {
-              if (tabId === 'users') setActiveTab('users');
-              else if (tabId === 'approvals' || tabId === 'activity') setActiveTab('audit');
-              else if (tabId === 'campus-connect') setActiveTab('campus-connect');
-            }}
-          />
-        ) : (
-          <>
-            <header className="erp-header">
-              <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                {!sidebarOpen && (
-                  <button
-                    className="campus-nav-toggle-btn"
-                    type="button"
-                    onClick={() => setSidebarOpen(true)}
-                    title="Show Navigation"
-                    aria-label="Show Navigation"
-                  >
-                    <Menu size={20} />
-                  </button>
-                )}
-                <div>
-                  <h1>Enterprise Governance & Security Console</h1>
-                  <p>Super Administrator · Complete System-Level Control</p>
-                </div>
               </div>
-
-              <div className="erp-header-actions">
-                {onSwitchRole && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>Preview:</span>
-                    <select
-                      className="erp-role-switcher-select"
-                      value="super_admin"
-                      onChange={(e) => onSwitchRole(e.target.value)}
-                    >
-                      <option value="super_admin">Super Administrator</option>
-                      <option value="management">Management / Trustee</option>
-                      <option value="principal">Principal / Director</option>
-                      <option value="admin">Admin Operations</option>
-                      <option value="hod">HOD</option>
-                      <option value="faculty">Faculty Portal</option>
-                      <option value="student">Student Portal</option>
-                      <option value="accounts">Accounts & Finance</option>
-                      <option value="exam_cell">Examination Cell</option>
-                      <option value="library">Library Staff</option>
-                      <option value="warden">Hostel Warden</option>
-                      <option value="transport">Transport Fleet</option>
-                      <option value="placement">Placement Cell</option>
-                      <option value="staff">Non-Teaching Staff</option>
-                    </select>
-                  </div>
-                )}
-                <div className="erp-role-badge">
-                  <ShieldCheck size={14} /> Full Access Grant
-                </div>
-
-                {/* Top Right Campus OS User Profile Pill with Sign Out */}
-                <div className="campus-user-pill">
-                  <div className="campus-user-avatar">SA</div>
-                  <div className="campus-user-details">
-                    <strong>{account?.name || 'Chief Systems Architect'}</strong>
-                    <small>Super Admin • {account?.identity || 'SYS-SUPER-01'}</small>
-                  </div>
-                  <button
-                    className="campus-logout-btn"
-                    type="button"
-                    onClick={onLogout}
-                    title="Sign out"
-                    aria-label="Sign out"
-                  >
-                    <LogOut size={16} />
-                  </button>
-                </div>
->>>>>>> origin/teammate-work
-              </div>
-            </header>
-
-            <div className="erp-content-body">
+            </div>
+          )}
               {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
               {activeTab === 'campus-connect' && (
                 <div style={{ height: 'calc(100vh - 140px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>
@@ -3282,7 +3214,6 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
           {activeTab === 'report-generation' && (
             <ReportGenerationModule account={account} role="super_admin" />
           )}
-<<<<<<< HEAD
 
           {/* TAB: ADMINISTRATIVE APPROVALS CENTER (NEW) */}
           {activeTab === 'approvals' && (
@@ -3418,12 +3349,9 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
             </div>
           )}
         </div>
-=======
-            </div>
-          </>
-        )}
->>>>>>> origin/teammate-work
-      </main>
+      </>
+    )}
+  </main>
 
       {/* MODAL 1: Security Incident Investigation & Resolution Modal */}
       {selectedIncidentModal && (

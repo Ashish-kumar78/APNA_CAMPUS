@@ -260,13 +260,9 @@ export default function ReportGenerationModule({ account, role }) {
         const present = Math.min(classesHeld, Math.round((classesHeld * it.attendance) / 100));
         const absent = classesHeld - present;
         const pct = classesHeld > 0 ? (present / classesHeld) * 100 : 0;
-<<<<<<< HEAD
         if (pct < minAttendanceThreshold) shortage++;
         totalPresent += present;
         totalHeld += classesHeld;
-
-=======
->>>>>>> origin/teammate-work
         return {
           slNo: idx + 1,
           studentName: it.studentName,

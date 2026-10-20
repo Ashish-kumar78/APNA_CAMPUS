@@ -10,12 +10,9 @@ import {
   FileText, Check, ArrowRight, CornerDownLeft, Info
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
-<<<<<<< HEAD
 import api from '../services/api.js';
-=======
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
->>>>>>> origin/teammate-work
 import './ManagementPortal.css';
 
 // ─── Static Fallbacks & Seed Constants ────────────────────────────────────────
@@ -487,11 +484,6 @@ export default function ManagementPortal({ account, onLogout }) {
 
       {/* ─── Main Content Container ─────────────────────────────────────────── */}
       <main className="mgmt-main">
-<<<<<<< HEAD
-
-        {/* Top Header */}
-        <header className="mgmt-header">
-=======
         {activeTab === 'executive' ? (
           <RoleDashboardLanding
             account={account}
@@ -508,7 +500,6 @@ export default function ManagementPortal({ account, onLogout }) {
         ) : (
           <>
             <header className="mgmt-header">
->>>>>>> origin/teammate-work
           <div className="mgmt-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             {!sidebarOpen && (
               <button

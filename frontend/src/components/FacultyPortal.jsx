@@ -24,11 +24,8 @@ import { useTimeGreeting } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
-<<<<<<< HEAD
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
-=======
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
->>>>>>> origin/teammate-work
 
 // CSV Export Helper
 function exportToCsv(filename, rows) {

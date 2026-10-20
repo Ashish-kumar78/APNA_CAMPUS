@@ -1104,8 +1104,6 @@ function AcademicDetails({ student }) {
       </div>
       <div className="erp-cyan-divider-bar"></div>
 
-<<<<<<< HEAD
-=======
       <div className="erp-table-responsive" style={{ marginBottom: '20px' }}>
         <table className="erp-grid-table">
           <tbody>
@@ -1118,7 +1116,6 @@ function AcademicDetails({ student }) {
           </tbody>
         </table>
       </div>
->>>>>>> origin/teammate-work
       {/* Normalized Degree Programme & Semester Progression Section */}
       <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>

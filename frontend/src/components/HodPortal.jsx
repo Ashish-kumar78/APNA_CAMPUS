@@ -49,11 +49,8 @@ import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
-<<<<<<< HEAD
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
-=======
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
->>>>>>> origin/teammate-work
 
 function exportToCsv(filename, rows) {
   if (!rows || !rows.length) return;

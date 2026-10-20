@@ -24,7 +24,11 @@ import { useTimeGreeting } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
+<<<<<<< HEAD
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
+=======
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+>>>>>>> origin/teammate-work
 
 // CSV Export Helper
 function exportToCsv(filename, rows) {
@@ -723,6 +727,21 @@ export default function FacultyPortal({ account, onLogout }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
+            <RoleDashboardLanding
+              roleKey="faculty"
+              account={account}
+              onLogout={onLogout}
+              onNavigate={(target) => {
+                if (target === 'faculty-att') setActiveTab('take-attendance');
+                else if (target === 'faculty-eval') setActiveTab('digital-evaluation');
+                else if (target === 'faculty-marks') setActiveTab('marks');
+                else if (target === 'faculty-tt') setActiveTab('subjects');
+                else setActiveTab('subjects');
+              }}
+            />
+          )}
+
+          {false && activeTab === 'dashboard' && (
             <div>
               {/* Welcome Header */}
               <div className="admin-view-header">

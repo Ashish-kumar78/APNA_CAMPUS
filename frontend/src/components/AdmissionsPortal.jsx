@@ -24,8 +24,10 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api.js';
 import AccountActivationModal from './AccountActivationModal.jsx';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 
 export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
+  const [activeView, setActiveView] = useState('dashboard');
   const [stats, setStats] = useState({
     total: 0,
     applied: 0,
@@ -187,6 +189,16 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {activeView === 'dashboard' ? (
+        <RoleDashboardLanding
+          roleKey="admissions"
+          account={account}
+          onLogout={onLogout}
+          onSwitchRole={onSwitchRole}
+          onNavigate={(target) => setActiveView('applicants')}
+        />
+      ) : (
+        <>
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -252,6 +264,24 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={() => setActiveView('dashboard')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#f8fafc',
+              color: '#334155',
+              border: '1px solid #cbd5e1',
+              padding: '9px 14px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '0.84rem',
+              cursor: 'pointer',
+            }}
+          >
+            ← Overview Dashboard
+          </button>
           <button
             onClick={() => setIsRegisterModalOpen(true)}
             style={{
@@ -587,6 +617,8 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
           </div>
         </div>
       </main>
+        </>
+      )}
 
       {/* Register New Applicant Modal */}
       {isRegisterModalOpen && (

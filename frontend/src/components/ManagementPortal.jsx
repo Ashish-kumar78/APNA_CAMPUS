@@ -10,7 +10,12 @@ import {
   FileText, Check, ArrowRight, CornerDownLeft, Info
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
+<<<<<<< HEAD
 import api from '../services/api.js';
+=======
+import CampusConnect from './CampusConnect/CampusConnect.jsx';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+>>>>>>> origin/teammate-work
 import './ManagementPortal.css';
 
 // ─── Static Fallbacks & Seed Constants ────────────────────────────────────────
@@ -482,9 +487,28 @@ export default function ManagementPortal({ account, onLogout }) {
 
       {/* ─── Main Content Container ─────────────────────────────────────────── */}
       <main className="mgmt-main">
+<<<<<<< HEAD
 
         {/* Top Header */}
         <header className="mgmt-header">
+=======
+        {activeTab === 'executive' ? (
+          <RoleDashboardLanding
+            account={account}
+            roleKey="management"
+            onLogout={onLogout}
+            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            onNavigateTab={(tabId) => {
+              if (tabId === 'reports') exportExecutiveReport();
+              else if (tabId === 'kpi' || tabId === 'departments') setActiveTab('departments');
+              else if (tabId === 'circulars' || tabId === 'governance') setActiveTab('governance');
+              else if (tabId === 'approvals') setActiveTab('approvals');
+            }}
+          />
+        ) : (
+          <>
+            <header className="mgmt-header">
+>>>>>>> origin/teammate-work
           <div className="mgmt-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             {!sidebarOpen && (
               <button
@@ -1612,6 +1636,8 @@ export default function ManagementPortal({ account, onLogout }) {
           )}
 
         </div>
+          </>
+        )}
       </main>
 
       {/* ─── Proposal Dossier Modal ─────────────────────────────────────────── */}

@@ -28,16 +28,43 @@ import {
   AlertCircle,
   CreditCard,
   UserCheck,
-  MessageSquare
+  MessageSquare,
+  Fuel,
+  FileCheck2,
+  MessageSquareWarning,
+  AlertOctagon,
+  SquareParking,
+  Megaphone,
+  GitPullRequest,
+  CalendarDays,
+  Boxes,
+  Settings
 } from 'lucide-react';
 import './TransportPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import { erpStore } from '../services/erpStore.js';
 import { api } from '../services/api.js';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+
+import TransportBoardingSection from './transport/TransportBoardingSection.jsx';
+import TransportMaintenanceSection from './transport/TransportMaintenanceSection.jsx';
+import TransportFuelSection from './transport/TransportFuelSection.jsx';
+import TransportFeesSection from './transport/TransportFeesSection.jsx';
+import TransportComplianceSection from './transport/TransportComplianceSection.jsx';
+import TransportComplaintsSection from './transport/TransportComplaintsSection.jsx';
+import TransportAccidentsSection from './transport/TransportAccidentsSection.jsx';
+import TransportParkingSection from './transport/TransportParkingSection.jsx';
+import TransportStaffAttendanceSection from './transport/TransportStaffAttendanceSection.jsx';
+import TransportNotificationsSection from './transport/TransportNotificationsSection.jsx';
+import TransportRequestsSection from './transport/TransportRequestsSection.jsx';
+import TransportSafetySection from './transport/TransportSafetySection.jsx';
+import TransportScheduleSection from './transport/TransportScheduleSection.jsx';
+import TransportInventorySection from './transport/TransportInventorySection.jsx';
+import TransportSettingsSection from './transport/TransportSettingsSection.jsx';
 
 export default function TransportPortal({ account, onLogout, onSwitchRole }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('fleet'); // fleet, routes, passes, drivers, trips, telemetry, reports
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, fleet, routes, passes, drivers, trips, telemetry, reports
 
   // Core Data States
   const [fleetVehicles, setFleetVehicles] = useState(() => erpStore.getFleetVehicles());
@@ -498,6 +525,19 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
         </div>
 
         <nav className="erp-sidebar-nav">
+          <div style={{ fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', padding: '6px 14px 2px' }}>
+            Fleet &amp; Operations
+          </div>
+          {/* 1. Transport Dashboard */}
+          <button
+            className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <Bus size={18} />
+            <span>Transport Dashboard</span>
+            <span style={{ marginLeft: 'auto', background: '#0284c7', color: '#fff', fontSize: '0.68rem', padding: '1px 6px', borderRadius: '10px' }}>Live</span>
+          </button>
+          {/* 2. Vehicles & Fleet */}
           <button
             className={`erp-nav-item ${activeTab === 'fleet' ? 'active' : ''}`}
             onClick={() => setActiveTab('fleet')}
@@ -505,6 +545,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
             <Bus size={18} />
             <span>Vehicles &amp; Fleet</span>
           </button>
+          {/* 3. Routes & Stops */}
           <button
             className={`erp-nav-item ${activeTab === 'routes' ? 'active' : ''}`}
             onClick={() => setActiveTab('routes')}
@@ -512,33 +553,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
             <MapPin size={18} />
             <span>Routes &amp; Stops</span>
           </button>
-          <button
-            className={`erp-nav-item ${activeTab === 'passes' ? 'active' : ''}`}
-            onClick={() => setActiveTab('passes')}
-          >
-            <FileText size={18} />
-            <span>Bus Passes &amp; Allocations</span>
-            {currentStats.pendingPasses > 0 && (
-              <span style={{
-                marginLeft: 'auto',
-                background: '#f59e0b',
-                color: '#ffffff',
-                fontSize: '0.7rem',
-                padding: '2px 6px',
-                borderRadius: '9999px',
-                fontWeight: 700,
-              }}>
-                {currentStats.pendingPasses}
-              </span>
-            )}
-          </button>
-          <button
-            className={`erp-nav-item ${activeTab === 'drivers' ? 'active' : ''}`}
-            onClick={() => setActiveTab('drivers')}
-          >
-            <UserCheck size={18} />
-            <span>Drivers &amp; Duty Roster</span>
-          </button>
+          {/* 6. Trip Operations & Dispatch */}
           <button
             className={`erp-nav-item ${activeTab === 'trips' ? 'active' : ''}`}
             onClick={() => setActiveTab('trips')}
@@ -559,6 +574,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
               </span>
             )}
           </button>
+          {/* 7. GPS Tracking & Telemetry */}
           <button
             className={`erp-nav-item ${activeTab === 'telemetry' ? 'active' : ''}`}
             onClick={() => setActiveTab('telemetry')}
@@ -566,6 +582,164 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
             <Radio size={18} />
             <span>GPS Tracking &amp; Telemetry</span>
           </button>
+          {/* NEW: Transport Schedule & Calendar */}
+          <button
+            className={`erp-nav-item ${activeTab === 'schedule-calendar' ? 'active' : ''}`}
+            onClick={() => setActiveTab('schedule-calendar')}
+          >
+            <CalendarDays size={18} />
+            <span>Transport Schedule &amp; Calendar</span>
+          </button>
+
+          <div style={{ fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', padding: '12px 14px 2px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            Commuters &amp; Passes
+          </div>
+          {/* 4. Bus Passes & Allocations */}
+          <button
+            className={`erp-nav-item ${activeTab === 'passes' ? 'active' : ''}`}
+            onClick={() => setActiveTab('passes')}
+          >
+            <FileText size={18} />
+            <span>Bus Passes &amp; Allocations</span>
+            {currentStats.pendingPasses > 0 && (
+              <span style={{
+                marginLeft: 'auto',
+                background: '#f59e0b',
+                color: '#ffffff',
+                fontSize: '0.7rem',
+                padding: '2px 6px',
+                borderRadius: '9999px',
+                fontWeight: 700,
+              }}>
+                {currentStats.pendingPasses}
+              </span>
+            )}
+          </button>
+          {/* NEW: Student Boarding & Attendance */}
+          <button
+            className={`erp-nav-item ${activeTab === 'boarding' ? 'active' : ''}`}
+            onClick={() => setActiveTab('boarding')}
+          >
+            <Users size={18} />
+            <span>Student Boarding &amp; Attendance</span>
+          </button>
+          {/* NEW: Transport Fees & Dues */}
+          <button
+            className={`erp-nav-item ${activeTab === 'fees-dues' ? 'active' : ''}`}
+            onClick={() => setActiveTab('fees-dues')}
+          >
+            <CreditCard size={18} />
+            <span>Transport Fees &amp; Dues</span>
+          </button>
+          {/* NEW: Transport Requests & Approvals */}
+          <button
+            className={`erp-nav-item ${activeTab === 'requests' ? 'active' : ''}`}
+            onClick={() => setActiveTab('requests')}
+          >
+            <GitPullRequest size={18} />
+            <span>Transport Requests &amp; Approvals</span>
+          </button>
+
+          <div style={{ fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', padding: '12px 14px 2px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            Maintenance &amp; Workshop
+          </div>
+          {/* NEW: Vehicle Maintenance & Service */}
+          <button
+            className={`erp-nav-item ${activeTab === 'maintenance' ? 'active' : ''}`}
+            onClick={() => setActiveTab('maintenance')}
+          >
+            <Wrench size={18} />
+            <span>Vehicle Maintenance &amp; Service</span>
+          </button>
+          {/* NEW: Fuel & Expense Management */}
+          <button
+            className={`erp-nav-item ${activeTab === 'fuel-expenses' ? 'active' : ''}`}
+            onClick={() => setActiveTab('fuel-expenses')}
+          >
+            <Fuel size={18} />
+            <span>Fuel &amp; Expense Management</span>
+          </button>
+          {/* NEW: Parking & Vehicle Assignment */}
+          <button
+            className={`erp-nav-item ${activeTab === 'parking' ? 'active' : ''}`}
+            onClick={() => setActiveTab('parking')}
+          >
+            <SquareParking size={18} />
+            <span>Parking &amp; Vehicle Assignment</span>
+          </button>
+          {/* NEW: Transport Inventory & Spare Parts */}
+          <button
+            className={`erp-nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
+            onClick={() => setActiveTab('inventory')}
+          >
+            <Boxes size={18} />
+            <span>Transport Inventory &amp; Spare Parts</span>
+          </button>
+
+          <div style={{ fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', padding: '12px 14px 2px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            Safety &amp; Compliance
+          </div>
+          {/* NEW: Vehicle Documents & Compliance */}
+          <button
+            className={`erp-nav-item ${activeTab === 'compliance' ? 'active' : ''}`}
+            onClick={() => setActiveTab('compliance')}
+          >
+            <FileCheck2 size={18} />
+            <span>Vehicle Documents &amp; Compliance</span>
+          </button>
+          {/* NEW: Transport Safety & Inspections */}
+          <button
+            className={`erp-nav-item ${activeTab === 'safety-inspections' ? 'active' : ''}`}
+            onClick={() => setActiveTab('safety-inspections')}
+          >
+            <ShieldCheck size={18} />
+            <span>Transport Safety &amp; Inspections</span>
+          </button>
+          {/* NEW: Accident & Incident Management */}
+          <button
+            className={`erp-nav-item ${activeTab === 'accidents' ? 'active' : ''}`}
+            onClick={() => setActiveTab('accidents')}
+          >
+            <AlertOctagon size={18} />
+            <span>Accident &amp; Incident Management</span>
+          </button>
+
+          <div style={{ fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', padding: '12px 14px 2px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            Personnel &amp; Administration
+          </div>
+          {/* 5. Drivers & Duty Roster */}
+          <button
+            className={`erp-nav-item ${activeTab === 'drivers' ? 'active' : ''}`}
+            onClick={() => setActiveTab('drivers')}
+          >
+            <UserCheck size={18} />
+            <span>Drivers &amp; Duty Roster</span>
+          </button>
+          {/* NEW: Transport Staff Attendance */}
+          <button
+            className={`erp-nav-item ${activeTab === 'staff-attendance' ? 'active' : ''}`}
+            onClick={() => setActiveTab('staff-attendance')}
+          >
+            <UserCheck size={18} />
+            <span>Transport Staff Attendance</span>
+          </button>
+          {/* NEW: Transport Complaints & Feedback */}
+          <button
+            className={`erp-nav-item ${activeTab === 'complaints' ? 'active' : ''}`}
+            onClick={() => setActiveTab('complaints')}
+          >
+            <MessageSquareWarning size={18} />
+            <span>Transport Complaints &amp; Feedback</span>
+          </button>
+          {/* NEW: Transport Notifications & Announcements */}
+          <button
+            className={`erp-nav-item ${activeTab === 'notifications' ? 'active' : ''}`}
+            onClick={() => setActiveTab('notifications')}
+          >
+            <Megaphone size={18} />
+            <span>Transport Notifications &amp; Announcements</span>
+          </button>
+          {/* 8. Reports & Accounts Sync */}
           <button
             className={`erp-nav-item ${activeTab === 'reports' ? 'active' : ''}`}
             onClick={() => setActiveTab('reports')}
@@ -573,11 +747,54 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
             <CreditCard size={18} />
             <span>Reports &amp; Accounts Sync</span>
           </button>
+          {/* NEW: Transport Settings & Policies */}
+          <button
+            className={`erp-nav-item ${activeTab === 'settings-policies' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings-policies')}
+          >
+            <Settings size={18} />
+            <span>Transport Settings &amp; Policies</span>
+          </button>
         </nav>
       </aside>
 
       {/* Main Content */}
       <main className="erp-main-content">
+        {activeTab === 'dashboard' ? (
+          <RoleDashboardLanding
+            roleKey="transport"
+            account={account}
+            onLogout={onLogout}
+            onSwitchRole={onSwitchRole}
+            onToggleSidebar={() => setSidebarOpen(o => !o)}
+            onNavigate={(target) => {
+              if (target === 'trans-fleet') setActiveTab('fleet');
+              else if (target === 'trans-routes') setActiveTab('routes');
+              else if (target === 'trans-passes') setActiveTab('passes');
+              else if (target === 'trans-drivers') setActiveTab('drivers');
+              else if (target === 'trans-trips') setActiveTab('trips');
+              else if (target === 'trans-telemetry') setActiveTab('telemetry');
+              else if (target === 'trans-reports') setActiveTab('reports');
+              else if (target === 'trans-boarding') setActiveTab('boarding');
+              else if (target === 'trans-maintenance') setActiveTab('maintenance');
+              else if (target === 'trans-fuel') setActiveTab('fuel-expenses');
+              else if (target === 'trans-fees') setActiveTab('fees-dues');
+              else if (target === 'trans-compliance') setActiveTab('compliance');
+              else if (target === 'trans-complaints') setActiveTab('complaints');
+              else if (target === 'trans-accidents') setActiveTab('accidents');
+              else if (target === 'trans-parking') setActiveTab('parking');
+              else if (target === 'trans-staff') setActiveTab('staff-attendance');
+              else if (target === 'trans-notifications') setActiveTab('notifications');
+              else if (target === 'trans-requests') setActiveTab('requests');
+              else if (target === 'trans-safety') setActiveTab('safety-inspections');
+              else if (target === 'trans-schedule') setActiveTab('schedule-calendar');
+              else if (target === 'trans-inventory') setActiveTab('inventory');
+              else if (target === 'trans-settings') setActiveTab('settings-policies');
+              else setActiveTab(target || 'fleet');
+            }}
+          />
+        ) : (
+          <>
         <header className="erp-header">
           <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {!sidebarOpen && (
@@ -1446,7 +1663,57 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
               </div>
             </div>
           )}
+
+          {/* =========================================================================
+              15 NEW TRANSPORT MANAGEMENT SUBMODULES
+              ========================================================================= */}
+          {/* TAB 8: STUDENT BOARDING & ATTENDANCE */}
+          {activeTab === 'boarding' && <TransportBoardingSection />}
+
+          {/* TAB 9: VEHICLE MAINTENANCE & SERVICE */}
+          {activeTab === 'maintenance' && <TransportMaintenanceSection />}
+
+          {/* TAB 10: FUEL & EXPENSE MANAGEMENT */}
+          {activeTab === 'fuel-expenses' && <TransportFuelSection />}
+
+          {/* TAB 11: TRANSPORT FEES & DUES */}
+          {activeTab === 'fees-dues' && <TransportFeesSection />}
+
+          {/* TAB 12: VEHICLE DOCUMENTS & COMPLIANCE */}
+          {activeTab === 'compliance' && <TransportComplianceSection />}
+
+          {/* TAB 13: TRANSPORT COMPLAINTS & FEEDBACK */}
+          {activeTab === 'complaints' && <TransportComplaintsSection />}
+
+          {/* TAB 14: ACCIDENT & INCIDENT MANAGEMENT */}
+          {activeTab === 'accidents' && <TransportAccidentsSection />}
+
+          {/* TAB 15: PARKING & VEHICLE ASSIGNMENT */}
+          {activeTab === 'parking' && <TransportParkingSection />}
+
+          {/* TAB 16: TRANSPORT STAFF ATTENDANCE */}
+          {activeTab === 'staff-attendance' && <TransportStaffAttendanceSection />}
+
+          {/* TAB 17: TRANSPORT NOTIFICATIONS & ANNOUNCEMENTS */}
+          {activeTab === 'notifications' && <TransportNotificationsSection />}
+
+          {/* TAB 18: TRANSPORT REQUESTS & APPROVALS */}
+          {activeTab === 'requests' && <TransportRequestsSection />}
+
+          {/* TAB 19: TRANSPORT SAFETY & INSPECTIONS */}
+          {activeTab === 'safety-inspections' && <TransportSafetySection />}
+
+          {/* TAB 20: TRANSPORT SCHEDULE & CALENDAR */}
+          {activeTab === 'schedule-calendar' && <TransportScheduleSection />}
+
+          {/* TAB 21: TRANSPORT INVENTORY & SPARE PARTS */}
+          {activeTab === 'inventory' && <TransportInventorySection />}
+
+          {/* TAB 22: TRANSPORT SETTINGS & POLICIES */}
+          {activeTab === 'settings-policies' && <TransportSettingsSection />}
         </div>
+          </>
+        )}
       </main>
 
       {/* MODAL 1: ADD VEHICLE */}

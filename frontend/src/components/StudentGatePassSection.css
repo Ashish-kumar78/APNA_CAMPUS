@@ -318,17 +318,13 @@
 }
 
 @media print {
-  body * {
-    visibility: hidden;
-  }
-  .digital-pass-card, .digital-pass-card * {
-    visibility: visible;
-  }
   .digital-pass-card {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    border: 2px solid #000;
+    position: static !important;
+    width: 100% !important;
+    max-width: 620px !important;
+    margin: 0 auto !important;
+    border: 2px solid #000 !important;
+    box-shadow: none !important;
   }
 }
+

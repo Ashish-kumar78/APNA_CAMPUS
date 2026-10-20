@@ -1172,23 +1172,17 @@
 }
 
 @media print {
-  body * {
-    visibility: hidden;
-  }
-  .printable-admit-sheet, .printable-admit-sheet * {
-    visibility: visible;
-  }
   .printable-admit-sheet {
-    position: absolute;
-    left: 0;
-    top: 0;
+    position: static !important;
     width: 100% !important;
     padding: 20px !important;
     box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
   }
   .no-print {
     display: none !important;
   }
 }
+
 
 

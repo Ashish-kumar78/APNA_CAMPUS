@@ -93,10 +93,89 @@
 }
 
 .rg-filter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
   margin-bottom: 1.25rem;
+  width: 100%;
+}
+
+.rg-filter-row {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+.rg-filter-row-1 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.rg-filter-row-2 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Row 3: Specialized Criteria Filter (e.g. Attendance Criteria & Manual Cutoff %) */
+.rg-filter-row-3 {
+  grid-template-columns: repeat(3, 1fr);
+  background: #f8fafc;
+  padding: 0.9rem 1.1rem;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  border-left: 4px solid #2563eb;
+  transition: all 0.2s ease;
+}
+
+.rg-input-suffix-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.rg-input-suffix-wrap .rg-input {
+  padding-right: 2rem;
+}
+
+.rg-input-suffix {
+  position: absolute;
+  right: 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  pointer-events: none;
+}
+
+.rg-preset-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.rg-preset-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.rg-preset-chip {
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rg-preset-chip:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
 }
 
 .rg-field {
@@ -620,11 +699,29 @@
 
 /* Responsive adjustments */
 @media (max-width: 1024px) {
-  .rg-filter-grid {
+  .rg-filter-row-1 {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .rg-filter-row-2 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .rg-filter-row-3 {
+    grid-template-columns: repeat(3, 1fr);
   }
   .rg-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .rg-filter-row-1 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .rg-filter-row-2 {
+    grid-template-columns: 1fr;
+  }
+  .rg-filter-row-3 {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -632,7 +729,9 @@
   .rg-container {
     padding: 1rem;
   }
-  .rg-filter-grid {
+  .rg-filter-row-1,
+  .rg-filter-row-2,
+  .rg-filter-row-3 {
     grid-template-columns: 1fr;
   }
   .rg-kpi-grid {

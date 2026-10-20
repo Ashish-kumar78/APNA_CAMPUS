@@ -35,12 +35,25 @@ import {
   UserPlus,
   AlertTriangle,
   FileSpreadsheet,
-  MessageSquare
+  MessageSquare,
+  Utensils,
+  Wrench,
+  Boxes,
+  ShieldAlert,
+  AlertOctagon,
+  LogIn,
+  CreditCard,
+  ClipboardCheck,
+  PhoneCall,
+  Settings,
+  Bell,
+  Shield
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import './HostelPortal.css';
 import '../components/AdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import { downloadHostelCensusPdf } from '../utils/pdfGenerator';
 import {
   initialHostels,
@@ -60,6 +73,24 @@ import { api } from '../services/api.js';
 import { useTimeGreeting } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import HandwrittenApplicationLetter from './HandwrittenApplicationLetter.jsx';
+
+// ── 15 New Hostel Warden Submodules ──
+import HostelAttendanceSection from './hostel/HostelAttendanceSection.jsx';
+import HostelLeaveSection from './hostel/HostelLeaveSection.jsx';
+import HostelMessSection from './hostel/HostelMessSection.jsx';
+import HostelMaintenanceSection from './hostel/HostelMaintenanceSection.jsx';
+import HostelStaffSection from './hostel/HostelStaffSection.jsx';
+import HostelDisciplinarySection from './hostel/HostelDisciplinarySection.jsx';
+import HostelEmergencyIncidentsSection from './hostel/HostelEmergencyIncidentsSection.jsx';
+import HostelInventorySection from './hostel/HostelInventorySection.jsx';
+import HostelNoticesSection from './hostel/HostelNoticesSection.jsx';
+import HostelCheckinCheckoutSection from './hostel/HostelCheckinCheckoutSection.jsx';
+import HostelFeesSection from './hostel/HostelFeesSection.jsx';
+import HostelFeedbackSection from './hostel/HostelFeedbackSection.jsx';
+import HostelInspectionSection from './hostel/HostelInspectionSection.jsx';
+import HostelEmergencyContactsSection from './hostel/HostelEmergencyContactsSection.jsx';
+import HostelSettingsRulesSection from './hostel/HostelSettingsRulesSection.jsx';
+
 
 export default function HostelPortal({ account, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -780,6 +811,8 @@ export default function HostelPortal({ account, onLogout }) {
                 <X size={16} />
               </button>
             </div>
+            {/* ── Category 1: Residence & Allocations ── */}
+            <div className="hostel-nav-category">Residence &amp; Rooms</div>
             <button
               className={`hostel-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
               onClick={() => setActiveTab('dashboard')}
@@ -799,16 +832,25 @@ export default function HostelPortal({ account, onLogout }) {
               <Bed size={17} /> Rooms &amp; Bed Allocations
             </button>
             <button
-              className={`hostel-nav-btn ${activeTab === 'complaints' ? 'active' : ''}`}
-              onClick={() => setActiveTab('complaints')}
+              className={`hostel-nav-btn ${activeTab === 'checkin-checkout' ? 'active' : ''}`}
+              onClick={() => setActiveTab('checkin-checkout')}
             >
-              <AlertCircle size={17} /> Complaints ({pendingComplaints})
+              <LogIn size={17} /> Student Check-in / Check-out
+            </button>
+
+            {/* ── Category 2: Student Movement & Dining ── */}
+            <div className="hostel-nav-category">Daily Movement &amp; Dining</div>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'attendance' ? 'active' : ''}`}
+              onClick={() => setActiveTab('attendance')}
+            >
+              <UserCheck size={17} /> Hostel Attendance
             </button>
             <button
-              className={`hostel-nav-btn ${activeTab === 'visitors' ? 'active' : ''}`}
-              onClick={() => setActiveTab('visitors')}
+              className={`hostel-nav-btn ${activeTab === 'leave-mgmt' ? 'active' : ''}`}
+              onClick={() => setActiveTab('leave-mgmt')}
             >
-              <Users size={17} /> Visitor Management ({activeVisitors.length})
+              <Calendar size={17} /> Leave Management
             </button>
             <button
               className={`hostel-nav-btn ${activeTab === 'gatepasses' ? 'active' : ''}`}
@@ -818,6 +860,87 @@ export default function HostelPortal({ account, onLogout }) {
               {pendingGatePassCount > 0 && (
                 <span className="hostel-badge-count">{pendingGatePassCount}</span>
               )}
+            </button>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'visitors' ? 'active' : ''}`}
+              onClick={() => setActiveTab('visitors')}
+            >
+              <Users size={17} /> Visitor Management ({activeVisitors.length})
+            </button>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'mess-dining' ? 'active' : ''}`}
+              onClick={() => setActiveTab('mess-dining')}
+            >
+              <Utensils size={17} /> Mess &amp; Dining Management
+            </button>
+
+            {/* ── Category 3: Facilities & Maintenance ── */}
+            <div className="hostel-nav-category">Facilities &amp; Assets</div>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'complaints' ? 'active' : ''}`}
+              onClick={() => setActiveTab('complaints')}
+            >
+              <AlertCircle size={17} /> Complaints ({pendingComplaints})
+            </button>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'maintenance-repairs' ? 'active' : ''}`}
+              onClick={() => setActiveTab('maintenance-repairs')}
+            >
+              <Wrench size={17} /> Maintenance &amp; Repairs
+            </button>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'inventory-assets' ? 'active' : ''}`}
+              onClick={() => setActiveTab('inventory-assets')}
+            >
+              <Boxes size={17} /> Inventory &amp; Assets
+            </button>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'inspection-compliance' ? 'active' : ''}`}
+              onClick={() => setActiveTab('inspection-compliance')}
+            >
+              <ClipboardCheck size={17} /> Inspection &amp; Compliance
+            </button>
+
+            {/* ── Category 4: Student Discipline & Welfare ── */}
+            <div className="hostel-nav-category">Discipline &amp; Welfare</div>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'disciplinary' ? 'active' : ''}`}
+              onClick={() => setActiveTab('disciplinary')}
+            >
+              <ShieldAlert size={17} /> Disciplinary Management
+            </button>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'emergency-incidents' ? 'active' : ''}`}
+              onClick={() => setActiveTab('emergency-incidents')}
+            >
+              <AlertOctagon size={17} /> Emergency &amp; Incident Reports
+            </button>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'feedback-suggestions' ? 'active' : ''}`}
+              onClick={() => setActiveTab('feedback-suggestions')}
+            >
+              <MessageSquare size={17} /> Feedback &amp; Suggestions
+            </button>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'fees-dues' ? 'active' : ''}`}
+              onClick={() => setActiveTab('fees-dues')}
+            >
+              <CreditCard size={17} /> Hostel Fees &amp; Dues
+            </button>
+
+            {/* ── Category 5: Administration & Governance ── */}
+            <div className="hostel-nav-category">Administration &amp; Rules</div>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'staff-mgmt' ? 'active' : ''}`}
+              onClick={() => setActiveTab('staff-mgmt')}
+            >
+              <Shield size={17} /> Hostel Staff Management
+            </button>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'notices-announcements' ? 'active' : ''}`}
+              onClick={() => setActiveTab('notices-announcements')}
+            >
+              <Bell size={17} /> Hostel Notices &amp; Announcements
             </button>
             <button
               className={`hostel-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
@@ -837,7 +960,20 @@ export default function HostelPortal({ account, onLogout }) {
             >
               <FileSpreadsheet size={17} /> Report Generation
             </button>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'emergency-contacts' ? 'active' : ''}`}
+              onClick={() => setActiveTab('emergency-contacts')}
+            >
+              <PhoneCall size={17} /> Emergency Contacts
+            </button>
+            <button
+              className={`hostel-nav-btn ${activeTab === 'settings-rules' ? 'active' : ''}`}
+              onClick={() => setActiveTab('settings-rules')}
+            >
+              <Settings size={17} /> Settings &amp; Hostel Rules
+            </button>
           </aside>
+
         )}
 
         {/* Dynamic Content Pane */}
@@ -851,6 +987,25 @@ export default function HostelPortal({ account, onLogout }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
+            <RoleDashboardLanding
+              roleKey="warden"
+              account={account}
+              onLogout={onLogout}
+              onNavigate={(target) => {
+                if (target === 'rooms') setActiveTab('rooms');
+                else if (target === 'complaints') setActiveTab('complaints');
+                else if (target === 'maintenance') setActiveTab('maintenance-repairs');
+                else if (target === 'attendance') setActiveTab('attendance');
+                else if (target === 'leave') setActiveTab('leave-mgmt');
+                else if (target === 'mess') setActiveTab('mess-dining');
+                else if (target) setActiveTab(target);
+                else setActiveTab('rooms');
+              }}
+
+            />
+          )}
+
+          {false && activeTab === 'dashboard' && (
             <div>
               <div className="admin-view-header">
                 <div>
@@ -2083,8 +2238,85 @@ export default function HostelPortal({ account, onLogout }) {
           {activeTab === 'report-generation' && (
             <ReportGenerationModule account={account} role="hostel" />
           )}
+
+          {/* ── 15 NEW HOSTEL WARDEN SECTIONS ── */}
+          {/* TAB 10: HOSTEL ATTENDANCE */}
+          {activeTab === 'attendance' && (
+            <HostelAttendanceSection />
+          )}
+
+          {/* TAB 11: LEAVE MANAGEMENT */}
+          {activeTab === 'leave-mgmt' && (
+            <HostelLeaveSection />
+          )}
+
+          {/* TAB 12: MESS & DINING MANAGEMENT */}
+          {activeTab === 'mess-dining' && (
+            <HostelMessSection />
+          )}
+
+          {/* TAB 13: MAINTENANCE & REPAIRS */}
+          {activeTab === 'maintenance-repairs' && (
+            <HostelMaintenanceSection />
+          )}
+
+          {/* TAB 14: HOSTEL STAFF MANAGEMENT */}
+          {activeTab === 'staff-mgmt' && (
+            <HostelStaffSection />
+          )}
+
+          {/* TAB 15: DISCIPLINARY MANAGEMENT */}
+          {activeTab === 'disciplinary' && (
+            <HostelDisciplinarySection />
+          )}
+
+          {/* TAB 16: EMERGENCY & INCIDENT REPORTS */}
+          {activeTab === 'emergency-incidents' && (
+            <HostelEmergencyIncidentsSection />
+          )}
+
+          {/* TAB 17: INVENTORY & ASSETS */}
+          {activeTab === 'inventory-assets' && (
+            <HostelInventorySection />
+          )}
+
+          {/* TAB 18: HOSTEL NOTICES & ANNOUNCEMENTS */}
+          {activeTab === 'notices-announcements' && (
+            <HostelNoticesSection />
+          )}
+
+          {/* TAB 19: STUDENT CHECK-IN / CHECK-OUT */}
+          {activeTab === 'checkin-checkout' && (
+            <HostelCheckinCheckoutSection />
+          )}
+
+          {/* TAB 20: HOSTEL FEES & DUES */}
+          {activeTab === 'fees-dues' && (
+            <HostelFeesSection />
+          )}
+
+          {/* TAB 21: FEEDBACK & SUGGESTIONS */}
+          {activeTab === 'feedback-suggestions' && (
+            <HostelFeedbackSection />
+          )}
+
+          {/* TAB 22: INSPECTION & COMPLIANCE */}
+          {activeTab === 'inspection-compliance' && (
+            <HostelInspectionSection />
+          )}
+
+          {/* TAB 23: EMERGENCY CONTACTS */}
+          {activeTab === 'emergency-contacts' && (
+            <HostelEmergencyContactsSection />
+          )}
+
+          {/* TAB 24: SETTINGS & HOSTEL RULES */}
+          {activeTab === 'settings-rules' && (
+            <HostelSettingsRulesSection />
+          )}
         </main>
       </div>
+
 
       {/* ── MODAL: ALLOCATE BED ── */}
       {isAllocateModalOpen && (

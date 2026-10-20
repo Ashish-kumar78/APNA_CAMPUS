@@ -918,7 +918,6 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-<<<<<<< HEAD
   // 35. Automated Timetable Management System
   getTimetables: (params = {}) => {
     const q = new URLSearchParams(params).toString();
@@ -1101,7 +1100,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-=======
   // 28. Enterprise Academic Reports
   getReportFilters: () => request('/reports/filters'),
   getAttendanceReport: (params = {}) => {
@@ -1203,7 +1201,6 @@ export const api = {
     request(`/notifications/student/${id}/read`, {
       method: 'POST',
     }),
->>>>>>> origin/somya
 };
 
 

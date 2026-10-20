@@ -27,14 +27,11 @@ import { useTimeGreeting } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
-<<<<<<< HEAD
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
-=======
 import FacultyClassSelector from './FacultyClassSelector.jsx';
 import FacultyComplaintsModule from './FacultyComplaintsModule.jsx';
 import FacultyNotificationsModule from './FacultyNotificationsModule.jsx';
->>>>>>> origin/somya
 
 // CSV Export Helper
 function exportToCsv(filename, rows) {
@@ -996,29 +993,6 @@ export default function FacultyPortal({ account, onLogout }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
-<<<<<<< HEAD
-            <RoleDashboardLanding
-              roleKey="faculty"
-              account={account}
-              onLogout={onLogout}
-              onNavigate={(target) => {
-                if (target === 'faculty-att') setActiveTab('take-attendance');
-                else if (target === 'faculty-eval') setActiveTab('digital-evaluation');
-                else if (target === 'faculty-marks') setActiveTab('marks');
-                else if (target === 'faculty-tt') setActiveTab('subjects');
-                else setActiveTab('subjects');
-              }}
-            />
-          )}
-
-          {false && activeTab === 'dashboard' && (
-            <div>
-              {/* Welcome Header */}
-              <div className="admin-view-header">
-                <div>
-                  <h2>{greeting}, {account?.name || 'Dr. S. Mohanty'}</h2>
-                  <p>Faculty Continuous Assessment &amp; Evaluation Workspace · Assigned: {currentAssignment.subjectName} ({currentAssignment.subjectCode})</p>
-=======
             <div className="dash">
               {/* 1. Dynamic Hero Greeting matching Student Dashboard */}
               <section className={`dash-hero ${timeGreeting.themeClass}`} aria-label="Welcome">
@@ -1032,7 +1006,6 @@ export default function FacultyPortal({ account, onLogout }) {
                     <strong>Academic Notice</strong>
                     <span>Continuous evaluation &amp; CIA register active for {currentAssignment.subjectName} ({currentAssignment.subjectCode}) · {currentAssignment.semester}</span>
                   </div>
->>>>>>> origin/somya
                 </div>
                 <div className="dash-hero-meta">
                   <span className="dash-chip">Academic year <strong>2026–27</strong></span>

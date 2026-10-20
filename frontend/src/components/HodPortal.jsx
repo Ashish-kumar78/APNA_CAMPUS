@@ -65,10 +65,8 @@ import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
-<<<<<<< HEAD
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
-=======
 import HodGrievanceMonitoringModule from './HodGrievanceMonitoringModule.jsx';
 import { complaintsApi } from '../services/complaintsApi.js';
 import { notificationsApi } from '../services/notificationsApi.js';
@@ -147,7 +145,6 @@ export function getStudentInternalMarks(student) {
     status: hasMissing ? 'Incomplete' : 'Complete'
   };
 }
->>>>>>> origin/somya
 
 function exportToCsv(filename, rows) {
   if (!rows || !rows.length) return;
@@ -1019,29 +1016,9 @@ export default function HodPortal({ account, onLogout }) {
             </div>
           )}
 
-<<<<<<< HEAD
-          {/* TAB 1: DASHBOARD */}
-          {activeTab === 'dashboard' && (
-            <RoleDashboardLanding
-              roleKey="hod"
-              account={account}
-              onLogout={onLogout}
-              onNavigate={(target) => {
-                if (target === 'hod-review') setActiveTab('approval');
-                else if (target === 'hod-faculty') setActiveTab('faculty');
-                else if (target === 'hod-dept') setActiveTab('students');
-                else setActiveTab('approval');
-              }}
-            />
-          )}
-
-          {false && activeTab === 'dashboard' && (
-            <div>
-=======
           {/* TAB: MARKS MANAGEMENT */}
           {activeTab === 'marks' && (
             <div style={{ marginBottom: '24px' }}>
->>>>>>> origin/somya
               <div className="hod-view-header">
                 <div>
                   <h2>Department Continuous Assessment &amp; Marks Management</h2>

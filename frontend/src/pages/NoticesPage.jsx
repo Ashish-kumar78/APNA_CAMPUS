@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Bell, 
   Search, 
@@ -8,9 +8,11 @@ import {
   ExternalLink, 
   Filter, 
   CheckCircle,
-  FileText
+  FileText,
+  Megaphone
 } from 'lucide-react'
 import { downloadNoticePdf } from '../utils/pdfGenerator'
+import { notificationsApi } from '../services/notificationsApi.js'
 import './NoticesPage.css'
 
 const allNotices = [
@@ -75,12 +77,50 @@ export default function NoticesPage() {
   const [selectedTag, setSelectedTag] = useState('all')
   const [query, setQuery] = useState('')
   const [selectedNotice, setSelectedNotice] = useState(null)
+  const [facultyNotices, setFacultyNotices] = useState([])
 
-  const filtered = allNotices.filter((n) => {
+  useEffect(() => {
+    let isMounted = true;
+    const loadFacultyNotices = async () => {
+      try {
+        const list = await notificationsApi.getStudentNotifications('01');
+        if (!isMounted || !Array.isArray(list)) return;
+
+        const mapped = list.map(n => ({
+          id: `fac-${n.id}`,
+          title: n.title,
+          tag: 'faculty',
+          category: n.category,
+          date: n.publishedAt ? new Date(n.publishedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today',
+          publisher: `${n.facultyName || 'Course Faculty'} (${n.subjectCode || 'CSE Dept'})`,
+          pinned: n.priority === 'URGENT',
+          summary: n.message.slice(0, 150) + (n.message.length > 150 ? '...' : ''),
+          content: n.message,
+          attachment: n.attachmentName || (n.category === 'EXAMINATION' ? 'Modular_Exam_Notice.pdf' : 'Academic_Notification.pdf')
+        }));
+
+        setFacultyNotices(mapped);
+      } catch (e) {
+        console.warn('Failed to load faculty notices on Notices page', e);
+      }
+    };
+
+    loadFacultyNotices();
+    window.addEventListener('apna_campus_notifications_updated', loadFacultyNotices);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('apna_campus_notifications_updated', loadFacultyNotices);
+    };
+  }, []);
+
+  const combinedNotices = [...facultyNotices, ...allNotices];
+
+  const filtered = combinedNotices.filter((n) => {
     const matchesTag = selectedTag === 'all' || n.tag === selectedTag
     const matchesQuery = query.trim() === '' || 
       n.title.toLowerCase().includes(query.toLowerCase()) ||
-      n.summary.toLowerCase().includes(query.toLowerCase())
+      n.summary.toLowerCase().includes(query.toLowerCase()) ||
+      (n.publisher && n.publisher.toLowerCase().includes(query.toLowerCase()))
     return matchesTag && matchesQuery
   })
 
@@ -95,13 +135,21 @@ export default function NoticesPage() {
 
       <div className="notices-controls">
         <div className="notices-cats">
-          {['all', 'academic', 'exam', 'scholarship', 'placement', 'event'].map((cat) => (
+          {[
+            { id: 'all', label: 'All Notices' },
+            { id: 'faculty', label: 'Faculty Broadcasts' },
+            { id: 'academic', label: 'Academic' },
+            { id: 'exam', label: 'Examinations' },
+            { id: 'scholarship', label: 'Scholarship' },
+            { id: 'placement', label: 'Placement' },
+            { id: 'event', label: 'Events' }
+          ].map((cat) => (
             <button
-              key={cat}
-              className={`notices-cat-btn ${selectedTag === cat ? 'active' : ''}`}
-              onClick={() => setSelectedTag(cat)}
+              key={cat.id}
+              className={`notices-cat-btn ${selectedTag === cat.id ? 'active' : ''}`}
+              onClick={() => setSelectedTag(cat.id)}
             >
-              {cat === 'all' ? 'All Notices' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+              {cat.label}
             </button>
           ))}
         </div>

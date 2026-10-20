@@ -70,6 +70,7 @@ import AnonymousComplaintsSection from './components/CampusConnect/AnonymousComp
 import { campusConnectStore } from './services/campusConnectStore.js'
 import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, getAllStudents, findStudentByQuery } from './services/studentStore.js'
+import { notificationsApi } from './services/notificationsApi.js'
 
 const profilePageTabMap = {
   attendance: 'Attendance Dashboard',
@@ -381,15 +382,80 @@ function StudentPortal({ account, onLogout }) {
   const [holidayView, setHolidayView] = useState('all')
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState(initialStudentNotifications)
+  const [selectedBroadcastModal, setSelectedBroadcastModal] = useState(null)
   const unreadNotifCount = notifications.filter((n) => n.unread).length
 
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })))
-  }
+  useEffect(() => {
+    let isMounted = true;
+    const loadNotifications = async () => {
+      try {
+        const roll = account?.rollNumber || account?.registrationNumber || '01';
+        const facultyList = await notificationsApi.getStudentNotifications(roll);
+        if (!isMounted) return;
 
-  const handleToggleNotif = (id) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: !n.unread } : n)))
-  }
+        const formattedFaculty = (facultyList || []).map((f) => {
+          let timeAgo = 'Recently';
+          if (f.publishedAt) {
+            const diffHours = (Date.now() - new Date(f.publishedAt).getTime()) / 3600000;
+            if (diffHours < 1) timeAgo = `${Math.max(1, Math.round(diffHours * 60))}m ago`;
+            else if (diffHours < 24) timeAgo = `${Math.round(diffHours)}h ago`;
+            else timeAgo = new Date(f.publishedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+          }
+
+          return {
+            id: f.id,
+            tag: f.priority === 'URGENT' ? 'URGENT' : (f.category ? f.category.replace(/_/g, ' ') : 'ACADEMIC NOTICE'),
+            tagClass: f.priority === 'URGENT' ? 'notif-tag-urgent' : f.category === 'EXAMINATION' ? 'notif-tag-exam' : f.category === 'ASSIGNMENT_DEADLINE' ? 'notif-tag-accounts' : 'notif-tag-faculty',
+            title: f.title,
+            message: f.message,
+            facultyInfo: `${f.facultyName || 'Faculty'}${f.subjectCode ? ` • ${f.subjectCode}` : ''}`,
+            time: timeAgo,
+            unread: !f.isRead,
+            isFacultyNotice: true,
+            raw: f
+          };
+        });
+
+        setNotifications([...formattedFaculty, ...initialStudentNotifications]);
+      } catch (err) {
+        console.warn('Failed to load student notifications:', err);
+      }
+    };
+
+    loadNotifications();
+    window.addEventListener('apna_campus_notifications_updated', loadNotifications);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('apna_campus_notifications_updated', loadNotifications);
+    };
+  }, [account]);
+
+  const handleMarkAllRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    const roll = account?.rollNumber || '01';
+    notifications.forEach((n) => {
+      if (n.isFacultyNotice && n.unread) {
+        notificationsApi.markAsRead(n.id, roll).catch(() => {});
+      }
+    });
+  };
+
+  const handleToggleNotif = async (notif) => {
+    const id = notif.id;
+    const newUnread = !notif.unread;
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: newUnread } : n)));
+    if (notif.isFacultyNotice && !newUnread) {
+      const roll = account?.rollNumber || '01';
+      notificationsApi.markAsRead(id, roll).catch(() => {});
+    }
+  };
+
+  const handleOpenNoticeDetail = (notif) => {
+    setSelectedBroadcastModal(notif);
+    if (notif.unread) {
+      handleToggleNotif(notif);
+    }
+  };
 
   const studentPhoto = useMemo(() => {
     if (account?.photo && !account.photo.includes('female')) return account.photo
@@ -697,17 +763,24 @@ function StudentPortal({ account, onLogout }) {
                         <div
                           key={notif.id}
                           className={`notif-item ${notif.unread ? 'is-unread' : ''}`}
-                          onClick={() => handleToggleNotif(notif.id)}
+                          onClick={() => handleOpenNoticeDetail(notif)}
                           role="button"
                           tabIndex={0}
-                          title={notif.unread ? 'Click to mark as read' : 'Click to mark as unread'}
+                          title="Click to view full announcement details"
                         >
                           <div className="notif-item-top">
                             <span className={`notif-tag-badge ${notif.tagClass}`}>{notif.tag}</span>
                             <span className="notif-time">{notif.time}</span>
                           </div>
                           <h4 className="notif-title">{notif.title}</h4>
-                          <p className="notif-message">{notif.message}</p>
+                          {notif.facultyInfo && (
+                            <div style={{ fontSize: '10.5px', color: '#0f766e', fontWeight: 600, marginBottom: '3px' }}>
+                              👨‍🏫 {notif.facultyInfo}
+                            </div>
+                          )}
+                          <p className="notif-message" style={{ display: '-webkit-box', WebKitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {notif.message}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -1124,6 +1197,61 @@ function StudentPortal({ account, onLogout }) {
           </div>
         </main>
       </div>
+
+      {/* Broadcast Notice Inspection Modal */}
+      {selectedBroadcastModal && (
+        <div className="payment-modal-backdrop" onClick={() => setSelectedBroadcastModal(null)} style={{ zIndex: 10000 }}>
+          <div className="payment-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', width: '92%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <span className={`notif-tag-badge ${selectedBroadcastModal.tagClass}`} style={{ fontSize: '11px', padding: '3px 8px' }}>
+                {selectedBroadcastModal.tag}
+              </span>
+              <button
+                className="payment-modal-close"
+                onClick={() => setSelectedBroadcastModal(null)}
+                style={{ position: 'static' }}
+              >
+                ×
+              </button>
+            </div>
+            <h2 style={{ fontSize: '1.25rem', margin: '0 0 10px', color: '#0a0f1e', lineHeight: 1.35 }}>
+              {selectedBroadcastModal.title}
+            </h2>
+            <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '16px', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {selectedBroadcastModal.facultyInfo && (
+                <span style={{ color: '#0f766e', fontWeight: 600 }}>
+                  👨‍🏫 {selectedBroadcastModal.facultyInfo}
+                </span>
+              )}
+              {selectedBroadcastModal.raw?.subjectName && (
+                <span>• {selectedBroadcastModal.raw.subjectName}</span>
+              )}
+              {selectedBroadcastModal.raw?.semester && (
+                <span>• {selectedBroadcastModal.raw.semester} ({selectedBroadcastModal.raw.section})</span>
+              )}
+              <span>• {selectedBroadcastModal.time}</span>
+            </div>
+            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', fontSize: '0.92rem', lineHeight: '1.6', color: '#334155', marginBottom: '20px', whiteSpace: 'pre-wrap', border: '1px solid #e2e8f0' }}>
+              {selectedBroadcastModal.message}
+            </div>
+            {selectedBroadcastModal.raw?.attachmentName && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#ecfdf5', borderRadius: '8px', border: '1px solid #a7f3d0', marginBottom: '16px', fontSize: '0.85rem', color: '#065f46' }}>
+                <FileText size={16} />
+                <span>Academic Material: <strong>{selectedBroadcastModal.raw.attachmentName}</strong></span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                className="btn-pay-now"
+                style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+                onClick={() => setSelectedBroadcastModal(null)}
+              >
+                Acknowledge &amp; Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

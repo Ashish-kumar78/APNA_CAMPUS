@@ -5,77 +5,265 @@ export const ACADEMIC_YEARS = ['2026-27', '2025-26', '2024-25']
 export const SEMESTERS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th']
 export const SECTIONS = ['A', 'B', 'C']
 
+// Dr. S. Mohanty's multi-class, multi-section, multi-semester teaching assignments
+export const ASSIGNED_CLASSES = [
+  {
+    id: 'fa-1',
+    subjectId: 'dsa',
+    academicYear: '2026-27',
+    semester: '5th',
+    semNumber: 5,
+    section: 'A',
+    subjectCode: 'CS501',
+    subjectName: 'Data Structures & Algorithms',
+    credits: 4,
+    room: 'Block B - 302',
+    labRoom: 'Computing Lab 3',
+    studentCount: 32,
+    completionPct: 84,
+    pendingMarksCount: 3,
+    avgScore: 78.4,
+  },
+  {
+    id: 'fa-1b',
+    subjectId: 'dsa_b',
+    academicYear: '2026-27',
+    semester: '5th',
+    semNumber: 5,
+    section: 'B',
+    subjectCode: 'CS501',
+    subjectName: 'Data Structures & Algorithms',
+    credits: 4,
+    room: 'Block B - 303',
+    labRoom: 'Computing Lab 3',
+    studentCount: 30,
+    completionPct: 78,
+    pendingMarksCount: 5,
+    avgScore: 76.1,
+  },
+  {
+    id: 'fa-2',
+    subjectId: 'os',
+    academicYear: '2026-27',
+    semester: '5th',
+    semNumber: 5,
+    section: 'A',
+    subjectCode: 'CS502',
+    subjectName: 'Operating Systems',
+    credits: 4,
+    room: 'Block B - 304',
+    labRoom: null,
+    studentCount: 32,
+    completionPct: 100,
+    pendingMarksCount: 0,
+    avgScore: 82.5,
+  },
+  {
+    id: 'fa-3',
+    subjectId: 'oop',
+    academicYear: '2026-27',
+    semester: '3rd',
+    semNumber: 3,
+    section: 'A',
+    subjectCode: 'CS301',
+    subjectName: 'Object Oriented Programming with Java',
+    credits: 4,
+    room: 'Block B - 201',
+    labRoom: 'Computing Lab 1',
+    studentCount: 34,
+    completionPct: 80,
+    pendingMarksCount: 4,
+    avgScore: 75.8,
+  },
+  {
+    id: 'fa-3b',
+    subjectId: 'oop_b',
+    academicYear: '2026-27',
+    semester: '3rd',
+    semNumber: 3,
+    section: 'B',
+    subjectCode: 'CS301',
+    subjectName: 'Object Oriented Programming with Java',
+    credits: 4,
+    room: 'Block B - 202',
+    labRoom: 'Computing Lab 1',
+    studentCount: 32,
+    completionPct: 75,
+    pendingMarksCount: 6,
+    avgScore: 74.2,
+  },
+  {
+    id: 'fa-4',
+    subjectId: 'c_prog',
+    academicYear: '2026-27',
+    semester: '1st',
+    semNumber: 1,
+    section: 'A',
+    subjectCode: 'CS101',
+    subjectName: 'Problem Solving & C Programming',
+    credits: 4,
+    room: 'Block B - 101',
+    labRoom: 'Computing Lab 2',
+    studentCount: 36,
+    completionPct: 72,
+    pendingMarksCount: 8,
+    avgScore: 71.9,
+  },
+  {
+    id: 'fa-5',
+    subjectId: 'daa',
+    academicYear: '2025-26',
+    semester: '4th',
+    semNumber: 4,
+    section: 'A',
+    subjectCode: 'CS402',
+    subjectName: 'Design & Analysis of Algorithms',
+    credits: 4,
+    room: 'Block B - 205',
+    labRoom: 'Computing Lab 2',
+    studentCount: 30,
+    completionPct: 100,
+    pendingMarksCount: 0,
+    avgScore: 85.3,
+  },
+  {
+    id: 'fa-6',
+    subjectId: 'compiler',
+    academicYear: '2025-26',
+    semester: '6th',
+    semNumber: 6,
+    section: 'A',
+    subjectCode: 'CS601',
+    subjectName: 'Compiler Design & Automata',
+    credits: 4,
+    room: 'Block B - 305',
+    labRoom: null,
+    studentCount: 28,
+    completionPct: 100,
+    pendingMarksCount: 0,
+    avgScore: 88.0,
+  },
+]
+
 export const SUBJECTS = [
   {
     id: 'dsa',
     code: 'CS501',
-    name: 'Data Structures',
-    shortName: 'DSA',
+    name: 'Data Structures & Algorithms (Sec A)',
+    shortName: 'DSA - A',
+    semester: '5th',
+    section: 'A',
+    academicYear: '2026-27',
     credits: 4,
     faculty: 'Dr. S. Mohanty',
-    room: 'Room 204',
-    totalStudents: 91,
-    marksEnteredPct: 82,
+    room: 'Block B - 302',
+    totalStudents: 32,
+    marksEnteredPct: 84,
     color: '#2563eb',
+  },
+  {
+    id: 'dsa_b',
+    code: 'CS501',
+    name: 'Data Structures & Algorithms (Sec B)',
+    shortName: 'DSA - B',
+    semester: '5th',
+    section: 'B',
+    academicYear: '2026-27',
+    credits: 4,
+    faculty: 'Dr. S. Mohanty',
+    room: 'Block B - 303',
+    totalStudents: 30,
+    marksEnteredPct: 78,
+    color: '#3b82f6',
   },
   {
     id: 'os',
     code: 'CS502',
     name: 'Operating Systems',
     shortName: 'OS',
+    semester: '5th',
+    section: 'A',
+    academicYear: '2026-27',
     credits: 4,
-    faculty: 'Prof. R. K. Nayak',
-    room: 'Room 206',
-    totalStudents: 91,
+    faculty: 'Dr. S. Mohanty',
+    room: 'Block B - 304',
+    totalStudents: 32,
     marksEnteredPct: 100,
     color: '#059669',
   },
   {
-    id: 'dbms',
-    code: 'CS503',
-    name: 'Database Management Systems',
-    shortName: 'DBMS',
+    id: 'oop',
+    code: 'CS301',
+    name: 'Object Oriented Programming with Java (Sec A)',
+    shortName: 'OOP - A',
+    semester: '3rd',
+    section: 'A',
+    academicYear: '2026-27',
     credits: 4,
-    faculty: 'Dr. P. Mohapatra',
-    room: 'Room 302',
-    totalStudents: 91,
-    marksEnteredPct: 65,
+    faculty: 'Dr. S. Mohanty',
+    room: 'Block B - 201',
+    totalStudents: 34,
+    marksEnteredPct: 80,
     color: '#7c3aed',
   },
   {
-    id: 'ai',
-    code: 'CS504',
-    name: 'Artificial Intelligence',
-    shortName: 'AI',
-    credits: 3,
-    faculty: 'Dr. A. K. Panda',
-    room: 'Hall-A',
-    totalStudents: 91,
-    marksEnteredPct: 74,
+    id: 'oop_b',
+    code: 'CS301',
+    name: 'Object Oriented Programming with Java (Sec B)',
+    shortName: 'OOP - B',
+    semester: '3rd',
+    section: 'B',
+    academicYear: '2026-27',
+    credits: 4,
+    faculty: 'Dr. S. Mohanty',
+    room: 'Block B - 202',
+    totalStudents: 32,
+    marksEnteredPct: 75,
+    color: '#9333ea',
+  },
+  {
+    id: 'c_prog',
+    code: 'CS101',
+    name: 'Problem Solving & C Programming',
+    shortName: 'C Prog',
+    semester: '1st',
+    section: 'A',
+    academicYear: '2026-27',
+    credits: 4,
+    faculty: 'Dr. S. Mohanty',
+    room: 'Block B - 101',
+    totalStudents: 36,
+    marksEnteredPct: 72,
     color: '#d97706',
   },
   {
-    id: 'ml',
-    code: 'CS505',
-    name: 'Machine Learning',
-    shortName: 'ML',
+    id: 'daa',
+    code: 'CS402',
+    name: 'Design & Analysis of Algorithms',
+    shortName: 'DAA',
+    semester: '4th',
+    section: 'A',
+    academicYear: '2025-26',
     credits: 4,
-    faculty: 'Prof. M. Mishra',
-    room: 'Hall-B',
-    totalStudents: 91,
-    marksEnteredPct: 89,
+    faculty: 'Dr. S. Mohanty',
+    room: 'Block B - 205',
+    totalStudents: 30,
+    marksEnteredPct: 100,
     color: '#0284c7',
   },
   {
-    id: 'se',
-    code: 'CS506',
-    name: 'Software Engineering',
-    shortName: 'SE',
-    credits: 3,
-    faculty: 'Prof. S. Das',
-    room: 'Room 108',
-    totalStudents: 91,
-    marksEnteredPct: 83,
+    id: 'compiler',
+    code: 'CS601',
+    name: 'Compiler Design & Automata',
+    shortName: 'Compiler',
+    semester: '6th',
+    section: 'A',
+    academicYear: '2025-26',
+    credits: 4,
+    faculty: 'Dr. S. Mohanty',
+    room: 'Block B - 305',
+    totalStudents: 28,
+    marksEnteredPct: 100,
     color: '#e11d48',
   },
 ]
@@ -428,43 +616,63 @@ const lastNames = [
   'Mallick', 'Mahapatra', 'Sethy', 'Swain', 'Acharya', 'Bhoi', 'Dasgupta', 'Ghosh', 'Chatterjee', 'Banerjee'
 ]
 
-export function generateStudents() {
-  const students = []
-  for (let i = 1; i <= 91; i++) {
-    const rollNo = i.toString().padStart(2, '0')
-    const regNo = `23052010${rollNo}`
-    const fn = firstNames[(i - 1) % firstNames.length]
-    const ln = lastNames[(i * 3) % lastNames.length]
-    const name = i === 1 ? 'Rahul Sharma' : i === 2 ? 'Amit Patel' : i === 3 ? 'Raj Kumar' : i === 4 ? 'Rakesh Das' : `${fn} ${ln}`
-    students.push({
-      id: `s-${i}`,
-      rollNo,
-      regNo,
-      name,
-      section: i <= 46 ? 'A' : 'B',
-      semester: '5th',
-      email: `${fn.toLowerCase()}.${ln.toLowerCase()}@student.apnacampus.edu.in`,
-    })
+import { generateAllStudents } from '../data/collegeData'
+
+export function generateStudents(semester, section, academicYear) {
+  const allGenerated = generateAllStudents()
+  const allStudents = allGenerated.map((s) => ({
+    id: s.id,
+    rollNo: s.rollNo,
+    regNo: s.studentId || `23052010${s.rollNo}`,
+    name: s.name,
+    section: s.section.replace('Section ', ''),
+    semester: s.semester.replace('Semester ', '') + (s.semester.includes('1') ? 'st' : s.semester.includes('2') ? 'nd' : s.semester.includes('3') ? 'rd' : 'th'),
+    semesterRaw: s.semester,
+    academicYear: s.academicYear,
+    email: s.email,
+    cgpa: s.cgpa,
+    attendance: s.attendance,
+  }))
+
+  if (!semester && !section && !academicYear) {
+    // Default to Sem 5 Sec A
+    return allStudents.filter((s) => s.semesterRaw === 'Semester 5' && s.section === 'A')
   }
-  return students
+
+  return allStudents.filter((s) => {
+    if (academicYear && academicYear !== 'all') {
+      if (s.academicYear !== academicYear) return false
+    }
+    if (semester && semester !== 'all') {
+      const sNum = s.semesterRaw.replace(/[^0-9]/g, '')
+      const targetNum = String(semester).replace(/[^0-9]/g, '')
+      if (sNum !== targetNum) return false
+    }
+    if (section && section !== 'all') {
+      const targetSec = String(section).replace('Section ', '').toUpperCase()
+      if (s.section.toUpperCase() !== targetSec) return false
+    }
+    return true
+  })
 }
 
 // Generate marks table for each subject and student
 export function generateInitialMarks(students) {
   const marksMap = {}
+  const targetStudents = students && students.length > 0 ? students : generateStudents('all', 'all', 'all')
 
   SUBJECTS.forEach((subject, sIdx) => {
     marksMap[subject.id] = {}
 
-    students.forEach((student, stdIdx) => {
+    targetStudents.forEach((student, stdIdx) => {
       // Seeded pseudorandom marks based on student index and subject index for consistent deterministic data
       const seed = (stdIdx * 17 + sIdx * 31) % 100
       const ability = 0.65 + (stdIdx % 23) * 0.015 // baseline 65% to 99%
 
       // Some students have pending marks to demonstrate teacher entry
-      const isPendingQuiz3 = subject.id === 'dsa' && (stdIdx === 2 || stdIdx === 5 || stdIdx === 8)
-      const isPendingLab = subject.id === 'dbms' && stdIdx > 70
-      const isPendingST2 = subject.id === 'ai' && stdIdx % 4 === 0
+      const isPendingQuiz3 = (subject.id === 'dsa' || subject.id === 'dsa_b') && (stdIdx === 2 || stdIdx === 5 || stdIdx === 8)
+      const isPendingLab = subject.id === 'oop' && stdIdx > 30
+      const isPendingST2 = subject.id === 'c_prog' && stdIdx % 4 === 0
 
       marksMap[subject.id][student.id] = {
         mod1: Math.min(20, Math.max(8, Math.round(20 * ability + ((seed % 5) - 2)))),

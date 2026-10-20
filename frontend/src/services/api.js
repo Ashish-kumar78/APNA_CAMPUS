@@ -918,6 +918,7 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+<<<<<<< HEAD
   // 35. Automated Timetable Management System
   getTimetables: (params = {}) => {
     const q = new URLSearchParams(params).toString();
@@ -1100,6 +1101,109 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+=======
+  // 28. Enterprise Academic Reports
+  getReportFilters: () => request('/reports/filters'),
+  getAttendanceReport: (params = {}) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined && v !== '')).toString();
+    return request(`/reports/attendance${q ? '?' + q : ''}`);
+  },
+  getCgpaReport: (params = {}) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined && v !== '')).toString();
+    return request(`/reports/cgpa${q ? '?' + q : ''}`);
+  },
+  getSgpaReport: (params = {}) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined && v !== '')).toString();
+    return request(`/reports/sgpa${q ? '?' + q : ''}`);
+  },
+  getDocumentReport: (params = {}) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined && v !== '')).toString();
+    return request(`/reports/documents${q ? '?' + q : ''}`);
+  },
+  downloadReportExcel: async (params = {}) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined && v !== '')).toString();
+    const url = `${API_BASE_URL}/reports/export?${q}`;
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('collegeflow_token') : null;
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      throw new Error(`Export failed with HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = `ApnaCampus_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+  },
+
+  // 29. Faculty Multi-Class & Scoped Students
+  getFacultyClasses: () => request('/faculty/classes'),
+  getFacultyScopedStudents: (params = {}) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined && v !== '')).toString();
+    return request(`/faculty/students${q ? '?' + q : ''}`);
+  },
+
+  // 30. Anonymous Student Complaints & Grievance System
+  getComplaintOptions: () => request('/complaints/options'),
+  submitAnonymousComplaint: (payload) =>
+    request('/complaints/submit', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  trackAnonymousComplaint: (trackingId) => request(`/complaints/track/${encodeURIComponent(trackingId)}`),
+  getFacultyComplaints: (status = 'ALL') =>
+    request(`/complaints/faculty${status && status !== 'ALL' ? '?status=' + status : ''}`),
+  getFacultyComplaintById: (id) => request(`/complaints/faculty/${id}`),
+  submitFacultyComplaintResponse: (id, payload) =>
+    request(`/complaints/faculty/${id}/respond`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateFacultyComplaintStatus: (id, payload) =>
+    request(`/complaints/faculty/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  getHodComplaints: (filters = {}) => {
+    const q = new URLSearchParams(Object.entries(filters).filter(([_, v]) => v !== undefined && v !== '' && v !== 'ALL')).toString();
+    return request(`/complaints/hod${q ? '?' + q : ''}`);
+  },
+  getHodComplaintAnalytics: (deptCode = 'CSE') =>
+    request(`/complaints/hod/analytics?deptCode=${deptCode}`),
+  reviewHodComplaint: (id, payload) =>
+    request(`/complaints/hod/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  // 31. Faculty-to-Student Notification System
+  getNotificationMetadata: () => request('/notifications/metadata'),
+  getFacultyNotifications: () => request('/notifications/faculty'),
+  previewNotificationRecipients: (target) =>
+    request('/notifications/faculty/preview-recipients', {
+      method: 'POST',
+      body: JSON.stringify(target),
+    }),
+  createFacultyNotification: (payload) =>
+    request('/notifications/faculty', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  cancelFacultyNotification: (id) =>
+    request(`/notifications/faculty/${id}`, {
+      method: 'DELETE',
+    }),
+  getStudentNotifications: () => request('/notifications/student'),
+  markStudentNotificationRead: (id) =>
+    request(`/notifications/student/${id}/read`, {
+      method: 'POST',
+    }),
+>>>>>>> origin/somya
 };
 
 

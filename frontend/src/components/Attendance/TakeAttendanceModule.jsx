@@ -77,7 +77,13 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
   const [branch, setBranch] = useState('CSE');
   const [section, setSection] = useState('Section A');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [classTime, setClassTime] = useState('10:30 AM');
+  const [fromTime, setFromTime] = useState('10:30 AM');
+  const [toTime, setToTime] = useState('11:30 AM');
+  const [timePickerTarget, setTimePickerTarget] = useState('from');
+  const classTime = useMemo(() => {
+    if (fromTime && toTime) return `${fromTime} to ${toTime}`;
+    return fromTime || toTime || '';
+  }, [fromTime, toTime]);
   const [topicsCovered, setTopicsCovered] = useState('Binary Search Trees, AVL Rotations & Balancing Factors');
 
   // Search filter inside table
@@ -212,18 +218,19 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     setAttendanceMap(updated);
   };
 
-  // Time Picker open helper
-  const openTimePicker = () => {
-    // Parse existing classTime e.g. "10:30 AM"
+  // Time Picker open helper for From / To time
+  const openTimePicker = (target = 'from') => {
+    setTimePickerTarget(target);
+    const targetVal = target === 'from' ? fromTime : toTime;
     try {
-      const parts = classTime.split(/[: ]/);
+      const parts = (targetVal || (target === 'from' ? '10:30 AM' : '11:30 AM')).split(/[: ]/);
       if (parts.length >= 3) {
-        setDraftHour(parseInt(parts[0], 10) || 10);
+        setDraftHour(parseInt(parts[0], 10) || (target === 'from' ? 10 : 11));
         setDraftMinute(parseInt(parts[1], 10) || 30);
         setDraftAmPm(parts[2].toUpperCase() === 'PM' ? 'PM' : 'AM');
       }
     } catch {
-      setDraftHour(10);
+      setDraftHour(target === 'from' ? 10 : 11);
       setDraftMinute(30);
       setDraftAmPm('AM');
     }
@@ -234,7 +241,18 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
   const confirmTimePicker = () => {
     const h = draftHour < 10 ? `0${draftHour}` : `${draftHour}`;
     const m = draftMinute < 10 ? `0${draftMinute}` : `${draftMinute}`;
-    setClassTime(`${h}:${m} ${draftAmPm}`);
+    const formatted = `${h}:${m} ${draftAmPm}`;
+    if (timePickerTarget === 'from') {
+      setFromTime(formatted);
+      if (!toTime) {
+        const nextHour = (draftHour % 12) + 1;
+        const nextAmPm = draftHour === 11 ? (draftAmPm === 'AM' ? 'PM' : 'AM') : draftAmPm;
+        const nh = nextHour < 10 ? `0${nextHour}` : `${nextHour}`;
+        setToTime(`${nh}:${m} ${nextAmPm}`);
+      }
+    } else {
+      setToTime(formatted);
+    }
     setIsTimePickerOpen(false);
   };
 
@@ -248,8 +266,8 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
       setAlertBanner({ type: 'error', message: 'Please select a valid attendance date.' });
       return;
     }
-    if (!classTime) {
-      setAlertBanner({ type: 'error', message: 'Please specify the class lecture time.' });
+    if (!fromTime || !toTime) {
+      setAlertBanner({ type: 'error', message: 'Please specify both class start time (From) and end time (To).' });
       return;
     }
     if (!topicsCovered.trim()) {
@@ -274,6 +292,8 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
       branch,
       section,
       date,
+      fromTime,
+      toTime,
       classTime,
       topicsCovered,
       totalStudents,
@@ -319,6 +339,8 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
       branch,
       section,
       date,
+      fromTime,
+      toTime,
       classTime,
       topicsCovered,
       totalStudents,
@@ -341,7 +363,19 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     if (submittedSession) {
       setAttendanceMap({ ...submittedSession.attendanceMap });
       setTopicsCovered(submittedSession.topicsCovered);
-      setClassTime(submittedSession.classTime);
+      if (submittedSession.fromTime && submittedSession.toTime) {
+        setFromTime(submittedSession.fromTime);
+        setToTime(submittedSession.toTime);
+      } else if (submittedSession.classTime) {
+        const parts = submittedSession.classTime.split(/\s*(?:to|-|–)\s*/i);
+        if (parts.length >= 2) {
+          setFromTime(parts[0].trim());
+          setToTime(parts[1].trim());
+        } else {
+          setFromTime(submittedSession.classTime);
+          setToTime('11:30 AM');
+        }
+      }
       setDate(submittedSession.date);
     }
     setIsEditing(false);
@@ -577,17 +611,32 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
                 />
               </div>
 
-              {/* Class Time - Interactive Clock Trigger */}
+              {/* Class Time - From Time and To Time */}
               <div className="form-group">
-                <label>Class Time <span className="required-star">*</span></label>
+                <label>Class Time (From) <span className="required-star">*</span></label>
                 <button
                   type="button"
                   className="form-control-time-btn"
-                  onClick={openTimePicker}
-                  title="Click to open interactive clock time picker"
+                  onClick={() => openTimePicker('from')}
+                  title="Click to select lecture Start Time (From)"
                 >
-                  <span className={classTime ? 'time-val' : 'time-placeholder'}>
-                    {classTime || 'Select Time'}
+                  <span className={fromTime ? 'time-val' : 'time-placeholder'}>
+                    {fromTime || 'Select From Time'}
+                  </span>
+                  <Clock size={16} color="#2563eb" />
+                </button>
+              </div>
+
+              <div className="form-group">
+                <label>Class Time (To) <span className="required-star">*</span></label>
+                <button
+                  type="button"
+                  className="form-control-time-btn"
+                  onClick={() => openTimePicker('to')}
+                  title="Click to select lecture End Time (To)"
+                >
+                  <span className={toTime ? 'time-val' : 'time-placeholder'}>
+                    {toTime || 'Select To Time'}
                   </span>
                   <Clock size={16} color="#2563eb" />
                 </button>
@@ -837,7 +886,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
           <div className="attendance-modal-card clock-picker-modal" onClick={(e) => e.stopPropagation()}>
             <div className="attendance-modal-header">
               <h3>
-                <Clock size={18} color="#2563eb" /> Select Class Time
+                <Clock size={18} color="#2563eb" /> Select Class {timePickerTarget === 'from' ? 'Start Time (From)' : 'End Time (To)'}
               </h3>
               <button
                 type="button"
@@ -932,7 +981,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
                 style={{ padding: '8px 20px', fontSize: '0.88rem' }}
                 onClick={confirmTimePicker}
               >
-                Confirm Time
+                Confirm {timePickerTarget === 'from' ? 'From Time' : 'To Time'}
               </button>
             </div>
           </div>

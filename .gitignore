@@ -21,7 +21,7 @@ build/
 !**/.env.*.example
 
 # Test outputs, reports, and generated PDFs
-Fee_Receipt_*.pdf
+**/Fee_Receipt_*.pdf
 *.pdf.tmp
 
 # IDE and OS files

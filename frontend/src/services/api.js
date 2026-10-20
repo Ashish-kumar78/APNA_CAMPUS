@@ -278,6 +278,64 @@ export const api = {
 
   // 9. Admin & Staff Rosters
   getAdminMetrics: () => request('/admin/metrics'),
+  getAdminDiagnostics: () => request('/admin/diagnostics'),
+  getSecurityAlerts: () => request('/admin/security-alerts'),
+  getAdminIncidents: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/incidents${q ? '?' + q : ''}`);
+  },
+  updateAdminIncident: (id, payload) =>
+    request(`/admin/incidents/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  getAdminSystemLogs: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/system-logs${q ? '?' + q : ''}`);
+  },
+  getAdminSessions: () => request('/admin/sessions'),
+  revokeAdminSession: (id) => request(`/admin/sessions/${id}/revoke`, { method: 'POST' }),
+  getAdminIntegrations: () => request('/admin/integrations'),
+  testAdminIntegration: (id) => request(`/admin/integrations/${id}/test`, { method: 'POST' }),
+  getAdminUsers: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/users${q ? '?' + q : ''}`);
+  },
+  updateAdminUserStatus: (id, isActive) =>
+    request(`/admin/users/${id}/status`, {
+      method: 'POST',
+      body: JSON.stringify({ isActive }),
+    }),
+  resetAdminUserPassword: (id) =>
+    request(`/admin/users/${id}/reset-password`, { method: 'POST' }),
+  getAdminBackups: () => request('/admin/backups'),
+  triggerAdminBackup: () => request('/admin/backups/create', { method: 'POST' }),
+  restoreAdminBackup: (id, confirmationCode) =>
+    request(`/admin/backups/${id}/restore`, {
+      method: 'POST',
+      body: JSON.stringify({ confirmationCode }),
+    }),
+  getAdminApprovals: () => request('/admin/approvals'),
+  decideAdminApproval: (id, decision, reason) =>
+    request(`/admin/approvals/${id}/decide`, {
+      method: 'POST',
+      body: JSON.stringify({ decision, reason }),
+    }),
+  saveAdminRbacPermissions: (roleKey, permissions) =>
+    request('/admin/rbac/permissions', {
+      method: 'POST',
+      body: JSON.stringify({ roleKey, permissions }),
+    }),
+  saveAdminSettings: (settings) =>
+    request('/admin/settings', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    }),
+  createAdminUser: (userData) =>
+    request('/admin/users/create', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    }),
   getStaffRosters: (type = 'All', search = '') =>
     request(`/admin/staff?type=${type}&search=${encodeURIComponent(search)}`),
   createStaff: (payload) =>
@@ -854,6 +912,189 @@ export const api = {
     request('/academics/progression/promote', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+
+  // 35. Automated Timetable Management System
+  getTimetables: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/timetables${q ? '?' + q : ''}`);
+  },
+  getTimetableById: (id) => request(`/timetables/${id}`),
+  getTimetableConflicts: (id) => request(`/timetables/${id}/conflicts`),
+  getTimetableRooms: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/timetables/rooms${q ? '?' + q : ''}`);
+  },
+  createTimetableRoom: (data) =>
+    request('/timetables/rooms', { method: 'POST', body: JSON.stringify(data) }),
+  updateTimetableRoom: (id, data) =>
+    request(`/timetables/rooms/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTimetableRoom: (id) =>
+    request(`/timetables/rooms/${id}`, { method: 'DELETE' }),
+  getTimetableConfig: (academicYear = '2026-27', department = 'CSE') => {
+    const q = new URLSearchParams({ academicYear, department }).toString();
+    return request(`/timetables/config?${q}`);
+  },
+  updateTimetableConfig: (academicYear, department, data) => {
+    const q = new URLSearchParams({ academicYear, department }).toString();
+    return request(`/timetables/config?${q}`, { method: 'PUT', body: JSON.stringify(data) });
+  },
+  getFacultyAvailability: (facultyId) => {
+    const q = facultyId ? `?facultyId=${facultyId}` : '';
+    return request(`/timetables/faculty-availability${q}`);
+  },
+  setFacultyAvailability: (data) =>
+    request('/timetables/faculty-availability', { method: 'POST', body: JSON.stringify(data) }),
+  preValidateTimetable: (data) =>
+    request('/timetables/pre-validate', { method: 'POST', body: JSON.stringify(data) }),
+  generateTimetable: (data) =>
+    request('/timetables/generate', { method: 'POST', body: JSON.stringify(data) }),
+  getTimetableJob: (id) => request(`/timetables/generation-jobs/${id}`),
+  cancelTimetableJob: (id) =>
+    request(`/timetables/generation-jobs/${id}/cancel`, { method: 'POST' }),
+  updateTimetableEntry: (timetableId, entryId, data) =>
+    request(`/timetables/${timetableId}/entries/${entryId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  submitTimetableForApproval: (id) =>
+    request(`/timetables/${id}/submit-for-approval`, { method: 'POST' }),
+  approveTimetable: (id) =>
+    request(`/timetables/${id}/approve`, { method: 'POST' }),
+  publishTimetable: (id) =>
+    request(`/timetables/${id}/publish`, { method: 'POST' }),
+  rejectTimetable: (id, rejectionReason) =>
+    request(`/timetables/${id}/reject`, { method: 'POST', body: JSON.stringify({ rejectionReason }) }),
+  getTimetableWorkloadReport: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/timetables/reports/workload${q ? '?' + q : ''}`);
+  },
+  getTimetableRoomUtilization: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/timetables/reports/room-utilization${q ? '?' + q : ''}`);
+  },
+  getStudentTimetable: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/timetables/view/student${q ? '?' + q : ''}`);
+  },
+  getFacultyTimetable: (facultyName) => {
+    const q = new URLSearchParams({ facultyName }).toString();
+    return request(`/timetables/view/faculty?${q}`);
+  },
+
+  // 36. Governing Body & Management Portal Operations
+  getManagementOverview: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/management/overview${q ? '?' + q : ''}`);
+  },
+  getManagementInsights: () => request('/management/executive-insights'),
+  getManagementDepartments: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/management/departments${q ? '?' + q : ''}`);
+  },
+  getManagementFinance: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/management/finance${q ? '?' + q : ''}`);
+  },
+  getManagementPlacements: () => request('/management/placements'),
+  getManagementApprovals: () => request('/management/approvals'),
+  decideManagementApproval: (id, action, comments = '') =>
+    request(`/management/approvals/${id}/decision`, {
+      method: 'POST',
+      body: JSON.stringify({ action, comments }),
+    }),
+  getManagementGovernance: () => request('/management/governance'),
+  getManagementExceptions: () => request('/management/exceptions'),
+  getManagementAuditTrail: (search = '') => {
+    const q = search ? `?search=${encodeURIComponent(search)}` : '';
+    return request(`/management/audit-trail${q}`);
+  },
+  logManagementActivity: (action, details = '') =>
+    request('/management/audit-trail/log', {
+      method: 'POST',
+      body: JSON.stringify({ action, details }),
+    }),
+
+  // 37. Principal / Director Command Center Operations
+  getPrincipalOverview: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/principal/overview${q ? '?' + q : ''}`);
+  },
+  getPrincipalAcademicAnalytics: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/principal/academic-analytics${q ? '?' + q : ''}`);
+  },
+  getPrincipalLeaves: () => request('/principal/leaves'),
+  decidePrincipalLeave: (id, action, remarks = '') =>
+    request(`/principal/leaves/${id}/decision`, {
+      method: 'POST',
+      body: JSON.stringify({ action, remarks }),
+    }),
+  getPrincipalCirculars: () => request('/principal/circulars'),
+  createPrincipalCircular: (payload) =>
+    request('/principal/circulars', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  decidePrincipalCircular: (id, action, remarks = '') =>
+    request(`/principal/circulars/${id}/clearance`, {
+      method: 'POST',
+      body: JSON.stringify({ action, remarks }),
+    }),
+
+  // 38. Admin & Institutional Command Center Operations
+  getAdminMetrics: () => request('/admin/metrics'),
+  getAdminDiagnostics: () => request('/admin/diagnostics'),
+  getAdminSecurityAlerts: () => request('/admin/security-alerts'),
+  getAdminAuditLogs: (search = '') =>
+    request(`/admin/audit-logs${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  createAdminAuditLog: (payload) =>
+    request('/admin/audit-logs', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getAdminUsers: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/users${q ? '?' + q : ''}`);
+  },
+  updateAdminUserStatus: (id, isActive) =>
+    request(`/admin/users/${id}/status`, {
+      method: 'POST',
+      body: JSON.stringify({ isActive }),
+    }),
+  resetAdminUserPassword: (id) =>
+    request(`/admin/users/${id}/reset-password`, {
+      method: 'POST',
+    }),
+  createAdminUserAccount: (payload) =>
+    request('/admin/users/create', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getAdminStaff: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/staff${q ? '?' + q : ''}`);
+  },
+  saveAdminStaff: (payload) =>
+    request('/admin/staff', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateAdminStaff: (id, payload) =>
+    request(`/admin/staff/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteAdminStaff: (id) =>
+    request(`/admin/staff/${id}`, {
+      method: 'DELETE',
+    }),
+  getAdminBackups: () => request('/admin/backups'),
+  triggerAdminBackup: () =>
+    request('/admin/backups/create', {
+      method: 'POST',
+    }),
+  saveAdminSettings: (payload) =>
+    request('/admin/settings', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     }),
 };
 

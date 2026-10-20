@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   ArrowRight,
   BookOpen,
+  Calendar,
   CalendarDays,
   Check,
   Eye,
@@ -18,6 +19,10 @@ import {
   Utensils,
   ChevronDown,
   ChevronUp,
+  BarChart3,
+  LayoutGrid,
+  Building2,
+  Loader2,
 } from 'lucide-react'
 import './App.css'
 import StudentPortal from './StudentPortal.jsx'
@@ -39,6 +44,7 @@ import AdmissionsPortal from './components/AdmissionsPortal.jsx'
 import AccountActivationModal from './components/AccountActivationModal.jsx'
 import UniversalWhatsAppLauncher from './components/CampusConnect/UniversalWhatsAppLauncher.jsx'
 import ApnaAIChatbot from './components/Chatbot/ApnaAIChatbot.jsx'
+import UnifiedFloatingAssistant from './components/Common/UnifiedFloatingAssistant.jsx'
 import MarksManagementModule from './marks/MarksManagementModule.jsx'
 import DigitalAnswerSheetEvaluationSystem from './components/DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx'
 import { api } from './services/api.js'
@@ -55,17 +61,17 @@ const accounts = {
   },
   '2305201001': {
     role: 'student',
-    name: 'BISHNU PRASAD SAHOO',
-    registrationNumber: '2401432265',
-    department: 'Computer Science & Engineering (Artificial Intelligence)',
-    detail: 'BTECH 2028-P · CSE (AI) - Genius',
+    name: 'Rakesh Das',
+    registrationNumber: '2305201001',
+    department: 'Computer Science & Engineering',
+    detail: 'BTECH 2023–2027 · CSE (Sec A)',
   },
   'student': {
     role: 'student',
-    name: 'BISHNU PRASAD SAHOO',
-    registrationNumber: '2401432265',
-    department: 'Computer Science & Engineering (Artificial Intelligence)',
-    detail: 'BTECH 2028-P · CSE (AI) - Genius',
+    name: 'Rakesh Das',
+    registrationNumber: '2305201001',
+    department: 'Computer Science & Engineering',
+    detail: 'BTECH 2023–2027 · CSE (Sec A)',
   },
   'superadmin': {
     role: 'super_admin',
@@ -249,6 +255,57 @@ const roleCopy = {
   canteen: { label: 'Canteen portal', icon: Utensils },
 }
 
+const demoCategories = [
+  {
+    id: 'admin',
+    title: 'Administration',
+    count: '4 Roles',
+    color: '#2563eb',
+    bg: '#f0f7ff',
+    border: '#dbeafe',
+    icon: Building2,
+    roles: [
+      { key: 'super_admin', label: 'Super Admin' },
+      { key: 'management', label: 'Management' },
+      { key: 'principal', label: 'Principal' },
+      { key: 'admin', label: 'Admin Ops' },
+    ],
+  },
+  {
+    id: 'academics',
+    title: 'Academics',
+    count: '5 Roles',
+    color: '#16a34a',
+    bg: '#f0fdf4',
+    border: '#dcfce7',
+    icon: GraduationCap,
+    roles: [
+      { key: 'admissions', label: 'Admissions' },
+      { key: 'hod', label: 'HOD' },
+      { key: 'faculty', label: 'Faculty' },
+      { key: 'student', label: 'Student' },
+      { key: 'exam_cell', label: 'Exam Cell' },
+    ],
+  },
+  {
+    id: 'services',
+    title: 'Campus Services',
+    count: '6 Roles',
+    color: '#ea580c',
+    bg: '#fff7ed',
+    border: '#ffedd5',
+    icon: Home,
+    roles: [
+      { key: 'accounts', label: 'Accounts' },
+      { key: 'library', label: 'Library' },
+      { key: 'placement', label: 'Placement' },
+      { key: 'transport', label: 'Transport' },
+      { key: 'warden', label: 'Hostel' },
+      { key: 'staff', label: 'Staff (Labs)' },
+    ],
+  },
+]
+
 function App() {
   const [identifier, setIdentifier] = useState('2305201001')
   const [password, setPassword] = useState('gift123')
@@ -257,6 +314,8 @@ function App() {
   const [account, setAccount] = useState(null)
   const [error, setError] = useState('')
   const [resetRequested, setResetRequested] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [expandedCategory, setExpandedCategory] = useState('admin')
   const [showDigitalEvaluation, setShowDigitalEvaluation] = useState(false)
   const [digitalEvalRole, setDigitalEvalRole] = useState('faculty')
   const [activationModalOpen, setActivationModalOpen] = useState(false)
@@ -522,209 +581,353 @@ function App() {
     if (portal) {
       return (
         <>
-          <UniversalWhatsAppLauncher account={account} />
-          <ApnaAIChatbot account={account} />
+          <UniversalWhatsAppLauncher account={account} hideTrigger={true} />
+          <ApnaAIChatbot account={account} hideTrigger={true} />
+          <UnifiedFloatingAssistant account={account} />
           {portal}
         </>
       )
     }
   }
 
-  // Otherwise render the Login Page first (with universal WhatsApp launcher & Apna AI visible)
+  // Otherwise render the Login Page first
   return (
     <>
-      <UniversalWhatsAppLauncher account={null} />
-      <ApnaAIChatbot account={null} />
-      <main className="login-page">
-      {/* ── Left hero panel (campus photo & stats) ── */}
-      <div className="campus-scene" aria-hidden="true">
-        <div className="campus-hero-content">
-          <a className="top-brand" href="#home" aria-label="Apna Campus home">
-            <GiftMark size={38} />
-            <span>Apna Campus</span>
-          </a>
-          <div className="hero-body">
-            <div className="hero-badge">
-              <span className="hero-badge-dot" />
-              Academic Year 2026–27 · Active
-            </div>
-            <h2 className="hero-title">
-              Empowering<br />
-              <span>Academic Excellence</span>
-            </h2>
-            <p className="hero-description">
-              Your complete college ecosystem — academics, attendance, fees,
-              exams and more, all in one secure portal.
-            </p>
-            <div className="hero-stats">
-              <div className="hero-stat"><strong>2,480</strong><small>Students</small></div>
-              <div className="hero-stat"><strong>146</strong><small>Faculty</small></div>
-              <div className="hero-stat"><strong>18</strong><small>Programs</small></div>
+      <main className="erp-split-page">
+        {/* Left hero panel (Campus photo at golden hour with dark vignette) */}
+        <div className="erp-hero-panel">
+          <div className="erp-hero-content">
+            {/* Top brand header */}
+            <header className="erp-top-brand-wrapper">
+              <div className="erp-top-brand">
+                <div className="erp-logo-box">
+                  <img src="/logo.png" alt="Apna Campus Logo" className="erp-campus-logo" />
+                </div>
+                <div className="erp-brand-titles">
+                  <span className="erp-brand-name">APNA CAMPUS</span>
+                  <span className="erp-brand-tagline">AUTONOMOUS HIGHER EDUCATION PORTAL</span>
+                </div>
+              </div>
+              <div className="erp-accreditation-chip">
+                <ShieldCheck size={14} className="erp-chip-icon" />
+                <span>NAAC A++ ACCREDITED</span>
+              </div>
+            </header>
+
+            {/* Hero Main Content */}
+            <div className="erp-hero-body">
+              <div className="erp-hero-kicker">
+                <span>LEARN</span>
+                <span className="erp-kicker-sep">|</span>
+                <span>GROW</span>
+                <span className="erp-kicker-sep">|</span>
+                <span>CONNECT</span>
+                <span className="erp-kicker-line"></span>
+              </div>
+
+              <h1 className="erp-hero-title">
+                A Smarter<br />
+                <span className="erp-cyan-text">Campus Experience.</span>
+              </h1>
+
+              <div className="erp-hero-pills-row">
+                <span>People</span>
+                <span className="erp-dot">•</span>
+                <span>Academics</span>
+                <span className="erp-dot">•</span>
+                <span>Administration</span>
+                <span className="erp-dot">•</span>
+                <span>Opportunities</span>
+              </div>
+
+              <div className="erp-hero-divider-bar" />
+
+              {/* 4 Feature indicators with circular icon containers */}
+              <div className="erp-feature-indicators">
+                <div className="erp-feature-item">
+                  <div className="erp-feature-icon-circle">
+                    <Calendar size={16} />
+                  </div>
+                  <div className="erp-feature-text">
+                    <span>Smart</span>
+                    <span>Timetable</span>
+                  </div>
+                </div>
+
+                <div className="erp-feature-item">
+                  <div className="erp-feature-icon-circle">
+                    <BarChart3 size={16} />
+                  </div>
+                  <div className="erp-feature-text">
+                    <span>Digital</span>
+                    <span>Evaluations</span>
+                  </div>
+                </div>
+
+                <div className="erp-feature-item">
+                  <div className="erp-feature-icon-circle">
+                    <UsersRound size={16} />
+                  </div>
+                  <div className="erp-feature-text">
+                    <span>Smart</span>
+                    <span>Attendance</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Statistics row at bottom with vertical dividers */}
+              <div className="erp-stats-row">
+                <div className="erp-stat-col">
+                  <div className="erp-stat-num">
+                    2,480<span className="erp-stat-plus">+</span>
+                  </div>
+                  <div className="erp-stat-label">STUDENTS</div>
+                </div>
+
+                <div className="erp-stat-divider" />
+
+                <div className="erp-stat-col">
+                  <div className="erp-stat-num">
+                    146<span className="erp-stat-plus">+</span>
+                  </div>
+                  <div className="erp-stat-label">FACULTY</div>
+                </div>
+
+                <div className="erp-stat-divider" />
+
+                <div className="erp-stat-col">
+                  <div className="erp-stat-num">18</div>
+                  <div className="erp-stat-label">PROGRAMS</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Right login panel ── */}
-      <section className="login-panel" aria-labelledby="login-title">
-        <a className="panel-brand" href="#home" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <GiftMark size={44} />
-          <span>Apna Campus</span>
-        </a>
-        <h1 id="login-title">Welcome back</h1>
-
-        <form className="login-form" onSubmit={handleLogin}>
-          <div className="field-group">
-            <label className="field-label" htmlFor="identifier">College ID / Registration Number</label>
-            <div className="input-wrap">
-              <UserRound aria-hidden="true" size={17} />
-              <input
-                id="identifier"
-                name="identifier"
-                autoComplete="username"
-                placeholder="e.g. 23CSE0001 · FAC-042 · ADM-001"
-                value={identifier}
-                onChange={(event) => setIdentifier(event.target.value)}
-                required
-              />
+        {/* Right login panel: Clean White Floating Card */}
+        <section className="erp-login-section" aria-label="Sign In">
+          <div className="erp-login-card">
+            <div className="erp-card-brand-header">
+              <h2 className="erp-card-title">Welcome Back</h2>
+              <p className="erp-card-subtitle">Sign in to your Apna Campus account</p>
             </div>
-          </div>
 
-          <div className="field-group">
-            <label className="field-label" htmlFor="password">Password</label>
-            <div className="input-wrap">
-              <LockKeyhole aria-hidden="true" size={17} />
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-              />
-              <button
-                className="visibility-toggle"
-                type="button"
-                onClick={() => setShowPassword((visible) => !visible)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-              </button>
-            </div>
-          </div>
+            <form className="erp-login-form" onSubmit={handleLogin} noValidate>
+              <div className="erp-field-group">
+                <div className="erp-input-wrapper">
+                  <UserRound className="erp-input-icon" size={17} aria-hidden="true" />
+                  <input
+                    id="identifier"
+                    name="identifier"
+                    type="text"
+                    autoComplete="username"
+                    placeholder="College ID / Registration Number"
+                    value={identifier}
+                    onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
+                    disabled={isSubmitting}
+                    required
+                  />
+                </div>
+              </div>
 
-          <div className="form-options">
-            <label className="remember-option">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(event) => setRememberMe(event.target.checked)}
-              />
-              <span className="checkmark"><Check size={11} /></span>
-              <span>Remember me</span>
-            </label>
-            <button
-              className="text-button"
-              type="button"
-              onClick={() => { setResetRequested(true); setError('') }}
-            >
-              Forgot password?
-            </button>
-          </div>
+              <div className="erp-field-group">
+                <div className="erp-input-wrapper">
+                  <LockKeyhole className="erp-input-icon" size={17} aria-hidden="true" />
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                    disabled={isSubmitting}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="erp-password-toggle"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
 
-          {(error || resetRequested) && (
-            <p className={`form-feedback ${error ? 'is-error' : ''}`} role="status">
-              {error || 'Password reset link and OTP instructions sent to your registered college phone.'}
-            </p>
-          )}
-
-          <button className="login-button" type="submit">
-            <span>Sign In</span>
-            <ArrowRight size={18} aria-hidden="true" />
-          </button>
-
-          <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '0.82rem' }}>
-            <span style={{ color: '#64748b' }}>Newly admitted student? </span>
-            <button
-              type="button"
-              onClick={() => { setActivationModalOpen(true); setActivationTokenInput(''); }}
-              style={{ background: 'none', border: 'none', color: '#0284c7', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-            >
-              Activate with security token
-            </button>
-          </div>
-
-          {/* 1-Click Role Switcher Demo Bar */}
-          <div style={{ marginTop: '18px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-            <p style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px', textAlign: 'center' }}>
-              ⚡ 1-Click Quick Demo Sign-In (15 Roles)
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', justifyContent: 'center' }}>
-              {[
-                { key: 'super_admin', label: 'Super Admin', color: '#4338ca' },
-                { key: 'management', label: 'Management', color: '#b45309' },
-                { key: 'principal', label: 'Principal', color: '#0369a1' },
-                { key: 'admin', label: 'Admin Ops', color: '#1d4ed8' },
-                { key: 'admissions', label: 'Admissions', color: '#0284c7' },
-                { key: 'hod', label: 'HOD', color: '#047857' },
-                { key: 'faculty', label: 'Faculty', color: '#15803d' },
-                { key: 'student', label: 'Student', color: '#1d4ed8' },
-                { key: 'exam_cell', label: 'Exam Cell', color: '#6d28d9' },
-                { key: 'accounts', label: 'Accounts', color: '#0f766e' },
-                { key: 'library', label: 'Library', color: '#047857' },
-                { key: 'placement', label: 'Placement', color: '#be185d' },
-                { key: 'transport', label: 'Transport', color: '#0369a1' },
-                { key: 'warden', label: 'Hostel', color: '#b45309' },
-                { key: 'staff', label: 'Staff (Labs)', color: '#0f766e' },
-              ].map(r => (
+              {/* Options row */}
+              <div className="erp-options-row">
+                <label className="erp-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    disabled={isSubmitting}
+                  />
+                  <span>Remember me</span>
+                </label>
                 <button
-                  key={r.key}
                   type="button"
-                  onClick={() => handleQuickLogin(r.key)}
-                  style={{
-                    padding: '5px 10px',
-                    fontSize: '0.76rem',
-                    fontWeight: 700,
-                    borderRadius: '7px',
-                    border: `1.5px solid ${r.color}44`,
-                    background: `${r.color}14`,
-                    color: r.color,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseOver={(e) => { e.currentTarget.style.background = `${r.color}25` }}
-                  onMouseOut={(e) => { e.currentTarget.style.background = `${r.color}14` }}
+                  className="erp-text-link"
+                  onClick={() => { setResetRequested((prev) => !prev); setError(''); }}
                 >
-                  {r.label}
+                  Forgot password?
                 </button>
-              ))}
-            </div>
-          </div>
-        </form>
+              </div>
 
-        <footer className="site-footer">
-          <div className="footer-links">
-            <a href="mailto:info@apnacampus.edu.in"><Mail size={13} />info@apnacampus.edu.in</a>
-            <span className="footer-dot" aria-hidden="true" />
-            <a href="https://www.apnacampus.edu.in/" target="_blank" rel="noreferrer">www.apnacampus.edu.in</a>
-          </div>
-          <p>© 2026 Apna Campus. All rights reserved.</p>
-        </footer>
-      </section>
-    </main>
+              {/* Feedback alert (Error or Password Reset feedback) */}
+              {(error || resetRequested) && (
+                <div
+                  className={`erp-alert-box ${error ? 'is-error' : 'is-success'}`}
+                  role="alert"
+                  aria-live="polite"
+                >
+                  <span>{error || 'Password reset link sent to your registered college phone.'}</span>
+                  <button
+                    type="button"
+                    className="erp-alert-close"
+                    onClick={() => { setError(''); setResetRequested(false); }}
+                    aria-label="Dismiss notification"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
 
-    {activationModalOpen && (
-      <AccountActivationModal
-        initialToken={activationTokenInput}
-        onClose={() => setActivationModalOpen(false)}
-        onActivationSuccess={(user, token) => {
-          setAccount(user)
-          setActivationModalOpen(false)
-        }}
-      />
-    )}
+              {/* Cyan-to-blue gradient login button */}
+              <button
+                type="submit"
+                className="erp-primary-btn"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={18} className="erp-spin" aria-hidden="true" />
+                    <span>Signing In...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Login</span>
+                    <ArrowRight size={18} aria-hidden="true" />
+                  </>
+                )}
+              </button>
+
+              {/* New user / Activate account link */}
+              <div className="erp-sublink-row">
+                <span className="erp-sublink-text">New user?</span>
+                <button
+                  type="button"
+                  className="erp-highlight-link"
+                  onClick={() => { setActivationModalOpen(true); setActivationTokenInput(''); }}
+                >
+                  Activate Account
+                </button>
+              </div>
+
+              {/* Section Divider */}
+              <div className="erp-section-divider">
+                <span>OR</span>
+              </div>
+
+              {/* Explore by Role Section */}
+              <div className="erp-demo-section">
+                <div className="erp-demo-header">
+                  <h3 className="erp-demo-title">Explore by Role</h3>
+                  <p className="erp-demo-subtitle">Explore the portal with different roles</p>
+                </div>
+
+                {/* 3 Category Cards */}
+                <div className="erp-category-cards-grid">
+                  {demoCategories.map((cat) => {
+                    const CatIcon = cat.icon
+                    const isExpanded = expandedCategory === cat.id
+                    return (
+                      <div
+                        key={cat.id}
+                        className={`erp-cat-card ${isExpanded ? 'active' : ''}`}
+                        onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
+                        role="button"
+                        tabIndex={0}
+                        style={{ '--cat-bg': cat.bg, '--cat-border': cat.border, '--cat-color': cat.color }}
+                      >
+                        <div className="erp-cat-top">
+                          <div className="erp-cat-icon-box">
+                            <CatIcon size={18} />
+                          </div>
+                          <ArrowRight size={13} className="erp-cat-arrow" />
+                        </div>
+                        <div className="erp-cat-bottom">
+                          <strong className="erp-cat-name">{cat.title}</strong>
+                          <span className="erp-cat-count">{cat.count}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Expanded Role Selection Popover / Drawer */}
+                {expandedCategory && (
+                  <div className="erp-expanded-roles-drawer">
+                    <div className="erp-drawer-header">
+                      <span>Select {demoCategories.find((c) => c.id === expandedCategory)?.title} Role:</span>
+                      <button
+                        type="button"
+                        className="erp-drawer-close"
+                        onClick={() => setExpandedCategory(null)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="erp-drawer-roles">
+                      {demoCategories
+                        .find((c) => c.id === expandedCategory)
+                        ?.roles.map((r) => (
+                          <button
+                            key={r.key}
+                            type="button"
+                            className="erp-drawer-role-pill"
+                            onClick={async () => {
+                              await handleQuickLogin(r.key)
+                            }}
+                          >
+                            <span>{r.label}</span>
+                            <ArrowRight size={11} />
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </form>
+
+            {/* University Portal Footer */}
+            <footer className="erp-card-footer">
+              <div className="erp-footer-links">
+                <a href="#help" onClick={(e) => e.preventDefault()}>Help</a>
+                <span className="erp-footer-bar">|</span>
+                <a href="#privacy" onClick={(e) => e.preventDefault()}>Privacy</a>
+                <span className="erp-footer-bar">|</span>
+                <a href="#contact" onClick={(e) => e.preventDefault()}>Contact</a>
+              </div>
+              <p className="erp-footer-copyright">
+                © 2026 Apna Campus
+              </p>
+            </footer>
+          </div>
+        </section>
+      </main>
+
+      {activationModalOpen && (
+        <AccountActivationModal
+          initialToken={activationTokenInput}
+          onClose={() => setActivationModalOpen(false)}
+          onActivationSuccess={(user, token) => {
+            setAccount(user)
+            setActivationModalOpen(false)
+          }}
+        />
+      )}
     </>
   )
 }

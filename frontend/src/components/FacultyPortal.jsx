@@ -24,6 +24,7 @@ import { useTimeGreeting } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
+import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 
 // CSV Export Helper
 function exportToCsv(filename, rows) {
@@ -615,6 +616,12 @@ export default function FacultyPortal({ account, onLogout }) {
               onClick={() => setActiveTab('subjects')}
             >
               <BookOpen size={17} /> My Subjects
+            </button>
+            <button
+              className={`faculty-nav-btn ${activeTab === 'timetable' ? 'active' : ''}`}
+              onClick={() => setActiveTab('timetable')}
+            >
+              <Calendar size={17} color="#2563eb" /> Teaching Timetable
             </button>
             <button
               className={`faculty-nav-btn ${activeTab === 'digital-evaluation' ? 'active' : ''}`}
@@ -1407,6 +1414,11 @@ export default function FacultyPortal({ account, onLogout }) {
                 </table>
               </div>
             </div>
+          )}
+
+          {/* TAB: TEACHING TIMETABLE */}
+          {activeTab === 'timetable' && (
+            <TimetableManager account={account} />
           )}
 
           {/* TAB 5: CLASS PERFORMANCE & ANALYTICS */}

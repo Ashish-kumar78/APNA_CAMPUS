@@ -3151,22 +3151,23 @@ export class EnterpriseService {
     });
   }
 
-  async updateWorkflowStage(id: string, action: 'APPROVE' | 'REJECT', approver: { id: string; name: string; role: string }, notes?: string) {
+  async updateWorkflowStage(id: string, action: 'APPROVE' | 'REJECT' | 'RETURN', approver: { id: string; name: string; role: string }, notes?: string) {
     const req = await this.prisma.workflowRequest.findUnique({ where: { id } });
     if (!req) throw new NotFoundException('Workflow request not found.');
 
-    const newStatus = action === 'APPROVE' ? 'Approved' : 'Rejected';
+    const newStatus = action === 'APPROVE' ? 'Approved' : action === 'RETURN' ? 'Returned for Revision' : 'Rejected';
+    const actionLabel = action === 'APPROVE' ? 'APPROVED' : action === 'RETURN' ? 'RETURNED_FOR_REVISION' : 'REJECTED';
     const history = (req.history as any[]) || [];
     history.push({
       stage: req.currentStage,
-      action: action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+      action: actionLabel,
       by: approver.name,
       role: approver.role,
       notes,
       timestamp: new Date().toISOString(),
     });
 
-    return this.prisma.workflowRequest.update({
+    const updated = await this.prisma.workflowRequest.update({
       where: { id },
       data: {
         status: newStatus,
@@ -3176,6 +3177,23 @@ export class EnterpriseService {
         history,
       },
     });
+
+    try {
+      await this.prisma.auditLog.create({
+        data: {
+          user: approver.name || 'System Approver',
+          role: approver.role || 'approver',
+          subject: req.title,
+          assessment: 'Workflow Decision',
+          oldMark: req.status,
+          newMark: newStatus,
+          changedAt: new Date().toLocaleString('en-IN'),
+          reason: notes || `Workflow action: ${actionLabel}`,
+        },
+      });
+    } catch {}
+
+    return updated;
   }
 
   // ==========================================

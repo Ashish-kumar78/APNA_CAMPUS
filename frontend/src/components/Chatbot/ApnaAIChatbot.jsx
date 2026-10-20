@@ -22,9 +22,15 @@ import { getActiveStudent } from '../../services/studentStore.js';
 import { erpStore } from '../../services/erpStore.js';
 import './ApnaAIChatbot.css';
 
-export default function ApnaAIChatbot({ account = null, activeTab = '' }) {
+export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrigger = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('open_apna_ai_drawer', handleOpen);
+    return () => window.removeEventListener('open_apna_ai_drawer', handleOpen);
+  }, []);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState(null);
@@ -446,7 +452,7 @@ export default function ApnaAIChatbot({ account = null, activeTab = '' }) {
   return (
     <>
       {/* ── 1. Floating Chatbot Trigger Button - Round Circular Shape ── */}
-      {!isOpen && (
+      {!isOpen && !hideTrigger && (
         <button
           className="apna-ai-floating-trigger"
           type="button"

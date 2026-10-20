@@ -38,6 +38,12 @@ export const rolePolicies = {
   maintenance: {
     permissions: ['complaints:read','complaints:write','maintenance:read','maintenance:write'],
   },
+  principal: {
+    permissions: ['academics:read', 'approvals:action', 'notices:publish_college', 'timetables:approve', 'timetables:publish', 'reports:read'],
+  },
+  hod: {
+    permissions: ['department:read', 'faculty:read', 'subjects:allocate', 'timetable:manage_dept', 'timetables:manage', 'marks:moderate'],
+  },
   non_teaching: {
     permissions: ['staff:read:self','attendance:read:self','leave:read:self','leave:write:self'],
   },

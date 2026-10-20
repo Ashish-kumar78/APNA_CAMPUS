@@ -24,9 +24,11 @@ import {
 import './ReportGenerationModule.css';
 import { api } from '../services/api.js';
 import * as XLSX from 'xlsx';
+import { erpStore } from '../services/erpStore.js';
 
 export default function ReportGenerationModule({ account, role }) {
   const userRole = (role || account?.role || '').toLowerCase();
+  const minAttendanceThreshold = erpStore.getSettings()?.minimumAttendancePercentage || 75;
 
   // Filter States
   const [branch, setBranch] = useState('CSE');
@@ -237,7 +239,7 @@ export default function ReportGenerationModule({ account, role }) {
         const present = Math.min(classesHeld, Math.round((classesHeld * it.attendance) / 100));
         const absent = classesHeld - present;
         const pct = classesHeld > 0 ? (present / classesHeld) * 100 : 0;
-        if (pct < 75) shortage++;
+        if (pct < minAttendanceThreshold) shortage++;
         totalPresent += present;
         totalHeld += classesHeld;
 
@@ -261,7 +263,7 @@ export default function ReportGenerationModule({ account, role }) {
         averageMetric: totalHeld > 0 ? Number(((totalPresent / totalHeld) * 100).toFixed(2)) : 0,
         metricLabel: 'Average Attendance Rate (%)',
         recordsRequiringAttention: shortage,
-        attentionLabel: 'Students with Shortage (<75%)',
+        attentionLabel: `Students with Shortage (<${minAttendanceThreshold}%)`,
         totalMatchingRecords: finalRecords.length,
       };
     } else if (reportType === 'cgpa') {
@@ -1059,8 +1061,8 @@ export default function ReportGenerationModule({ account, role }) {
                             fontWeight: 800,
                             padding: '3px 8px',
                             borderRadius: '6px',
-                            background: parseFloat(row.attendancePercentage) >= 85 ? '#ecfdf5' : parseFloat(row.attendancePercentage) >= 75 ? '#eff6ff' : '#fef2f2',
-                            color: parseFloat(row.attendancePercentage) >= 85 ? '#047857' : parseFloat(row.attendancePercentage) >= 75 ? '#1d4ed8' : '#b91c1c',
+                            background: parseFloat(row.attendancePercentage) >= (minAttendanceThreshold + 10) ? '#ecfdf5' : parseFloat(row.attendancePercentage) >= minAttendanceThreshold ? '#eff6ff' : '#fef2f2',
+                            color: parseFloat(row.attendancePercentage) >= (minAttendanceThreshold + 10) ? '#047857' : parseFloat(row.attendancePercentage) >= minAttendanceThreshold ? '#1d4ed8' : '#b91c1c',
                           }}
                         >
                           {row.attendancePercentage}

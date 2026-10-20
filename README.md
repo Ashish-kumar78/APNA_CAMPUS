@@ -6,13 +6,7 @@
 
 ## 🏛️ Architecture Overview
 
-The repository is structured as a full-stack monorepo:
-
-| Layer | Technology | Default Port | Description |
-|---|---|---|---|
-| **Frontend** | React 18, Vite, Tailwind CSS, Lucide Icons | `5173` | Responsive web portals for all campus roles |
-| **Backend** | NestJS 10, TypeScript, Passport JWT, Swagger | `4000` | REST API with global validation, RBAC guards, and filters |
-| **Database** | PostgreSQL, Prisma ORM 5.22 | `5432` | Relational schema with migrations and idempotent seed scripts |
+c
 
 ### Monorepo Structure
 

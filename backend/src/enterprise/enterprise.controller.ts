@@ -719,7 +719,7 @@ export class EnterpriseController {
   async actionWorkflowRequest(
     @CurrentUser() user: any,
     @Param('id') id: string,
-    @Body() body: { action: 'APPROVE' | 'REJECT'; notes?: string },
+    @Body() body: { action: 'APPROVE' | 'REJECT' | 'RETURN'; notes?: string },
   ) {
     const role = normalizeRole(user.role);
     const authorized = ['hod', 'principal', 'management', 'super_admin', 'exam_cell', 'admin'];
@@ -733,7 +733,8 @@ export class EnterpriseController {
       { id: user.id, name: user.name, role: user.role },
       body.notes,
     );
-    return { success: true, message: `Request successfully ${body.action === 'APPROVE' ? 'APPROVED' : 'REJECTED'}.`, data: updated };
+    const verb = body.action === 'APPROVE' ? 'APPROVED' : body.action === 'RETURN' ? 'RETURNED FOR REVISION' : 'REJECTED';
+    return { success: true, message: `Request successfully ${verb}.`, data: updated };
   }
 
   // ==========================================

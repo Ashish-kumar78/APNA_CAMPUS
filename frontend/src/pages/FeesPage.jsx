@@ -18,7 +18,6 @@ import {
   UploadCloud,
   FileText,
   Eye,
-  Award,
   ShieldCheck,
   RefreshCw,
   AlertTriangle,
@@ -475,23 +474,35 @@ export default function FeesPage({ account }) {
 
       {/* Metrics Row */}
       <div className="fees-metrics">
-        {/* Card 1: Total Fee */}
+        {/* Card 1: Overall Paid 4-Years */}
+        <div 
+          className="fee-metric-card interactive" 
+          onClick={() => setShowYearlyModal(true)}
+          title="Click to view complete year-by-year fee breakdown"
+          style={{ border: '1.5px solid #818cf8', background: 'linear-gradient(180deg, #ffffff 0%, #f8faff 100%)' }}
+        >
+          <div className="fee-metric-icon indigo"><History size={24} /></div>
+          <div className="fee-metric-body" style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+              <h4>Overall Paid (4-Years)</h4>
+              <span style={{ fontSize: '0.66rem', fontWeight: 700, background: '#e0e7ff', color: '#4338ca', padding: '2px 6px', borderRadius: '4px' }}>
+                All Years
+              </span>
+            </div>
+            <div className="fee-val" style={{ color: '#4338ca' }}>₹{totalOverallPaid.toLocaleString('en-IN')}</div>
+            <div className="fee-sub" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#6366f1', fontWeight: 600 }}>
+              <span>{overallClearedPercent}% cleared</span> · <span>Details →</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Total College Fee */}
         <div className="fee-metric-card">
           <div className="fee-metric-icon blue"><DollarSign size={24} /></div>
           <div className="fee-metric-body">
             <h4>Total College Fee</h4>
             <div className="fee-val">₹89,000</div>
             <div className="fee-sub">Semester 7 · Session 2026–27</div>
-          </div>
-        </div>
-
-        {/* Card 2: Scholarship Amount */}
-        <div className="fee-metric-card" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)', border: '1px solid #bbf7d0' }}>
-          <div className="fee-metric-icon green" style={{ background: '#dcfce7', color: '#15803d' }}><Award size={24} /></div>
-          <div className="fee-metric-body">
-            <h4>Scholarship Amount</h4>
-            <div className="fee-val" style={{ color: '#15803d' }}>₹15,000</div>
-            <div className="fee-sub" style={{ color: '#166534', fontWeight: 600 }}>PRERANA Post-Matric Grant</div>
           </div>
         </div>
 
@@ -512,28 +523,6 @@ export default function FeesPage({ account }) {
             <h4>Pending Balance</h4>
             <div className="fee-val" style={{ color: '#d97706' }}>₹12,000</div>
             <div className="fee-sub">Due date: 30 Oct 2026</div>
-          </div>
-        </div>
-
-        {/* Card 5: Overall Paid 4-Years */}
-        <div 
-          className="fee-metric-card interactive" 
-          onClick={() => setShowYearlyModal(true)}
-          title="Click to view complete year-by-year fee breakdown"
-          style={{ border: '1.5px solid #818cf8', background: 'linear-gradient(180deg, #ffffff 0%, #f8faff 100%)' }}
-        >
-          <div className="fee-metric-icon indigo"><History size={24} /></div>
-          <div className="fee-metric-body" style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-              <h4>Overall Paid (4-Years)</h4>
-              <span style={{ fontSize: '0.66rem', fontWeight: 700, background: '#e0e7ff', color: '#4338ca', padding: '2px 6px', borderRadius: '4px' }}>
-                All Years
-              </span>
-            </div>
-            <div className="fee-val" style={{ color: '#4338ca' }}>₹{totalOverallPaid.toLocaleString('en-IN')}</div>
-            <div className="fee-sub" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#6366f1', fontWeight: 600 }}>
-              <span>{overallClearedPercent}% cleared</span> · <span>Details →</span>
-            </div>
           </div>
         </div>
       </div>

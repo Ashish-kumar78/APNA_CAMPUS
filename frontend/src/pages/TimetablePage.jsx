@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   AlertCircle,
   CalendarDays,
@@ -6,14 +6,16 @@ import {
   FileText,
   Filter,
   MessageSquare,
+  Sparkles,
 } from 'lucide-react'
 import { downloadTimetablePdf } from '../utils/pdfGenerator'
+import { api } from '../services/api'
 import './TimetablePage.css'
 
-const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const slots = ['8:30 AM', '9:30 AM', '10:30 AM', '11:30 AM', '12:30 PM', '1:30 PM', '2:30 PM', '3:30 PM', '4:30 PM']
+const defaultDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const defaultSlots = ['8:30 AM', '9:30 AM', '10:30 AM', '11:30 AM', '12:30 PM', '1:30 PM', '2:30 PM', '3:30 PM', '4:30 PM']
 
-const schedule = {
+const defaultSchedule = {
   Monday: {
     '8:30 AM': { subject: 'Artificial Intelligence', code: 'CS501', room: 'Room 301', faculty: 'Dr. P. Mohapatra', type: 'theory' },
     '9:30 AM': { subject: 'Machine Learning', code: 'CS502', room: 'Room 302', faculty: 'Dr. S. Rath', type: 'theory' },
@@ -86,7 +88,58 @@ const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
 
 export default function TimetablePage() {
   const [view, setView] = useState('week')
-  const [selectedDay, setSelectedDay] = useState(days.includes(today) ? today : 'Monday')
+  const [days, setDays] = useState(defaultDays)
+  const [slots, setSlots] = useState(defaultSlots)
+  const [schedule, setSchedule] = useState(defaultSchedule)
+  const [liveTimetable, setLiveTimetable] = useState(null)
+  const [selectedDay, setSelectedDay] = useState(defaultDays.includes(today) ? today : 'Monday')
+
+  useEffect(() => {
+    async function loadStudentSchedule() {
+      try {
+        const res = await api.getStudentTimetable({ department: 'CSE', semester: 'Semester 5', section: 'Section A' })
+        const tt = res?.data?.timetable
+        const cfg = res?.data?.config
+
+        if (tt && tt.entries && tt.entries.length > 0) {
+          setLiveTimetable(tt)
+          const workingDays = cfg?.workingDays || defaultDays
+          setDays(workingDays)
+
+          const timings = (cfg?.slotTimings || []).map(s => s.startTime)
+          if (timings.length > 0) setSlots(timings)
+
+          // Build timetable map
+          const newMap = {}
+          workingDays.forEach(d => {
+            newMap[d] = {}
+            timings.forEach(t => {
+              newMap[d][t] = null
+            })
+          })
+
+          tt.entries.forEach(entry => {
+            const day = entry.dayOfWeek
+            const timeKey = entry.startTime
+            if (newMap[day]) {
+              newMap[day][timeKey] = {
+                subject: entry.subjectName,
+                code: entry.subjectCode,
+                room: entry.roomNumber,
+                faculty: entry.facultyName,
+                type: entry.sessionType?.toLowerCase() || 'theory',
+              }
+            }
+          })
+
+          setSchedule(newMap)
+        }
+      } catch (err) {
+        console.warn('Live student timetable unavailable, displaying standard syllabus routine.', err.message)
+      }
+    }
+    loadStudentSchedule()
+  }, [])
 
   const displayDays = view === 'week' ? days : [selectedDay]
 

@@ -399,3 +399,171 @@
   font-weight: 700;
 }
 
+/* HOD Section Comparative Analytics */
+.hod-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.hod-section-card {
+  background: #ffffff;
+  border: 1px solid var(--d-line, #e2e8f0);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hod-section-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.hod-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.hod-section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.hod-section-meta {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.hod-section-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.hod-metric-box {
+  background: #f8fafc;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.hod-metric-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hod-metric-val {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+/* HOD Continuous Marks Matrix */
+.hod-marks-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin-top: 10px;
+}
+
+.hod-marks-matrix-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  padding: 8px 10px;
+  text-align: center;
+  border-bottom: 2px solid #e2e8f0;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.hod-marks-matrix-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: center;
+  color: #334155;
+}
+
+.hod-missing-tag {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* HOD Department Broadcast Composer */
+.hod-broadcast-container {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+@media (max-width: 960px) {
+  .hod-broadcast-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hod-recipient-preview-card {
+  background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+  border: 1px solid #99f6e4;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.08);
+}
+
+.hod-recipient-count-badge {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #0f766e;
+  line-height: 1;
+}
+
+.hod-tab-nav-pill {
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.hod-tab-nav-pill.active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.hod-tab-nav-pill:not(.active) {
+  background: #ffffff;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.hod-tab-nav-pill:not(.active):hover {
+  background: #f8fafc;
+  color: #1e293b;
+}
+

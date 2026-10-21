@@ -41,7 +41,7 @@ export default function TeacherOverview({
             <Sparkles size={14} />
             <span>Faculty Academic Evaluation Workspace</span>
           </div>
-          <h2>{greeting}, Dr. S. Mohanty 👋</h2>
+          <h2>{greeting}, Dr. S. Mohanty</h2>
           <p>
             Consolidated marks management overview across your assigned classes, sections, and semesters.
             Enter continuous evaluation scores, finalize internal assessments, and review grade distribution.

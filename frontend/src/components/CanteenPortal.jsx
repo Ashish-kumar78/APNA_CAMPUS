@@ -181,23 +181,12 @@ export default function CanteenPortal({ account, onLogout }) {
         {/* Sidebar */}
         {sidebarOpen && (
           <aside className="canteen-sidebar">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.2rem 0.4rem 0.6rem', borderBottom: '1px solid #f1f5f9', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Canteen Menu</span>
+            <div className="canteen-sidebar-header">
+              <span className="canteen-sidebar-title">Canteen Menu</span>
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}
-                style={{
-                  background: 'rgba(15, 23, 42, 0.08)',
-                  border: 'none',
-                  color: '#64748b',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
+                className="canteen-sidebar-close"
                 title="Close Navigation"
               >
                 <X size={16} />

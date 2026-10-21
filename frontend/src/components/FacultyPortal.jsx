@@ -143,7 +143,7 @@ export default function FacultyPortal({ account, onLogout }) {
     if (hour >= 5 && hour < 12) {
       return {
         wish: 'Good morning',
-        emoji: '🌅',
+        emoji: '',
         period: 'Morning',
         caption: 'Rise and shine! Have an inspiring, energetic, and productive academic day ahead.',
         motd: 'Morning lectures commence at 09:00 AM. Check your class timetable for room assignments.',
@@ -153,7 +153,7 @@ export default function FacultyPortal({ account, onLogout }) {
     if (hour >= 12 && hour < 17) {
       return {
         wish: 'Good afternoon',
-        emoji: '☀️',
+        emoji: '',
         period: 'Afternoon',
         caption: 'Keep up the strong teaching momentum in your afternoon lectures, lab practicals, and assessments.',
         motd: 'Computing lab facilities and evaluation center remain open till 06:00 PM.',
@@ -163,7 +163,7 @@ export default function FacultyPortal({ account, onLogout }) {
     if (hour >= 17 && hour < 22) {
       return {
         wish: 'Good evening',
-        emoji: '🌇',
+        emoji: '',
         period: 'Evening',
         caption: 'Review today’s lecture coverage, verify attendance entries, and enjoy your evening.',
         motd: 'Continuous assessment evaluation marks entry deadline is active.',
@@ -172,7 +172,7 @@ export default function FacultyPortal({ account, onLogout }) {
     }
     return {
       wish: 'Good night',
-      emoji: '🌙',
+      emoji: '',
       period: 'Night',
       caption: 'Rest well tonight and recharge your energy for tomorrow’s classes.',
       motd: 'Campus quiet hours are in effect. Ensure evaluation grades are saved.',
@@ -813,23 +813,12 @@ export default function FacultyPortal({ account, onLogout }) {
         {/* Sidebar */}
         {sidebarOpen && (
           <aside className="faculty-sidebar">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.2rem 0.4rem 0.6rem', borderBottom: '1px solid #f1f5f9', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Faculty Menu</span>
+            <div className="faculty-sidebar-header">
+              <span className="faculty-sidebar-title">Faculty Menu</span>
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}
-                style={{
-                  background: 'rgba(15, 23, 42, 0.08)',
-                  border: 'none',
-                  color: '#64748b',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
+                className="faculty-sidebar-close"
                 title="Close Navigation"
               >
                 <X size={16} />
@@ -860,14 +849,10 @@ export default function FacultyPortal({ account, onLogout }) {
               <BookOpen size={17} /> My Subjects
             </button>
             <button
-              className={`faculty-nav-btn ${activeTab === 'digital-evaluation' ? 'active' : ''}`}
+              className={`faculty-nav-btn evaluation-btn ${activeTab === 'digital-evaluation' ? 'active' : ''}`}
               onClick={() => setActiveTab('digital-evaluation')}
-              style={{
-                background: activeTab === 'digital-evaluation' ? undefined : 'linear-gradient(90deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.12))',
-                border: '1px solid rgba(16, 185, 129, 0.35)'
-              }}
             >
-              <FileText size={17} style={{ color: '#10b981' }} /> Answer Sheet Evaluation
+              <FileText size={17} /> Answer Sheet Evaluation
             </button>
             <button
               className={`faculty-nav-btn ${activeTab === 'marks' ? 'active' : ''}`}
@@ -928,7 +913,7 @@ export default function FacultyPortal({ account, onLogout }) {
               onClick={() => { setCampusDocs(getDocumentsForRole('faculty')); setActiveTab('documents'); }}
             >
               <Download size={17} /> Documents
-              <span style={{ marginLeft: 'auto', background: '#4338ca', color: '#fff', fontSize: '0.62rem', fontWeight: 700, padding: '1px 6px', borderRadius: '10px' }}>
+              <span className="faculty-sidebar-badge">
                 {campusDocs.length}
               </span>
             </button>
@@ -991,7 +976,7 @@ export default function FacultyPortal({ account, onLogout }) {
                 <div className="dash-hero-glow" aria-hidden="true" />
                 <div className="dash-hero-main">
                   <p className="dash-hero-kicker"><Sparkles size={13} /> Faculty workspace · {currentAssignment.deptCode || 'CSE'} Department</p>
-                  <h2 className="dash-hero-title">{timeGreeting.wish}, {(account?.name || 'Dr. S. Mohanty').split(' ')[0]} {timeGreeting.emoji}</h2>
+                  <h2 className="dash-hero-title">{timeGreeting.wish}, {(account?.name || 'Dr. S. Mohanty').split(' ')[0]}</h2>
                   <p className="dash-hero-caption">{timeGreeting.caption}</p>
                   <div className="dash-motd" role="note" aria-label="Message of the day">
                     <span className="dash-motd-icon"><Megaphone size={14} /></span>

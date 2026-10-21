@@ -28,8 +28,9 @@
 /* Sidebar Styling */
 .erp-exam-layout .erp-sidebar {
   width: 270px;
-  background: #0f172a;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: #091326;
+  background: linear-gradient(180deg, #091326 0%, #0b1a36 100%);
+  border-right: 1px solid #1a2a44;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -38,6 +39,16 @@
   height: 100vh;
   z-index: 40;
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 14px 35px rgba(2, 6, 23, 0.4);
+}
+
+.erp-exam-layout .erp-sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.erp-exam-layout .erp-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
 }
 
 .erp-exam-layout .erp-sidebar-brand {

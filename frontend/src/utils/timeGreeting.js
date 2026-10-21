@@ -26,14 +26,7 @@ export function getTimeGreeting(customDate = new Date()) {
  * @returns {string}
  */
 export function getTimeGreetingWithEmoji(customDate = new Date()) {
-  const hour = customDate.getHours();
-  if (hour >= 4 && hour < 12) {
-    return 'Good Morning 🌅';
-  }
-  if (hour >= 12 && hour < 17) {
-    return 'Good Afternoon ☀️';
-  }
-  return 'Good Evening 🌇';
+  return getTimeGreeting(customDate);
 }
 
 /**
@@ -67,7 +60,7 @@ export function getTimeWish(customDate = new Date()) {
   if (hour >= 4 && hour < 12) {
     return {
       greeting: 'Good Morning',
-      emoji: '🌅',
+      emoji: '',
       wish: 'Wishing you an inspiring, energetic, and productive day administering college operations!',
       period: 'Morning'
     };
@@ -75,7 +68,7 @@ export function getTimeWish(customDate = new Date()) {
   if (hour >= 12 && hour < 17) {
     return {
       greeting: 'Good Afternoon',
-      emoji: '☀️',
+      emoji: '',
       wish: 'Hope your departmental administrative reviews, academic sessions, and student affairs are progressing smoothly!',
       period: 'Afternoon'
     };
@@ -83,14 +76,14 @@ export function getTimeWish(customDate = new Date()) {
   if (hour >= 17 && hour < 22) {
     return {
       greeting: 'Good Evening',
-      emoji: '🌇',
+      emoji: '',
       wish: 'Reviewing today’s academic achievements, departmental marks approvals, and campus attendance returns.',
       period: 'Evening'
     };
   }
   return {
     greeting: 'Good Night / Working Late',
-    emoji: '🌙',
+    emoji: '',
     wish: 'Working late? Campus biometric gateways, security monitoring, and institutional ERP records remain active 24/7.',
     period: 'Night'
   };

@@ -202,7 +202,7 @@ export default function HodPortal({ account, onLogout }) {
     if (hour >= 5 && hour < 12) {
       return {
         wish: 'Good morning',
-        emoji: '🌅',
+        emoji: '',
         period: 'Morning',
         caption: 'Departmental morning session active. Review marks moderation queues, at-risk rosters, and lecture scheduling.',
         motd: 'Continuous assessment review & marks moderation portal open for Autumn Semester 2026-27.',
@@ -212,7 +212,7 @@ export default function HodPortal({ account, onLogout }) {
     if (hour >= 12 && hour < 17) {
       return {
         wish: 'Good afternoon',
-        emoji: '☀️',
+        emoji: '',
         period: 'Afternoon',
         caption: 'Oversee departmental computing labs, faculty continuous assessment progress, and academic grievances.',
         motd: 'Examination Cell moderation board meeting scheduled for today at 03:00 PM.',
@@ -222,7 +222,7 @@ export default function HodPortal({ account, onLogout }) {
     if (hour >= 17 && hour < 22) {
       return {
         wish: 'Good evening',
-        emoji: '🌇',
+        emoji: '',
         period: 'Evening',
         caption: 'Verify departmental daily turnout, sign off pending assessment submissions, and examine academic reports.',
         motd: 'Statutory minimum 75% attendance compliance verification active across all 6 sections.',
@@ -231,7 +231,7 @@ export default function HodPortal({ account, onLogout }) {
     }
     return {
       wish: 'Good night',
-      emoji: '🌙',
+      emoji: '',
       period: 'Night',
       caption: 'Department records safely synchronized. Recheck pending moderation items before tomorrow morning sessions.',
       motd: 'Autonomous Affiliated Academic Governance Workspace active.',
@@ -848,23 +848,12 @@ export default function HodPortal({ account, onLogout }) {
         {/* Sidebar */}
         {sidebarOpen && (
           <aside className="hod-sidebar">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.2rem 0.4rem 0.6rem', borderBottom: '1px solid #f1f5f9', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>HOD Governance</span>
+            <div className="hod-sidebar-header">
+              <span className="hod-sidebar-title">HOD Governance</span>
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}
-                style={{
-                  background: 'rgba(15, 23, 42, 0.08)',
-                  border: 'none',
-                  color: '#64748b',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
+                className="hod-sidebar-close"
                 title="Close Navigation"
               >
                 <X size={16} />
@@ -900,7 +889,7 @@ export default function HodPortal({ account, onLogout }) {
             >
               <AlertTriangle size={17} /> At-Risk Students Alert
               {atRiskCount > 0 && (
-                <span style={{ marginLeft: 'auto', background: '#dc2626', color: '#fff', fontSize: '0.62rem', fontWeight: 700, padding: '1px 6px', borderRadius: '10px' }}>
+                <span style={{ marginLeft: 'auto', background: '#dc2626', color: '#fff', fontSize: '0.65rem', fontWeight: 800, padding: '1px 7px', borderRadius: '10px', boxShadow: '0 2px 6px rgba(220, 38, 38, 0.4)' }}>
                   {atRiskCount}
                 </span>
               )}
@@ -917,7 +906,7 @@ export default function HodPortal({ account, onLogout }) {
             >
               <ShieldAlert size={17} /> Grievance Monitoring
               {pendingGrievancesCount > 0 && (
-                <span style={{ marginLeft: 'auto', background: '#d97706', color: '#fff', fontSize: '0.62rem', fontWeight: 700, padding: '1px 6px', borderRadius: '10px' }}>
+                <span style={{ marginLeft: 'auto', background: '#d97706', color: '#fff', fontSize: '0.65rem', fontWeight: 800, padding: '1px 7px', borderRadius: '10px', boxShadow: '0 2px 6px rgba(217, 119, 6, 0.4)' }}>
                   {pendingGrievancesCount}
                 </span>
               )}
@@ -953,21 +942,17 @@ export default function HodPortal({ account, onLogout }) {
               <ClipboardCheck size={17} /> Take Attendance
             </button>
             <button
-              className={`hod-nav-btn ${activeTab === 'digital-evaluation' ? 'active' : ''}`}
+              className={`hod-nav-btn evaluation-btn ${activeTab === 'digital-evaluation' ? 'active' : ''}`}
               onClick={() => setActiveTab('digital-evaluation')}
-              style={{
-                background: activeTab === 'digital-evaluation' ? undefined : 'linear-gradient(90deg, rgba(13, 148, 136, 0.12), rgba(16, 185, 129, 0.12))',
-                border: '1px solid rgba(13, 148, 136, 0.35)'
-              }}
             >
-              <FileText size={17} style={{ color: '#0d9488' }} /> Digital Evaluation &amp; Approval
+              <FileText size={17} /> Digital Evaluation &amp; Approval
             </button>
             <button
               className={`hod-nav-btn ${activeTab === 'documents' ? 'active' : ''}`}
               onClick={() => { setHodDocs(getDocumentsForRole('hod')); setActiveTab('documents'); }}
             >
               <Download size={17} /> Documents
-              <span style={{ marginLeft: 'auto', background: '#7c3aed', color: '#fff', fontSize: '0.62rem', fontWeight: 700, padding: '1px 6px', borderRadius: '10px' }}>
+              <span className="hod-sidebar-badge">
                 {hodDocs.length}
               </span>
             </button>
@@ -1373,7 +1358,7 @@ export default function HodPortal({ account, onLogout }) {
                 <div className="dash-hero-glow" aria-hidden="true" />
                 <div className="dash-hero-main">
                   <p className="dash-hero-kicker"><Sparkles size={13} /> Head of Department Workspace · Department of Computer Science &amp; Engineering</p>
-                  <h2 className="dash-hero-title">{timeGreeting.wish}, {(account?.name || 'Dr. P. K. Pattnaik').split(' ')[0]} {timeGreeting.emoji}</h2>
+                  <h2 className="dash-hero-title">{timeGreeting.wish}, {(account?.name || 'Dr. P. K. Pattnaik').split(' ')[0]}</h2>
                   <p className="dash-hero-caption">{timeGreeting.caption}</p>
                   <div className="dash-motd" role="note" aria-label="Department governance notice">
                     <span className="dash-motd-icon"><Megaphone size={14} /></span>

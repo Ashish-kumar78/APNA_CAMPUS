@@ -348,31 +348,62 @@ button {
   font-weight: 600 !important;
 }
 
-/* Dark Sidebars */
-.erp-sidebar {
-  background: #0f172a !important;
+/* ========================================================
+   STANDARDIZED SIDEBAR THEME ACROSS ALL USER ROLES
+   Exact Student Dashboard blue midnight gradient theme:
+   background: linear-gradient(180deg, #091326 0%, #0b1a36 100%)
+   ======================================================== */
+.erp-sidebar,
+.admin-sidebar,
+.mgmt-sidebar,
+.accounts-sidebar,
+.hostel-sidebar,
+.canteen-sidebar,
+.faculty-sidebar,
+.hod-sidebar,
+.campus-os-sidebar {
+  background: #091326 !important;
+  background: linear-gradient(180deg, #091326 0%, #0b1a36 100%) !important;
+  border-right: 1px solid #1a2a44 !important;
+  box-shadow: 0 14px 35px rgba(2, 6, 23, 0.4) !important;
 }
 
-.erp-sidebar .erp-brand-text h2 {
+/* Consistent Scrollbar Across All Sidebars */
+.erp-sidebar::-webkit-scrollbar,
+.admin-sidebar::-webkit-scrollbar,
+.mgmt-sidebar::-webkit-scrollbar,
+.accounts-sidebar::-webkit-scrollbar,
+.hostel-sidebar::-webkit-scrollbar,
+.canteen-sidebar::-webkit-scrollbar,
+.faculty-sidebar::-webkit-scrollbar,
+.hod-sidebar::-webkit-scrollbar,
+.campus-os-sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.erp-sidebar::-webkit-scrollbar-thumb,
+.admin-sidebar::-webkit-scrollbar-thumb,
+.mgmt-sidebar::-webkit-scrollbar-thumb,
+.accounts-sidebar::-webkit-scrollbar-thumb,
+.hostel-sidebar::-webkit-scrollbar-thumb,
+.canteen-sidebar::-webkit-scrollbar-thumb,
+.faculty-sidebar::-webkit-scrollbar-thumb,
+.hod-sidebar::-webkit-scrollbar-thumb,
+.campus-os-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+/* Sidebar Brand Titles */
+.erp-sidebar .erp-brand-text h2,
+.erp-sidebar .erp-sidebar-brand h2,
+.mgmt-sidebar .mgmt-brand-text h2,
+.admin-sidebar .admin-brand-text h2 {
   color: #ffffff !important;
   font-weight: 800 !important;
 }
 
-.erp-sidebar .erp-nav-item {
-  color: #cbd5e1 !important;
-  font-weight: 600 !important;
-}
-
-.erp-sidebar .erp-nav-item.active {
-  color: #ffffff !important;
-  background: #2563eb !important;
-}
-
-/* ========================================================
-   GLOBAL STUDENT-STYLE NAV CURSOR SYSTEM ACROSS ALL PORTALS
-   Ensures identical electric-blue active pill indicator
-   and pointer cursor on all navigation and action items.
-   ======================================================== */
+/* Sidebar Navigation Items - Normal State */
 .campus-os-nav a,
 .campus-os-nav button,
 .erp-nav-item,
@@ -384,8 +415,56 @@ button {
 .canteen-nav-btn,
 .mgmt-nav-item {
   cursor: pointer !important;
+  color: #cbd5e1 !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
 }
 
+.campus-os-nav a svg,
+.campus-os-nav button svg,
+.erp-nav-item svg,
+.admin-nav-btn svg,
+.hod-nav-btn svg,
+.faculty-nav-btn svg,
+.accounts-nav-btn svg,
+.hostel-nav-btn svg,
+.canteen-nav-btn svg,
+.mgmt-nav-item svg {
+  color: #94a3b8 !important;
+  transition: color 0.2s ease !important;
+}
+
+/* Sidebar Navigation Items - Hover State */
+.campus-os-nav a:hover,
+.campus-os-nav button:hover,
+.erp-nav-item:hover,
+.admin-nav-btn:hover,
+.hod-nav-btn:hover,
+.faculty-nav-btn:hover,
+.accounts-nav-btn:hover,
+.hostel-nav-btn:hover,
+.canteen-nav-btn:hover,
+.mgmt-nav-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.campus-os-nav a:hover svg,
+.campus-os-nav button:hover svg,
+.erp-nav-item:hover svg,
+.admin-nav-btn:hover svg,
+.hod-nav-btn:hover svg,
+.faculty-nav-btn:hover svg,
+.accounts-nav-btn:hover svg,
+.hostel-nav-btn:hover svg,
+.canteen-nav-btn:hover svg,
+.mgmt-nav-item:hover svg {
+  color: #ffffff !important;
+}
+
+/* Sidebar Navigation Items - Active State */
+.campus-os-nav a.active,
+.campus-os-nav button.active,
 .erp-nav-item.active,
 .admin-nav-btn.active,
 .hod-nav-btn.active,
@@ -401,6 +480,8 @@ button {
   border-radius: 14px !important;
 }
 
+.campus-os-nav a.active svg,
+.campus-os-nav button.active svg,
 .erp-nav-item.active svg,
 .admin-nav-btn.active svg,
 .hod-nav-btn.active svg,

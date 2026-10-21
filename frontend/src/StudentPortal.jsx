@@ -477,7 +477,7 @@ function StudentPortal({ account, onLogout }) {
     if (hour >= 5 && hour < 12) {
       return {
         wish: 'Good morning',
-        emoji: '🌅',
+        emoji: '',
         period: 'Morning',
         caption: 'Rise and shine! Have an inspiring, energetic, and productive learning day ahead.',
         motd: 'Morning lectures commence at 09:15 AM. Check your class timetable for room assignments.',
@@ -487,7 +487,7 @@ function StudentPortal({ account, onLogout }) {
     if (hour >= 12 && hour < 17) {
       return {
         wish: 'Good afternoon',
-        emoji: '☀️',
+        emoji: '',
         period: 'Afternoon',
         caption: 'Keep up the strong momentum in your afternoon lectures, lab practicals, and projects.',
         motd: 'Central library research wing and computing center access remain open till 08:00 PM.',
@@ -497,7 +497,7 @@ function StudentPortal({ account, onLogout }) {
     if (hour >= 17 && hour < 22) {
       return {
         wish: 'Good evening',
-        emoji: '🌇',
+        emoji: '',
         period: 'Evening',
         caption: 'Review today’s coursework, complete your assignments, and enjoy your evening.',
         motd: 'Scholarship applications for the 2026–27 session are now open.',
@@ -506,7 +506,7 @@ function StudentPortal({ account, onLogout }) {
     }
     return {
       wish: 'Good night',
-      emoji: '🌙',
+      emoji: '',
       period: 'Night',
       caption: 'Rest well tonight and recharge your energy for tomorrow’s achievements.',
       motd: 'Campus quiet hours are in effect. Ensure assignments are submitted and devices charged.',
@@ -977,7 +977,7 @@ function StudentPortal({ account, onLogout }) {
             <div className="dash-hero-glow" aria-hidden="true" />
             <div className="dash-hero-main">
               <p className="dash-hero-kicker"><Sparkles size={13} /> Student workspace · Semester 5</p>
-              <h2 className="dash-hero-title">{timeGreeting.wish}, {(account?.name || 'Student').split(' ')[0]} {timeGreeting.emoji}</h2>
+              <h2 className="dash-hero-title">{timeGreeting.wish}, {(account?.name || 'Student').split(' ')[0]}</h2>
               <p className="dash-hero-caption">{timeGreeting.caption}</p>
               <div className="dash-motd" role="note" aria-label="Message of the day">
                 <span className="dash-motd-icon"><Megaphone size={14} /></span>

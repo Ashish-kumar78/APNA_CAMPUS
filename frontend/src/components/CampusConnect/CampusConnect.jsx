@@ -5,19 +5,16 @@ import {
   Award, Flag, ThumbsUp, Heart, Sparkles, Filter, ChevronRight, X,
   ExternalLink, Bell, Pin, MoreVertical, ArrowLeft, BookOpen, Share2,
   Lock, CheckCircle2, AlertTriangle, Layers, Megaphone, HelpCircle,
-  Maximize2, Phone, Video, PhoneOff, VideoOff, Mic, MicOff, CornerUpLeft,
+  Maximize2, Mic, MicOff, CornerUpLeft,
   CornerUpRight, Star, Copy, Trash2, Play, Pause, UserPlus, UserMinus,
   UserX, UserCheck, Image as ImageIcon, Camera, Smile, Info, Volume2,
-  VolumeX, ChevronDown, PhoneIncoming, PhoneOutgoing, PhoneMissed
+  VolumeX, ChevronDown
 } from 'lucide-react';
 import './CampusConnect.css';
 import { campusConnectStore } from '../../services/campusConnectStore';
 import {
   playSentSound,
-  playReceivedSound,
-  startRingingSound,
-  stopRingingSound,
-  playCallEndSound
+  playReceivedSound
 } from '../../services/soundEffects.js';
 import AcademicResourcesSection from './AcademicResourcesSection.jsx';
 import LeadershipScoreboardSection from './LeadershipScoreboardSection.jsx';
@@ -95,10 +92,7 @@ export default function CampusConnect({
   const galleryInputRef = useRef(null);
   const docInputRef = useRef(null);
 
-  // Calling States: Voice & Video Calls
-  const [activeCall, setActiveCall] = useState(null); // { type, contact, status: 'ringing'|'connected', duration, isMuted, isVideoOff }
-  const [incomingCall, setIncomingCall] = useState(null);
-  const callDurationTimerRef = useRef(null);
+
 
   // Contacts Directory & Group Management States
   const [contactsSearch, setContactsSearch] = useState('');
@@ -205,19 +199,7 @@ export default function CampusConnect({
     return () => window.removeEventListener('campus_connect_typing', handleTypingEvent);
   }, [activeConvId, account?.name]);
 
-  // Call duration interval
-  useEffect(() => {
-    if (activeCall && activeCall.status === 'connected') {
-      callDurationTimerRef.current = setInterval(() => {
-        setActiveCall(prev => prev ? { ...prev, duration: (prev.duration || 0) + 1 } : null);
-      }, 1000);
-    } else {
-      if (callDurationTimerRef.current) clearInterval(callDurationTimerRef.current);
-    }
-    return () => {
-      if (callDurationTimerRef.current) clearInterval(callDurationTimerRef.current);
-    };
-  }, [activeCall?.status]);
+
 
   // Cleanup on unmount
   useEffect(() => {
@@ -227,7 +209,6 @@ export default function CampusConnect({
         voiceAudioRef.current.pause();
         voiceAudioRef.current = null;
       }
-      stopRingingSound();
     };
   }, []);
 
@@ -495,87 +476,7 @@ export default function CampusConnect({
     }
   };
 
-  // Calling Handlers (Audio & Video)
-  const handleStartCall = (type = 'voice', targetContact = null) => {
-    const contact = targetContact || activeConversation;
-    setActiveCall({
-      type,
-      contact,
-      status: 'ringing',
-      duration: 0,
-      isMuted: false,
-      isVideoOff: false
-    });
-    startRingingSound();
 
-    setTimeout(() => {
-      stopRingingSound();
-      setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null);
-    }, 2500);
-  };
-
-  const handleEndCall = () => {
-    stopRingingSound();
-    playCallEndSound();
-    if (activeCall) {
-      campusConnectStore.logCall({
-        type: activeCall.type,
-        direction: 'outgoing',
-        contactName: activeCall.contact?.name || 'Contact',
-        contactAvatar: activeCall.contact?.avatar || '👤',
-        contactRole: activeCall.contact?.role || 'student',
-        duration: formatCallDuration(activeCall.duration || 0)
-      });
-    }
-    setActiveCall(null);
-    triggerToast('Call ended');
-  };
-
-  const handleAcceptIncomingCall = () => {
-    stopRingingSound();
-    if (!incomingCall) return;
-    setActiveCall({
-      type: incomingCall.type,
-      contact: incomingCall.contact,
-      status: 'connected',
-      duration: 0,
-      isMuted: false,
-      isVideoOff: false
-    });
-    setIncomingCall(null);
-  };
-
-  const handleRejectIncomingCall = () => {
-    stopRingingSound();
-    playCallEndSound();
-    if (incomingCall) {
-      campusConnectStore.logCall({
-        type: incomingCall.type,
-        direction: 'missed',
-        contactName: incomingCall.contact?.name || 'Contact',
-        contactAvatar: incomingCall.contact?.avatar || '👤',
-        contactRole: incomingCall.contact?.role || 'student',
-        duration: '00:00'
-      });
-    }
-    setIncomingCall(null);
-    triggerToast('Call declined');
-  };
-
-  const handleSimulateIncomingCall = (type = 'voice') => {
-    const contacts = campusConnectStore.getContacts();
-    const demoCaller = contacts[0] || {
-      name: 'Dr. P. Mohapatra',
-      role: 'faculty',
-      avatar: '👨‍🏫',
-      department: 'CSE'
-    };
-    setIncomingCall({
-      type,
-      contact: demoCaller
-    });
-    startRingingSound();
-  };
 
   // Message Actions (Reply, Forward, Star, Pin, Delete, Copy)
   const handleStartReply = (msg) => {
@@ -902,15 +803,7 @@ export default function CampusConnect({
             <span className="cc-rail-pill official">1</span>
           </button>
 
-          <button
-            type="button"
-            className={`cc-rail-btn ${activeView === 'calls' ? 'active' : ''}`}
-            onClick={() => setActiveView('calls')}
-            title="Audio & Video Calls Log"
-          >
-            <Phone size={19} />
-            <span className="cc-rail-tip">Calls</span>
-          </button>
+
 
           <button
             type="button"
@@ -1152,7 +1045,7 @@ export default function CampusConnect({
                 {activeConversation?.name || 'Class Group'}
                 {activeConversation?.isClass && (
                   <span style={{ fontSize: '0.68rem', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#60a5fa', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
-                    {activeConversation.code || 'COURSE'}
+                    {activeConversation?.code || 'COURSE'}
                   </span>
                 )}
                 {activeConversation?.isBroadcast && (
@@ -1173,13 +1066,13 @@ export default function CampusConnect({
                 ) : (
                   <>
                     {activeConversation?.membersCount && (
-                      <span>{activeConversation.membersCount} members</span>
+                      <span>{activeConversation?.membersCount} members</span>
                     )}
                     {activeConversation?.onlineCount && (
-                      <span className="cc-online-chip">{activeConversation.onlineCount} online</span>
+                      <span className="cc-online-chip">{activeConversation?.onlineCount} online</span>
                     )}
                     {activeConversation?.faculty && (
-                      <span>• Faculty: {activeConversation.faculty}</span>
+                      <span>• Faculty: {activeConversation?.faculty}</span>
                     )}
                   </>
                 )}
@@ -1188,22 +1081,7 @@ export default function CampusConnect({
           </div>
 
           <div className="cc-header-actions">
-            <button
-              type="button"
-              className="cc-header-btn"
-              title="Voice Call"
-              onClick={() => handleStartCall('voice')}
-            >
-              <Phone size={14} color="#10b981" /> Call
-            </button>
-            <button
-              type="button"
-              className="cc-header-btn"
-              title="Video Call"
-              onClick={() => handleStartCall('video')}
-            >
-              <Video size={14} color="#06b6d4" /> Video
-            </button>
+
             <button
               type="button"
               className={`cc-header-btn ${searchInChatOpen ? 'active' : ''}`}
@@ -1284,23 +1162,18 @@ export default function CampusConnect({
                   >
                     <Star size={14} /> Starred Messages
                   </button>
-                  <button
-                    type="button"
-                    style={{ background: 'none', border: 'none', color: '#f8fafc', padding: '8px 14px', textAlign: 'left', cursor: 'pointer', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 8 }}
-                    onClick={() => { setChatMenuOpen(false); handleSimulateIncomingCall('voice'); }}
-                  >
-                    <Phone size={14} color="#10b981" /> Test Incoming Call
-                  </button>
+
                   {activeConversation?.isDirect && (
                     <button
                       type="button"
                       style={{ background: 'none', border: 'none', color: '#f87171', padding: '8px 14px', textAlign: 'left', cursor: 'pointer', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 8 }}
                       onClick={() => {
-                        const blocked = campusConnectStore.isUserBlocked(activeConversation.id);
+                        setChatMenuOpen(false);
+                        const blocked = campusConnectStore.isUserBlocked(activeConversation?.id);
                         if (blocked) {
-                          handleUnblockUser(activeConversation.id);
+                          handleUnblockUser(activeConversation?.id);
                         } else {
-                          handleBlockUser(activeConversation.id, activeConversation.name);
+                          handleBlockUser(activeConversation?.id, activeConversation?.name);
                         }
                       }}
                     >
@@ -1362,7 +1235,7 @@ export default function CampusConnect({
           <div className="cc-pinned-banner">
             <div className="cc-pinned-content">
               <span className="cc-pinned-tag">Pinned Deadlines</span>
-              <span>{activeConversation.pinned}</span>
+              <span>{activeConversation?.pinned}</span>
             </div>
             <button
               type="button"
@@ -1979,7 +1852,7 @@ export default function CampusConnect({
               className="cc-comp-action-btn accent-request"
               onClick={() => {
                 if (activeConversation?.subject) {
-                  setRequestForm(prev => ({ ...prev, subject: activeConversation.subject }));
+                  setRequestForm(prev => ({ ...prev, subject: activeConversation?.subject }));
                 }
                 setShowRequestModal(true);
               }}
@@ -2496,102 +2369,7 @@ export default function CampusConnect({
         </div>
       )}
 
-      {/* ─────────────────────────────────────────────────────────────
-          7. AUDIO & VIDEO CALLS LOG WORKSPACE
-          ───────────────────────────────────────────────────────────── */}
-      {activeView === 'calls' && (
-        <div className="cc-standalone-workspace">
-          <div className="cc-calls-view">
-            <div className="cc-hub-header">
-              <h2>
-                <Phone size={24} color="#10b981" />
-                Calls & Audio/Video History
-              </h2>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  className="cc-req-filter-btn"
-                  onClick={() => handleSimulateIncomingCall('voice')}
-                  title="Test incoming call popup & sound"
-                  style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}
-                >
-                  <Phone size={14} /> Test Incoming Call
-                </button>
-                <button
-                  type="button"
-                  className="cc-req-filter-btn"
-                  onClick={() => {
-                    campusConnectStore.clearCallHistory();
-                    triggerToast('Call history cleared');
-                  }}
-                  style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }}
-                >
-                  <Trash2 size={14} /> Clear Log
-                </button>
-                <button
-                  type="button"
-                  className="cc-req-filter-btn active"
-                  onClick={() => setActiveView('contacts')}
-                >
-                  <Plus size={14} /> New Call
-                </button>
-              </div>
-            </div>
 
-            <div className="cc-call-history-list">
-              {campusConnectStore.getCallHistory().length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
-                  <Phone size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-                  <p>No call logs yet. Start an audio or video call with faculty or classmates!</p>
-                </div>
-              ) : (
-                campusConnectStore.getCallHistory().map((c) => (
-                  <div key={c.id} className="cc-call-history-row">
-                    <div className="cc-call-history-left">
-                      <div className="cc-conv-avatar" style={{ background: '#1e293b', width: 44, height: 44, fontSize: '1.2rem' }}>
-                        {c.contactAvatar || '👤'}
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <strong style={{ color: '#fff', fontSize: '0.92rem' }}>{c.contactName}</strong>
-                          <span className={`cc-role-badge ${c.contactRole || 'student'}`}>{c.contactRole || 'Student'}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, fontSize: '0.76rem', color: '#94a3b8' }}>
-                          <span className={`cc-call-dir-icon ${c.direction}`}>
-                            {c.direction === 'missed' ? '✕ Missed' : (c.direction === 'incoming' ? '↙ Incoming' : '↗ Outgoing')}
-                          </span>
-                          <span>•</span>
-                          <span>{c.type === 'video' ? '📹 Video Call' : '📞 Voice Call'}</span>
-                          <span>•</span>
-                          <span>{c.time} ({c.duration})</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        type="button"
-                        className="cc-action-icon-btn"
-                        title="Voice Call Back"
-                        onClick={() => handleStartCall('voice', { name: c.contactName, avatar: c.contactAvatar, role: c.contactRole })}
-                      >
-                        <Phone size={15} color="#10b981" />
-                      </button>
-                      <button
-                        type="button"
-                        className="cc-action-icon-btn"
-                        title="Video Call Back"
-                        onClick={() => handleStartCall('video', { name: c.contactName, avatar: c.contactAvatar, role: c.contactRole })}
-                      >
-                        <Video size={15} color="#06b6d4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ─────────────────────────────────────────────────────────────
           8. CAMPUS CONTACTS & DIRECTORY WORKSPACE
@@ -2674,22 +2452,7 @@ export default function CampusConnect({
                     >
                       <MessageSquare size={13} /> Chat
                     </button>
-                    <button
-                      type="button"
-                      className="cc-action-icon-btn"
-                      onClick={() => handleStartCall('voice', contact)}
-                      title="Voice Call"
-                    >
-                      <Phone size={15} color="#10b981" />
-                    </button>
-                    <button
-                      type="button"
-                      className="cc-action-icon-btn"
-                      onClick={() => handleStartCall('video', contact)}
-                      title="Video Call"
-                    >
-                      <Video size={15} color="#06b6d4" />
-                    </button>
+
                   </div>
                 </div>
               ))}
@@ -3237,118 +3000,7 @@ export default function CampusConnect({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          WHATSAPP OVERLAY 1: ACTIVE CALL SCREEN (VOICE & VIDEO)
-          ───────────────────────────────────────────────────────────── */}
-      {activeCall && (
-        <div className="cc-call-overlay">
-          <div className="cc-call-header">
-            <div className="cc-call-type-badge">
-              {activeCall.type === 'video' ? <Video size={14} /> : <Phone size={14} />}
-              Apna Campus {activeCall.type === 'video' ? 'Video' : 'Voice'} Call
-            </div>
-            <h2 className="cc-call-contact-name">{activeCall.contact?.name || 'Contact'}</h2>
-            <p className="cc-call-status-label">
-              {activeCall.status === 'ringing' ? 'Calling / Ringing...' : 'Encrypted Connection Active'}
-            </p>
-            {activeCall.status === 'connected' && (
-              <div className="cc-call-timer">{formatCallDuration(activeCall.duration)}</div>
-            )}
-          </div>
 
-          <div className="cc-call-center">
-            {activeCall.type === 'voice' ? (
-              <div className="cc-call-avatar-pulse">
-                {activeCall.contact?.avatar || '👤'}
-              </div>
-            ) : (
-              <div className="cc-call-video-grid">
-                <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle at center, #1e293b, #090d16)' }}>
-                  <span style={{ fontSize: '5rem', marginBottom: 12 }}>{activeCall.contact?.avatar || '👨‍🎓'}</span>
-                  <strong style={{ color: '#f8fafc', fontSize: '1.1rem' }}>{activeCall.contact?.name}</strong>
-                  <span style={{ color: '#38bdf8', fontSize: '0.82rem', marginTop: 4 }}>Peer-to-Peer HD Video Stream</span>
-                </div>
-                {/* Picture in picture self-view */}
-                <div className="cc-call-pip-video">
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#334155', color: '#fff', fontSize: '0.74rem', flexDirection: 'column' }}>
-                    <span>You</span>
-                    <span style={{ fontSize: '0.64rem', color: activeCall.isVideoOff ? '#f87171' : '#38bdf8' }}>
-                      {activeCall.isVideoOff ? 'Camera Off' : 'Live Camera'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="cc-call-controls-bar">
-            <button
-              type="button"
-              className={`cc-call-ctrl-btn ${activeCall.isMuted ? 'active' : ''}`}
-              onClick={() => setActiveCall(c => ({ ...c, isMuted: !c.isMuted }))}
-              title={activeCall.isMuted ? 'Unmute microphone' : 'Mute microphone'}
-            >
-              {activeCall.isMuted ? <MicOff size={22} /> : <Mic size={22} />}
-            </button>
-
-            {activeCall.type === 'video' && (
-              <button
-                type="button"
-                className={`cc-call-ctrl-btn ${activeCall.isVideoOff ? 'active' : ''}`}
-                onClick={() => setActiveCall(c => ({ ...c, isVideoOff: !c.isVideoOff }))}
-                title={activeCall.isVideoOff ? 'Enable camera' : 'Disable camera'}
-              >
-                {activeCall.isVideoOff ? <VideoOff size={22} /> : <Video size={22} />}
-              </button>
-            )}
-
-            <button
-              type="button"
-              className="cc-call-ctrl-btn end"
-              onClick={handleEndCall}
-              title="End call"
-            >
-              <PhoneOff size={24} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          WHATSAPP OVERLAY 2: INCOMING CALL NOTIFICATION BANNER
-          ───────────────────────────────────────────────────────────── */}
-      {incomingCall && (
-        <div className="cc-incoming-call-banner">
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
-            {incomingCall.contact?.avatar || '📞'}
-          </div>
-          <div style={{ flex: 1 }}>
-            <h4 style={{ margin: 0, fontSize: '0.96rem', color: '#fff' }}>{incomingCall.contact?.name}</h4>
-            <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#38bdf8' }}>
-              Incoming {incomingCall.type === 'video' ? 'Video' : 'Voice'} Call...
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              className="cc-call-ctrl-btn accept"
-              style={{ width: 44, height: 44 }}
-              onClick={handleAcceptIncomingCall}
-              title="Accept call"
-            >
-              <Phone size={18} />
-            </button>
-            <button
-              type="button"
-              className="cc-call-ctrl-btn end"
-              style={{ width: 44, height: 44 }}
-              onClick={handleRejectIncomingCall}
-              title="Decline call"
-            >
-              <PhoneOff size={18} />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ─────────────────────────────────────────────────────────────
           WHATSAPP OVERLAY 3: FULLSCREEN MEDIA LIGHTBOX
@@ -3699,7 +3351,7 @@ export default function CampusConnect({
                 </p>
                 {activeConversation?.isDirect && activeConversation?.phone && (
                   <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#38bdf8' }}>
-                    {activeConversation.phone} • {activeConversation.email}
+                    {activeConversation?.phone} • {activeConversation?.email}
                   </p>
                 )}
               </div>
@@ -3707,35 +3359,12 @@ export default function CampusConnect({
               {activeConversation?.description && (
                 <div style={{ background: '#0b0f19', padding: '12px 14px', borderRadius: 10, fontSize: '0.82rem', color: '#cbd5e1' }}>
                   <strong style={{ color: '#94a3b8', display: 'block', marginBottom: 4, textTransform: 'uppercase', fontSize: '0.72rem' }}>About / Description:</strong>
-                  {activeConversation.description}
+                  {activeConversation?.description}
                 </div>
               )}
 
               {/* Action buttons inside drawer */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <button
-                  type="button"
-                  className="cc-req-filter-btn"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px' }}
-                  onClick={() => {
-                    setShowGroupInfoDrawer(false);
-                    handleStartCall('voice');
-                  }}
-                >
-                  <Phone size={15} color="#10b981" /> Voice Call
-                </button>
-                <button
-                  type="button"
-                  className="cc-req-filter-btn"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px' }}
-                  onClick={() => {
-                    setShowGroupInfoDrawer(false);
-                    handleStartCall('video');
-                  }}
-                >
-                  <Video size={15} color="#06b6d4" /> Video Call
-                </button>
-              </div>
+
 
               {/* Members List (for groups) */}
               {!activeConversation?.isDirect && (
@@ -3777,10 +3406,10 @@ export default function CampusConnect({
                     style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#f87171', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}
                     onClick={() => {
                       setShowGroupInfoDrawer(false);
-                      if (campusConnectStore.isUserBlocked(activeConversation.id)) {
-                        handleUnblockUser(activeConversation.id);
+                      if (campusConnectStore.isUserBlocked(activeConversation?.id)) {
+                        handleUnblockUser(activeConversation?.id);
                       } else {
-                        handleBlockUser(activeConversation.id, activeConversation.name);
+                        handleBlockUser(activeConversation?.id, activeConversation?.name);
                       }
                     }}
                   >

@@ -1538,23 +1538,12 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
         {/* Sidebar */}
         {sidebarOpen && (
           <aside className="admin-sidebar">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.2rem 0.4rem 0.6rem', borderBottom: '1px solid #f1f5f9', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Menu</span>
+            <div className="admin-sidebar-header">
+              <span className="admin-sidebar-title">Menu</span>
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}
-                style={{
-                  background: 'rgba(15, 23, 42, 0.08)',
-                  border: 'none',
-                  color: '#64748b',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
+                className="admin-sidebar-close"
                 title="Close Navigation"
               >
                 <X size={16} />
@@ -1918,7 +1907,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                     <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 2px rgba(34, 197, 94, 0.3)' }} />
                     Live Time: {formattedLiveTime} · {formattedLiveDate}
                   </div>
-                  <h2>{timeWishDetails.greeting} {timeWishDetails.emoji}, {account?.name || 'Campus Administrator'}</h2>
+                  <h2>{timeWishDetails.greeting}, {account?.name || 'Campus Administrator'}</h2>
                   <p>{timeWishDetails.wish}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>

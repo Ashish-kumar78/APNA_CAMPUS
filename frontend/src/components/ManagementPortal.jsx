@@ -421,9 +421,9 @@ export default function ManagementPortal({ account, onLogout }) {
               type="button"
               onClick={() => setSidebarOpen(false)}
               style={{
-                background: 'rgba(15, 23, 42, 0.08)',
+                background: 'rgba(255, 255, 255, 0.1)',
                 border: 'none',
-                color: '#64748b',
+                color: '#cbd5e1',
                 width: '30px',
                 height: '30px',
                 borderRadius: '8px',

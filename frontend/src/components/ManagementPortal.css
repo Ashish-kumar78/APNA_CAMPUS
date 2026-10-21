@@ -11,11 +11,24 @@
   color: #0f172a;
 }
 
+@media (max-width: 1024px) {
+  .mgmt-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 265px;
+    z-index: 50;
+    box-shadow: 4px 0 25px rgba(2, 6, 23, 0.5);
+  }
+}
+
 /* ─── Sidebar ─────────────────────────────────────── */
 .mgmt-sidebar {
   width: 265px;
-  background: #ffffff;
-  border-right: 1px solid rgba(15, 23, 42, 0.08);
+  background: #091326;
+  background: linear-gradient(180deg, #091326 0%, #0b1a36 100%);
+  border-right: 1px solid #1a2a44;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -23,7 +36,16 @@
   top: 0;
   height: 100vh;
   z-index: 40;
-  box-shadow: 2px 0 12px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 14px 35px rgba(2, 6, 23, 0.4);
+}
+
+.mgmt-sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.mgmt-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
 }
 
 .mgmt-brand {
@@ -31,7 +53,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .mgmt-brand-icon {
@@ -49,7 +71,7 @@
 .mgmt-brand-text h2 {
   font-size: 0.88rem;
   font-weight: 800 !important;
-  color: #0f172a !important;
+  color: #ffffff !important;
   margin: 0;
   line-height: 1.2;
 }
@@ -57,14 +79,14 @@
 .mgmt-brand-text span {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #2563eb;
+  color: #60a5fa !important;
   letter-spacing: 0.03em;
 }
 
 .mgmt-user-card {
   margin: 1rem 1rem 0;
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-  border: 1px solid #bfdbfe;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   padding: 0.85rem 1rem;
 }
@@ -92,14 +114,14 @@
 .mgmt-user-name {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #1e3a8a;
+  color: #ffffff !important;
   display: block;
   line-height: 1.2;
 }
 
 .mgmt-user-role {
   font-size: 0.7rem;
-  color: #3b82f6;
+  color: #93c5fd !important;
   font-weight: 600;
 }
 
@@ -115,7 +137,7 @@
 .mgmt-nav-section {
   font-size: 0.74rem;
   font-weight: 800;
-  color: #cbd5e1;
+  color: #60a5fa !important;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 0.85rem 0.5rem 0.35rem;
@@ -129,7 +151,7 @@
   border-radius: 14px;
   border: none;
   background: transparent;
-  color: #475569;
+  color: #cbd5e1;
   font-size: 13.5px;
   font-weight: 700;
   cursor: pointer !important;
@@ -138,10 +160,20 @@
   transition: all 0.2s ease;
 }
 
+.mgmt-nav-item svg {
+  flex-shrink: 0;
+  color: #94a3b8;
+  transition: color 0.2s ease;
+}
+
 .mgmt-nav-item:hover {
-  background: #eff6ff;
-  color: #2563eb;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
   cursor: pointer !important;
+}
+
+.mgmt-nav-item:hover svg {
+  color: #ffffff !important;
 }
 
 .mgmt-nav-item.active {
@@ -159,7 +191,7 @@
 
 .mgmt-sidebar-footer {
   padding: 1rem;
-  border-top: 1px solid rgba(15, 23, 42, 0.07);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* ─── Main Content ────────────────────────────────── */

@@ -78,15 +78,76 @@
   .accounts-layout {
     grid-template-columns: 1fr;
   }
+  .accounts-sidebar {
+    position: fixed;
+    top: 65px;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    z-index: 50;
+    box-shadow: 4px 0 25px rgba(2, 6, 23, 0.5);
+  }
 }
 
 .accounts-sidebar {
-  background: #ffffff;
-  border-right: 1px solid #e2e8f0;
+  background: #091326;
+  background: linear-gradient(180deg, #091326 0%, #0b1a36 100%);
+  border-right: 1px solid #1a2a44;
   padding: 1.25rem 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: calc(100vh - 65px);
+  overflow-y: auto;
+  position: sticky;
+  top: 65px;
+  box-shadow: 0 14px 35px rgba(2, 6, 23, 0.4);
+}
+
+.accounts-sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.accounts-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+/* Sidebar Header Area */
+.accounts-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.2rem 0.4rem 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 0.5rem;
+}
+
+.accounts-sidebar-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #60a5fa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.accounts-sidebar-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #cbd5e1;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.accounts-sidebar-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .accounts-nav-btn {
@@ -98,7 +159,7 @@
   border-radius: 14px;
   border: none;
   background: transparent;
-  color: #475569;
+  color: #cbd5e1;
   font-size: 13.5px;
   font-weight: 700;
   cursor: pointer !important;
@@ -106,10 +167,20 @@
   text-align: left;
 }
 
+.accounts-nav-btn svg {
+  flex-shrink: 0;
+  color: #94a3b8;
+  transition: color 0.2s ease;
+}
+
 .accounts-nav-btn:hover {
-  background: #eff6ff;
-  color: #2563eb;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
   cursor: pointer !important;
+}
+
+.accounts-nav-btn:hover svg {
+  color: #ffffff !important;
 }
 
 .accounts-nav-btn.active {

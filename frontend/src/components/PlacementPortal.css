@@ -23,16 +23,27 @@
 /* Sidebar Navigation */
 .erp-sidebar {
   width: 260px;
-  background: #0f172a;
+  background: #091326;
+  background: linear-gradient(180deg, #091326 0%, #0b1a36 100%);
   color: #f8fafc;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  border-right: 1px solid #1e293b;
+  border-right: 1px solid #1a2a44;
   min-height: 100vh;
   position: sticky;
   top: 0;
   z-index: 50;
+  box-shadow: 0 14px 35px rgba(2, 6, 23, 0.4);
+}
+
+.erp-sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.erp-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
 }
 
 @media (max-width: 1024px) {

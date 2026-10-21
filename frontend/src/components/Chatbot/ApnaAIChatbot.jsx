@@ -40,15 +40,18 @@ export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrig
   const inputRef = useRef(null);
 
   // Normalize user details
-  const userRole = (account?.role || 'student').toLowerCase();
-  const userName = account?.name || (userRole === 'student' ? 'Student' : 'Campus User');
+  const isGuest = !account;
+  const userRole = (account?.role || (isGuest ? 'guest' : 'student')).toLowerCase();
+  const userName = account?.name || (isGuest ? 'Visitor' : 'Campus User');
   const userIdentifier = account?.identifier || account?.rollNumber || account?.studentId || '';
   const storageKey = `apna_ai_chat_${userIdentifier || userRole || 'guest'}`;
 
   // Initial welcome message
   const getInitialWelcomeMessage = () => ({
     role: 'assistant',
-    content: `Hello **${userName}**! I am **Apna AI Assistant**, your official companion for **Apna Campus**.\n\nI can answer questions regarding:\n• Your authorized academic records, attendance %, and CGPA\n• Internal marks submission & approval workflows\n• Step-by-step guidance for attendance, examinations, and feedback\n• Official report generation and Excel downloads\n• Campus services (Fees, Hostel, Canteen, Transport, Library)\n\n*How can I assist you with Apna Campus today?*`,
+    content: isGuest
+      ? `Hello **${userName}**! I am **Apna AI Assistant**, your official companion for **Apna Campus**.\n\nI can assist you with:\n• Login credentials & College ID / Registration Number format\n• Account activation instructions & password recovery\n• Campus courses, branch options & admission guidance\n• Hostel, mess, transport, and campus facilities\n\n*How can I assist you with Apna Campus today?*`
+      : `Hello **${userName}**! I am **Apna AI Assistant**, your official companion for **Apna Campus**.\n\nI can answer questions regarding:\n• Your authorized academic records, attendance %, and CGPA\n• Internal marks submission & approval workflows\n• Step-by-step guidance for attendance, examinations, and feedback\n• Official report generation and Excel downloads\n• Campus services (Fees, Hostel, Canteen, Transport, Library)\n\n*How can I assist you with Apna Campus today?*`,
     source: 'campus-knowledge-base',
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   });
@@ -123,6 +126,15 @@ export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrig
 
     // Role-specific defaults
     switch (role) {
+      case 'guest':
+        setSuggestions([
+          'How do I sign in to my portal?',
+          'How do I activate a new account?',
+          'Forgot password or College ID help',
+          'Which courses and programs are offered?',
+          'Tell me about hostel & campus amenities',
+        ]);
+        break;
       case 'student':
         setSuggestions([
           'What is my attendance percentage?',
@@ -257,6 +269,34 @@ export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrig
   // Client-side fallback if backend is offline
   const generateClientSideFallback = (queryText, role, user, currentTab) => {
     const q = queryText.toLowerCase();
+
+    // 0. Login & Account Access
+    if (q.includes('login') || q.includes('sign in') || q.includes('how to access') || q.includes('college id')) {
+      return {
+        content: `🔐 **How to Sign In to Apna Campus**:\n\n1. **Students**: Enter your 10-digit Registration Number (e.g., \`2305201001\` or \`2401432265\`) and your account password.\n2. **Faculty / Staff**: Enter your designated College ID or username and password.\n3. **Quick Demo Access**: Click **Explore by Role** below the login form to test any portal (Student, Faculty, HOD, Admin, Hostel, etc.) instantly.\n\nNeed password help? Click **Forgot password?** on the login card to receive a reset verification link.`,
+      };
+    }
+
+    // Account Activation
+    if (q.includes('activate') || q.includes('new user') || q.includes('token')) {
+      return {
+        content: `✨ **Account Activation Instructions**:\n\n1. On the login screen, click **Activate Account** right next to "New user?".\n2. Provide your registered College Login ID or Email.\n3. Enter the one-time activation token issued by the Academic Administration.\n4. Set your permanent password to activate your portal.`,
+      };
+    }
+
+    // Admissions & Programs
+    if (q.includes('admission') || q.includes('course') || q.includes('program') || q.includes('branch')) {
+      return {
+        content: `🏛️ **Academic Programs Offered at Apna Campus (NAAC A++ Accredited)**:\n\n• **B.Tech**: Computer Science & Engg, CSE (AI), Electronics & Communication, Mechanical, Civil, Electrical.\n• **Postgraduate**: M.Tech (Computer Science), MBA, MCA.\n• **Autonomous System**: Outcome-Based Education (OBE) & CBCS Curriculum.\n\nFor fresh admissions and eligibility criteria, reach out to the Admissions Cell in Room 102.`,
+      };
+    }
+
+    // Hostel Facilities
+    if (q.includes('hostel') || q.includes('mess') || q.includes('room')) {
+      return {
+        content: `🏢 **Campus Hostel & Accommodation Amenities**:\n\n• **Hostel Wings**: Boys Hostel (Aryabhatta, APJ Abdul Kalam) & Girls Hostel (Kalpana Chawla, Gargi).\n• **Features**: High-speed campus Wi-Fi, 24/7 security & biometric attendance, multi-cuisine hygienic dining mess, laundry facilities.\n• **Gate Pass System**: Digital barcode gate passes with instant parent & warden SMS verification.`,
+      };
+    }
 
     // 1. Attendance check
     if (q.includes('my attendance') || q.includes('attendance percentage')) {

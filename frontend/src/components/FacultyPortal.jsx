@@ -851,17 +851,13 @@ export default function FacultyPortal({ account, onLogout }) {
               <BookOpen size={17} /> My Subjects
             </button>
             <button
-<<<<<<< HEAD
               className={`faculty-nav-btn ${activeTab === 'timetable' ? 'active' : ''}`}
               onClick={() => setActiveTab('timetable')}
             >
               <Calendar size={17} color="#2563eb" /> Teaching Timetable
             </button>
             <button
-              className={`faculty-nav-btn ${activeTab === 'digital-evaluation' ? 'active' : ''}`}
-=======
               className={`faculty-nav-btn evaluation-btn ${activeTab === 'digital-evaluation' ? 'active' : ''}`}
->>>>>>> origin/somya
               onClick={() => setActiveTab('digital-evaluation')}
             >
               <FileText size={17} /> Answer Sheet Evaluation

@@ -97,18 +97,6 @@
 }
 
 .hostel-sidebar {
-<<<<<<< HEAD
-  background: #ffffff;
-  border-right: 1px solid #e2e8f0;
-  padding: 1.25rem 0.75rem 3rem;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow-y: auto;
-  max-height: calc(100vh - 65px);
-  position: sticky;
-  top: 65px;
-=======
   background: #091326;
   background: linear-gradient(180deg, #091326 0%, #0b1a36 100%);
   border-right: 1px solid #1a2a44;
@@ -125,6 +113,10 @@
 
 .hostel-sidebar::-webkit-scrollbar {
   width: 5px;
+}
+
+.hostel-sidebar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .hostel-sidebar::-webkit-scrollbar-thumb {
@@ -167,20 +159,6 @@
 .hostel-sidebar-close:hover {
   background: rgba(255, 255, 255, 0.2);
   color: #ffffff;
->>>>>>> origin/somya
-}
-
-.hostel-sidebar::-webkit-scrollbar {
-  width: 5px;
-}
-
-.hostel-sidebar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.hostel-sidebar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
 }
 
 .hostel-nav-category {

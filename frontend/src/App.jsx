@@ -593,6 +593,9 @@ function App() {
   // Otherwise render the Login Page first
   return (
     <>
+      <UniversalWhatsAppLauncher account={account} hideTrigger={true} />
+      <ApnaAIChatbot account={account} hideTrigger={true} />
+      <UnifiedFloatingAssistant account={account} />
       <main className="erp-split-page">
         {/* Left hero panel (Campus photo at golden hour with dark vignette) */}
         <div className="erp-hero-panel">

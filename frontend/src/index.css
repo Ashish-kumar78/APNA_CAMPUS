@@ -917,3 +917,150 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.35) !important;
 }
 
+/* ==========================================================================
+   UNIVERSAL ENTERPRISE PRINT ENGINE
+   Ensures crystal-clear, zero-blank printing across all modals, slips,
+   passes, cards, receipts, dossiers, and reports.
+   ========================================================================== */
+@media print {
+  @page {
+    margin: 10mm 12mm;
+    size: auto;
+  }
+
+  /* Reset document background & contrast */
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-family: inherit !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide screen chrome, navigation, headers, footers & action buttons */
+  .admin-sidebar,
+  .erp-sidebar,
+  .hostel-sidebar,
+  .campus-sidebar,
+  .admin-header,
+  .erp-header,
+  .hostel-header,
+  .role-dash-header,
+  .campus-nav-toggle-btn,
+  .campus-logout-btn,
+  .admin-modal-footer,
+  .role-modal-footer,
+  .erp-modal-footer,
+  .lib-modal-footer,
+  .exam-modal-footer,
+  .admin-table-action-btn,
+  .role-notif-close,
+  .role-dossier-print-btn,
+  .portal-quick-actions,
+  .no-print {
+    display: none !important;
+  }
+
+  /* When an admin modal is open (e.g. Hostel Resident Slip, Fee Receipt, Digital Pass):
+     Hide background portal chrome and tables so only the modal slip prints on clean paper */
+  body:has(.admin-modal-backdrop) .hostel-header,
+  body:has(.admin-modal-backdrop) .hostel-layout,
+  body:has(.admin-modal-backdrop) .admin-portal-header,
+  body:has(.admin-modal-backdrop) .admin-sidebar,
+  body:has(.admin-modal-backdrop) .admin-main-wrap,
+  body:has(.admin-modal-backdrop) .admin-portal-content,
+  body:has(.admin-modal-backdrop) .erp-sidebar,
+  body:has(.admin-modal-backdrop) .erp-header,
+  body:has(.admin-modal-backdrop) .erp-main,
+  body:has(.admin-modal-backdrop) .erp-layout,
+  body:has(.role-modal-overlay) .role-dash-page > *:not(.role-modal-overlay),
+  body:has(.erp-modal-overlay) .erp-main,
+  body:has(.erp-modal-overlay) .erp-header,
+  body:has(.erp-modal-overlay) .erp-sidebar {
+    display: none !important;
+  }
+
+  /* Universal Modal Backdrop Reset for Clean Printing */
+  .admin-modal-backdrop,
+  .role-modal-overlay,
+  .erp-modal-overlay {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    z-index: auto !important;
+  }
+
+  /* Universal Modal Card & Slip Print Styling */
+  .admin-modal-card,
+  .role-modal-card,
+  .role-dossier-modal-card,
+  .erp-modal-card,
+  .digital-pass-card,
+  .printable-admit-sheet,
+  .lib-receipt-box,
+  .bonafide-document-sheet {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    margin: 0 auto !important;
+    background: #ffffff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .admin-modal-body,
+  .role-modal-body,
+  .erp-modal-body {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 1.25rem !important;
+  }
+
+  .admin-modal-header,
+  .role-modal-header,
+  .erp-modal-header {
+    border-bottom: 1.5px solid #cbd5e1 !important;
+    padding: 1rem 1.25rem !important;
+    background: #f8fafc !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Card and table print clarity */
+  .admin-card,
+  .admin-table-container {
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  /* Preserve all colored tags, badges, and avatars in print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+

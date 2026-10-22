@@ -161,6 +161,7 @@ model Faculty {
   updatedAt        DateTime @updatedAt
 
   courseAssignments FacultyAssignment[]
+  availabilities    FacultyAvailability[]
 }
 
 model Hod {

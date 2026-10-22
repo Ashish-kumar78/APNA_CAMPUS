@@ -27,10 +27,11 @@ import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 import { erpStore } from '../services/erpStore.js';
 import { api } from '../services/api.js';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 
 export default function StaffPortal({ account, onLogout, onSwitchRole }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('tickets'); // tickets, visitors, inventory
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, tickets, visitors, inventory
   const [staffWorkspaces, setStaffWorkspaces] = useState(() => erpStore.getStaffWorkspaces());
   const [toastMessage, setToastMessage] = useState('');
 
@@ -191,6 +192,14 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
 
           <nav className="erp-sidebar-nav">
             <button
+              className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveTab('dashboard')}
+            >
+              <Monitor size={18} />
+              <span>Staff &amp; Lab Dashboard</span>
+              <span className="erp-nav-badge" style={{ background: '#14b8a6', color: '#ffffff' }}>Live</span>
+            </button>
+            <button
               className={`erp-nav-item ${activeTab === 'take-attendance' ? 'active' : ''}`}
               onClick={() => setActiveTab('take-attendance')}
             >
@@ -243,6 +252,22 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
 
       {/* Main Content */}
       <main className="erp-main-content">
+        {activeTab === 'dashboard' ? (
+          <RoleDashboardLanding
+            roleKey="staff"
+            account={account}
+            onLogout={onLogout}
+            onSwitchRole={onSwitchRole}
+            onToggleSidebar={() => setSidebarOpen(o => !o)}
+            onNavigate={(target) => {
+              if (target === 'equipment') setActiveTab('tickets');
+              else if (target === 'schedule') setActiveTab('take-attendance');
+              else if (target === 'maintenance') setActiveTab('tickets');
+              else setActiveTab('tickets');
+            }}
+          />
+        ) : (
+          <>
         <header className="erp-header">
           <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {!sidebarOpen && (
@@ -631,6 +656,8 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
             <ReportGenerationModule account={account} role="staff" />
           )}
         </div>
+          </>
+        )}
       </main>
     </div>
   );

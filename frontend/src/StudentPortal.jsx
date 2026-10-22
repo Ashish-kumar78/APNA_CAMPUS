@@ -722,22 +722,6 @@ function StudentPortal({ account, onLogout }) {
             </div>
 
             <div className="campus-header-actions">
-              {/* WhatsApp / Campus Connect Button - Side of Notifications Panel */}
-              <div style={{ position: 'relative' }}>
-                <button
-                  className="campus-icon-btn campus-whatsapp-header-btn"
-                  type="button"
-                  aria-label="Campus Connect (College WhatsApp)"
-                  title="Campus Connect • College WhatsApp"
-                  onClick={() => setWhatsappDrawerOpen((prev) => !prev)}
-                >
-                  <MessageSquare size={18} className="whatsapp-header-icon" />
-                  {chatUnreadCount > 0 && (
-                    <span className="campus-whatsapp-header-badge">{chatUnreadCount}</span>
-                  )}
-                </button>
-              </div>
-
               {/* Notification Bell */}
               <div style={{ position: 'relative' }}>
                 <button

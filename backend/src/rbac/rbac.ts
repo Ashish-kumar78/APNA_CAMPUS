@@ -44,10 +44,22 @@ export const rolePolicies: Record<string, RolePolicy> = {
       'departments.view',
       'academics.view',
       'fees.view_summary',
+      'fees.view_budgets',
+      'budget.view',
+      'budget.approve',
       'placement.view_stats',
       'hostel.view_stats',
       'transport.view_stats',
       'attendance.view_summary',
+      'approvals.review',
+      'approvals.action',
+      'approvals.return',
+      'governance.view',
+      'governance.acknowledge',
+      'audit.view',
+      'exceptions.view',
+      'notices.view',
+      'notices.acknowledge',
     ],
   },
 
@@ -74,7 +86,7 @@ export const rolePolicies: Record<string, RolePolicy> = {
     ],
   },
 
-  // 4. Admin Ops: Operational student records, admissions, rosters, certificates, ID cards.
+  // 4. Admin Ops: Operational student records, admissions, rosters, certificates, ID cards, institutional administration.
   admin: {
     scope: 'COLLEGE',
     permissions: [
@@ -91,6 +103,17 @@ export const rolePolicies: Record<string, RolePolicy> = {
       'reports.view',
       'reports.generate',
       'reports.export',
+      'analytics.view',
+      'academics.view',
+      'departments.manage',
+      'users.create',
+      'users.edit',
+      'users.disable',
+      'users.activate',
+      'users.reset_password',
+      'system.config',
+      'system.backup',
+      'audit.view',
     ],
   },
 

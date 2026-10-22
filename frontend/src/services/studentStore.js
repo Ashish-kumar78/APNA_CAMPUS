@@ -182,6 +182,134 @@ function normalizeStudentData(student, index) {
   };
 }
 
+// Rakesh Das complete record (Roll 01, Reg 2305201001)
+export const rakeshDasStudent = {
+  id: 'std-1',
+  studentId: 'GIFT-2023-1001',
+  rollNumber: '01',
+  registrationNumber: '2305201001',
+  name: 'Rakesh Das',
+  firstName: 'Rakesh',
+  middleName: '—',
+  lastName: 'Das',
+  title: 'Mr.',
+  gender: 'MALE',
+  email: 'rakesh.das@gift.edu.in',
+  personalEmail: 'rakesh.das@gmail.com',
+  phone: '+91 98610 23010',
+  department: 'Computer Science & Engineering',
+  deptCode: 'CSE',
+  program: 'B.Tech',
+  course: 'Bachelor of Technology',
+  currentSemester: 5,
+  semester: 'Semester 5',
+  section: 'Section A',
+  sectionName: 'CSE · Section A',
+  academicSection: 'CSE · Section A',
+  batch: 'BTECH 2023–2027',
+  academicYear: '2023-2027',
+  status: 'Active',
+  lifecycleStatus: 'ACTIVE',
+  cgpa: '8.72',
+  attendance: 88,
+  lastClassAttendanceDate: '15/10/2026',
+  lastHostelAttendanceDate: '16/10/2026',
+  backlogCount: 0,
+  enrolledSubjects: initialSubjects.filter(s => s.semester === 5 && (s.department === 'CSE' || s.deptCode === 'CSE')),
+
+  admissionCategory: 'General',
+  dob: '2005-06-12',
+  dobFormatted: '12-06-2005',
+  nationality: 'Indian',
+  caste: 'General',
+  religion: 'HINDU',
+  bloodGroup: 'B+',
+  birthplace: 'Bargarh, Odisha',
+  identificationMark: 'Mole on right collarbone',
+  thumbId: 'GFT2305201001',
+  hostel: 'Yes',
+  transport: 'Yes',
+  lunch: 'N',
+  nss: 'Yes',
+  languagesKnown: 'Odia, English, Hindi',
+  hobbies: 'Competitive Programming, Chess',
+
+  branch: 'Computer Science & Engineering',
+  house: 'PRATAP',
+  labGroup: '1',
+  honors: 'Yes',
+  minor: 'No',
+  valueAdded1: 'Cloud Computing & Distributed Systems',
+  valueAdded2: 'Full-Stack Web Development',
+  valueAdded3: 'Cybersecurity Fundamentals',
+  admissionDate: '2023-08-05',
+  admissionDateFormatted: '05-08-2023',
+  entranceExam: 'JEE (Main) / OJEE',
+  rank: '1840 (State Merit)',
+  studentStatus: 'Active',
+  activeStatus: 'Active',
+
+  qualifications: [
+    { qualification: '10th', institute: 'Bargarh High School', year: '2021', marks: '88.40%' },
+    { qualification: '12th', institute: 'Panchayat Junior College, Bargarh', year: '2023', marks: '85.60%' },
+    { qualification: 'ITI', institute: 'Not applicable', year: '—', marks: '—' },
+    { qualification: 'Diploma', institute: 'Not applicable', year: '—', marks: '—' },
+    { qualification: '+3', institute: 'Not applicable', year: '—', marks: '—' },
+    { qualification: 'BCA', institute: 'Not applicable', year: '—', marks: '—' },
+    { qualification: 'BBA', institute: 'Not applicable', year: '—', marks: '—' },
+    { qualification: 'BTECH', institute: 'Apna Campus Autonomous', year: '2027', marks: 'In progress (CGPA 8.72)' },
+  ],
+
+  fatherName: 'Sanjay Das',
+  fatherRelationship: 'Father',
+  fatherOccupation: 'GOVERNMENT SERVICE',
+  fatherPhone: '+91 94370 10001',
+  fatherLandline: '',
+  fatherIncome: '3.5 LAK',
+  fatherEmail: 'sanjay.das@gov.in',
+  fatherQualification: 'Graduate',
+  fatherHomeAddress: 'Ward 4, Main Road, Bargarh, Odisha - 768028',
+  fatherOfficeAddress: 'Collectorate Complex, Bargarh',
+  fatherIsEmergency: 'Yes',
+
+  motherName: 'Minati Das',
+  motherRelationship: 'Mother',
+  motherOccupation: 'HOMEMAKER',
+  motherPhone: '+91 98610 23011',
+  motherLandline: '',
+  motherIncome: '0',
+  motherEmail: '',
+  motherQualification: 'Graduate',
+  motherHomeAddress: 'Ward 4, Main Road, Bargarh, Odisha - 768028',
+  motherOfficeAddress: '',
+  motherIsEmergency: 'No',
+
+  currAddress: 'Room 101, Gandhi Boys Residence (Hostel 1), Apna Campus, Bhubaneswar',
+  currCity: 'Bhubaneswar',
+  currState: 'Odisha',
+  currCountry: 'India',
+  currHouseNo: 'Hostel 1, Room 101',
+  currPin: '752054',
+  currPhone: '+91 98610 23010',
+
+  permAddress: 'Ward 4, Main Road, Bargarh, Odisha',
+  permCity: 'Bargarh',
+  permState: 'Odisha',
+  permCountry: 'India',
+  permHouseNo: 'House No. 42',
+  permPin: '768028',
+  permPhone: '+91 94370 10001',
+
+  documents: {
+    passportPhoto: { name: 'Passport-size photograph', status: 'Uploaded', url: '/passport_photo_male.svg' },
+    govtIdProof: { name: 'Aadhaar Card', status: 'Uploaded', type: 'Aadhaar Card' },
+    panCard: { name: 'PAN Card', status: 'Uploaded', type: 'PAN Card' },
+    nptelCert: { name: 'NPTEL Certificate', status: 'Uploaded', type: 'NPTEL Certificate' },
+    class10Cert: { name: 'Class 10 certificate', status: 'Uploaded', board: 'BSE Odisha / CBSE' },
+    class12Cert: { name: 'Class 12 certificate', status: 'Uploaded', board: 'CHSE Odisha / CBSE' },
+  }
+};
+
 /**
  * Fetch all students from storage or initialize
  */
@@ -191,7 +319,12 @@ export function getAllStudents() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((s, idx) => normalizeStudentData(s, idx));
+        const hasRakesh = parsed.some(s => s.registrationNumber === '2305201001' && (s.name || '').includes('Rakesh'));
+        const hasBishnu = parsed.some(s => s.registrationNumber === '2401432265');
+        const hasAmit = parsed.some(s => s.registrationNumber === '2305201002');
+        if (hasRakesh && hasBishnu && hasAmit) {
+          return parsed.map((s, idx) => normalizeStudentData(s, idx));
+        }
       }
     }
   } catch (e) {
@@ -199,82 +332,102 @@ export function getAllStudents() {
   }
 
   // Initialize with generateAllStudents and demo details
-  const initialList = generateAllStudents().map((s, idx) => {
-    if (s.id === 'std-1' || s.rollNumber === '01') {
-      return normalizeStudentData({ ...s, ...defaultDemoStudent }, idx);
-    }
-    const rollNum = parseInt(s.rollNumber) || (idx + 1);
-    const fName = s.name.split(' ')[0];
-    const isFemale = FEMALE_FIRST_NAMES.has(fName);
-    return normalizeStudentData({
-      ...s,
-      registrationNumber: `230520${s.rollNumber.padStart(4, '0')}`,
-      admissionCategory: 'General',
-      title: isFemale ? 'Ms.' : 'Mr.',
-      firstName: fName,
-      lastName: s.name.split(' ').slice(1).join(' ') || 'Kumar',
-      middleName: 'Not provided',
-      gender: isFemale ? 'Female' : 'Male',
-      dob: '2005-04-10',
-      dobFormatted: '10-04-2005',
-      nationality: 'Indian',
-      caste: 'General',
-      religion: 'Hindu',
-      bloodGroup: 'B+',
-      birthplace: 'Bhubaneswar, Odisha',
-      identificationMark: 'Not provided',
-      thumbId: `GFT230520${s.rollNumber.padStart(4, '0')}`,
-      hostel: 'No',
-      transport: 'No',
-      lunch: 'No',
-      nss: 'No',
-      languagesKnown: 'Odia, English, Hindi',
-      hobbies: 'Not provided',
+  const generated = generateAllStudents();
+  const initialList = [
+    normalizeStudentData(rakeshDasStudent, 0),
+    ...generated.slice(1).map((s, idx) => {
+      const rollNum = idx + 2;
+      const fName = s.name.split(' ')[0];
+      const lName = s.name.split(' ').slice(1).join(' ') || 'Kumar';
+      const isFemale = FEMALE_FIRST_NAMES.has(fName);
+      const regNo = `230520${1000 + rollNum}`;
+      return normalizeStudentData({
+        ...s,
+        rollNumber: String(rollNum).padStart(2, '0'),
+        registrationNumber: regNo,
+        studentId: `GIFT-2023-${1000 + rollNum}`,
+        admissionCategory: 'General',
+        title: isFemale ? 'Ms.' : 'Mr.',
+        firstName: fName,
+        lastName: lName,
+        middleName: '—',
+        gender: isFemale ? 'Female' : 'Male',
+        dob: '2005-04-10',
+        dobFormatted: '10-04-2005',
+        nationality: 'Indian',
+        caste: 'General',
+        religion: 'Hindu',
+        bloodGroup: 'B+',
+        birthplace: `${lName === 'Das' ? 'Bargarh' : lName === 'Nayak' ? 'Cuttack' : lName === 'Sahoo' ? 'Puri' : 'Bhubaneswar'}, Odisha`,
+        identificationMark: 'Not provided',
+        thumbId: `GFT${regNo}`,
+        hostel: rollNum % 2 === 0 ? 'Yes' : 'No',
+        transport: rollNum % 3 === 0 ? 'Yes' : 'No',
+        lunch: 'No',
+        nss: rollNum % 4 === 0 ? 'Yes' : 'No',
+        languagesKnown: 'Odia, English, Hindi',
+        hobbies: 'Coding, Reading',
 
-      course: 'Bachelor of Technology',
-      batch: 'BTECH 2023–2027',
-      branch: s.department,
-      academicSection: `${s.deptCode || 'CSE'} · ${s.section}`,
-      house: 'Not assigned',
-      labGroup: '1',
-      honors: 'No',
-      minor: 'No',
-      valueAdded1: 'Not selected',
-      valueAdded2: 'Not selected',
-      valueAdded3: 'Not selected',
-      admissionDate: '2023-08-05',
-      admissionDateFormatted: '05-08-2023',
-      entranceExam: 'JEE (Main)',
-      rank: 'Not provided',
-      studentStatus: s.status,
-      activeStatus: s.status,
+        course: 'Bachelor of Technology',
+        batch: 'BTECH 2023–2027',
+        branch: s.department,
+        academicSection: `${s.deptCode || 'CSE'} · ${s.section}`,
+        house: 'PRATAP',
+        labGroup: '1',
+        honors: 'No',
+        minor: 'No',
+        valueAdded1: 'Cloud Architecture & DevOps',
+        valueAdded2: 'Full-Stack React & NestJS',
+        valueAdded3: 'Not selected',
+        admissionDate: '2023-08-05',
+        admissionDateFormatted: '05-08-2023',
+        entranceExam: 'JEE (Main) / OJEE',
+        rank: `${1800 + rollNum * 12} (State Merit)`,
+        studentStatus: s.status,
+        activeStatus: s.status,
 
-      qualifications: defaultDemoStudent.qualifications,
+        qualifications: [
+          { qualification: '10th', institute: 'Secondary Board High School', year: '2021', marks: `${(80 + (rollNum % 15)).toFixed(2)}%` },
+          { qualification: '12th', institute: 'Junior Science College', year: '2023', marks: `${(78 + (rollNum % 18)).toFixed(2)}%` },
+          { qualification: 'ITI', institute: 'Not applicable', year: '—', marks: '—' },
+          { qualification: 'Diploma', institute: 'Not applicable', year: '—', marks: '—' },
+          { qualification: '+3', institute: 'Not applicable', year: '—', marks: '—' },
+          { qualification: 'BCA', institute: 'Not applicable', year: '—', marks: '—' },
+          { qualification: 'BBA', institute: 'Not applicable', year: '—', marks: '—' },
+          { qualification: 'BTECH', institute: 'Apna Campus Autonomous', year: '2027', marks: `In progress (CGPA ${s.cgpa})` },
+        ],
 
-      fatherName: `${s.name.split(' ').slice(1).join(' ') || 'Guardian'} Senior`,
-      fatherRelationship: 'Father',
-      fatherPhone: s.phone,
-      fatherEmail: `guardian.${s.email}`,
-      motherName: 'Mother Guardian',
-      motherRelationship: 'Mother',
-      motherPhone: s.phone,
-      motherEmail: `mother.${s.email}`,
+        fatherName: `${lName === 'Das' ? 'Sanjay' : lName === 'Nayak' ? 'Ramesh' : lName === 'Sahoo' ? 'Maheswar' : lName === 'Patra' ? 'Dillip' : 'Kailash'} ${lName}`,
+        fatherRelationship: 'Father',
+        fatherOccupation: 'Business / Service',
+        fatherPhone: `+91 ${9437000000 + (rollNum * 111) % 900000}`,
+        fatherEmail: `guardian.${s.email}`,
+        fatherIncome: '3.5 LAK',
+        fatherIsEmergency: 'Yes',
+        motherName: `${lName === 'Das' ? 'Minati' : lName === 'Nayak' ? 'Geeta' : lName === 'Sahoo' ? 'Sarojini' : lName === 'Patra' ? 'Kabita' : 'Sita'} ${lName}`,
+        motherRelationship: 'Mother',
+        motherOccupation: 'Homemaker',
+        motherPhone: `+91 ${9438000000 + (rollNum * 111) % 900000}`,
+        motherEmail: `mother.${s.email}`,
+        motherIsEmergency: 'No',
 
-      permAddress: 'Campus Road, Gandarpur',
-      permCity: 'Bhubaneswar',
-      permState: 'Odisha',
-      permCountry: 'India',
-      permPin: '751010',
+        permAddress: `Ward ${1 + (rollNum % 15)}, Main Road, ${lName === 'Das' ? 'Bargarh' : lName === 'Nayak' ? 'Cuttack' : lName === 'Sahoo' ? 'Puri' : 'Bhubaneswar'}, Odisha`,
+        permCity: lName === 'Das' ? 'Bargarh' : lName === 'Nayak' ? 'Cuttack' : lName === 'Sahoo' ? 'Puri' : 'Bhubaneswar',
+        permState: 'Odisha',
+        permCountry: 'India',
+        permPin: '751010',
 
-      currAddress: 'Campus Hostel, Apna Campus',
-      currCity: 'Bhubaneswar',
-      currState: 'Odisha',
-      currCountry: 'India',
-      currPin: '751054',
+        currAddress: `Room ${100 + (rollNum % 25) + 1}, Gandhi Boys Residence (Hostel 1), Apna Campus`,
+        currCity: 'Bhubaneswar',
+        currState: 'Odisha',
+        currCountry: 'India',
+        currPin: '752054',
 
-      documents: defaultDemoStudent.documents
-    }, idx);
-  });
+        documents: defaultDemoStudent.documents
+      }, idx + 1);
+    }),
+    normalizeStudentData({ ...defaultDemoStudent, id: 'std-bishnu' }, 92)
+  ];
 
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(initialList));
@@ -443,8 +596,10 @@ export function findStudentByQuery(query) {
     (s.rollNumber && s.rollNumber.toLowerCase() === q) ||
     (s.email && s.email.toLowerCase() === q) ||
     (s.name && s.name.toLowerCase() === q) ||
-    (s.studentId && s.studentId.toLowerCase() === q)
-  );
+    (s.studentId && s.studentId.toLowerCase() === q) ||
+    (q === '2305201001' && (s.rollNumber === '01' || s.rollNumber === '1' || s.registrationNumber === '2305201001')) ||
+    (q === '2401432265' && (s.registrationNumber === '2401432265' || s.id === 'std-bishnu'))
+  ) || null;
 }
 
 // ── CAMPUS DOCUMENT STORE ──────────────────────────────────────────────────────

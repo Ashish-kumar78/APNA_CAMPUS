@@ -38,10 +38,11 @@ import './SuperAdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import { erpStore } from '../services/erpStore.js';
 import api from '../services/api.js';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 
 export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('circulation'); // circulation, catalog, inventory, reservations, fines, acquisitions, digital, reports
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, circulation, catalog, inventory, reservations, fines, acquisitions, digital, reports
   const [toastMessage, setToastMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -628,6 +629,15 @@ export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
 
           <nav className="erp-sidebar-nav">
             <button
+              className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveTab('dashboard')}
+            >
+              <Layers size={18} />
+              <span>Library Dashboard</span>
+              <span className="erp-nav-badge" style={{ background: '#10b981', color: '#ffffff' }}>Live</span>
+            </button>
+
+            <button
               className={`erp-nav-item ${activeTab === 'circulation' ? 'active' : ''}`}
               onClick={() => setActiveTab('circulation')}
             >
@@ -696,6 +706,22 @@ export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
 
       {/* Main Content Area */}
       <main className="erp-main-content">
+        {activeTab === 'dashboard' ? (
+          <RoleDashboardLanding
+            roleKey="library"
+            account={account}
+            onLogout={onLogout}
+            onSwitchRole={onSwitchRole}
+            onToggleSidebar={() => setSidebarOpen(o => !o)}
+            onNavigate={(target) => {
+              if (target === 'lib-search') setActiveTab('catalog');
+              else if (target === 'lib-issued') setActiveTab('circulation');
+              else if (target === 'lib-overdue') setActiveTab('fines');
+              else setActiveTab('catalog');
+            }}
+          />
+        ) : (
+          <>
         <header className="erp-header">
           <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             {!sidebarOpen && (
@@ -1561,6 +1587,8 @@ export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
             </div>
           )}
         </div>
+          </>
+        )}
       </main>
 
       {/* MODAL 1: ADD CATALOG TITLE */}

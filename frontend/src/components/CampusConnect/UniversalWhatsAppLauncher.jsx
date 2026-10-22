@@ -4,7 +4,7 @@ import CampusConnect from './CampusConnect.jsx';
 import { campusConnectStore } from '../../services/campusConnectStore.js';
 import './UniversalWhatsAppLauncher.css';
 
-export default function UniversalWhatsAppLauncher({ account }) {
+export default function UniversalWhatsAppLauncher({ account, hideTrigger = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [unreadCount, setUnreadCount] = useState(() => campusConnectStore.getTotalUnreadCount());
@@ -29,7 +29,7 @@ export default function UniversalWhatsAppLauncher({ account }) {
   return (
     <>
       {/* Floating WhatsApp Action Button - Round Circular Shape */}
-      {!isOpen && (
+      {!isOpen && !hideTrigger && (
         <button
           type="button"
           className="universal-wa-trigger-btn"

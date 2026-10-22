@@ -1179,28 +1179,59 @@ export function downloadTimetablePdf(scheduleData = {}) {
   doc.setFillColor(...SECONDARY_COLOR);
   doc.rect(0, 24, doc.internal.pageSize.getWidth(), 2, 'F');
 
+  const title = scheduleData?.title || 'APNA CAMPUS • WEEKLY ACADEMIC SCHEDULE';
+  const subtitle = scheduleData?.subtitle || `Class Timetable · ${scheduleData?.department || 'CSE'} · ${scheduleData?.semester || 'Semester 5'} (${scheduleData?.section || 'Section A'}) · Autumn 2026-27`;
+
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text('APNA CAMPUS • DEPARTMENT OF CSE', 14, 11);
+  doc.text(title.toUpperCase(), 14, 11);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(203, 213, 225);
-  doc.text('Master Weekly Academic Class Routine • 5th Semester B.Tech (Section A) • Autumn 2026', 14, 18);
+  doc.text(subtitle, 14, 18);
 
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const tableData = [
-    ['09:30 - 10:25', 'Artificial Intelligence (CS501)\nRoom 301 · Dr. P. Nayak', 'Cloud Computing (CS503)\nRoom 301 · Prof. M. Das', 'Operating Systems (CS502)\nRoom 301 · Dr. K. Rao', 'Compiler Design (CS504)\nRoom 301 · Prof. S. Jena', 'Machine Learning (CS502)\nRoom 301 · Dr. R. Mishra'],
-    ['10:25 - 11:20', 'Operating Systems (CS502)\nRoom 301 · Dr. K. Rao', 'Compiler Design (CS504)\nRoom 301 · Prof. S. Jena', 'Artificial Intelligence (CS501)\nRoom 301 · Dr. P. Nayak', 'Machine Learning (CS502)\nRoom 301 · Dr. R. Mishra', 'Cloud Computing (CS503)\nRoom 301 · Prof. M. Das'],
-    ['11:30 - 12:25', 'Machine Learning (CS502)\nRoom 301 · Dr. R. Mishra', 'Artificial Intelligence (CS501)\nRoom 301 · Dr. P. Nayak', 'Compiler Design (CS504)\nRoom 301 · Prof. S. Jena', 'Cloud Computing (CS503)\nRoom 301 · Prof. M. Das', 'Operating Systems (CS502)\nRoom 301 · Dr. K. Rao'],
-    ['12:25 - 01:20', 'Compiler Design (CS504)\nRoom 301 · Prof. S. Jena', 'AI Lab (Group 1)\nLab 4 · Dr. P. Nayak', 'Cloud Lab (Group 1)\nLab 2 · Prof. M. Das', 'AI Lab (Group 2)\nLab 4 · Dr. P. Nayak', 'Seminar / Aptitude Prep\nAuditorium · T&P Team'],
-    ['01:20 - 02:10', '— LUNCH BREAK —', '— LUNCH BREAK —', '— LUNCH BREAK —', '— LUNCH BREAK —', '— LUNCH BREAK —'],
-    ['02:10 - 03:05', 'Cloud Lab (Group 2)\nLab 2 · Prof. M. Das', 'Library / Self Study\nCentral Library', 'Project Phase-1 Mentoring\nProject Lab · Faculty Guides', 'Technical Coding Drill\nLab 5 · Coding Cell', 'Sports / Co-Curricular\nCampus Ground'],
-    ['03:05 - 04:00', 'Project Phase-1 Mentoring\nProject Lab · Faculty Guides', 'Research Colloquium\nSeminar Hall', 'Mentorship & Counseling\nFaculty Chambers', 'Club Activities\nSAC Building', 'Open Elective Lecture\nLH-2']
-  ];
+  const days = scheduleData?.days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const entries = scheduleData?.entries || [];
+
+  let tableData = [];
+  if (entries.length > 0) {
+    const slotTimes = scheduleData?.slotTimes || [
+      '08:30 - 09:30', '09:30 - 10:30', '10:30 - 11:30', '11:30 - 12:30',
+      '12:30 - 01:30', '01:30 - 02:30', '02:30 - 03:30', '03:30 - 04:30'
+    ];
+
+    tableData = slotTimes.map((timeStr, pIdx) => {
+      const row = [timeStr];
+      for (const day of days) {
+        if (pIdx === 4) {
+          row.push('— LUNCH BREAK —');
+          continue;
+        }
+        const item = entries.find(e => e.dayOfWeek === day && e.periodIndex === pIdx);
+        if (item) {
+          const typeStr = item.sessionType === 'LAB' ? '[LAB]' : '[TH]';
+          row.push(`${item.subjectCode} ${typeStr}\n${item.subjectName}\nRm: ${item.roomNumber || 'TBD'} · ${item.facultyName || 'TBD'}`);
+        } else {
+          row.push('—');
+        }
+      }
+      return row;
+    });
+  } else {
+    tableData = [
+      ['08:30 - 09:30', 'CS501 (AI)\nRoom 301 · Dr. Mohapatra', 'CS503 (Cloud)\nRoom 205 · Prof. Nayak', 'CS504 (Compiler)\nRoom 204 · Dr. Panda', 'CS501 (AI)\nRoom 301 · Dr. Mohapatra', 'CS502 (ML)\nRoom 302 · Dr. Rath', 'Extra / Remedial\nRoom 201'],
+      ['09:30 - 10:30', 'CS502 (ML)\nRoom 302 · Dr. Rath', 'CS501 (AI)\nRoom 301 · Dr. Mohapatra', 'CS501 (AI)\nRoom 301 · Dr. Mohapatra', 'CS504 (Compiler)\nRoom 204 · Dr. Panda', 'CS501 (AI)\nRoom 301 · Dr. Mohapatra', 'Seminar Prep\nAuditorium'],
+      ['10:30 - 11:30', 'CS504 (Compiler)\nRoom 204 · Dr. Panda', 'CS502 (ML)\nRoom 302 · Dr. Rath', 'CS503 (Cloud)\nRoom 205 · Prof. Nayak', 'CS503 (Cloud)\nRoom 205 · Prof. Nayak', 'CS504 (Compiler)\nRoom 204 · Dr. Panda', 'Mentorship\nSAC Room'],
+      ['11:30 - 12:30', 'CS503 (Cloud)\nRoom 205 · Prof. Nayak', 'CS504 (Compiler)\nRoom 204 · Dr. Panda', 'CS502 (ML)\nRoom 302 · Dr. Rath', 'CS502 (ML)\nRoom 302 · Dr. Rath', 'CS503 (Cloud)\nRoom 205 · Prof. Nayak', 'Self Study\nLibrary'],
+      ['12:30 - 01:30', '— LUNCH BREAK —', '— LUNCH BREAK —', '— LUNCH BREAK —', '— LUNCH BREAK —', '— LUNCH BREAK —', '— LUNCH BREAK —'],
+      ['01:30 - 02:30', 'CS505 AI Lab\nCS Lab-1 · Dr. Mohapatra', 'CS506 Project\nLab-3 · Dr. Mohanty', 'CS Lab-2\nDr. Rath', 'CS505 AI Lab\nCS Lab-1 · Dr. Mohapatra', 'CS506 Project\nLab-3 · Dr. Mohanty', 'Club Activities\nSAC'],
+      ['02:30 - 03:30', 'CS505 AI Lab\nCS Lab-1 · Dr. Mohapatra', 'CS506 Project\nLab-3 · Dr. Mohanty', 'Research Colloquium\nSeminar Hall', 'CS505 AI Lab\nCS Lab-1 · Dr. Mohapatra', 'CS506 Project\nLab-3 · Dr. Mohanty', 'Sports / Co-Curricular\nGrounds'],
+    ];
+  }
 
   renderTable(doc, {
-    startY: 32,
+    startY: 30,
     head: [['Time Slot', ...days]],
     body: tableData,
     theme: 'grid',
@@ -1209,16 +1240,16 @@ export function downloadTimetablePdf(scheduleData = {}) {
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       fontSize: 8,
-      halign: 'center'
+      halign: 'center',
     },
     bodyStyles: {
-      fontSize: 7,
+      fontSize: 6.8,
       textColor: TEXT_DARK,
-      cellPadding: 2.5
+      cellPadding: 2,
     },
     columnStyles: {
-      0: { cellWidth: 26, fontStyle: 'bold', halign: 'center' }
-    }
+      0: { cellWidth: 24, fontStyle: 'bold', halign: 'center' },
+    },
   });
 
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -1226,10 +1257,11 @@ export function downloadTimetablePdf(scheduleData = {}) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(...TEXT_MUTED);
-  doc.text('Note: 75% minimum attendance is mandatory as per BPUT autonomous norms.', 14, pageHeight - 8);
-  doc.text('Head of Department (CSE) • Apna Campus', pageWidth - 14, pageHeight - 8, { align: 'right' });
+  doc.text('Note: 75% minimum attendance is mandatory as per autonomous AICTE/UGC academic regulations.', 14, pageHeight - 8);
+  doc.text('Approved by Principal / Academic Council • Apna Campus', pageWidth - 14, pageHeight - 8, { align: 'right' });
 
-  doc.save('Class_Timetable_5th_Sem_CSE.pdf');
+  const safeFilename = (scheduleData?.fileName || `${scheduleData?.department || 'CSE'}_${scheduleData?.semester || 'Sem5'}_Timetable`).replace(/\s+/g, '_');
+  doc.save(`${safeFilename}.pdf`);
 }
 
 // -------------------------------------------------------------

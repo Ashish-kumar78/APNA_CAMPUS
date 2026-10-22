@@ -58,6 +58,7 @@ import { api } from '../services/api.js';
 import { feesApi } from '../services/feesApi.js';
 import { useTimeGreeting } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 
 // CSV Export Helper
 function exportToCsv(filename, rows) {
@@ -610,6 +611,20 @@ export default function AccountsPortal({ account, onLogout }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
+            <RoleDashboardLanding
+              roleKey="accounts"
+              account={account}
+              onLogout={onLogout}
+              onNavigate={(target) => {
+                if (target === 'acc-fee') setActiveTab('structure');
+                else if (target === 'acc-verify') setActiveTab('verifications');
+                else if (target === 'acc-txns') setActiveTab('transactions');
+                else setActiveTab('transactions');
+              }}
+            />
+          )}
+
+          {false && activeTab === 'dashboard' && (
             <div>
               <div className="admin-view-header">
                 <div>

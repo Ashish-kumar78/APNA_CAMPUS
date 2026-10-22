@@ -65,6 +65,8 @@ import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
+import TimetableManager from './TimetableManagement/TimetableManager.jsx';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import HodGrievanceMonitoringModule from './HodGrievanceMonitoringModule.jsx';
 import { complaintsApi } from '../services/complaintsApi.js';
 import { notificationsApi } from '../services/notificationsApi.js';
@@ -916,6 +918,12 @@ export default function HodPortal({ account, onLogout }) {
               onClick={() => setActiveTab('notifications')}
             >
               <Megaphone size={17} /> Department Notifications
+            </button>
+            <button
+              className={`hod-nav-btn ${activeTab === 'timetable' ? 'active' : ''}`}
+              onClick={() => setActiveTab('timetable')}
+            >
+              <Calendar size={17} color="#2563eb" /> Timetable &amp; Schedules
             </button>
             <button
               className={`hod-nav-btn ${activeTab === 'report-generation' ? 'active' : ''}`}
@@ -2625,10 +2633,14 @@ export default function HodPortal({ account, onLogout }) {
                   <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f766e', marginTop: '3px' }}>100% Balanced</div>
                   <small style={{ color: '#134e4a' }}>All 48 autonomous courses assigned to active faculty</small>
                 </div>
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '10px' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>TIMETABLE CONFLICTS</span>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669', marginTop: '3px' }}>0 Clashes</div>
-                  <small style={{ color: '#64748b' }}>No overlapping room or lecture slot allocations</small>
+                <div
+                  style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onClick={() => setActiveTab('timetable')}
+                  title="Click to view and manage automated timetable"
+                >
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>TIMETABLE CONFLICTS &amp; SCHEDULES</span>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669', marginTop: '3px' }}>0 Clashes (View &rarr;)</div>
+                  <small style={{ color: '#64748b' }}>Automated OR-Tools Schedule Active</small>
                 </div>
                 <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '10px' }}>
                   <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>EVALUATION SUBMISSIONS</span>
@@ -2865,6 +2877,11 @@ export default function HodPortal({ account, onLogout }) {
                 </table>
               </div>
             </div>
+          )}
+
+          {/* TAB 6B: AUTOMATED TIMETABLE MANAGEMENT */}
+          {activeTab === 'timetable' && (
+            <TimetableManager account={account} />
           )}
 
           {/* TAB 7: DEPARTMENT REPORTS */}

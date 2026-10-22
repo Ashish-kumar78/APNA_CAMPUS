@@ -81,7 +81,7 @@ export default function AccountActivationModal({ initialToken = '', onClose, onA
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 9999,
+        zIndex: 10001,
         padding: '16px',
       }}
     >

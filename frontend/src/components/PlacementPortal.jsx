@@ -38,10 +38,11 @@ import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import { erpStore } from '../services/erpStore.js';
 import { getAllStudents } from '../services/studentStore.js';
 import { api } from '../services/api.js';
+import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 
 export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('drives'); // drives, companies, applicants, offers, stats
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, drives, companies, applicants, offers, stats
 
   // Core Data States
   const [companies, setCompanies] = useState(() => erpStore.getPlacementCompanies());
@@ -543,6 +544,14 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
 
         <nav className="erp-sidebar-nav">
           <button
+            className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <TrendingUp size={18} />
+            <span>Placement Dashboard</span>
+            <span style={{ marginLeft: 'auto', background: '#db2777', color: '#fff', fontSize: '0.68rem', padding: '1px 6px', borderRadius: '10px' }}>Live</span>
+          </button>
+          <button
             className={`erp-nav-item ${activeTab === 'drives' ? 'active' : ''}`}
             onClick={() => setActiveTab('drives')}
           >
@@ -611,6 +620,22 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
 
       {/* Main Content */}
       <main className="erp-main-content">
+        {activeTab === 'dashboard' ? (
+          <RoleDashboardLanding
+            roleKey="placement"
+            account={account}
+            onLogout={onLogout}
+            onSwitchRole={onSwitchRole}
+            onToggleSidebar={() => setSidebarOpen(o => !o)}
+            onNavigate={(target) => {
+              if (target === 'place-drives') setActiveTab('drives');
+              else if (target === 'place-recruiters') setActiveTab('companies');
+              else if (target === 'place-stats') setActiveTab('stats');
+              else setActiveTab('drives');
+            }}
+          />
+        ) : (
+          <>
         <header className="erp-header">
           <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             {!sidebarOpen && (
@@ -1299,6 +1324,8 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
             <ReportGenerationModule account={account} role="placement" />
           )}
         </div>
+          </>
+        )}
       </main>
 
       {/* MODAL 1: SCHEDULE RECRUITMENT DRIVE */}

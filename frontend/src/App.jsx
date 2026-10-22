@@ -47,6 +47,7 @@ import ApnaAIChatbot from './components/Chatbot/ApnaAIChatbot.jsx'
 import UnifiedFloatingAssistant from './components/Common/UnifiedFloatingAssistant.jsx'
 import MarksManagementModule from './marks/MarksManagementModule.jsx'
 import DigitalAnswerSheetEvaluationSystem from './components/DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx'
+import PublicTimetable from './components/PublicTimetable.jsx'
 import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, findStudentByQuery } from './services/studentStore.js'
 import { getTimeGreeting } from './utils/timeGreeting.js'
@@ -320,12 +321,15 @@ function App() {
   const [digitalEvalRole, setDigitalEvalRole] = useState('faculty')
   const [activationModalOpen, setActivationModalOpen] = useState(false)
   const [activationTokenInput, setActivationTokenInput] = useState('')
+  const [showPublicTimetable, setShowPublicTimetable] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash || ''
       const search = window.location.search || ''
-      if (hash.includes('activate?token=')) {
+      if (hash.includes('timetable') || search.includes('timetable')) {
+        setShowPublicTimetable(true)
+      } else if (hash.includes('activate?token=')) {
         const tok = hash.split('activate?token=')[1]?.split('&')[0]
         if (tok) {
           setActivationTokenInput(tok)
@@ -528,6 +532,18 @@ function App() {
     setResetRequested(false)
   }
 
+  // Public Timetable View (1-Click access without requiring login or authentication)
+  if (showPublicTimetable) {
+    return (
+      <PublicTimetable
+        onClose={() => {
+          setShowPublicTimetable(false)
+          clearUrlHash()
+        }}
+      />
+    )
+  }
+
   // Digital Answer Sheet Evaluation System Fullscreen Overlay
   if (showDigitalEvaluation) {
     return (
@@ -704,15 +720,108 @@ function App() {
                 </div>
               </div>
             </div>
+
+            {/* Public Timetable Hero CTA Button */}
+            <div style={{ marginTop: '22px' }}>
+              <button
+                type="button"
+                id="hero-view-timetable-btn"
+                onClick={() => setShowPublicTimetable(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '11px 18px',
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.14)',
+                  border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                  color: '#fff',
+                  fontFamily: "'Outfit', sans-serif",
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25)',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.24)';
+                  e.currentTarget.style.borderColor = '#38bdf8';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                  e.currentTarget.style.transform = 'none';
+                }}
+              >
+                <CalendarDays size={18} color="#38bdf8" />
+                <span>View Public Timetable</span>
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  background: 'rgba(56, 189, 248, 0.25)',
+                  color: '#7dd3fc',
+                  padding: '2px 8px',
+                  borderRadius: '20px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em'
+                }}>No login required</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Right login panel: Clean White Floating Card */}
-        <section className="erp-login-section" aria-label="Sign In">
-          <div className="erp-login-card">
-            <div className="erp-card-brand-header">
-              <h2 className="erp-card-title">Welcome Back</h2>
-              <p className="erp-card-subtitle">Sign in to your Apna Campus account</p>
+      {/* ── Right login panel ── */}
+      <section className="login-panel" aria-labelledby="login-title">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '1rem' }}>
+          <a className="panel-brand" href="#home" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+            <GiftMark size={42} />
+            <span>Apna Campus</span>
+          </a>
+          <button
+            type="button"
+            id="panel-view-timetable-btn"
+            onClick={() => setShowPublicTimetable(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: '1.5px solid rgba(37, 99, 235, 0.25)',
+              background: 'rgba(37, 99, 235, 0.08)',
+              color: '#1d4ed8',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.18)' }}
+            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.08)' }}
+            title="View public timetable without login"
+          >
+            <CalendarDays size={15} color="#2563eb" />
+            <span>View Timetable</span>
+          </button>
+        </div>
+        <h1 id="login-title">Welcome back</h1>
+
+        <form className="login-form" onSubmit={handleLogin}>
+          <div className="field-group">
+            <label className="field-label" htmlFor="identifier">College ID / Registration Number</label>
+            <div className="input-wrap">
+              <UserRound aria-hidden="true" size={17} />
+              <input
+                id="identifier"
+                name="identifier"
+                autoComplete="username"
+                placeholder="e.g. 23CSE0001 · FAC-042 · ADM-001"
+                value={identifier}
+                onChange={(event) => setIdentifier(event.target.value)}
+                required
+              />
             </div>
 
             <form className="erp-login-form" onSubmit={handleLogin} noValidate>

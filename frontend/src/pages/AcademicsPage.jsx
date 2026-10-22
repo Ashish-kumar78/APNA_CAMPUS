@@ -265,21 +265,11 @@ export default function AcademicsPage({ account }) {
 
       <div className="academics-header">
         <div className="academics-header-left">
-          <p className="academics-kicker"><BookOpen size={13} /> ACADEMIC RECORD & CLASS STUDY MATERIALS</p>
+          <p className="academics-kicker"><BookOpen size={13} /> ACADEMIC RECORD & COURSES</p>
           <h2>Academics</h2>
-          <p className="academics-caption">Courses, syllabus, academic performance & peer-shared class notes.</p>
+          <p className="academics-caption">Courses, syllabus, academic curriculum & admit card access.</p>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button 
-            type="button" 
-            className="btn-academic-upload-notes"
-            onClick={() => {
-              setSelectedSubjectName('Operating Systems')
-              setShowUploadModal(true)
-            }}
-          >
-            <UploadCloud size={16} /> Upload Notes
-          </button>
           <div className="academics-cgpa-badge">
             <Star size={14} />
             <span>CGPA</span>
@@ -293,10 +283,8 @@ export default function AcademicsPage({ account }) {
       <div className="academics-tabs" role="tablist">
         {[
           { id: 'subjects', label: 'Enrolled Subjects' },
-          { id: 'results', label: 'Results & Grades' },
           { id: 'progression', label: 'Programme & Term History' },
           { id: 'syllabus', label: 'Syllabus' },
-          { id: 'notes', label: `Class Notes & Materials (${classNotes.length})` },
           { id: 'admit-card', label: 'Download Admit Card' }
         ].map((tab) => (
           <button

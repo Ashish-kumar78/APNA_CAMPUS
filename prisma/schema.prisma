@@ -846,4 +846,227 @@ model UserRole {
   @@index([role])
 }
 
+// ==============================================================================
+// 1. ANONYMOUS STUDENT COMPLAINT & GRIEVANCE SYSTEM MODELS
+// ==============================================================================
+
+enum ComplaintCategory {
+  TEACHING_RELATED
+  FACULTY_BEHAVIOR
+  COURSE_MATERIAL
+  MARKS_AND_ASSESSMENTS
+  CLASSROOM_ENVIRONMENT
+  OTHER_ACADEMIC
+}
+
+enum ComplaintStatus {
+  NEW
+  UNDER_REVIEW
+  RESPONSE_SUBMITTED
+  AWAITING_HOD_REVIEW
+  RESOLVED
+  ESCALATED
+}
+
+model StudentComplaint {
+  id                  String             @id @default(cuid())
+  trackingId          String             @unique // e.g. CMP-2026-8492
+  category            ComplaintCategory  @default(TEACHING_RELATED)
+  subject             String
+  description         String             @db.Text
+  
+  // Academic scope
+  department          String             @default("Computer Science & Engineering")
+  deptCode            String             @default("CSE")
+  academicYear        String             @default("2026-27")
+  semester            String             @default("Semester 5")
+  section             String             @default("Section A")
+  subjectCode         String?
+  subjectName         String?
+  
+  // Faculty assignment relation
+  facultyId           String?
+  facultyName         String             // Concerned faculty member name
+  
+  // Attachment
+  attachmentUrl       String?            @db.Text
+  attachmentName      String?
+  
+  // Anonymity & Privacy Protection
+  isAnonymous         Boolean            @default(true)
+  // Protected student token/secret hash - never exposed to faculty/HOD
+  studentSecretRef    String?            // Cryptographic or hashed reference for student to track their complaint
+  
+  // Current status
+  status              ComplaintStatus    @default(NEW)
+  isOverdue           Boolean            @default(false) // Flagged if unresolved > 7 days
+  submittedAt         DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  
+  // Responses and audit trail
+  responses           ComplaintResponse[]
+  statusHistory       ComplaintStatusHistory[]
+  hodReviews          ComplaintHodReview[]
+  
+  @@index([trackingId])
+  @@index([facultyName])
+  @@index([deptCode])
+  @@index([status])
+  @@index([category])
+}
+
+model ComplaintResponse {
+  id                  String             @id @default(cuid())
+  complaintId         String
+  complaint           StudentComplaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  
+  facultyId           String?
+  facultyName         String
+  facultyDesignation  String?            @default("Associate Professor")
+  
+  responseComment     String             @db.Text
+  proposedAction      String?            @db.Text // Proposed corrective actions or resolutions
+  resolutionSummary   String?            @db.Text
+  
+  // Response timing
+  responseTimeHours   Float?             @default(0.0)
+  submittedAt         DateTime           @default(now())
+  
+  @@index([complaintId])
+}
+
+model ComplaintStatusHistory {
+  id                  String             @id @default(cuid())
+  complaintId         String
+  complaint           StudentComplaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  
+  fromStatus          ComplaintStatus
+  toStatus            ComplaintStatus
+  changedBy           String             // e.g. "Dr. S. Mohanty (Faculty)" or "Dr. P. K. Pattnaik (HOD)"
+  changedByRole       String             // FACULTY, HOD, ADMIN
+  remarks             String?            @db.Text
+  timestamp           DateTime           @default(now())
+  
+  @@index([complaintId])
+}
+
+model ComplaintHodReview {
+  id                  String             @id @default(cuid())
+  complaintId         String
+  complaint           StudentComplaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  
+  hodId               String?
+  hodName             String
+  reviewOutcome       String             // "Adequate", "Clarification Requested", "Corrective Action Required", "Escalated"
+  observations        String             @db.Text
+  isResponseAdequate  Boolean            @default(true)
+  requiresClarification Boolean          @default(false)
+  requiresCorrectiveAction Boolean       @default(false)
+  isEscalated         Boolean            @default(false)
+  escalationReason    String?            @db.Text
+  finalReviewStatus   String             @default("Reviewed")
+  reviewedAt          DateTime           @default(now())
+  
+  @@index([complaintId])
+}
+
+// ==============================================================================
+// 2. FACULTY-TO-STUDENT NOTIFICATION SYSTEM MODELS
+// ==============================================================================
+
+enum FacultyNotificationCategory {
+  EXAMINATION
+  EXAM_TIMETABLE
+  ASSIGNMENT_DEADLINE
+  INTERNAL_ASSESSMENT
+  PRACTICAL_EXAM
+  CLASS_CANCELLATION
+  SCHEDULE_CHANGE
+  EXTRA_CLASS
+  PROJECT_SUBMISSION
+  ACADEMIC_REMINDER
+  GENERAL_ANNOUNCEMENT
+}
+
+enum NotificationPriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
+enum NotificationPublishStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  EXPIRED
+  CANCELLED
+}
+
+model FacultyNotification {
+  id                  String                      @id @default(cuid())
+  title               String
+  message             String                      @db.Text
+  category            FacultyNotificationCategory @default(GENERAL_ANNOUNCEMENT)
+  priority            NotificationPriority        @default(NORMAL)
+  status              NotificationPublishStatus   @default(PUBLISHED)
+  
+  // Faculty author details
+  facultyId           String?
+  facultyName         String
+  facultyDesignation  String                      @default("Associate Professor")
+  facultyEmail        String?
+  department          String                      @default("Computer Science & Engineering")
+  
+  // Target Academic Scoping
+  academicYear        String                      @default("2026-27")
+  program             String                      @default("B.Tech")
+  semester            String                      @default("Semester 5")
+  section             String                      @default("Section A") // e.g. "Section A", "Section B", or "ALL_ASSIGNED"
+  subjectCode         String?
+  subjectName         String?
+  
+  // Delivery timing
+  scheduledFor        DateTime?
+  publishedAt         DateTime                    @default(now())
+  expiresAt           DateTime?
+  
+  // Optional attachment
+  attachmentUrl       String?                     @db.Text
+  attachmentName      String?
+  
+  // Stats
+  totalRecipients     Int                         @default(0)
+  totalRead           Int                         @default(0)
+  
+  recipients          FacultyNotificationRecipient[]
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  
+  @@index([facultyName])
+  @@index([semester])
+  @@index([section])
+  @@index([subjectCode])
+  @@index([status])
+}
+
+model FacultyNotificationRecipient {
+  id                  String                      @id @default(cuid())
+  notificationId      String
+  notification        FacultyNotification         @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  
+  studentId           String?
+  studentRollNumber   String
+  studentName         String
+  studentEmail        String?
+  semester            String
+  section             String
+  
+  isRead              Boolean                     @default(false)
+  readAt              DateTime?
+  
+  @@unique([notificationId, studentRollNumber])
+  @@index([studentRollNumber])
+  @@index([isRead])
+}
+
 

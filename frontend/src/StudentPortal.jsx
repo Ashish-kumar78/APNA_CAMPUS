@@ -231,6 +231,16 @@ const holidays = [
 ]
 
 function StudentPortal({ account, onLogout }) {
+  const student = useMemo(() => {
+    const query = account?.registrationNumber || account?.rollNumber || account?.identifier || account?.name;
+    const matched = query ? findStudentByQuery(query) : null;
+    return matched || getActiveStudent() || account || {};
+  }, [account]);
+
+  const identifier = account?.identifier || account?.registrationNumber || account?.rollNumber;
+  const pct = student?.attendance ?? 92;
+  const roll = student?.rollNumber || identifier || '2305201001';
+
   const [profileTab, setProfileTab] = useState('')
   const [profileQuickView, setProfileQuickView] = useState('')
 
@@ -384,7 +394,6 @@ function StudentPortal({ account, onLogout }) {
     let isMounted = true;
     const loadNotifications = async () => {
       try {
-        const roll = account?.rollNumber || account?.registrationNumber || '01';
         const facultyList = await notificationsApi.getStudentNotifications(roll);
         if (!isMounted) return;
 
@@ -1047,26 +1056,28 @@ function StudentPortal({ account, onLogout }) {
               </article>
 
               {/* Card 2: Attendance */}
-              <article className="dash-stat tone-green">
+              <article className={`dash-stat ${pct >= 75 ? 'tone-green' : 'tone-red'}`}>
                 <div className="dash-stat-head">
                   <div className="dash-stat-head-left">
                     <span className="dash-stat-icon"><CheckCircle2 size={18} /></span>
                     <span className="dash-stat-label">Attendance</span>
                   </div>
-                  <span className="dash-stat-badge tone-green-badge">Eligible</span>
+                  <span className={`dash-stat-badge ${pct >= 75 ? 'tone-green-badge' : 'tone-red-badge'}`}>
+                    {pct >= 75 ? 'Eligible' : 'Shortage'}
+                  </span>
                 </div>
                 <div className="dash-stat-body">
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <strong className="dash-stat-value">92%</strong>
-                    <span className="dash-stat-ratio">138 / 150 Lectures</span>
+                    <strong className="dash-stat-value">{pct}%</strong>
+                    <span className="dash-stat-ratio">Roll: {roll}</span>
                   </div>
                   <div className="dash-progress" aria-hidden="true">
-                    <i style={{ width: '92%' }} />
+                    <i style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: pct < 75 ? '#ef4444' : undefined }} />
                   </div>
                 </div>
                 <div className="dash-stat-foot">
-                  <small className="dash-stat-sub text-green">
-                    <Check size={13} /> 17% above required 75% examination threshold
+                  <small className={`dash-stat-sub ${pct >= 75 ? 'text-green' : 'text-red'}`}>
+                    <Check size={13} /> {pct >= 75 ? `${pct - 75}% above required 75% examination threshold` : `${75 - pct}% below minimum 75% examination threshold`}
                   </small>
                 </div>
               </article>

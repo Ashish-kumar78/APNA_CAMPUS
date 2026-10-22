@@ -52,191 +52,6 @@ import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, findStudentByQuery } from './services/studentStore.js'
 import { getTimeGreeting } from './utils/timeGreeting.js'
 
-const accounts = {
-  '2401432265': {
-    role: 'student',
-    name: 'BISHNU PRASAD SAHOO',
-    registrationNumber: '2401432265',
-    department: 'Computer Science & Engineering (Artificial Intelligence)',
-    detail: 'BTECH 2028-P · CSE (AI) - Genius',
-  },
-  '2305201001': {
-    role: 'student',
-    name: 'Rakesh Das',
-    registrationNumber: '2305201001',
-    department: 'Computer Science & Engineering',
-    detail: 'BTECH 2023–2027 · CSE (Sec A)',
-  },
-  'student': {
-    role: 'student',
-    name: 'Rakesh Das',
-    registrationNumber: '2305201001',
-    department: 'Computer Science & Engineering',
-    detail: 'BTECH 2023–2027 · CSE (Sec A)',
-  },
-  'superadmin': {
-    role: 'super_admin',
-    name: 'Chief Systems Architect',
-    identity: 'SYS-SUPER-01',
-    department: 'Enterprise IT & Security',
-    detail: 'Super Administrator · Full System Scope',
-  },
-  'super_admin': {
-    role: 'super_admin',
-    name: 'Chief Systems Architect',
-    identity: 'SYS-SUPER-01',
-    department: 'Enterprise IT & Security',
-    detail: 'Super Administrator · Full System Scope',
-  },
-  'management': {
-    role: 'management',
-    name: 'Prof. (Dr.) S. P. Panda',
-    identity: 'GOV-CHAIR-01',
-    department: 'Governing Board / Trustees',
-    detail: 'Chairman & Governing Body Trustee',
-  },
-  'director': {
-    role: 'management',
-    name: 'Prof. (Dr.) S. P. Panda',
-    identity: 'GOV-CHAIR-01',
-    department: 'Governing Board / Trustees',
-    detail: 'Chairman & Governing Body Trustee',
-  },
-  'principal': {
-    role: 'principal',
-    name: 'Dr. B. K. Sarap',
-    identity: 'OFF-PRIN-01',
-    department: 'Office of the Principal',
-    detail: 'Principal & Director · Autonomous Campus',
-  },
-  'faculty': {
-    role: 'faculty',
-    name: 'Dr. S. Mohanty',
-    identity: 'FAC-042',
-    department: 'Computer Science & Engineering',
-    detail: 'Faculty · School of Computing',
-  },
-  'fac-042': {
-    role: 'faculty',
-    name: 'Dr. S. Mohanty',
-    identity: 'FAC-042',
-    department: 'Computer Science & Engineering',
-    detail: 'Faculty · School of Computing',
-  },
-  'hod': {
-    role: 'hod',
-    name: 'Dr. P. K. Pattnaik',
-    identity: 'HOD-CSE',
-    department: 'Computer Science & Engineering',
-    detail: 'Head of Department · CSE',
-  },
-  'hod-cse': {
-    role: 'hod',
-    name: 'Dr. P. K. Pattnaik',
-    identity: 'HOD-CSE',
-    department: 'Computer Science & Engineering',
-    detail: 'Head of Department · CSE',
-  },
-  'admin': {
-    role: 'admin',
-    name: 'Campus Administrator',
-    identity: 'ADM-001',
-    department: 'Apna Campus',
-    detail: 'System administrator',
-  },
-  'adm-001': {
-    role: 'admin',
-    name: 'Campus Administrator',
-    identity: 'ADM-001',
-    department: 'Apna Campus',
-    detail: 'System administrator',
-  },
-  'accounts': {
-    role: 'accounts',
-    name: 'Mr. S. K. Roy',
-    identity: 'ACC-012',
-    department: 'Finance & Accounts',
-    detail: 'Senior Accounts Officer',
-  },
-  'exam_cell': {
-    role: 'exam_cell',
-    name: 'Dr. K. C. Patra',
-    identity: 'COE-EXAM-01',
-    department: 'Autonomous Examination Cell',
-    detail: 'Controller of Examinations (CoE)',
-  },
-  'examcell': {
-    role: 'exam_cell',
-    name: 'Dr. K. C. Patra',
-    identity: 'COE-EXAM-01',
-    department: 'Autonomous Examination Cell',
-    detail: 'Controller of Examinations (CoE)',
-  },
-  'library': {
-    role: 'library',
-    name: 'Dr. Rabindra K. Jena',
-    identity: 'LIB-HEAD-01',
-    department: 'Central University Library',
-    detail: 'Chief Librarian & Information Officer',
-  },
-  'warden': {
-    role: 'warden',
-    name: 'Mrs. Nibedita Das',
-    identity: 'WRD-004',
-    department: 'Hostel Administration',
-    detail: 'Chief Resident Warden',
-  },
-  'transport': {
-    role: 'transport',
-    name: 'Mr. Jagannath Sahoo',
-    identity: 'TRANS-FLEET-01',
-    department: 'Campus Transport Division',
-    detail: 'Fleet & Transit Manager',
-  },
-  'placement': {
-    role: 'placement',
-    name: 'Prof. Sudhanshu S. Ray',
-    identity: 'TPO-HEAD-01',
-    department: 'Training & Placement Cell',
-    detail: 'Head of Corporate Relations & Placements',
-  },
-  'staff': {
-    role: 'staff',
-    name: 'Mr. Biswajit Sahoo',
-    identity: 'STF-OPS-09',
-    department: 'Campus Technical & Lab Operations',
-    detail: 'Senior Technical Staff',
-  },
-  'canteen': {
-    role: 'canteen',
-    name: 'Mr. B. K. Sahoo',
-    identity: 'CAN-007',
-    department: 'Hospitality & Dining',
-    detail: 'Smart Canteen Supervisor',
-  },
-  'admissions': {
-    role: 'admissions',
-    name: 'Ms. Sasmita Mohapatra',
-    identity: 'ADM-OFF-01',
-    department: 'Admissions & Student Intake Office',
-    detail: 'Senior Admissions Officer · Admissions & Counseling',
-  },
-  'adm-off-01': {
-    role: 'admissions',
-    name: 'Ms. Sasmita Mohapatra',
-    identity: 'ADM-OFF-01',
-    department: 'Admissions & Student Intake Office',
-    detail: 'Senior Admissions Officer · Admissions & Counseling',
-  },
-  'maintenance': {
-    role: 'staff',
-    name: 'Mr. Pradeep Kumar Barik',
-    identity: 'MTN-OPS-01',
-    department: 'Estate Maintenance & Civil Works',
-    detail: 'Estate Maintenance Supervisor',
-  },
-}
-
 const roleCopy = {
   super_admin: { label: 'Super Admin console', icon: ShieldCheck },
   management: { label: 'Governing board', icon: ShieldCheck },
@@ -322,9 +137,26 @@ function App() {
   const [activationModalOpen, setActivationModalOpen] = useState(false)
   const [activationTokenInput, setActivationTokenInput] = useState('')
   const [showPublicTimetable, setShowPublicTimetable] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
 
   useEffect(() => {
+    async function validateSession() {
+      try {
+        const user = await api.getMe();
+        if (user && user.success && user.user) {
+          setAccount(user.user);
+        }
+      } catch (err) {
+        console.info('No valid session found or session expired.');
+        localStorage.removeItem('collegeflow_token');
+        localStorage.removeItem('collegeflow_user');
+      } finally {
+        setIsInitializing(false);
+      }
+    }
+
     if (typeof window !== 'undefined') {
+      validateSession();
       const hash = window.location.hash || ''
       const search = window.location.search || ''
       if (hash.includes('timetable') || search.includes('timetable')) {
@@ -351,132 +183,21 @@ function App() {
     clearUrlHash()
     setError('')
     setResetRequested(false)
+    setIsSubmitting(true)
 
     try {
       const res = await api.login(identifier, password)
       if (res && res.success && res.user) {
         setAccount(res.user)
         return
+      } else {
+        setError('Invalid college ID or password. Please try again.')
       }
     } catch (apiErr) {
-      // Fallback to local accounts dictionary if server is not reached
-      console.info('Attempting fallback authentication:', apiErr.message)
+      setError(`Connection failed: ${apiErr.message || 'Unable to reach authentication server.'}`)
+    } finally {
+      setIsSubmitting(false)
     }
-
-    const key = identifier.trim().toLowerCase()
-
-    // Accepted passwords: gift123, password123, or Gift@YEAR (auto-generated for admitted students)
-    const isValidPassword = (pwd) =>
-      pwd === 'gift123' ||
-      pwd === 'password123' ||
-      /^Gift@\d{4}$/.test(pwd) // e.g. Gift@2023, Gift@2026
-
-    if (!isValidPassword(password)) {
-      setError('We could not verify those sign-in details. Please check your College ID and password.')
-      return
-    }
-
-    // 1. Check if entered identifier matches any registered student in the store
-    //    (covers both original roll numbers AND auto-generated reg numbers like 23CSE0092)
-    const studentMatch = findStudentByQuery(key)
-    if (studentMatch) {
-      // Accept if password matches their stored defaultPassword OR any accepted password
-      const storedDefaultPwd = studentMatch.defaultPassword
-      if (
-        isValidPassword(password) ||
-        (storedDefaultPwd && password === storedDefaultPwd)
-      ) {
-        setActiveStudent(studentMatch.id)
-        setAccount({
-          role: 'student',
-          ...studentMatch,
-        })
-        return
-      }
-    }
-
-    // 2. Match exact account dictionary (staff / demo accounts)
-    const matchedAccount = accounts[key]
-    if (matchedAccount) {
-      if (matchedAccount.role === 'student') {
-        const activeStd = findStudentByQuery(matchedAccount.registrationNumber) || getActiveStudent()
-        setAccount({ ...matchedAccount, ...(activeStd || {}) })
-      } else {
-        setAccount(matchedAccount)
-      }
-      return
-    }
-
-    // 3. Role-prefix automatic routing for any valid institutional ID
-    if (key.startsWith('super')) {
-      setAccount(accounts['super_admin'])
-      return
-    }
-    if (key.startsWith('mgmt') || key.includes('management') || key.includes('director') || key.includes('trustee')) {
-      setAccount(accounts['management'])
-      return
-    }
-    if (key.startsWith('prin')) {
-      setAccount(accounts['principal'])
-      return
-    }
-    if (key.startsWith('exam') || key.includes('coe')) {
-      setAccount(accounts['exam_cell'])
-      return
-    }
-    if (key.startsWith('lib')) {
-      setAccount(accounts['library'])
-      return
-    }
-    if (key.startsWith('trans') || key.includes('bus')) {
-      setAccount(accounts['transport'])
-      return
-    }
-    if (key.startsWith('place') || key.includes('tpo')) {
-      setAccount(accounts['placement'])
-      return
-    }
-    if (key.startsWith('staff') || key.includes('tech') || key.includes('lab')) {
-      setAccount(accounts['staff'])
-      return
-    }
-    if (key.startsWith('fac') || key.includes('faculty')) {
-      setAccount(accounts['faculty'])
-      return
-    }
-    if (key.startsWith('hod')) {
-      setAccount(accounts['hod'])
-      return
-    }
-    if (key.startsWith('adm')) {
-      setAccount(accounts['admin'])
-      return
-    }
-    if (key.startsWith('acc') || key.includes('account')) {
-      setAccount(accounts['accounts'])
-      return
-    }
-    if (key.startsWith('wrd') || key.includes('warden')) {
-      setAccount(accounts['warden'])
-      return
-    }
-    if (key.startsWith('can') || key.includes('canteen')) {
-      setAccount(accounts['canteen'])
-      return
-    }
-    // 4. Numeric reg number fallback (6-12 digits) — treat as student
-    if (/^\d{6,12}$/.test(key)) {
-      const demoStd = getActiveStudent() || {}
-      setAccount({
-        role: 'student',
-        ...demoStd,
-        registrationNumber: identifier,
-        rollNumber: identifier.slice(-2) || '01',
-      })
-      return
-    }
-
-    setError('We could not verify those sign-in details. Please check your College ID and password.')
   }
 
   const clearUrlHash = () => {
@@ -492,33 +213,26 @@ function App() {
     clearUrlHash()
     setError('')
     setResetRequested(false)
+    const demoIdentifierMap = {
+      super_admin: 'superadmin',
+      exam_cell: 'examcell',
+    }
+    const loginIdentifier = demoIdentifierMap[roleKey] || roleKey
     setIdentifier(roleKey)
     setPassword('gift123')
-
-    if (roleKey === 'student') {
-      const activeStd = getActiveStudent()
-      if (activeStd) {
-        setAccount({
-          role: 'student',
-          ...activeStd
-        })
-        return
-      }
-    }
+    setIsSubmitting(true)
 
     try {
-      const res = await api.login(roleKey, 'gift123')
+      const res = await api.login(loginIdentifier, 'gift123')
       if (res && res.success && res.user) {
         setAccount(res.user)
-        return
+      } else {
+        setError('Quick login failed. Please use valid credentials.')
       }
     } catch (apiErr) {
-      // Fallback
-    }
-
-    const acc = accounts[roleKey]
-    if (acc) {
-      setAccount(acc)
+      setError('Unable to connect to server for quick login.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -532,7 +246,7 @@ function App() {
     setResetRequested(false)
   }
 
-  // Public Timetable View (1-Click access without requiring login or authentication)
+  // Public Timetable View (one-click access without login)
   if (showPublicTimetable) {
     return (
       <PublicTimetable
@@ -541,6 +255,23 @@ function App() {
           clearUrlHash()
         }}
       />
+    )
+  }
+
+  // Show a loading screen while validating the current session.
+  if (isInitializing) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          background: '#090d16',
+        }}
+      >
+        <Loader2 className="erp-spin" size={40} style={{ color: '#22d3ee' }} />
+      </div>
     )
   }
 
@@ -557,7 +288,6 @@ function App() {
     )
   }
 
-  // Role-based Router Guard
   if (account) {
     let portal = null
     if (account.role === 'super_admin') {
@@ -606,17 +336,14 @@ function App() {
     }
   }
 
-  // Otherwise render the Login Page first
   return (
     <>
       <UniversalWhatsAppLauncher account={account} hideTrigger={true} />
       <ApnaAIChatbot account={account} hideTrigger={true} />
       <UnifiedFloatingAssistant account={account} />
       <main className="erp-split-page">
-        {/* Left hero panel (Campus photo at golden hour with dark vignette) */}
         <div className="erp-hero-panel">
           <div className="erp-hero-content">
-            {/* Top brand header */}
             <header className="erp-top-brand-wrapper">
               <div className="erp-top-brand">
                 <div className="erp-logo-box">
@@ -632,8 +359,6 @@ function App() {
                 <span>NAAC A++ ACCREDITED</span>
               </div>
             </header>
-
-            {/* Hero Main Content */}
             <div className="erp-hero-body">
               <div className="erp-hero-kicker">
                 <span>LEARN</span>
@@ -643,12 +368,10 @@ function App() {
                 <span>CONNECT</span>
                 <span className="erp-kicker-line"></span>
               </div>
-
               <h1 className="erp-hero-title">
                 A Smarter<br />
                 <span className="erp-cyan-text">Campus Experience.</span>
               </h1>
-
               <div className="erp-hero-pills-row">
                 <span>People</span>
                 <span className="erp-dot">•</span>
@@ -658,10 +381,7 @@ function App() {
                 <span className="erp-dot">•</span>
                 <span>Opportunities</span>
               </div>
-
               <div className="erp-hero-divider-bar" />
-
-              {/* 4 Feature indicators with circular icon containers */}
               <div className="erp-feature-indicators">
                 <div className="erp-feature-item">
                   <div className="erp-feature-icon-circle">
@@ -672,7 +392,6 @@ function App() {
                     <span>Timetable</span>
                   </div>
                 </div>
-
                 <div className="erp-feature-item">
                   <div className="erp-feature-icon-circle">
                     <BarChart3 size={16} />
@@ -682,7 +401,6 @@ function App() {
                     <span>Evaluations</span>
                   </div>
                 </div>
-
                 <div className="erp-feature-item">
                   <div className="erp-feature-icon-circle">
                     <UsersRound size={16} />
@@ -693,8 +411,6 @@ function App() {
                   </div>
                 </div>
               </div>
-
-              {/* Statistics row at bottom with vertical dividers */}
               <div className="erp-stats-row">
                 <div className="erp-stat-col">
                   <div className="erp-stat-num">
@@ -702,18 +418,14 @@ function App() {
                   </div>
                   <div className="erp-stat-label">STUDENTS</div>
                 </div>
-
                 <div className="erp-stat-divider" />
-
                 <div className="erp-stat-col">
                   <div className="erp-stat-num">
                     146<span className="erp-stat-plus">+</span>
                   </div>
                   <div className="erp-stat-label">FACULTY</div>
                 </div>
-
                 <div className="erp-stat-divider" />
-
                 <div className="erp-stat-col">
                   <div className="erp-stat-num">18</div>
                   <div className="erp-stat-label">PROGRAMS</div>
@@ -772,58 +484,12 @@ function App() {
             </div>
           </div>
         </div>
-
-      {/* ── Right login panel ── */}
-      <section className="login-panel" aria-labelledby="login-title">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '1rem' }}>
-          <a className="panel-brand" href="#home" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <GiftMark size={42} />
-            <span>Apna Campus</span>
-          </a>
-          <button
-            type="button"
-            id="panel-view-timetable-btn"
-            onClick={() => setShowPublicTimetable(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              border: '1.5px solid rgba(37, 99, 235, 0.25)',
-              background: 'rgba(37, 99, 235, 0.08)',
-              color: '#1d4ed8',
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.18)' }}
-            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.08)' }}
-            title="View public timetable without login"
-          >
-            <CalendarDays size={15} color="#2563eb" />
-            <span>View Timetable</span>
-          </button>
-        </div>
-        <h1 id="login-title">Welcome back</h1>
-
-        <form className="login-form" onSubmit={handleLogin}>
-          <div className="field-group">
-            <label className="field-label" htmlFor="identifier">College ID / Registration Number</label>
-            <div className="input-wrap">
-              <UserRound aria-hidden="true" size={17} />
-              <input
-                id="identifier"
-                name="identifier"
-                autoComplete="username"
-                placeholder="e.g. 23CSE0001 · FAC-042 · ADM-001"
-                value={identifier}
-                onChange={(event) => setIdentifier(event.target.value)}
-                required
-              />
+        <section className="erp-login-section" aria-label="Sign In">
+          <div className="erp-login-card">
+            <div className="erp-card-brand-header">
+              <h2 className="erp-card-title">Welcome Back</h2>
+              <p className="erp-card-subtitle">Sign in to your Apna Campus account</p>
             </div>
-
             <form className="erp-login-form" onSubmit={handleLogin} noValidate>
               <div className="erp-field-group">
                 <div className="erp-input-wrapper">
@@ -841,7 +507,6 @@ function App() {
                   />
                 </div>
               </div>
-
               <div className="erp-field-group">
                 <div className="erp-input-wrapper">
                   <LockKeyhole className="erp-input-icon" size={17} aria-hidden="true" />
@@ -866,28 +531,24 @@ function App() {
                   </button>
                 </div>
               </div>
-
-              {/* Options row */}
               <div className="erp-options-row">
-                <label className="erp-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    disabled={isSubmitting}
-                  />
-                  <span>Remember me</span>
-                </label>
-                <button
-                  type="button"
-                  className="erp-text-link"
-                  onClick={() => { setResetRequested((prev) => !prev); setError(''); }}
-                >
-                  Forgot password?
-                </button>
-              </div>
-
-              {/* Feedback alert (Error or Password Reset feedback) */}
+                  <label className="erp-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      disabled={isSubmitting}
+                    />
+                    <span>Remember me</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="erp-text-link"
+                    onClick={() => { setResetRequested((prev) => !prev); setError(''); }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
               {(error || resetRequested) && (
                 <div
                   className={`erp-alert-box ${error ? 'is-error' : 'is-success'}`}
@@ -905,8 +566,6 @@ function App() {
                   </button>
                 </div>
               )}
-
-              {/* Cyan-to-blue gradient login button */}
               <button
                 type="submit"
                 className="erp-primary-btn"
@@ -924,103 +583,91 @@ function App() {
                   </>
                 )}
               </button>
-
-              {/* New user / Activate account link */}
               <div className="erp-sublink-row">
                 <span className="erp-sublink-text">New user?</span>
                 <button
-                  type="button"
-                  className="erp-highlight-link"
-                  onClick={() => { setActivationModalOpen(true); setActivationTokenInput(''); }}
-                >
-                  Activate Account
-                </button>
-              </div>
-
-              {/* Section Divider */}
-              <div className="erp-section-divider">
-                <span>OR</span>
-              </div>
-
-              {/* Explore by Role Section */}
-              <div className="erp-demo-section">
-                <div className="erp-demo-header">
-                  <h3 className="erp-demo-title">Explore by Role</h3>
-                  <p className="erp-demo-subtitle">Explore the portal with different roles</p>
+                      type="button"
+                      className="erp-highlight-link"
+                      onClick={() => { setActivationModalOpen(true); setActivationTokenInput(''); }}
+                    >
+                      Activate Account
+                    </button>
                 </div>
-
-                {/* 3 Category Cards */}
-                <div className="erp-category-cards-grid">
-                  {demoCategories.map((cat) => {
-                    const CatIcon = cat.icon
-                    const isExpanded = expandedCategory === cat.id
-                    return (
-                      <div
-                        key={cat.id}
-                        className={`erp-cat-card ${isExpanded ? 'active' : ''}`}
-                        onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
-                        role="button"
-                        tabIndex={0}
-                        style={{ '--cat-bg': cat.bg, '--cat-border': cat.border, '--cat-color': cat.color }}
-                      >
-                        <div className="erp-cat-top">
-                          <div className="erp-cat-icon-box">
-                            <CatIcon size={18} />
+                <div className="erp-section-divider">
+                  <span>OR</span>
+                </div>
+                <div className="erp-demo-section">
+                  <div className="erp-demo-header">
+                    <h3 className="erp-demo-title">Explore by Role</h3>
+                    <p className="erp-demo-subtitle">Explore the portal with different roles</p>
+                  </div>
+                  <div className="erp-category-cards-grid">
+                    {demoCategories.map((cat) => {
+                      const CatIcon = cat.icon
+                      const isExpanded = expandedCategory === cat.id
+                      return (
+                        <div
+                          key={cat.id}
+                          className={`erp-cat-card ${isExpanded ? 'active' : ''}`}
+                          onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
+                          role="button"
+                          tabIndex={0}
+                          style={{ '--cat-bg': cat.bg, '--cat-border': cat.border, '--cat-color': cat.color }}
+                        >
+                          <div className="erp-cat-top">
+                            <div className="erp-cat-icon-box">
+                              <CatIcon size={18} />
+                            </div>
+                            <ArrowRight size={13} className="erp-cat-arrow" />
                           </div>
-                          <ArrowRight size={13} className="erp-cat-arrow" />
+                          <div className="erp-cat-bottom">
+                            <strong className="erp-cat-name">{cat.title}</strong>
+                            <span className="erp-cat-count">{cat.count}</span>
+                          </div>
                         </div>
-                        <div className="erp-cat-bottom">
-                          <strong className="erp-cat-name">{cat.title}</strong>
-                          <span className="erp-cat-count">{cat.count}</span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {/* Expanded Role Selection Popover / Drawer */}
-                {expandedCategory && (
-                  <div className="erp-expanded-roles-drawer">
-                    <div className="erp-drawer-header">
-                      <span>Select {demoCategories.find((c) => c.id === expandedCategory)?.title} Role:</span>
-                      <button
+                      )
+                    })}
+                  </div>
+                  {expandedCategory && (
+                    <div className="erp-expanded-roles-drawer">
+                      <div className="erp-drawer-header">
+                        <span>Select {demoCategories.find((c) => c.id === expandedCategory)?.title} Role:</span>
+                        <button
                         type="button"
                         className="erp-drawer-close"
                         onClick={() => setExpandedCategory(null)}
                       >
                         ×
                       </button>
-                    </div>
-                    <div className="erp-drawer-roles">
-                      {demoCategories
-                        .find((c) => c.id === expandedCategory)
-                        ?.roles.map((r) => (
-                          <button
-                            key={r.key}
-                            type="button"
-                            className="erp-drawer-role-pill"
-                            onClick={async () => {
-                              await handleQuickLogin(r.key)
-                            }}
-                          >
+                      </div>
+                      <div className="erp-drawer-roles">
+                        {demoCategories
+                          .find((c) => c.id === expandedCategory)
+                          ?.roles.map((r) => (
+                            <button
+                              key={r.key}
+                              type="button"
+                              className="erp-drawer-role-pill"
+                              onClick={async () => {
+                                await handleQuickLogin(r.key)
+                              }}
+                            >
                             <span>{r.label}</span>
                             <ArrowRight size={11} />
                           </button>
                         ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            </form>
-
-            {/* University Portal Footer */}
+                  )}
+                </div>
+              </form>
             <footer className="erp-card-footer">
               <div className="erp-footer-links">
                 <a href="#help" onClick={(e) => e.preventDefault()}>Help</a>
                 <span className="erp-footer-bar">|</span>
                 <a href="#privacy" onClick={(e) => e.preventDefault()}>Privacy</a>
                 <span className="erp-footer-bar">|</span>
-                <a href="#contact" onClick={(e) => e.preventDefault()}>Contact</a>
+                <a href="#contact" onClick={(e) => e.preventDefault()} >Contact</a>
               </div>
               <p className="erp-footer-copyright">
                 © 2026 Apna Campus
@@ -1029,7 +676,6 @@ function App() {
           </div>
         </section>
       </main>
-
       {activationModalOpen && (
         <AccountActivationModal
           initialToken={activationTokenInput}

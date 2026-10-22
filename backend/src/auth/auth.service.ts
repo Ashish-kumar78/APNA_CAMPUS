@@ -10,13 +10,16 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const rawKey = dto.identifier.trim().toLowerCase();
+    const strippedKey = rawKey.replace(/[-_\s]/g, '');
     
-    // Find user by identifier or email
+    // Find user by identifier or email (supports aliases like super_admin -> superadmin, exam_cell -> examcell)
     const user = await this.prisma.user.findFirst({
       where: {
         OR: [
           { identifier: { equals: rawKey, mode: 'insensitive' } },
+          { identifier: { equals: strippedKey, mode: 'insensitive' } },
           { email: { equals: rawKey, mode: 'insensitive' } },
+          { email: { equals: strippedKey, mode: 'insensitive' } },
         ],
       },
       include: {
@@ -30,8 +33,9 @@ export class AuthService {
       throw new UnauthorizedException('We could not verify those sign-in details. Please check your College ID and password.');
     }
 
-    // Support both the hashed password check and common dev demo fallback (gift123 / password123)
-    const isValid = await bcrypt.compare(dto.password, user.passwordHash) || dto.password === 'gift123' || dto.password === 'password123';
+    // Support only the hashed password check
+    const isValid = await bcrypt.compare(dto.password, user.passwordHash);
+
 
     if (!isValid) {
       throw new UnauthorizedException('We could not verify those sign-in details. Invalid password.');
@@ -48,7 +52,10 @@ export class AuthService {
       identifier: user.identifier,
     };
 
-    const secret = process.env.JWT_SECRET || 'gift-autonomous-bput-super-secret-jwt-key-2026-production';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET is not defined in environment variables');
+    }
     const expiresIn = (process.env.JWT_EXPIRES_IN || '8h') as jwt.SignOptions['expiresIn'];
 
     const accessToken = jwt.sign(payload, secret, { expiresIn });
@@ -169,7 +176,10 @@ export class AuthService {
       identifier: updatedUser.identifier,
     };
 
-    const secret = process.env.JWT_SECRET || 'gift-autonomous-bput-super-secret-jwt-key-2026-production';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET is not defined in environment variables');
+    }
     const expiresIn = (process.env.JWT_EXPIRES_IN || '8h') as jwt.SignOptions['expiresIn'];
     const accessToken = jwt.sign(payload, secret, { expiresIn });
 

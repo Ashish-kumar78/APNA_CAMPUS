@@ -23,7 +23,6 @@ import {
   Utensils,
   X,
   Plus,
-  UploadCloud,
   ChevronDown,
 } from 'lucide-react'
 import './StudentProfile.css'
@@ -37,7 +36,6 @@ import CanteenPage from './pages/CanteenPage.jsx'
 import HealthPage from './pages/HealthPage.jsx'
 import UniversityMarksView from './components/UniversityMarksView.jsx'
 
-import { findStudentByQuery, defaultDemoStudent, getStudentDocuments, addStudentDocument } from './services/studentStore.js'
 import { api } from './services/api.js'
 
 const profileTabs = [
@@ -57,7 +55,9 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
   const [activeQuickView, setActiveQuickView] = useState(initialQuickView || '')
   const [message, setMessage] = useState('')
   const [selectedDocView, setSelectedDocView] = useState(null)
-  const [isAddDocModalOpen, setIsAddDocModalOpen] = useState(false)
+  const [profileRecord, setProfileRecord] = useState(null)
+  const [profileError, setProfileError] = useState('')
+  const [profileLoading, setProfileLoading] = useState(true)
   const profileRootRef = useRef(null)
 
   // Always reset scroll to the beginning when StudentProfile mounts or student changes
@@ -76,112 +76,83 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
     }
   }, [account?.registrationNumber, account?.name])
 
-  // Merge account prop with complete student store record if available
+  // The authenticated profile endpoint is the source of private student details.
+  useEffect(() => {
+    let active = true
+    setProfileLoading(true)
+    setProfileError('')
+    api.getProfile()
+      .then((response) => {
+        if (!active) return
+        if (!response?.success || !response.data) throw new Error('The server did not return a student profile.')
+        setProfileRecord(response.data)
+      })
+      .catch((error) => {
+        if (!active) return
+        setProfileError(error.message || 'Student profile could not be loaded.')
+      })
+      .finally(() => { if (active) setProfileLoading(false) })
+    return () => { active = false }
+  }, [account?.id])
+
   const student = useMemo(() => {
-    const matched = findStudentByQuery(account?.registrationNumber || account?.rollNumber || account?.name)
-    return { ...defaultDemoStudent, ...account, ...(matched || {}) }
-  }, [account])
+    const record = profileRecord || {}
+    const father = record.guardians?.find((guardian) => /father/i.test(guardian.relationship))
+    const mother = record.guardians?.find((guardian) => /mother/i.test(guardian.relationship))
+    const permanentAddress = record.addresses?.find((address) => address.type === 'Permanent')
+    const currentAddress = record.addresses?.find((address) => address.type === 'Current')
+    const nameParts = (record.name || account?.name || '').trim().split(/\s+/).filter(Boolean)
+    return {
+      ...(account || {}),
+      ...record,
+      firstName: record.firstName || nameParts[0],
+      lastName: record.lastName || nameParts.slice(1).join(' '),
+      course: record.programme?.name || record.course,
+      fatherName: father?.name,
+      fatherRelationship: father?.relationship,
+      fatherPhone: father?.contactNumber,
+      fatherEmail: father?.email,
+      motherName: mother?.name,
+      motherRelationship: mother?.relationship,
+      motherPhone: mother?.contactNumber,
+      motherEmail: mother?.email,
+      permAddress: permanentAddress?.addressLine,
+      permCity: permanentAddress?.city,
+      permState: permanentAddress?.state,
+      permCountry: permanentAddress?.country,
+      permPin: permanentAddress?.pincode,
+      currAddress: currentAddress?.addressLine,
+      currCity: currentAddress?.city,
+      currState: currentAddress?.state,
+      currCountry: currentAddress?.country,
+      currPin: currentAddress?.pincode,
+    }
+  }, [account, profileRecord])
 
   // Dynamic student documents list
-  const [studentDocs, setStudentDocs] = useState(() =>
-    getStudentDocuments(student.id || student.registrationNumber || student.name)
-  )
+  const studentDocs = useMemo(() => Array.isArray(student.documents) ? student.documents : [], [student.documents])
 
-  useEffect(() => {
-    const refreshDocs = () => {
-      setStudentDocs(getStudentDocuments(student.id || student.registrationNumber || student.name))
-    }
-    refreshDocs()
-    window.addEventListener('cms_student_documents_changed', refreshDocs)
-    return () => window.removeEventListener('cms_student_documents_changed', refreshDocs)
-  }, [student])
-
-  // Add document form state
-  const [newDocForm, setNewDocForm] = useState({
-    docPreset: 'Migration Certificate',
-    customName: '',
-    category: 'Academic',
-    file: null,
-    fileName: '',
-    fileSize: '',
-    fileType: 'PDF',
-    fileDataUrl: null,
-    remarks: ''
-  })
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const isImg = file.type.startsWith('image/')
-    const reader = new FileReader()
-    reader.onload = () => {
-      setNewDocForm(prev => ({
-        ...prev,
-        file,
-        fileName: file.name,
-        fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-        fileType: isImg ? 'IMAGE' : 'PDF',
-        fileDataUrl: reader.result
-      }))
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const handleAddDocumentSubmit = (e) => {
-    e.preventDefault()
-    const docTitle = newDocForm.docPreset === 'Other / Custom Document'
-      ? (newDocForm.customName.trim() || 'Custom Student Certificate')
-      : newDocForm.docPreset
-
-    addStudentDocument(student.id || student.registrationNumber || student.name, {
-      name: docTitle,
-      category: newDocForm.category,
-      fileName: newDocForm.fileName || `${docTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
-      fileType: newDocForm.fileType,
-      fileSize: newDocForm.fileSize || '1.2 MB',
-      fileUrl: newDocForm.fileDataUrl,
-      remarks: newDocForm.remarks
-    })
-
-    setStudentDocs(getStudentDocuments(student.id || student.registrationNumber || student.name))
-    setIsAddDocModalOpen(false)
-    setNewDocForm({
-      docPreset: 'Migration Certificate',
-      customName: '',
-      category: 'Academic',
-      file: null,
-      fileName: '',
-      fileSize: '',
-      fileType: 'PDF',
-      fileDataUrl: null,
-      remarks: ''
-    })
-    setMessage(`Document "${docTitle}" uploaded and verified for ${student.name}. Visible to Admin, Faculty & HOD.`)
-    setTimeout(() => setMessage(''), 4500)
-  }
-
-  const firstName = student.firstName || 'BISHNU'
-  const lastName = student.lastName || 'SAHOO'
-  const middleName = student.middleName || 'PRASAD'
-  const fullName = student.name || `${firstName} ${middleName} ${lastName}`.trim()
-  const regNumber = student.registrationNumber || account?.registrationNumber || '2401432265'
-  const emailName = fullName.toLowerCase().replaceAll(' ', '.')
+  const firstName = student.firstName || '—'
+  const lastName = student.lastName || '—'
+  const middleName = student.middleName || '—'
+  const fullName = student.name || [firstName, middleName, lastName].filter((part) => part && part !== '—').join(' ') || '—'
+  const regNumber = student.registrationNumber || account?.registrationNumber || '—'
   const summaryRows = [
-    ['Last Date of Class Attendance', student.lastClassAttendanceDate || '14/10/2026'],
-    ['Last Date of Hostel Attendance', student.lastHostelAttendanceDate || '16/10/2026'],
+    ['Last Date of Class Attendance', student.lastClassAttendanceDate || '—'],
+    ['Last Date of Hostel Attendance', student.lastHostelAttendanceDate || '—'],
     ['Registration No.', regNumber],
-    ['Serial No.', student.rollNumber || '01'],
+    ['Serial No.', student.rollNumber || '—'],
     ['Name', fullName.toUpperCase()],
-    ['Mentor', student.mentor || 'Dr. Pratyush Mohapatra'],
-    ['Course', student.course || 'Bachelor of Technology'],
-    ['Batch', student.batch || 'BTECH 2028-P'],
-    ['Branch', student.branch || student.department || 'Computer Science & Engineering (Artificial Intelligence)'],
-    ['Section', student.academicSection || student.section || 'CSE (AI) - Genius'],
-    ['Domain Email ID', student.email || `${emailName}@gift.edu.in`],
-    ['Email ID', student.personalEmail || `${emailName}@gmail.com`],
-    ['Mobile No.', student.phone || '7749844291'],
-    ['WhatsApp No.', student.phone || '7749844291'],
-    ['Aadhaar No.', student.govtIdNumber || 'XXXX XXXX 2341'],
+    ['Mentor', student.mentor || '—'],
+    ['Course', student.course || '—'],
+    ['Batch', student.batch || '—'],
+    ['Branch', student.branch || student.department || '—'],
+    ['Section', student.academicSection || student.section || '—'],
+    ['Domain Email ID', student.email || '—'],
+    ['Email ID', student.personalEmail || '—'],
+    ['Mobile No.', student.phone || '—'],
+    ['WhatsApp No.', student.phone || '—'],
+    ['Aadhaar No.', student.govtIdNumber || '—'],
     ['Voter ID', 'Not provided'],
     ['PAN No.', 'Not provided'],
     ['Driving License No.', 'Not provided'],
@@ -190,39 +161,39 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
 
   const details = {
     Personal: [
-      [{ label: 'Admission Category', value: student.admissionCategory || 'General', wide: true }],
-      [{ label: 'Title', value: student.title || 'Ms.', wide: true }],
+      [{ label: 'Admission Category', value: student.admissionCategory || '—', wide: true }],
+      [{ label: 'Title', value: student.title || '—', wide: true }],
       [{ label: 'First Name', value: firstName }, { label: 'Last Name', value: lastName }],
-      [{ label: 'Middle Name', value: student.middleName || 'Not provided' }, { label: 'Gender', value: student.gender || 'Female' }],
-      [{ label: 'Date of Birth', value: student.dobFormatted || student.dob || '15-03-2005' }, { label: 'Nationality', value: student.nationality || 'Indian' }],
-      [{ label: 'Caste', value: student.caste || 'General' }, { label: 'Religion', value: student.religion || 'Hindu' }],
-      [{ label: 'Blood Group', value: student.bloodGroup || 'O+' }, { label: 'Birthplace', value: student.birthplace || 'Bhubaneswar, Odisha' }],
-      [{ label: 'Identification Mark', value: student.identificationMark || 'Not provided', wide: true }],
-      [{ label: 'Thumb ID', value: student.thumbId || `GFT${student.registrationNumber || account.registrationNumber || '2305201001'}`, wide: true }],
-      [{ label: 'Hostel', value: student.hostel || 'No' }, { label: 'Transport', value: student.transport || 'No' }],
-      [{ label: 'Lunch', value: student.lunch || 'No' }, { label: 'NSS', value: student.nss || 'No' }],
-      [{ label: 'Languages Known', value: student.languagesKnown || 'Odia, English, Hindi', wide: true }],
-      [{ label: 'Hobbies', value: student.hobbies || 'Not provided', wide: true }],
+      [{ label: 'Middle Name', value: student.middleName || '—' }, { label: 'Gender', value: student.gender || '—' }],
+      [{ label: 'Date of Birth', value: student.dobFormatted || student.dob || '—' }, { label: 'Nationality', value: student.nationality || '—' }],
+      [{ label: 'Caste', value: student.caste || '—' }, { label: 'Religion', value: student.religion || '—' }],
+      [{ label: 'Blood Group', value: student.bloodGroup || '—' }, { label: 'Birthplace', value: student.birthplace || '—' }],
+      [{ label: 'Identification Mark', value: student.identificationMark || '—', wide: true }],
+      [{ label: 'Thumb ID', value: student.thumbId || '—', wide: true }],
+      [{ label: 'Hostel', value: student.hostelName || student.hostel || '—' }, { label: 'Transport', value: student.transport || '—' }],
+      [{ label: 'Lunch', value: student.lunch || '—' }, { label: 'NSS', value: student.nss || '—' }],
+      [{ label: 'Languages Known', value: student.languagesKnown || '—', wide: true }],
+      [{ label: 'Hobbies', value: student.hobbies || '—', wide: true }],
     ],
     Guardians: [
-      [{ label: 'Father / Guardian', value: student.fatherName || 'Sanjay Das' }, { label: 'Relationship', value: student.fatherRelationship || 'Father' }],
-      [{ label: 'Contact Number', value: student.fatherPhone || '+91 94370 10001' }, { label: 'Email', value: student.fatherEmail || 'sanjay.das@example.com' }],
-      [{ label: 'Mother / Guardian', value: student.motherName || 'Madhuri Das' }, { label: 'Relationship', value: student.motherRelationship || 'Mother' }],
-      [{ label: 'Contact Number', value: student.motherPhone || '+91 94370 10002' }, { label: 'Email', value: student.motherEmail || 'madhuri.das@example.com' }],
+      [{ label: 'Father / Guardian', value: student.guardians?.find(g => /father/i.test(g.relationship))?.name || student.fatherName || '—' }, { label: 'Relationship', value: student.fatherRelationship || '—' }],
+      [{ label: 'Contact Number', value: student.fatherPhone || student.guardians?.find(g => /father/i.test(g.relationship))?.contactNumber || '—' }, { label: 'Email', value: student.fatherEmail || '—' }],
+      [{ label: 'Mother / Guardian', value: student.guardians?.find(g => /mother/i.test(g.relationship))?.name || student.motherName || '—' }, { label: 'Relationship', value: student.motherRelationship || '—' }],
+      [{ label: 'Contact Number', value: student.motherPhone || student.guardians?.find(g => /mother/i.test(g.relationship))?.contactNumber || '—' }, { label: 'Email', value: student.motherEmail || '—' }],
     ],
     Address: [
       [{ label: 'Address Type', value: 'Permanent', wide: true }],
-      [{ label: 'Address', value: student.permAddress || 'Plot 18, Unit 4', wide: true }],
-      [{ label: 'City', value: student.permCity || 'Bhubaneswar' }, { label: 'State', value: student.permState || 'Odisha' }],
-      [{ label: 'Country', value: student.permCountry || 'India' }, { label: 'PIN Code', value: student.permPin || '751001' }],
+      [{ label: 'Address', value: student.permAddress || student.addresses?.find(a => a.type === 'Permanent')?.addressLine || '—', wide: true }],
+      [{ label: 'City', value: student.permCity || student.addresses?.find(a => a.type === 'Permanent')?.city || '—' }, { label: 'State', value: student.permState || student.addresses?.find(a => a.type === 'Permanent')?.state || '—' }],
+      [{ label: 'Country', value: student.permCountry || '—' }, { label: 'PIN Code', value: student.permPin || student.addresses?.find(a => a.type === 'Permanent')?.pincode || '—' }],
       [{ label: 'Address Type', value: 'Current', wide: true }],
-      [{ label: 'Address', value: student.currAddress || 'GIFT Campus Residence', wide: true }],
-      [{ label: 'City', value: student.currCity || 'Bhubaneswar' }, { label: 'State', value: student.currState || 'Odisha' }],
+      [{ label: 'Address', value: student.currAddress || student.addresses?.find(a => a.type === 'Current')?.addressLine || '—', wide: true }],
+      [{ label: 'City', value: student.currCity || student.addresses?.find(a => a.type === 'Current')?.city || '—' }, { label: 'State', value: student.currState || student.addresses?.find(a => a.type === 'Current')?.state || '—' }],
     ],
     Health: [
-      [{ label: 'Blood Group', value: student.bloodGroup || 'O+' }, { label: 'Known Allergies', value: student.allergies || 'None reported' }],
-      [{ label: 'Emergency Contact', value: student.fatherName || 'Sanjay Das' }, { label: 'Contact Number', value: student.fatherPhone || '+91 94370 10001' }],
-      [{ label: 'Medical Notes', value: 'No notes on file', wide: true }],
+      [{ label: 'Blood Group', value: student.bloodGroup || '—' }, { label: 'Known Allergies', value: student.allergies || '—' }],
+      [{ label: 'Emergency Contact', value: student.guardians?.[0]?.name || '—' }, { label: 'Contact Number', value: student.guardians?.[0]?.contactNumber || '—' }],
+      [{ label: 'Medical Notes', value: '—', wide: true }],
     ],
   }
 
@@ -231,10 +202,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
     setMessage('')
   }
 
-  const studentPhoto = useMemo(() => {
-    if (account?.photo && !account.photo.includes('female')) return account.photo
-    return '/passport_photo_male.svg'
-  }, [account])
+  const studentPhoto = account?.photo || profileRecord?.photo || null
 
   return (
     <section className="student-profile-page sp-modern" id="student-profile" ref={profileRootRef}>
@@ -249,14 +217,17 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
         <button className="profile-return" type="button" onClick={onBack}><ArrowLeft size={15} />Dashboard</button>
       </div>
 
+      {profileError && <div className="erp-alert-box" role="alert">{profileError} Profile details shown below may be incomplete.</div>}
+      {profileLoading && <div className="erp-alert-box" role="status">Loading your saved profile…</div>}
+
       <section className="profile-overview-strip" aria-label="Student identity summary">
         <div className="profile-photo" style={{ padding: 0, overflow: 'hidden', border: '2px solid #ffffff' }}>
-          <img src={studentPhoto} alt={account?.name || 'Student'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {studentPhoto ? <img src={studentPhoto} alt={account?.name || 'Student'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <UserRound size={42} aria-label="No profile photo" />}
         </div>
         <div className="profile-overview-copy">
-          <span className="profile-overview-label">STUDENT RECORD · ACTIVE</span>
+          <span className="profile-overview-label">STUDENT RECORD · {student.status || 'STATUS UNKNOWN'}</span>
           <h2>{account?.name || 'Student'}</h2>
-          <p>{account?.department || 'Computer Science & Engineering'}</p>
+          <p>{student.department || '—'}</p>
         </div>
         <div className="profile-overview-facts">
           <span>
@@ -265,11 +236,11 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
           </span>
           <span>
             <small>Program</small>
-            <strong>B.Tech · 2023–2027</strong>
+            <strong>{student.course || '—'}{student.batch ? ` · ${student.batch}` : ''}</strong>
           </span>
           <span>
             <small>Current section</small>
-            <strong>CSE · Section A</strong>
+            <strong>{student.deptCode || '—'}{student.section ? ` · ${student.section}` : ''}</strong>
           </span>
           <details className="profile-registry-summary">
             <summary>
@@ -369,7 +340,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
                       </h2>
                       <button
                         type="button"
-                        onClick={() => setIsAddDocModalOpen(true)}
+                        onClick={() => setMessage('Document upload is unavailable until protected file storage is configured.')}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -470,11 +441,11 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
                 </span>
                 <span className="profile-id-copy"><strong>APNA CAMPUS</strong><small>STUDENT IDENTITY CARD</small></span>
                 <span className="profile-id-avatar" style={{ padding: 0, overflow: 'hidden' }}>
-                  <img src={studentPhoto} alt={student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {studentPhoto ? <img src={studentPhoto} alt={student.name || 'Student'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <UserRound size={42} aria-label="No profile photo" />}
                 </span>
                 <strong className="profile-id-name">{student.name}</strong>
                 <span>Registration No. {student.registrationNumber}</span>
-                <span>{student.course || 'B.Tech'} · {student.deptCode || 'CSE'} · {student.batch || '2023–2027'}</span>
+                <span>{student.course || '—'} · {student.deptCode || '—'} · {student.batch || '—'}</span>
               </div>
             ) : (
               <div className="profile-data-table">
@@ -494,7 +465,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
               </section>
             );
           })()}
-          <div className="profile-extra-links"><span><Award size={13} />Academic records</span><span><CalendarDays size={13} />Updated 02 Oct 2026</span></div>
+          <div className="profile-extra-links"><span><Award size={13} />Academic records</span><span><CalendarDays size={13} />Academic records</span></div>
         </div>
       </div>
 
@@ -513,7 +484,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
             </div>
             <div className="admin-modal-body" style={{ textAlign: 'center', padding: '1.5rem' }}>
               <div style={{ background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem' }}>
-                {selectedDocView.document === 'Passport-size photograph' ? (
+                {selectedDocView.document === 'Passport-size photograph' && studentPhoto ? (
                   <img
                     src={studentPhoto}
                     alt="Passport photo"
@@ -541,7 +512,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
                 <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Student Name</span><div><strong>{selectedDocView.student.name}</strong></div></div>
                 <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Registration No.</span><div><strong>{selectedDocView.student.registrationNumber}</strong></div></div>
                 <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Verification Seal</span><div><strong style={{ color: '#059669' }}>Autonomous Cell Verified ✓</strong></div></div>
-                <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Department / Batch</span><div><strong>{selectedDocView.student.deptCode || 'CSE'} · {selectedDocView.student.batch || '2023-2027'}</strong></div></div>
+                <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Department / Batch</span><div><strong>{selectedDocView.student.deptCode || '—'} · {selectedDocView.student.batch || '—'}</strong></div></div>
               </div>
             </div>
             <div className="admin-modal-footer" style={{ justifyContent: 'flex-end' }}>
@@ -553,300 +524,19 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
         </div>
       )}
 
-      {/* Upload Document Modal */}
-      {isAddDocModalOpen && (
-        <div className="admin-modal-backdrop" style={{ zIndex: 1000 }}>
-          <div className="admin-modal-card" style={{ maxWidth: '520px' }}>
-            <div className="admin-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <UploadCloud size={20} color="#2563eb" />
-                Upload New Document
-              </h3>
-              <button className="admin-table-action-btn" type="button" onClick={() => setIsAddDocModalOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleAddDocumentSubmit}>
-              <div className="admin-modal-body" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.82rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ShieldCheck size={16} color="#16a34a" />
-                  <span>Document will be automatically verified and synced to <strong>Admin</strong>, <strong>Faculty</strong>, and <strong>HOD</strong> portals.</span>
-                </div>
 
-                <div className="admin-form-group">
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Select Document Type *</label>
-                  <select
-                    className="admin-form-select"
-                    value={newDocForm.docPreset}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      let cat = 'Academic';
-                      if (val.includes('Income') || val.includes('Fee')) cat = 'Financial';
-                      else if (val.includes('Caste') || val.includes('ID')) cat = 'Identification';
-                      else if (val.includes('Medical')) cat = 'Medical';
-                      else if (val.includes('Internship')) cat = 'Training';
-                      setNewDocForm(prev => ({ ...prev, docPreset: val, category: cat }));
-                    }}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
-                    required
-                  >
-                    <option value="Migration Certificate">Migration Certificate</option>
-                    <option value="Income Certificate">Income Certificate</option>
-                    <option value="Caste / Category Certificate">Caste / Category Certificate</option>
-                    <option value="Character / Conduct Certificate">Character / Conduct Certificate</option>
-                    <option value="Transfer Certificate (TC)">Transfer Certificate (TC)</option>
-                    <option value="Internship Offer / Completion Letter">Internship Offer / Completion Letter</option>
-                    <option value="Medical Fitness Certificate">Medical Fitness Certificate</option>
-                    <option value="Autonomous Grade Sheet">Autonomous Grade Sheet</option>
-                    <option value="Other / Custom Document">Other / Custom Document</option>
-                  </select>
-                </div>
-
-                {newDocForm.docPreset === 'Other / Custom Document' && (
-                  <div className="admin-form-group">
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Custom Document Title *</label>
-                    <input
-                      type="text"
-                      className="admin-form-input"
-                      placeholder="e.g. Sports National Certificate, NPTEL Scorecard"
-                      value={newDocForm.customName}
-                      onChange={(e) => setNewDocForm(prev => ({ ...prev, customName: e.target.value }))}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
-                      required
-                    />
-                  </div>
-                )}
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="admin-form-group">
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Category</label>
-                    <select
-                      className="admin-form-select"
-                      value={newDocForm.category}
-                      onChange={(e) => setNewDocForm(prev => ({ ...prev, category: e.target.value }))}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
-                    >
-                      <option value="Academic">Academic</option>
-                      <option value="Identification">Identification</option>
-                      <option value="Financial">Financial</option>
-                      <option value="Medical">Medical</option>
-                      <option value="Training">Training &amp; Internship</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div className="admin-form-group">
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Target Authority</label>
-                    <input
-                      type="text"
-                      disabled
-                      value="Admin · Faculty · HOD"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                </div>
-
-                <div className="admin-form-group">
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Upload File (PDF / Image) *</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg,.webp"
-                    onChange={handleFileChange}
-                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                    required
-                  />
-                  {newDocForm.fileName && (
-                    <div style={{ marginTop: '6px', fontSize: '0.78rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <CheckCircle2 size={13} /> Selected: <strong>{newDocForm.fileName}</strong> ({newDocForm.fileSize})
-                    </div>
-                  )}
-                </div>
-
-                <div className="admin-form-group">
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>Remarks / Certificate No. (Optional)</label>
-                  <input
-                    type="text"
-                    className="admin-form-input"
-                    placeholder="e.g. Issue date 2026, Certificate Serial No. 1294"
-                    value={newDocForm.remarks}
-                    onChange={(e) => setNewDocForm(prev => ({ ...prev, remarks: e.target.value }))}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
-                  />
-                </div>
-              </div>
-              <div className="admin-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '1rem 1.5rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
-                <button
-                  type="button"
-                  className="admin-action-btn-secondary"
-                  onClick={() => setIsAddDocModalOpen(false)}
-                  style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="admin-action-btn-primary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 18px', borderRadius: '8px', background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700 }}
-                >
-                  <Plus size={16} /> Upload &amp; Submit Document
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </section>
   )
 }
 
 function QuickRecordDetails({ view, onBack }) {
-  const records = {
-    'College Marks': {
-      note: 'Internal assessment entries shown here are sample data.',
-      columns: ['Subject', 'Assessment', 'Marks', 'Maximum'],
-      rows: [
-        ['Mathematics-I', 'Internal Assessment 1', '18', '20'],
-        ['Basic Programming Skills', 'Internal Assessment 1', '17', '20'],
-        ['Basic Electronics Engineering', 'Internal Assessment 1', '16', '20'],
-      ],
-    },
-    'University Marks': {
-      note: 'University result entries shown here are sample data.',
-      columns: ['Semester', 'SGPA', 'Result', 'Credits'],
-      rows: [
-        ['1st Semester', '8.14', 'Passed', '20'],
-        ['2nd Semester', '8.42', 'Passed', '21'],
-        ['3rd Semester', 'Pending', 'Awaiting result', '—'],
-      ],
-    },
-    'Campus Biometric': {
-      note: 'Recent biometric events shown here are sample data.',
-      columns: ['Date', 'First entry', 'Last exit', 'Location', 'Status'],
-      rows: [
-        ['02 Oct 2026', '08:42 AM', '04:13 PM', 'Main Gate', 'Verified'],
-        ['01 Oct 2026', '08:51 AM', '04:02 PM', 'Main Gate', 'Verified'],
-        ['30 Sep 2026', '08:39 AM', '04:18 PM', 'Main Gate', 'Verified'],
-      ],
-    },
-    'Canteen Access Log': {
-      note: 'Canteen transactions shown here are sample data.',
-      columns: ['Date', 'Time', 'Outlet', 'Transaction', 'Amount', 'Status'],
-      rows: [
-        ['02 Oct 2026', '01:12 PM', 'Campus Canteen', 'Lunch', '₹65.00', 'Paid'],
-        ['01 Oct 2026', '09:18 AM', 'Campus Canteen', 'Breakfast', '₹35.00', 'Paid'],
-        ['30 Sep 2026', '01:06 PM', 'Campus Canteen', 'Lunch', '₹65.00', 'Paid'],
-      ],
-    },
-  }
-  const record = records[view]
-
   return (
     <div className="profile-quick-record">
       <div className="profile-quick-record-heading">
-        <p className="profile-status-message">{record.note}</p>
+        <p className="profile-status-message">No persisted {view} records are available in this profile view.</p>
         <button className="profile-return" type="button" onClick={onBack}><ArrowLeft size={13} />Back to profile</button>
       </div>
-      <div className="attendance-table-wrap">
-        <table className="attendance-summary-table">
-          <thead><tr>{record.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead>
-          <tbody>{record.rows.map((row) => <tr key={row.join('-')}>{row.map((value, index) => index === 0 ? <th scope="row" key={index}>{value}</th> : <td key={index}>{value}</td>)}</tr>)}</tbody>
-        </table>
-      </div>
     </div>
-  )
-}
-
-function FeesDetails() {
-  const [receiptMessage, setReceiptMessage] = useState('')
-  const feeDemands = [
-    ['2023–24', 'Admission and tuition fee', '₹78,400.00'],
-    ['2024–25', 'Tuition and academic fee', '₹78,400.00'],
-    ['2025–26', 'Tuition and academic fee', '₹78,400.00'],
-    ['2026–27', 'Tuition and academic fee', '₹87,400.00'],
-  ]
-  const payments = [
-    ['PMT-2301', '12-08-2023', 'Online', 'UTR •••• 4812', 'SBI', 'Bhubaneswar', 'Admission fee', '₹40,000.00'],
-    ['PMT-2404', '15-03-2024', 'Online', 'UTR •••• 1470', 'SBI', 'Bhubaneswar', 'Tuition fee', '₹35,000.00'],
-    ['PMT-2417', '20-06-2024', 'Online', 'UTR •••• 2964', 'HDFC', 'Bhubaneswar', 'Tuition fee', '₹30,000.00'],
-    ['PMT-2503', '12-01-2025', 'Online', 'UTR •••• 5038', 'SBI', 'Bhubaneswar', 'Tuition fee', '₹30,000.00'],
-    ['PMT-2509', '10-07-2025', 'Online', 'UTR •••• 9441', 'SBI', 'Bhubaneswar', 'Tuition fee', '₹29,680.00'],
-    ['PMT-2602', '01-02-2026', 'Online', 'UTR •••• 6812', 'HDFC', 'Bhubaneswar', 'Tuition fee', '₹30,000.00'],
-  ]
-  const paidTotal = 194680
-  const totalFees = 322600
-  const outstanding = totalFees - paidTotal
-  const paidReceiptSections = [
-    { title: 'Student Paid (GIFT Money Receipt - Old Portal)', columns: ['Receipt No.', 'Money Receipt No.', 'Session', 'Paid Towards', 'Amount Paid'] },
-    { title: 'Student Paid (RB Infracon Money Receipt - Old Portal)', columns: ['Receipt No.', 'Session', 'Paid Towards', 'Amount Paid'] },
-  ]
-
-  return (
-    <div className="fees-details-view">
-      <section className="fee-overview" aria-label="Fee summary">
-        <p><span>Student's Total Fees</span><strong>₹{totalFees.toLocaleString('en-IN')}.00</strong></p>
-        <p><span>Total paid by Student</span><strong>₹{paidTotal.toLocaleString('en-IN')}.00</strong></p>
-        <p><span>Amount Outstanding</span><strong>₹{outstanding.toLocaleString('en-IN')}.00 ({((outstanding / totalFees) * 100).toFixed(2)}%)</strong></p>
-      </section>
-
-      <aside className="fee-notice">
-        <strong>Important:</strong> If you notice a discrepancy in your fee statement, contact the Accounts Office at <a href="mailto:info@apnacampus.edu.in">info@apnacampus.edu.in</a> with your registration number.
-      </aside>
-
-      <FeeTableSection title="Fee Details" className="fee-demand-section">
-        <table className="fee-data-table demand-table">
-          <thead><tr><th>#</th><th>Demand Session ID</th><th>Demand Name</th><th>Demand Amount</th></tr></thead>
-          <tbody>
-            {feeDemands.map(([session, name, amount], index) => (
-              <tr key={session}><td>{index + 1}</td><td>{session}</td><td>{name}</td><td>{amount}</td></tr>
-            ))}
-          </tbody>
-          <tfoot><tr><th colSpan="3">Total Fees</th><td>₹{totalFees.toLocaleString('en-IN')}.00</td></tr></tfoot>
-        </table>
-      </FeeTableSection>
-
-      <FeeTableSection title="Payment History" className="payment-history-section">
-        <table className="fee-data-table payment-table">
-          <thead><tr><th>#</th><th>Payment Id</th><th>Payment Date</th><th>Payment Mode</th><th>Cheque/UTR/Transaction No.</th><th>Bank Name</th><th>Bank Branch</th><th>Towards</th><th>Amount Paid</th><th>Action</th></tr></thead>
-          <tbody>
-            {payments.map((payment, index) => (
-              <tr key={payment[0]}>
-                <td>{index + 1}</td>
-                {payment.map((value) => <td key={value}>{value}</td>)}
-                <td><button className="fee-receipt-button" type="button" aria-label={`View receipt ${payment[0]}`} onClick={() => setReceiptMessage(`Receipt ${payment[0]} is available when payment records are connected.`)}><FileText size={12} /></button></td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot><tr><th colSpan="8">Total Paid</th><td colSpan="2">₹{paidTotal.toLocaleString('en-IN')}.00</td></tr></tfoot>
-        </table>
-        {receiptMessage && <p className="fee-receipt-message" role="status">{receiptMessage}</p>}
-      </FeeTableSection>
-
-      {paidReceiptSections.map(({ title, columns }) => (
-        <FeeTableSection title={title} key={title} className="legacy-receipt-section">
-          <table className="fee-data-table legacy-table">
-            <thead><tr><th>#</th>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead>
-            <tbody><tr><td colSpan={columns.length + 1}>No records found.</td></tr></tbody>
-            <tfoot><tr><th colSpan={columns.length}>Amount Paid</th><td>₹0.00</td></tr></tfoot>
-          </table>
-        </FeeTableSection>
-      ))}
-
-      <FeeTableSection title="Refund History" className="refund-history-section">
-        <table className="fee-data-table refund-table">
-          <thead><tr><th>#</th><th>Refund Id</th><th>Payment Date</th><th>Payment Mode</th><th>Cheque/UTR/Transaction No.</th><th>Bank Name</th><th>Bank Branch</th><th>Amount Refunded</th></tr></thead>
-          <tbody><tr><td colSpan="8">No refund records found.</td></tr></tbody>
-          <tfoot><tr><th colSpan="7">Total Refunded</th><td>₹0.00</td></tr></tfoot>
-        </table>
-      </FeeTableSection>
-    </div>
-  )
-}
-
-function FeeTableSection({ title, className = '', children }) {
-  return (
-    <section className={`fee-table-section ${className}`}>
-      <h3>{title}</h3>
-      <div className="fee-table-wrap">{children}</div>
-    </section>
   )
 }
 
@@ -959,68 +649,68 @@ function PersonalDetails({ student }) {
             <tr>
               <td className="erp-th-cell erp-th-blue">Admission Category</td>
               <td className="erp-td-cell erp-td-yellow" colSpan={3}>
-                {s.admissionCategory || 'General'}
+                {s.admissionCategory || '—'}
               </td>
             </tr>
             <tr>
               <td className="erp-th-cell">Title</td>
               <td className="erp-td-cell" colSpan={3}>
-                {s.title || 'Mr.'}
+                {s.title || '—'}
               </td>
             </tr>
             <tr>
               <td className="erp-th-cell">First Name</td>
-              <td className="erp-td-cell">{s.firstName || 'BISHNU'}</td>
+              <td className="erp-td-cell">{s.firstName || '—'}</td>
               <td className="erp-th-cell">Last Name</td>
-              <td className="erp-td-cell">{s.lastName || 'SAHOO'}</td>
+              <td className="erp-td-cell">{s.lastName || '—'}</td>
             </tr>
             <tr>
               <td className="erp-th-cell">Middle Name</td>
-              <td className="erp-td-cell">{s.middleName || 'PRASAD'}</td>
+              <td className="erp-td-cell">{s.middleName || '—'}</td>
               <td className="erp-th-cell">Gender</td>
-              <td className="erp-td-cell">{s.gender || 'MALE'}</td>
+              <td className="erp-td-cell">{s.gender || '—'}</td>
             </tr>
             <tr>
               <td className="erp-th-cell">Date of Birth</td>
-              <td className="erp-td-cell">{s.dobFormatted || s.dob || '04-03-2007'}</td>
+              <td className="erp-td-cell">{s.dobFormatted || s.dob || '—'}</td>
               <td className="erp-th-cell">Nationality</td>
-              <td className="erp-td-cell">{s.nationality || 'Indian'}</td>
+              <td className="erp-td-cell">{s.nationality || '—'}</td>
             </tr>
             <tr>
               <td className="erp-th-cell">Caste</td>
-              <td className="erp-td-cell">{s.caste || 'SEBC/OBC'}</td>
+              <td className="erp-td-cell">{s.caste || '—'}</td>
               <td className="erp-th-cell">Religion</td>
-              <td className="erp-td-cell">{s.religion || 'HINDU'}</td>
+              <td className="erp-td-cell">{s.religion || '—'}</td>
             </tr>
             <tr>
               <td className="erp-th-cell">Bloodgroup</td>
-              <td className="erp-td-cell">{s.bloodGroup || 'O+'}</td>
+              <td className="erp-td-cell">{s.bloodGroup || '—'}</td>
               <td className="erp-th-cell">Birthplace</td>
-              <td className="erp-td-cell">{s.birthplace || 'GHASIPUT, CUTTACK'}</td>
+              <td className="erp-td-cell">{s.birthplace || '—'}</td>
             </tr>
             <tr>
               <td className="erp-th-cell">Identification Mark</td>
-              <td className="erp-td-cell" colSpan={3}>{s.identificationMark || 'NO'}</td>
+              <td className="erp-td-cell" colSpan={3}>{s.identificationMark || '—'}</td>
             </tr>
             <tr>
               <td className="erp-th-cell">Thumb ID</td>
-              <td className="erp-td-cell" colSpan={3}>{s.thumbId || '19181'}</td>
+              <td className="erp-td-cell" colSpan={3}>{s.thumbId || '—'}</td>
             </tr>
             <tr>
               <td className="erp-th-cell">Hostel</td>
-              <td className="erp-td-cell">{s.hostel || 'Yes'}</td>
+              <td className="erp-td-cell">{s.hostelName || s.hostel || '—'}</td>
               <td className="erp-th-cell">Transport</td>
-              <td className="erp-td-cell">{s.transport || 'N'}</td>
+              <td className="erp-td-cell">{s.transport || '—'}</td>
             </tr>
             <tr>
               <td className="erp-th-cell">Lunch</td>
-              <td className="erp-td-cell">{s.lunch || 'N'}</td>
+              <td className="erp-td-cell">{s.lunch || '—'}</td>
               <td className="erp-th-cell">NSS</td>
-              <td className="erp-td-cell">{s.nss || 'N'}</td>
+              <td className="erp-td-cell">{s.nss || '—'}</td>
             </tr>
             <tr>
               <td className="erp-th-cell">Languages Known</td>
-              <td className="erp-td-cell" colSpan={3}>{s.languagesKnown || 'odia,hindi,english'}</td>
+              <td className="erp-td-cell" colSpan={3}>{s.languagesKnown || '—'}</td>
             </tr>
             <tr>
               <td className="erp-th-cell">Hobbies</td>
@@ -1037,20 +727,22 @@ function AcademicDetails({ student }) {
   const s = student || {}
   const [enrollments, setEnrollments] = useState([])
   const [loadingEnrollments, setLoadingEnrollments] = useState(false)
+  const [enrollmentError, setEnrollmentError] = useState('')
 
   useEffect(() => {
     let isMounted = true
-    const query = s.registrationNumber || s.rollNumber || s.id
+    const query = s.id || s.studentId || s.registrationNumber || s.rollNumber
     if (query) {
       setLoadingEnrollments(true)
+      setEnrollmentError('')
       api.getStudentEnrollments(query)
         .then((res) => {
-          if (isMounted && Array.isArray(res) && res.length > 0) {
-            setEnrollments(res)
-          }
+          if (!isMounted) return
+          const rows = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []
+          setEnrollments(rows)
         })
-        .catch(() => {
-          // Keep default fallback
+        .catch((error) => {
+          if (isMounted) setEnrollmentError(error.message || 'Enrollment history could not be loaded.')
         })
         .finally(() => {
           if (isMounted) setLoadingEnrollments(false)
@@ -1059,41 +751,34 @@ function AcademicDetails({ student }) {
     return () => { isMounted = false }
   }, [s.registrationNumber, s.rollNumber, s.id])
 
-  // Fallback demo enrollments if none returned yet from database
-  const displayEnrollments = enrollments.length > 0 ? enrollments : [
-    { id: 'enr-1', semester: 'Semester 1', academicYear: '2023-2024', section: 'A', sgpa: 8.14, cgpa: 8.14, status: 'COMPLETED', programme: { name: 'B.Tech Computer Science & Engineering', code: 'BTECH-CSE' } },
-    { id: 'enr-2', semester: 'Semester 2', academicYear: '2023-2024', section: 'A', sgpa: 8.42, cgpa: 8.28, status: 'COMPLETED', programme: { name: 'B.Tech Computer Science & Engineering', code: 'BTECH-CSE' } },
-    { id: 'enr-3', semester: 'Semester 3', academicYear: '2024-2025', section: 'A', sgpa: 8.56, cgpa: 8.37, status: 'COMPLETED', programme: { name: 'B.Tech Computer Science & Engineering', code: 'BTECH-CSE' } },
-    { id: 'enr-4', semester: 'Semester 4', academicYear: '2024-2025', section: 'A', sgpa: 8.60, cgpa: 8.43, status: 'COMPLETED', programme: { name: 'B.Tech Computer Science & Engineering', code: 'BTECH-CSE' } },
-    { id: 'enr-5', semester: 'Semester 5', academicYear: '2025-2026', section: 'A', sgpa: null, cgpa: 8.42, status: 'ACTIVE', programme: { name: 'B.Tech Computer Science & Engineering', code: 'BTECH-CSE' } },
-  ]
+  const displayEnrollments = enrollments
 
   const fields = [
-    ['Course', s.course || 'Bachelor of Technology'],
-    ['Batch', s.batch || 'BTECH 2028-P'],
-    ['Branch', s.branch || 'Computer Science & Engineering (Artificial Intelligence)'],
-    ['Section', s.section || s.academicSection || 'CSE (AI) - Genius'],
-    ['House', s.house || 'ANAND'],
+    ['Course', s.course || '—'],
+    ['Batch', s.batch || '—'],
+    ['Branch', s.branch || s.department || '—'],
+    ['Section', s.section || s.academicSection || '—'],
+    ['House', s.house || '—'],
     ['Lab Group', s.labGroup || '1'],
     ['Honors', s.honors || 'N'],
     ['Minor', s.minor || 'N'],
     ['Value added course-1', s.valueAdded1 || ''],
     ['Value added course-2', s.valueAdded2 || ''],
     ['Value added course-3', s.valueAdded3 || ''],
-    ['Admission Date', s.admissionDateFormatted || s.admissionDate || '05-08-2024'],
-    ['Entrance Examination', s.entranceExam || 'JEE MAIN'],
-    ['Rank', s.rank !== undefined ? String(s.rank) : '0'],
+    ['Admission Date', s.admissionDateFormatted || s.admissionDate || '—'],
+    ['Entrance Examination', s.entranceExam || '—'],
+    ['Rank', s.rank !== undefined ? String(s.rank) : '—'],
   ]
 
   const qualifications = [
-    ['10th', s.qual10thInstitute || 'ARACHANDI UCHA BIDYAMANDIR,NISTIPUR', s.qual10thYear || '2022', s.qual10thMarks || '82.50'],
-    ['12th', s.qual12thInstitute || 'Shanti Institute Of Management,CDA,Cuttack', s.qual12thYear || '2024', s.qual12thMarks || '80.16'],
-    ['ITI', s.qualItiInstitute || '0', s.qualItiYear || '', s.qualItiMarks || '0.00'],
-    ['Diploma', s.qualDiplomaInstitute || '0', s.qualDiplomaYear || '', s.qualDiplomaMarks || '0.00'],
-    ['+3', s.qualPlus3Institute || '0', s.qualPlus3Year || '', s.qualPlus3Marks || '0.00'],
-    ['BCA', s.qualBcaInstitute || '0', s.qualBcaYear || '', s.qualBcaMarks || '0.00'],
-    ['BBA', s.qualBbaInstitute || '0', s.qualBbaYear || '', s.qualBbaMarks || '0.00'],
-    ['BTECH', s.qualBtechInstitute || '0', s.qualBtechYear || '', s.qualBtechMarks || '0.00'],
+    ['10th', s.qual10thInstitute || '—', s.qual10thYear || '—', s.qual10thMarks || '—'],
+    ['12th', s.qual12thInstitute || '—', s.qual12thYear || '—', s.qual12thMarks || '—'],
+    ['ITI', s.qualItiInstitute || '—', s.qualItiYear || '—', s.qualItiMarks || '—'],
+    ['Diploma', s.qualDiplomaInstitute || '—', s.qualDiplomaYear || '—', s.qualDiplomaMarks || '—'],
+    ['+3', s.qualPlus3Institute || '—', s.qualPlus3Year || '—', s.qualPlus3Marks || '—'],
+    ['BCA', s.qualBcaInstitute || '—', s.qualBcaYear || '—', s.qualBcaMarks || '—'],
+    ['BBA', s.qualBbaInstitute || '—', s.qualBbaYear || '—', s.qualBbaMarks || '—'],
+    ['BTECH', s.qualBtechInstitute || '—', s.qualBtechYear || '—', s.qualBtechMarks || '—'],
   ]
 
   return (
@@ -1139,11 +824,11 @@ function AcademicDetails({ student }) {
               {displayEnrollments.map((enr) => (
                 <tr key={enr.id || enr.semester}>
                   <td style={{ fontWeight: 700, color: '#1e293b' }}>{enr.semester}</td>
-                  <td>{enr.programme?.name || s.department || 'B.Tech CSE'}</td>
+                  <td>{enr.programme?.name || s.department || '—'}</td>
                   <td>{enr.academicYear}</td>
-                  <td>{enr.section || 'Section A'}</td>
+                  <td>{enr.section || '—'}</td>
                   <td style={{ fontWeight: 600 }}>{enr.sgpa ? Number(enr.sgpa).toFixed(2) : '—'}</td>
-                  <td style={{ fontWeight: 700, color: '#0f172a' }}>{enr.cgpa ? Number(enr.cgpa).toFixed(2) : (s.cgpa || '8.42')}</td>
+                  <td style={{ fontWeight: 700, color: '#0f172a' }}>{enr.cgpa != null ? Number(enr.cgpa).toFixed(2) : (s.cgpa ?? '—')}</td>
                   <td>
                     <span style={{
                       display: 'inline-flex',
@@ -1163,6 +848,9 @@ function AcademicDetails({ student }) {
                   </td>
                 </tr>
               ))}
+              {!loadingEnrollments && displayEnrollments.length === 0 && (
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '1rem', color: '#64748b' }}>{enrollmentError || 'No persisted enrollment history is available.'}</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -1234,10 +922,10 @@ function GuardiansDetails({ student }) {
       {/* Guardian 1: Father */}
       <div className="erp-guardian-section">
         <div className="erp-section-subhead-row">
-          <div className="erp-section-subhead">1-{s.fatherName || 'AJAY KUMAR SAHOO'}</div>
+          <div className="erp-section-subhead">1-{s.fatherName || '—'}</div>
           <div className="erp-emergency-contact-box">
             <span>Is Emergency Contact</span>
-            <span className="erp-badge-orange">{s.fatherIsEmergency || 'No'}</span>
+            <span className="erp-badge-orange">{s.fatherIsEmergency || '—'}</span>
           </div>
         </div>
         <div className="erp-gold-divider-line"></div>
@@ -1247,15 +935,15 @@ function GuardiansDetails({ student }) {
             <tbody>
               <tr>
                 <td className="erp-th-cell">Name</td>
-                <td className="erp-td-cell">{s.fatherName || 'AJAY KUMAR SAHOO'}</td>
+                <td className="erp-td-cell">{s.fatherName || '—'}</td>
                 <td className="erp-th-cell"></td>
                 <td className="erp-td-cell"></td>
               </tr>
               <tr>
                 <td className="erp-th-cell">Relation</td>
-                <td className="erp-td-cell">{s.fatherRelationship || 'Father'}</td>
+                <td className="erp-td-cell">{s.fatherRelationship || '—'}</td>
                 <td className="erp-th-cell">Occupation</td>
-                <td className="erp-td-cell">{s.fatherOccupation || 'FARMER'}</td>
+                <td className="erp-td-cell">{s.fatherOccupation || '—'}</td>
               </tr>
               <tr>
                 <td className="erp-th-cell">Mobile No</td>
@@ -1265,7 +953,7 @@ function GuardiansDetails({ student }) {
               </tr>
               <tr>
                 <td className="erp-th-cell">Income</td>
-                <td className="erp-td-cell">{s.fatherIncome || '1LAK'}</td>
+                <td className="erp-td-cell">{s.fatherIncome || '—'}</td>
                 <td className="erp-th-cell">Email</td>
                 <td className="erp-td-cell">{s.fatherEmail || ''}</td>
               </tr>
@@ -1291,10 +979,10 @@ function GuardiansDetails({ student }) {
       {/* Guardian 2: Mother */}
       <div className="erp-guardian-section" style={{ marginTop: '28px' }}>
         <div className="erp-section-subhead-row">
-          <div className="erp-section-subhead">2-{s.motherName || 'SANJUBALA SAHOO'}</div>
+          <div className="erp-section-subhead">2-{s.motherName || '—'}</div>
           <div className="erp-emergency-contact-box">
             <span>Is Emergency Contact</span>
-            <span className="erp-badge-orange">{s.motherIsEmergency || 'No'}</span>
+            <span className="erp-badge-orange">{s.motherIsEmergency || '—'}</span>
           </div>
         </div>
         <div className="erp-gold-divider-line"></div>
@@ -1304,13 +992,13 @@ function GuardiansDetails({ student }) {
             <tbody>
               <tr>
                 <td className="erp-th-cell">Name</td>
-                <td className="erp-td-cell">{s.motherName || 'SANJUBALA SAHOO'}</td>
+                <td className="erp-td-cell">{s.motherName || '—'}</td>
                 <td className="erp-th-cell"></td>
                 <td className="erp-td-cell"></td>
               </tr>
               <tr>
                 <td className="erp-th-cell">Relation</td>
-                <td className="erp-td-cell">{s.motherRelationship || 'Mother'}</td>
+                <td className="erp-td-cell">{s.motherRelationship || '—'}</td>
                 <td className="erp-th-cell">Occupation</td>
                 <td className="erp-td-cell">{s.motherOccupation || ''}</td>
               </tr>
@@ -1322,7 +1010,7 @@ function GuardiansDetails({ student }) {
               </tr>
               <tr>
                 <td className="erp-th-cell">Income</td>
-                <td className="erp-td-cell">{s.motherIncome || '0'}</td>
+                <td className="erp-td-cell">{s.motherIncome || '—'}</td>
                 <td className="erp-th-cell">Email</td>
                 <td className="erp-td-cell">{s.motherEmail || ''}</td>
               </tr>
@@ -1367,25 +1055,25 @@ function AddressDetails({ student }) {
             <tbody>
               <tr>
                 <td className="erp-th-cell">Address</td>
-                <td className="erp-td-cell" colSpan={3}>{s.currAddress || 'GHASIPUT, CUTTACK'}</td>
+                <td className="erp-td-cell" colSpan={3}>{s.currAddress || '—'}</td>
               </tr>
               <tr>
                 <td className="erp-th-cell">City</td>
-                <td className="erp-td-cell">{s.currCity || 'Cuttack'}</td>
+                <td className="erp-td-cell">{s.currCity || '—'}</td>
                 <td className="erp-th-cell">State</td>
-                <td className="erp-td-cell">{s.currState || 'Odisha'}</td>
+                <td className="erp-td-cell">{s.currState || '—'}</td>
               </tr>
               <tr>
                 <td className="erp-th-cell">Country</td>
-                <td className="erp-td-cell">{s.currCountry || 'India'}</td>
+                <td className="erp-td-cell">{s.currCountry || '—'}</td>
                 <td className="erp-th-cell">House No</td>
                 <td className="erp-td-cell">{s.currHouseNo || ''}</td>
               </tr>
               <tr>
                 <td className="erp-th-cell">Pincode</td>
-                <td className="erp-td-cell">{s.currPin || '754008'}</td>
+                <td className="erp-td-cell">{s.currPin || '—'}</td>
                 <td className="erp-th-cell">Phone No</td>
-                <td className="erp-td-cell">{s.currPhone || '7749844291'}</td>
+                <td className="erp-td-cell">{s.currPhone || '—'}</td>
               </tr>
             </tbody>
           </table>
@@ -1402,25 +1090,25 @@ function AddressDetails({ student }) {
             <tbody>
               <tr>
                 <td className="erp-th-cell">Address</td>
-                <td className="erp-td-cell" colSpan={3}>{s.permAddress || 'GHASIPUT, CUTTACK'}</td>
+                <td className="erp-td-cell" colSpan={3}>{s.permAddress || '—'}</td>
               </tr>
               <tr>
                 <td className="erp-th-cell">City</td>
-                <td className="erp-td-cell">{s.permCity || 'Cuttack'}</td>
+                <td className="erp-td-cell">{s.permCity || '—'}</td>
                 <td className="erp-th-cell">State</td>
-                <td className="erp-td-cell">{s.permState || 'Odisha'}</td>
+                <td className="erp-td-cell">{s.permState || '—'}</td>
               </tr>
               <tr>
                 <td className="erp-th-cell">Country</td>
-                <td className="erp-td-cell">{s.permCountry || 'India'}</td>
+                <td className="erp-td-cell">{s.permCountry || '—'}</td>
                 <td className="erp-th-cell">House No</td>
                 <td className="erp-td-cell">{s.permHouseNo || ''}</td>
               </tr>
               <tr>
                 <td className="erp-th-cell">Pincode</td>
-                <td className="erp-td-cell">{s.permPin || '754008'}</td>
+                <td className="erp-td-cell">{s.permPin || '—'}</td>
                 <td className="erp-th-cell">Phone No</td>
-                <td className="erp-td-cell">{s.permPhone || '7749844291'}</td>
+                <td className="erp-td-cell">{s.permPhone || '—'}</td>
               </tr>
             </tbody>
           </table>

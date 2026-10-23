@@ -67,7 +67,6 @@ import CampusConnect from './components/CampusConnect/CampusConnect.jsx'
 import AcademicResourcesSection from './components/CampusConnect/AcademicResourcesSection.jsx'
 import LeadershipScoreboardSection from './components/CampusConnect/LeadershipScoreboardSection.jsx'
 import AnonymousComplaintsSection from './components/CampusConnect/AnonymousComplaintsSection.jsx'
-import { campusConnectStore } from './services/campusConnectStore.js'
 import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, getAllStudents, findStudentByQuery } from './services/studentStore.js'
 import { notificationsApi } from './services/notificationsApi.js'
@@ -266,30 +265,13 @@ function StudentPortal({ account, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeLink, setActiveLink] = useState(init.link);
   const [activePage, setActivePage] = useState(init.page);
-  const [initialConvId, setInitialConvId] = useState('conv-ds');
   const [whatsappDrawerOpen, setWhatsappDrawerOpen] = useState(false);
   const [campusSubView, setCampusSubView] = useState(() => {
     const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '';
     return campusSubViewMap[hash] || 'chats';
   });
-  const [chatUnreadCount, setChatUnreadCount] = useState(() => {
-    return campusConnectStore.getTotalUnreadCount ? campusConnectStore.getTotalUnreadCount() : 12;
-  });
-
-  useEffect(() => {
-    const updateUnread = () => {
-      if (campusConnectStore.getTotalUnreadCount) {
-        setChatUnreadCount(campusConnectStore.getTotalUnreadCount());
-      }
-    };
-    window.addEventListener('campus_connect_updated', updateUnread);
-    return () => window.removeEventListener('campus_connect_updated', updateUnread);
-  }, []);
-
   useEffect(() => {
     const handleChatNav = (e) => {
-      const targetConvId = e.detail?.convId || 'conv-ds';
-      setInitialConvId(targetConvId);
       setCampusSubView('chats');
       setActivePage('campus-connect');
       setActiveLink('Campus Connect');
@@ -603,7 +585,6 @@ function StudentPortal({ account, onLogout }) {
               <CampusConnect
                 account={account}
                 isDrawerMode={true}
-                initialConversationId={initialConvId}
                 initialView={campusSubView}
                 onNavigateToModule={(mod) => {
                   setWhatsappDrawerOpen(false);
@@ -897,7 +878,6 @@ function StudentPortal({ account, onLogout }) {
                 activePage === 'anonymous-complaints') && (
                 <CampusConnect
                   account={account}
-                  initialConversationId={initialConvId}
                   initialCategory={activePage === 'class-groups' ? 'Classes' : 'All'}
                   initialView={campusSubView}
                   onBack={() => {
@@ -923,7 +903,7 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'timetable' && <TimetablePage />}
               {activePage === 'notices' && <NoticesPage />}
               {activePage === 'idcard' && <IDCardPage />}
-              {activePage === 'library' && <LibraryPage />}
+              {activePage === 'library' && <LibraryPage account={account} />}
               {activePage === 'internship' && <InternshipPage account={account} />}
               {activePage === 'online-exam' && <OnlineExamPage />}
               {activePage === 'placement' && <PlacementPage />}

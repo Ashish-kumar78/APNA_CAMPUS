@@ -1,19 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Users,
   UserCheck,
   CheckCircle2,
-  Clock,
-  AlertCircle,
   Search,
   Filter,
   Plus,
   ArrowRight,
-  ExternalLink,
-  Copy,
-  Check,
   X,
-  FileText,
   Building2,
   GraduationCap,
   Sparkles,
@@ -23,87 +17,83 @@ import {
   Award
 } from 'lucide-react';
 import { api } from '../services/api.js';
-import AccountActivationModal from './AccountActivationModal.jsx';
-import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 
-export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
+export default function AdmissionsPortal({ account, onLogout }) {
   const [activeView, setActiveView] = useState('dashboard');
-  const [stats, setStats] = useState({
-    total: 0,
-    applied: 0,
-    verified: 0,
-    approved: 0,
-    enrolled: 0,
-    rejected: 0,
-    conversionRate: '0%',
-  });
+  const [stats, setStats] = useState(null);
 
   const [applicants, setApplicants] = useState([]);
   const [programmes, setProgrammes] = useState([]);
+  const [academicYears, setAcademicYears] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [progFilter, setProgFilter] = useState('All');
+  const [academicYearFilter, setAcademicYearFilter] = useState('All');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingApplicantId, setPendingApplicantId] = useState('');
+  const [selectedApplicant, setSelectedApplicant] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const loadSequence = useRef(0);
 
   // Onboarding credential modal (after one-click approve & enroll)
   const [enrolledStudentInfo, setEnrolledStudentInfo] = useState(null);
-  const [copiedLink, setCopiedLink] = useState(false);
-
-  // Direct activation simulation modal
-  const [activationTokenToSimulate, setActivationTokenToSimulate] = useState('');
 
   // New applicant form state
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    gender: 'Female',
-    dob: '2005-08-15',
-    category: 'General',
+    gender: '',
+    dob: '',
+    category: '',
     programmeId: '',
-    programmeName: 'B.Tech Computer Science & Engineering',
-    tenthMarks: '88.5',
-    twelfthMarks: '86.0',
-    entranceExam: 'JEE Main 2026',
-    entranceRank: '32500',
+    academicYear: '',
+    tenthMarks: '',
+    twelfthMarks: '',
+    entranceExam: '',
+    entranceRank: '',
   });
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
     loadData();
-  }, [statusFilter, progFilter]);
+  }, [statusFilter, progFilter, academicYearFilter, debouncedSearch]);
 
   async function loadData() {
+    const sequence = ++loadSequence.current;
     setIsLoading(true);
-    try {
-      const [statsRes, applicantsRes, progRes] = await Promise.allSettled([
-        api.getAdmissionStats(),
-        api.getApplicants({ status: statusFilter, programmeId: progFilter }),
-        api.getProgrammes(),
-      ]);
-
-      if (statsRes.status === 'fulfilled' && statsRes.value?.data) {
-        setStats(statsRes.value.data);
-      }
-      if (applicantsRes.status === 'fulfilled' && applicantsRes.value?.data) {
-        setApplicants(applicantsRes.value.data);
-      }
-      if (progRes.status === 'fulfilled' && progRes.value?.data) {
-        setProgrammes(progRes.value.data);
-        if (!formData.programmeId && progRes.value.data.length > 0) {
-          setFormData((prev) => ({
-            ...prev,
-            programmeId: progRes.value.data[0].id,
-            programmeName: progRes.value.data[0].name,
-          }));
-        }
-      }
-    } catch (err) {
-      console.warn('Error loading admissions data:', err);
-    } finally {
-      setIsLoading(false);
-    }
+    const results = await Promise.allSettled([
+      api.getAdmissionStats(),
+      api.getApplicants({ status: statusFilter, programmeId: progFilter, academicYear: academicYearFilter, search: debouncedSearch }),
+      api.getProgrammes(),
+      api.getAcademicYears(),
+    ]);
+    if (sequence !== loadSequence.current) return;
+    const errors = [];
+    const [statsRes, applicantsRes, progRes, yearsRes] = results;
+    if (statsRes.status === 'fulfilled' && statsRes.value?.data) setStats(statsRes.value.data);
+    else { setStats(null); errors.push('admission statistics'); }
+    if (applicantsRes.status === 'fulfilled' && Array.isArray(applicantsRes.value?.data)) setApplicants(applicantsRes.value.data);
+    else { setApplicants([]); errors.push('applicant records'); }
+    if (progRes.status === 'fulfilled' && Array.isArray(progRes.value?.data)) setProgrammes(progRes.value.data.filter((p) => String(p.status).toLowerCase() === 'active'));
+    else { setProgrammes([]); errors.push('active programmes'); }
+    if (yearsRes.status === 'fulfilled' && Array.isArray(yearsRes.value?.data)) {
+      const years = yearsRes.value.data;
+      setAcademicYears(years);
+      const currentYear = years.find((year) => year.isCurrent)?.year;
+      if (currentYear) setFormData((previous) => previous.academicYear ? previous : { ...previous, academicYear: currentYear });
+    } else { setAcademicYears([]); errors.push('academic years'); }
+    setLoadError(errors.length ? `Could not load ${errors.join(', ')} from the backend.` : '');
+    setIsLoading(false);
   }
 
   function showToast(msg) {
@@ -113,90 +103,147 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
 
   async function handleRegisterApplicant(e) {
     e.preventDefault();
+    if (!formData.programmeId || !academicYears.some((year) => year.year === formData.academicYear)) {
+      setLoadError('Choose an active programme and an academic year configured in Academic Setup.');
+      return;
+    }
+    setIsSubmitting(true);
     try {
-      const res = await api.createApplicant(formData);
+      const payload = {
+        ...formData,
+        tenthMarks: formData.tenthMarks === '' ? undefined : Number(formData.tenthMarks),
+        twelfthMarks: formData.twelfthMarks === '' ? undefined : Number(formData.twelfthMarks),
+        entranceExam: formData.entranceExam || undefined,
+        entranceRank: formData.entranceRank === '' ? undefined : Number(formData.entranceRank),
+      };
+      const res = await api.createApplicant(payload);
       if (res && res.success) {
-        showToast(`Applicant ${formData.name} registered successfully!`);
+        showToast(`Application ${res.data?.applicationNo || ''} saved.`);
         setIsRegisterModalOpen(false);
-        loadData();
+        setActiveView('applicants');
+        setFormData({ name: '', email: '', phone: '', gender: '', dob: '', category: '', programmeId: '', academicYear: '', tenthMarks: '', twelfthMarks: '', entranceExam: '', entranceRank: '' });
+        await loadData();
       } else {
         alert(res?.message || 'Failed to register applicant.');
       }
     } catch (err) {
       alert(err?.message || 'Error creating application. Please check input details.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleVerify(id, name) {
+    if (!window.confirm(`Confirm that ${name}'s admission eligibility was reviewed through your institution's approved process? This portal does not store uploaded documents.`)) return;
+    setPendingApplicantId(id);
     try {
       const res = await api.verifyApplicant(id);
       if (res && res.success) {
-        showToast(`Applicant ${name} marked as VERIFIED.`);
-        loadData();
+        showToast(`Application ${res.data?.applicationNo || ''} marked verified.`);
+        await loadData();
       }
     } catch (err) {
       alert(err?.message || 'Failed to verify applicant.');
+    } finally {
+      setPendingApplicantId('');
     }
   }
 
   async function handleApproveAndEnroll(id) {
-    if (!window.confirm('Approve admission and provision student account, enrollment and activation link?')) return;
+    if (!window.confirm('Approve this admission and create the student and enrollment records?')) return;
+    setPendingApplicantId(id);
     try {
       const res = await api.approveAndEnrollApplicant(id);
       if (res && res.success && res.data) {
         setEnrolledStudentInfo(res.data);
         showToast(`Student ${res.data.name} admitted successfully!`);
-        loadData();
+        await loadData();
       } else {
         alert(res?.message || 'Failed to enroll applicant.');
       }
     } catch (err) {
       alert(err?.message || 'Enrollment transaction failed.');
+    } finally {
+      setPendingApplicantId('');
     }
   }
 
   async function handleReject(id, name) {
-    const reason = window.prompt(`Please provide a rejection reason for ${name}:`, 'Incomplete academic prerequisites');
+    const reason = window.prompt(`Enter the documented rejection reason for ${name}:`);
     if (reason === null) return;
+    if (!reason.trim()) {
+      alert('A rejection reason is required.');
+      return;
+    }
+    setPendingApplicantId(id);
     try {
       const res = await api.rejectApplicant(id, reason);
       if (res && res.success) {
         showToast(`Applicant ${name} marked as REJECTED.`);
-        loadData();
+        await loadData();
       }
     } catch (err) {
       alert(err?.message || 'Failed to reject applicant.');
+    } finally {
+      setPendingApplicantId('');
     }
   }
 
-  function copyActivationLink(url) {
-    const fullUrl = `${window.location.origin}/#activate?token=${enrolledStudentInfo.activationToken}`;
-    navigator.clipboard.writeText(fullUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 3000);
+  async function openApplicantDetails(id) {
+    setDetailsLoading(true);
+    setSelectedApplicant(null);
+    try {
+      const response = await api.getApplicantById(id);
+      if (response?.success && response.data) setSelectedApplicant(response.data);
+      else throw new Error(response?.message || 'Applicant details were not returned.');
+    } catch (error) {
+      alert(error?.message || 'Could not load applicant details.');
+    } finally {
+      setDetailsLoading(false);
+    }
   }
 
   const filteredApplicants = applicants.filter((a) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      a.name?.toLowerCase().includes(q) ||
-      a.applicationNo?.toLowerCase().includes(q) ||
-      a.email?.toLowerCase().includes(q) ||
-      a.phone?.includes(q)
-    );
+    if (!debouncedSearch) return true;
+    const q = debouncedSearch.toLowerCase();
+    return a.name?.toLowerCase().includes(q) || a.applicationNo?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q) || a.phone?.includes(q);
   });
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' }}>
       {activeView === 'dashboard' ? (
-        <RoleDashboardLanding
-          roleKey="admissions"
-          account={account}
-          onLogout={onLogout}
-          onSwitchRole={onSwitchRole}
-          onNavigate={(target) => setActiveView('applicants')}
-        />
+        <>
+          <header style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '18px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <div>
+              <h1 style={{ margin: 0, color: '#0f172a', fontSize: '1.35rem', fontWeight: 800 }}>Admissions &amp; Intake</h1>
+              <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '.85rem' }}>Application records and decisions from the admissions backend.</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ color: '#475569', fontSize: '.85rem' }}>{account?.name || account?.identifier || 'Signed-in account'}</span>
+              <button type="button" onClick={onLogout} style={{ border: '1px solid #cbd5e1', background: '#fff', borderRadius: 8, padding: '9px 13px', cursor: 'pointer' }}><LogOut size={15} /> Sign out</button>
+            </div>
+          </header>
+          <main style={{ maxWidth: 1440, margin: '0 auto', padding: '28px' }}>
+            {loadError && <div role="alert" style={{ marginBottom: 18, padding: '12px 16px', borderRadius: 10, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c' }}>{loadError} <button type="button" onClick={loadData} style={{ marginLeft: 10 }}>Retry</button></div>}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
+              <div><h2 style={{ margin: 0, fontSize: '1.1rem' }}>Admissions pipeline</h2><p style={{ margin: '5px 0 0', color: '#64748b', fontSize: '.82rem' }}>{isLoading ? 'Refreshing persisted records…' : 'Live counts from saved applicant records.'}</p></div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button type="button" onClick={() => { setStatusFilter('All'); setProgFilter('All'); setAcademicYearFilter('All'); setActiveView('applicants'); }} style={{ padding: '10px 14px', border: '1px solid #cbd5e1', background: '#fff', borderRadius: 9, cursor: 'pointer' }}>View applications</button>
+                <button type="button" disabled={!programmes.length || !academicYears.length} onClick={() => setIsRegisterModalOpen(true)} style={{ padding: '10px 14px', border: 0, background: '#0284c7', color: '#fff', borderRadius: 9, fontWeight: 700, cursor: 'pointer', opacity: !programmes.length || !academicYears.length ? .5 : 1 }}><Plus size={15} /> Register applicant</button>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 14, marginBottom: 22 }}>
+              {[
+                ['Total applications', stats?.total], ['Applied', stats?.applied], ['Verified', stats?.verified],
+                ['Approved', stats?.approved], ['Enrolled', stats?.enrolled], ['Rejected', stats?.rejected],
+              ].map(([label, value]) => <article key={label} style={{ padding: 18, border: '1px solid #e2e8f0', background: '#fff', borderRadius: 12 }}><div style={{ color: '#64748b', fontSize: '.78rem', fontWeight: 700 }}>{label}</div><div style={{ marginTop: 8, fontSize: '1.7rem', fontWeight: 800, color: '#0f172a' }}>{value ?? '—'}</div></article>)}
+            </div>
+            <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between' }}><div><h3 style={{ margin: 0 }}>Recent applications</h3><p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '.8rem' }}>Latest records returned by the backend.</p></div><button type="button" onClick={() => setActiveView('applicants')} style={{ border: 0, color: '#0369a1', background: 'transparent', cursor: 'pointer' }}>Open register <ArrowRight size={14} /></button></div>
+              {applicants.length ? <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '.84rem' }}><thead><tr style={{ background: '#f8fafc' }}>{['Application', 'Applicant', 'Programme', 'Academic year', 'Status'].map((heading) => <th key={heading} style={{ padding: '12px 16px', color: '#475569' }}>{heading}</th>)}</tr></thead><tbody>{applicants.slice(0, 5).map((app) => <tr key={app.id} style={{ borderTop: '1px solid #e2e8f0' }}><td style={{ padding: '13px 16px', fontFamily: 'monospace' }}>{app.applicationNo}</td><td style={{ padding: '13px 16px', fontWeight: 700 }}>{app.name}<div style={{ color: '#64748b', fontSize: '.75rem', fontWeight: 400 }}>{app.email}</div></td><td style={{ padding: '13px 16px' }}>{app.programme?.name || app.programmeName}</td><td style={{ padding: '13px 16px' }}>{app.academicYear}</td><td style={{ padding: '13px 16px' }}>{app.status}</td></tr>)}</tbody></table></div> : <div style={{ padding: 34, textAlign: 'center', color: '#64748b' }}>{isLoading ? 'Loading applications…' : 'No admission applications have been recorded yet.'}</div>}
+            </section>
+          </main>
+        </>
       ) : (
         <>
       {/* Toast Notification */}
@@ -284,6 +331,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
           </button>
           <button
             onClick={() => setIsRegisterModalOpen(true)}
+            disabled={!programmes.length || !academicYears.length}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -295,7 +343,8 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
               borderRadius: '8px',
               fontWeight: 600,
               fontSize: '0.84rem',
-              cursor: 'pointer',
+              cursor: programmes.length && academicYears.length ? 'pointer' : 'not-allowed',
+              opacity: programmes.length && academicYears.length ? 1 : .55,
               boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)',
             }}
           >
@@ -340,6 +389,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
 
       {/* Main Content Container */}
       <main style={{ maxWidth: '1440px', margin: '0 auto', padding: '24px 28px' }}>
+        {loadError && <div role="alert" style={{ marginBottom: 18, padding: '12px 16px', borderRadius: 10, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c' }}>{loadError} <button type="button" onClick={loadData} style={{ marginLeft: 10 }}>Retry</button></div>}
         {/* KPI Summary Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           <div style={{ background: '#ffffff', padding: '18px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -347,17 +397,17 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
               <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Total Applications</span>
               <Users size={18} color="#0284c7" />
             </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '8px' }}>{stats.total || applicants.length}</div>
-            <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '4px', fontWeight: 500 }}>Active session 2026-27</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '8px' }}>{stats?.total ?? '—'}</div>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: 500 }}>Persisted applications</div>
           </div>
 
           <div style={{ background: '#ffffff', padding: '18px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Verified Documents</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Eligibility Reviews</span>
               <CheckCircle2 size={18} color="#059669" />
             </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#059669', marginTop: '8px' }}>{stats.verified}</div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>Ready for seat allocation</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#059669', marginTop: '8px' }}>{stats?.verified ?? '—'}</div>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>Eligibility reviews recorded</div>
           </div>
 
           <div style={{ background: '#ffffff', padding: '18px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -365,7 +415,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
               <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Approved for Admission</span>
               <Award size={18} color="#d97706" />
             </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#d97706', marginTop: '8px' }}>{stats.approved}</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#d97706', marginTop: '8px' }}>{stats?.approved ?? '—'}</div>
             <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>Awaiting student enrollment</div>
           </div>
 
@@ -374,8 +424,8 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
               <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Enrolled & Provisioned</span>
               <ShieldCheck size={18} color="#2563eb" />
             </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#2563eb', marginTop: '8px' }}>{stats.enrolled}</div>
-            <div style={{ fontSize: '0.75rem', color: '#2563eb', marginTop: '4px', fontWeight: 600 }}>Accounts generated</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#2563eb', marginTop: '8px' }}>{stats?.enrolled ?? '—'}</div>
+            <div style={{ fontSize: '0.75rem', color: '#2563eb', marginTop: '4px', fontWeight: 600 }}>Enrollment records created</div>
           </div>
 
           <div style={{ background: '#ffffff', padding: '18px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -383,7 +433,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
               <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Intake Conversion</span>
               <Sparkles size={18} color="#8b5cf6" />
             </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#8b5cf6', marginTop: '8px' }}>{stats.conversionRate || '25%'}</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#8b5cf6', marginTop: '8px' }}>{stats?.conversionRate ?? '—'}</div>
             <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>Inquiry-to-enrollment</div>
           </div>
         </div>
@@ -440,6 +490,13 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                 <option value="REJECTED">Rejected</option>
               </select>
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>Academic year:</span>
+              <select value={academicYearFilter} onChange={(e) => setAcademicYearFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.82rem', background: '#ffffff' }}>
+                <option value="All">All years</option>
+                {academicYears.map((year) => <option key={year.id} value={year.year}>{year.year}{year.isCurrent ? ' (current)' : ''}</option>)}
+              </select>
+            </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Building2 size={15} color="#64748b" />
@@ -466,7 +523,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
             <div>
               <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>Applicant Master Register</h2>
               <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#64748b' }}>
-                Showing {filteredApplicants.length} applicant records in current intake cycle
+                Showing {filteredApplicants.length} records from the selected backend filters
               </p>
             </div>
           </div>
@@ -478,7 +535,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                   <th style={{ padding: '12px 16px' }}>App Number</th>
                   <th style={{ padding: '12px 16px' }}>Applicant Name & Contact</th>
                   <th style={{ padding: '12px 16px' }}>Programme & Batch</th>
-                  <th style={{ padding: '12px 16px' }}>Category & Merit</th>
+                  <th style={{ padding: '12px 16px' }}>Category &amp; Exam Scores</th>
                   <th style={{ padding: '12px 16px' }}>Stage Status</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right' }}>Workflow Actions</th>
                 </tr>
@@ -487,7 +544,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                 {filteredApplicants.length === 0 ? (
                   <tr>
                     <td colSpan={6} style={{ padding: '36px', textAlign: 'center', color: '#64748b' }}>
-                      No applicant records matched your filters.
+                      {isLoading ? 'Loading applicant records…' : loadError ? 'Applicant records could not be loaded. Use Retry above.' : 'No saved applicant records match these filters.'}
                     </td>
                   </tr>
                 ) : (
@@ -517,7 +574,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ fontWeight: 500 }}>{app.category} · {app.gender}</div>
                           <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                            {app.entranceExam ? `${app.entranceExam} (Rank: ${app.entranceRank || 'Merit'})` : '10th & 12th Merit'}
+                            {[app.entranceExam, app.entranceRank != null ? `Rank ${app.entranceRank}` : null, app.tenthMarks != null ? `10th ${app.tenthMarks}%` : null, app.twelfthMarks != null ? `12th ${app.twelfthMarks}%` : null].filter(Boolean).join(' · ') || 'No examination scores recorded'}
                           </div>
                         </td>
                         <td style={{ padding: '14px 16px' }}>
@@ -543,6 +600,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                         </td>
                         <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                            <button type="button" onClick={() => openApplicantDetails(app.id)} disabled={detailsLoading} style={{ padding: '6px 10px', fontSize: '.76rem', background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6, cursor: 'pointer' }}>Details</button>
                             {app.status === 'APPLIED' && (
                               <button
                                 onClick={() => handleVerify(app.id, app.name)}
@@ -680,7 +738,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="student@example.com"
+                    placeholder="name@domain.edu"
                     required
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.86rem', boxSizing: 'border-box' }}
                   />
@@ -696,7 +754,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                     type="text"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="+91 94370 00000"
+                    placeholder="Enter applicant phone number"
                     required
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.86rem', boxSizing: 'border-box' }}
                   />
@@ -709,8 +767,10 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                   <select
                     value={formData.gender}
                     onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    required
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.86rem', background: '#fff' }}
                   >
+                    <option value="">Select gender</option>
                     <option value="Female">Female</option>
                     <option value="Male">Male</option>
                     <option value="Other">Other</option>
@@ -724,8 +784,10 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    required
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.86rem', background: '#fff' }}
                   >
+                    <option value="">Select category</option>
                     <option value="General">General</option>
                     <option value="OBC">OBC</option>
                     <option value="SC">SC</option>
@@ -742,21 +804,35 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                 <select
                   value={formData.programmeId}
                   onChange={(e) => {
-                    const selected = programmes.find((p) => p.id === e.target.value);
                     setFormData({
                       ...formData,
                       programmeId: e.target.value,
-                      programmeName: selected ? selected.name : 'Computer Science',
                     });
                   }}
+                  required
                   style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.86rem', background: '#fff' }}
                 >
+                  <option value="">Select an active programme</option>
                   {programmes.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} ({p.code} · {p.durationYears} Years)
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '.8rem', fontWeight: 600, color: '#334155', marginBottom: 6 }}>Academic year *</label>
+                <select required value={formData.academicYear} onChange={(e) => setFormData({ ...formData, academicYear: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: '.86rem', background: '#fff' }}>
+                  <option value="">Select a configured academic year</option>
+                  {academicYears.map((year) => <option key={year.id} value={year.year}>{year.year}{year.isCurrent ? ' (current)' : ''}</option>)}
+                </select>
+                {!academicYears.length && <p role="alert" style={{ color: '#b91c1c', fontSize: '.78rem' }}>No academic years are configured. Add one in Academic Setup before registering an applicant.</p>}
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '.8rem', fontWeight: 600, color: '#334155', marginBottom: 6 }}>Date of birth *</label>
+                <input type="date" required max={new Date().toISOString().slice(0, 10)} value={formData.dob} onChange={(e) => setFormData({ ...formData, dob: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: '.86rem', boxSizing: 'border-box' }} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px', marginBottom: '24px' }}>
@@ -767,6 +843,8 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                   <input
                     type="number"
                     step="0.1"
+                    min="0"
+                    max="100"
                     value={formData.tenthMarks}
                     onChange={(e) => setFormData({ ...formData, tenthMarks: e.target.value })}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.86rem', boxSizing: 'border-box' }}
@@ -779,6 +857,8 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                   <input
                     type="number"
                     step="0.1"
+                    min="0"
+                    max="100"
                     value={formData.twelfthMarks}
                     onChange={(e) => setFormData({ ...formData, twelfthMarks: e.target.value })}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.86rem', boxSizing: 'border-box' }}
@@ -792,7 +872,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                     type="text"
                     value={formData.entranceExam}
                     onChange={(e) => setFormData({ ...formData, entranceExam: e.target.value })}
-                    placeholder="JEE Main / OJEE"
+                    placeholder="Enter entrance exam name"
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.86rem', boxSizing: 'border-box' }}
                   />
                 </div>
@@ -802,6 +882,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                   </label>
                   <input
                     type="number"
+                    min="1"
                     value={formData.entranceRank}
                     onChange={(e) => setFormData({ ...formData, entranceRank: e.target.value })}
                     placeholder="Rank"
@@ -820,9 +901,10 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                 </button>
                 <button
                   type="submit"
+                  disabled={isSubmitting || !programmes.length || !academicYears.length}
                   style={{ padding: '10px 20px', background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
                 >
-                  Submit Application
+                  {isSubmitting ? 'Saving…' : 'Submit Application'}
                 </button>
               </div>
             </form>
@@ -861,9 +943,9 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                   <CheckCircle2 size={26} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Student Enrolled & Account Provisioned</h3>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Student Enrolled</h3>
                   <p style={{ margin: '4px 0 0', fontSize: '0.82rem', opacity: 0.9 }}>
-                    Multi-table atomic transaction committed to PostgreSQL database
+                    The student record and enrollment have been saved.
                   </p>
                 </div>
               </div>
@@ -891,76 +973,12 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                 </div>
               </div>
 
-              {/* Secure Activation Link Box */}
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  Unique Student Portal Activation Link
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    readOnly
-                    value={`${window.location.origin}/#activate?token=${enrolledStudentInfo.activationToken}`}
-                    style={{
-                      flex: 1,
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: '1.5px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      fontFamily: 'monospace',
-                      background: '#f8fafc',
-                      color: '#334155',
-                    }}
-                  />
-                  <button
-                    onClick={() => copyActivationLink()}
-                    style={{
-                      padding: '10px 14px',
-                      background: copiedLink ? '#059669' : '#0f766e',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontWeight: 600,
-                      fontSize: '0.82rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    {copiedLink ? <Check size={16} /> : <Copy size={16} />}
-                    {copiedLink ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-                <p style={{ margin: '6px 0 0', fontSize: '0.74rem', color: '#64748b' }}>
-                  The student uses this one-time link to set their own password and access their student portal.
-                </p>
+              <div style={{ marginBottom: '20px', padding: '12px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', color: '#9a3412', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                Student portal activation is pending. Secure email delivery is not configured, so no activation link has been issued.
               </div>
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={() => {
-                    setActivationTokenToSimulate(enrolledStudentInfo.activationToken);
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: '#f0fdfa',
-                    color: '#0f766e',
-                    border: '1.5px solid #99f6e4',
-                    borderRadius: '10px',
-                    fontWeight: 600,
-                    fontSize: '0.88rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <ExternalLink size={16} /> Test Student Activation Now
-                </button>
                 <button
                   onClick={() => setEnrolledStudentInfo(null)}
                   style={{
@@ -982,17 +1000,29 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
-      {/* Direct Test Activation Modal */}
-      {activationTokenToSimulate && (
-        <AccountActivationModal
-          initialToken={activationTokenToSimulate}
-          onClose={() => setActivationTokenToSimulate('')}
-          onActivationSuccess={(user, token) => {
-            showToast(`Account for ${user.name} activated successfully!`);
-            setActivationTokenToSimulate('');
-          }}
-        />
+      {(detailsLoading || selectedApplicant) && (
+        <div role="dialog" aria-modal="true" aria-label="Applicant details" style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(15,23,42,.65)', display: 'grid', placeItems: 'center', padding: 16 }}>
+          <section style={{ width: 'min(620px, 100%)', maxHeight: '85vh', overflow: 'auto', background: '#fff', borderRadius: 14, padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}><h2 style={{ margin: 0 }}>Applicant details</h2><button type="button" onClick={() => { setSelectedApplicant(null); setDetailsLoading(false); }} aria-label="Close details"><X /></button></div>
+            {detailsLoading ? <p>Loading applicant from backend…</p> : selectedApplicant && <>
+              <p style={{ color: '#64748b' }}>Application {selectedApplicant.applicationNo} · {selectedApplicant.status}</p>
+              <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(130px, .7fr) 1.3fr', gap: 10 }}>
+                {[
+                  ['Name', selectedApplicant.name], ['Email', selectedApplicant.email], ['Phone', selectedApplicant.phone],
+                  ['Date of birth', selectedApplicant.dob], ['Gender', selectedApplicant.gender], ['Category', selectedApplicant.category],
+                  ['Programme', selectedApplicant.programme?.name || selectedApplicant.programmeName], ['Academic year', selectedApplicant.academicYear],
+                  ['10th marks', selectedApplicant.tenthMarks == null ? 'Not recorded' : `${selectedApplicant.tenthMarks}%`],
+                  ['12th marks', selectedApplicant.twelfthMarks == null ? 'Not recorded' : `${selectedApplicant.twelfthMarks}%`],
+                  ['Entrance exam', selectedApplicant.entranceExam || 'Not recorded'], ['Entrance rank', selectedApplicant.entranceRank ?? 'Not recorded'],
+                  ['Reviewed by', selectedApplicant.verifiedBy || 'Not reviewed'], ['Rejection reason', selectedApplicant.rejectionReason || '—'],
+                ].map(([label, value]) => <React.Fragment key={label}><dt style={{ color: '#64748b' }}>{label}</dt><dd style={{ margin: 0, overflowWrap: 'anywhere' }}>{value}</dd></React.Fragment>)}
+              </dl>
+              <p style={{ marginTop: 20, padding: 12, background: '#fff7ed', color: '#9a3412', borderRadius: 8, fontSize: '.84rem' }}>Document attachments are not stored by this admissions module. Eligibility review records the staff decision only.</p>
+            </>}
+          </section>
+        </div>
       )}
+
     </div>
   );
 }

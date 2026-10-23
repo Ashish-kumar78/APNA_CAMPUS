@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../config/env';
 
 @Injectable()
 export class AuthService {
@@ -30,14 +31,13 @@ export class AuthService {
       throw new UnauthorizedException('We could not verify those sign-in details. Please check your College ID and password.');
     }
 
-    // Support both the hashed password check and common dev demo fallback (gift123 / password123)
-    const isValid = await bcrypt.compare(dto.password, user.passwordHash) || dto.password === 'gift123' || dto.password === 'password123';
+    const isValid = await bcrypt.compare(dto.password, user.passwordHash);
 
     if (!isValid) {
       throw new UnauthorizedException('We could not verify those sign-in details. Invalid password.');
     }
 
-    if (!user.isActive) {
+    if (!user.isActive || !user.isActivated) {
       throw new UnauthorizedException('Your account is currently disabled. Please contact the administrator.');
     }
 
@@ -48,7 +48,7 @@ export class AuthService {
       identifier: user.identifier,
     };
 
-    const secret = process.env.JWT_SECRET || 'gift-autonomous-bput-super-secret-jwt-key-2026-production';
+    const secret = getJwtSecret();
     const expiresIn = (process.env.JWT_EXPIRES_IN || '8h') as jwt.SignOptions['expiresIn'];
 
     const accessToken = jwt.sign(payload, secret, { expiresIn });
@@ -71,7 +71,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
-        phone: user.phone || '+91 94370 12345',
+        phone: user.phone,
         identifier: user.identifier,
         role: roleKey,
         roleEnum: user.role,
@@ -79,8 +79,8 @@ export class AuthService {
         permissions: user.permissions || [],
         registrationNumber: regNo,
         identity: facultyId || regNo,
-        department: user.department || user.student?.department || 'Computer Science & Engineering',
-        detail: user.detail || (user.role === 'STUDENT' ? 'Semester 5 · Section A' : 'School of Computing'),
+        department: user.department || user.student?.department,
+        detail: user.detail || (user.role === 'STUDENT' ? user.student?.semester : undefined),
         lastLogin: new Date(),
       },
     };
@@ -106,7 +106,7 @@ export class AuthService {
       roleEnum: user.role,
       registrationNumber: regNo,
       identity: user.faculty?.employeeId || regNo,
-      department: user.department || 'Computer Science & Engineering',
+      department: user.department,
       detail: user.detail || '',
     };
   }
@@ -135,8 +135,8 @@ export class AuthService {
 
   async activateAccount(token: string, newPassword: string) {
     const cleanToken = token.trim();
-    if (!newPassword || newPassword.length < 6) {
-      throw new BadRequestException('Password must be at least 6 characters long.');
+    if (!newPassword || newPassword.length < 8 || Buffer.byteLength(newPassword, 'utf8') > 72) {
+      throw new BadRequestException('Password must be between 8 and 72 bytes.');
     }
 
     const user = await this.prisma.user.findFirst({
@@ -169,7 +169,7 @@ export class AuthService {
       identifier: updatedUser.identifier,
     };
 
-    const secret = process.env.JWT_SECRET || 'gift-autonomous-bput-super-secret-jwt-key-2026-production';
+    const secret = getJwtSecret();
     const expiresIn = (process.env.JWT_EXPIRES_IN || '8h') as jwt.SignOptions['expiresIn'];
     const accessToken = jwt.sign(payload, secret, { expiresIn });
 
@@ -184,56 +184,24 @@ export class AuthService {
         id: updatedUser.id,
         name: updatedUser.name,
         email: updatedUser.email,
-        phone: updatedUser.phone || '+91 94370 12345',
+        phone: updatedUser.phone,
         identifier: updatedUser.identifier,
         role: roleKey,
         roleEnum: updatedUser.role,
         registrationNumber: regNo,
-        department: updatedUser.department || updatedUser.student?.department || 'Computer Science & Engineering',
-        detail: updatedUser.detail || 'Semester 1 · Section A',
+        department: updatedUser.department || updatedUser.student?.department,
+        detail: updatedUser.detail || updatedUser.student?.semester,
       },
     };
   }
 
-  async forgotPassword(emailOrIdentifier: string) {
-    const rawKey = emailOrIdentifier.trim().toLowerCase();
-    const user = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { identifier: { equals: rawKey, mode: 'insensitive' } },
-          { email: { equals: rawKey, mode: 'insensitive' } },
-        ],
-      },
-    });
-
-    if (!user) {
-      // Return benign message to prevent account enumeration
-      return {
-        success: true,
-        message: 'If an account exists with those details, a reset token has been issued.',
-      };
-    }
-
-    const crypto = await import('crypto');
-    const resetToken = crypto.randomBytes(24).toString('hex');
-    const tokenExpiresAt = new Date(Date.now() + 3600000); // 1 hour
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { resetToken, tokenExpiresAt },
-    });
-
-    return {
-      success: true,
-      message: 'Password reset link and security token generated.',
-      resetToken, // Included for easy offline/demo evaluation
-      expiresAt: tokenExpiresAt,
-    };
+  async forgotPassword(_emailOrIdentifier: string): Promise<never> {
+    throw new ServiceUnavailableException('Password recovery is unavailable until a secure email delivery provider is configured.');
   }
 
   async resetPassword(resetToken: string, newPassword: string) {
-    if (!newPassword || newPassword.length < 6) {
-      throw new BadRequestException('Password must be at least 6 characters long.');
+    if (!newPassword || newPassword.length < 8 || Buffer.byteLength(newPassword, 'utf8') > 72) {
+      throw new BadRequestException('Password must be between 8 and 72 bytes.');
     }
 
     const user = await this.prisma.user.findFirst({

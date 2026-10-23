@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
+import { ActivateAccountDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -50,21 +51,21 @@ export class AuthController {
   @Post('activate-account')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Activate student account and set password using activation token' })
-  async activateAccount(@Body() body: { token: string; newPassword: string }) {
+  async activateAccount(@Body() body: ActivateAccountDto) {
     return this.authService.activateAccount(body.token, body.newPassword);
   }
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Request password reset token' })
-  async forgotPassword(@Body() body: { identifier: string }) {
+  @ApiOperation({ summary: 'Request password recovery by email when delivery is configured' })
+  async forgotPassword(@Body() body: ForgotPasswordDto) {
     return this.authService.forgotPassword(body.identifier);
   }
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with security token' })
-  async resetPassword(@Body() body: { resetToken: string; newPassword: string }) {
+  async resetPassword(@Body() body: ResetPasswordDto) {
     return this.authService.resetPassword(body.resetToken, body.newPassword);
   }
 }

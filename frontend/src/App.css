@@ -320,7 +320,7 @@
 .erp-login-section {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 24px 44px 24px 12px;
   background-color: transparent;
@@ -336,7 +336,7 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 440px;
+  max-width: 560px;
   padding: 32px 34px 24px;
   border-radius: var(--erp-radius-card);
   background: #ffffff;
@@ -602,201 +602,32 @@
   text-decoration: underline;
 }
 
-/* Section Divider with OR */
-.erp-section-divider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 16px 0 14px;
-  position: relative;
-  text-align: center;
-}
-
-.erp-section-divider::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: #e2e8f0;
-  z-index: 0;
-}
-
-.erp-section-divider span {
-  position: relative;
-  z-index: 1;
-  background: #ffffff;
-  padding: 0 10px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #94a3b8;
-  letter-spacing: 0.05em;
-}
-
-/* Try a Demo Account Section */
-.erp-demo-section {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.erp-demo-header {
-  text-align: left;
-  margin-bottom: 10px;
-}
-
-.erp-demo-title {
-  font-size: 13.5px;
-  font-weight: 800;
-  color: var(--erp-text-main);
-  margin: 0 0 2px;
-}
-
-.erp-demo-subtitle {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--erp-text-muted);
-  margin: 0;
-}
-
-/* 3 Category Cards Grid */
-.erp-category-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.erp-cat-card {
-  background: var(--cat-bg);
-  border: 1px solid var(--cat-border);
-  border-radius: 12px;
-  padding: 10px 11px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  cursor: pointer;
-  transition: all 0.18s ease;
-  height: 68px;
-  box-sizing: border-box;
-  text-align: left;
-}
-
-.erp-cat-card:hover,
-.erp-cat-card.active {
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
-  border-color: var(--cat-color);
-  transform: translateY(-1px);
-}
-
-.erp-cat-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.erp-cat-icon-box {
-  color: var(--cat-color);
-  display: flex;
-  align-items: center;
-}
-
-.erp-cat-arrow {
-  color: #64748b;
-  transition: transform 0.15s ease;
-}
-
-.erp-cat-card:hover .erp-cat-arrow,
-.erp-cat-card.active .erp-cat-arrow {
-  transform: translateX(2px);
-  color: var(--cat-color);
-}
-
-.erp-cat-bottom {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-  margin-top: 4px;
-}
-
-.erp-cat-name {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--erp-text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.erp-cat-count {
-  font-size: 9.5px;
-  font-weight: 500;
-  color: var(--erp-text-muted);
-  margin-top: 1px;
-}
-
-/* Expanded Roles Drawer */
-.erp-expanded-roles-drawer {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 8px 10px;
-  margin-top: 6px;
-  animation: fadeIn 0.18s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-3px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.erp-drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--erp-text-main);
-  margin-bottom: 6px;
-}
-
-.erp-drawer-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  line-height: 1;
-  color: #64748b;
-  cursor: pointer;
-  padding: 0;
-}
-
-.erp-drawer-roles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.erp-drawer-role-pill {
-  padding: 5px 9px;
-  border-radius: 6px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  font-size: 11px;
-  font-weight: 600;
-  color: #1e293b;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  transition: all 0.12s ease;
-}
-
-.erp-drawer-role-pill:hover {
-  border-color: #0077c8;
-  background: #f0f9ff;
-  color: #0077c8;
-}
+/* Interactive portal selector shown beneath the sign-in and activation actions. */
+.erp-role-explorer { margin-top: 2px; }
+.erp-role-divider { display: flex; align-items: center; gap: 12px; margin: 17px 0 14px; color: #94a3b8; font-size: 10px; }
+.erp-role-divider span { height: 1px; flex: 1; background: #e2e8f0; }
+.erp-role-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.erp-role-heading h3 { margin: 0; color: #172033; font-size: 14px; font-weight: 800; }
+.erp-role-heading p { margin: 4px 0 0; color: #718096; font-size: 11px; }
+.erp-role-selected-label { color: #0876df; font-size: 10px; font-weight: 700; text-align: right; }
+.erp-role-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.erp-role-group-card { min-width: 0; min-height: 66px; display: flex; align-items: flex-start; gap: 8px; padding: 10px; border: 1px solid transparent; border-radius: 14px; text-align: left; cursor: pointer; transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+.erp-role-group-card:hover { transform: translateY(-2px); box-shadow: 0 7px 16px rgba(15, 23, 42, .08); }
+.erp-role-group-card.blue { color: #2863ff; background: #f3f6ff; border-color: #dce5ff; }
+.erp-role-group-card.green { color: #14a34a; background: #effcf4; border-color: #d4f7df; }
+.erp-role-group-card.orange { color: #f97316; background: #fff7ed; border-color: #ffead5; }
+.erp-role-group-card.is-active { box-shadow: 0 0 0 1px currentColor, 0 6px 16px rgba(15, 23, 42, .08); }
+.erp-role-group-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; color: #172033; }
+.erp-role-group-copy strong { font-size: 10.5px; line-height: 1.2; }
+.erp-role-group-copy small { color: #718096; font-size: 10px; }
+.erp-role-options { margin-top: 9px; padding: 10px 11px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
+.erp-role-options-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; color: #273449; font-size: 10.5px; font-weight: 700; }
+.erp-role-options-title button { padding: 0 2px; border: 0; background: transparent; color: #64748b; font-size: 18px; line-height: 1; cursor: pointer; }
+.erp-role-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.erp-role-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 6px 9px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #344256; font-size: 10.5px; font-weight: 700; cursor: pointer; transition: border-color .15s ease, background .15s ease, color .15s ease; }
+.erp-role-chip:hover { border-color: #60a5fa; color: #0876df; }
+.erp-role-chip.is-selected { border-color: #1683ff; background: #eaf4ff; color: #0867c5; box-shadow: 0 0 0 2px rgba(22, 131, 255, .12); }
+.erp-role-hint { margin: 8px 0 0; color: #64748b; font-size: 10px; line-height: 1.4; }
 
 /* Footer */
 .erp-card-footer {
@@ -858,14 +689,19 @@
     display: none;
   }
   .erp-login-section {
+    justify-content: flex-start;
     padding: 24px 16px;
     height: auto;
     min-height: 100vh;
   }
   .erp-login-card {
-    max-width: 440px;
+    max-width: 560px;
     padding: 24px 20px;
   }
+  .erp-role-groups { gap: 6px; }
+  .erp-role-group-card { gap: 5px; padding: 8px 6px; }
+  .erp-role-group-copy strong { font-size: 9px; }
+  .erp-role-group-card > svg:last-child { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

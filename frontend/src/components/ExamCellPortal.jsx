@@ -47,14 +47,32 @@ import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
-import { erpStore } from '../services/erpStore.js';
 import { examsApi } from '../services/examsApi.js';
 import {
-  downloadGradeCardPdf,
-  downloadAdmitCardPdf,
   downloadDoorChartPdf,
   downloadExamTimetableMasterPdf
 } from '../utils/pdfGenerator';
+
+const NEXT_EXAM_CYCLE_STATUS = {
+  Draft: 'Registration Open',
+  'Registration Open': 'Registration Closed',
+  'Registration Closed': 'Scheduling',
+  Scheduling: 'Admit Cards Ready',
+  'Admit Cards Ready': 'In Progress',
+  'In Progress': 'Evaluation',
+  Evaluation: 'Moderation',
+  Moderation: 'Results Approval',
+  'Results Approval': 'Published',
+  Published: 'Closed',
+};
+
+const MODERATION_FIELDS = [
+  ['modular1', 'Module 1', 20], ['modular2', 'Module 2', 20],
+  ['quiz1', 'Quiz 1', 10], ['quiz2', 'Quiz 2', 10], ['quiz3', 'Quiz 3', 10],
+  ['quiz4', 'Quiz 4', 10], ['quiz5', 'Quiz 5', 10], ['quiz6', 'Quiz 6', 10],
+  ['assignment1', 'Assignment 1', 10], ['assignment2', 'Assignment 2', 10],
+  ['surpriseTest1', 'Surprise 1', 10], ['surpriseTest2', 'Surprise 2', 10], ['labWork', 'Lab', 10],
+];
 
 // CSV Export Helper
 function exportToCsv(filename, rows) {
@@ -94,15 +112,20 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
   const [toastMessage, setToastMessage] = useState('');
 
   // Store data state
-  const [examCycles, setExamCycles] = useState(() => erpStore.getExamCycles());
-  const [examTimetable, setExamTimetable] = useState(() => erpStore.getExamTimetable());
-  const [seatingArrangements, setSeatingArrangements] = useState(() => erpStore.getSeatingArrangements());
-  const [gradeRoster, setGradeRoster] = useState(() => erpStore.getGradeRoster());
-  const [hallTickets, setHallTickets] = useState(() => erpStore.getHallTickets());
+  const [examCycles, setExamCycles] = useState([]);
+  const [cyclesLoading, setCyclesLoading] = useState(true);
+  const [cyclesError, setCyclesError] = useState('');
+  const [cycleSaving, setCycleSaving] = useState(false);
+  const [examTimetable, setExamTimetable] = useState([]);
+  const [seatingArrangements, setSeatingArrangements] = useState([]);
+  const [gradeRoster, setGradeRoster] = useState([]);
+  const [hallTickets, setHallTickets] = useState([]);
   const [activeSubjectCode, setActiveSubjectCode] = useState('CS501');
-  const [moderationData, setModerationData] = useState(() => erpStore.getModerationMarks('CS501'));
-  const [reevaluationRequests, setReevaluationRequests] = useState(() => erpStore.getReevaluationRequests());
-  const [examCirculars, setExamCirculars] = useState(() => erpStore.getExamCirculars());
+  const [moderationData, setModerationData] = useState({ records: [] });
+  const [markDrafts, setMarkDrafts] = useState({});
+  const [reevaluationRequests, setReevaluationRequests] = useState([]);
+  const [examCirculars, setExamCirculars] = useState([]);
+  const [featureErrors, setFeatureErrors] = useState({});
 
   // Filter & Search states
   const [cycleSearch, setCycleSearch] = useState('');
@@ -130,8 +153,6 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
     session: 'Autumn 2026 (Sem 3, 5, 7)',
     startDate: '2026-11-10',
     endDate: '2026-11-28',
-    totalRegisteredStudents: 1420,
-    totalPapers: 36,
   });
 
   // Form states for New Timetable Slot
@@ -166,66 +187,93 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
     content: '',
   });
 
-  // Reactive listener for store updates
   useEffect(() => {
-    const handleUpdate = () => {
-      setExamCycles([...erpStore.getExamCycles()]);
-      setExamTimetable([...erpStore.getExamTimetable()]);
-      setSeatingArrangements([...erpStore.getSeatingArrangements()]);
-      setGradeRoster([...erpStore.getGradeRoster()]);
-      setHallTickets([...erpStore.getHallTickets()]);
-      setModerationData({ ...erpStore.getModerationMarks(activeSubjectCode) });
-      setReevaluationRequests([...erpStore.getReevaluationRequests()]);
-      setExamCirculars([...erpStore.getExamCirculars()]);
-    };
-    window.addEventListener('erp_store_updated', handleUpdate);
-    return () => window.removeEventListener('erp_store_updated', handleUpdate);
-  }, [activeSubjectCode]);
+    let active = true;
+    examsApi.getExamCycles()
+      .then((cycles) => {
+        if (!active) return;
+        setExamCycles(cycles);
+        setCyclesError('');
+      })
+      .catch((error) => {
+        if (!active) return;
+        setCyclesError(error?.message || 'Could not load examination cycles.');
+      })
+      .finally(() => {
+        if (active) setCyclesLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   const triggerToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
   };
 
+  useEffect(() => {
+    let active = true;
+    const load = async (key, request, setter) => {
+      try {
+        const result = await request();
+        if (!active) return;
+        setter(result);
+        setFeatureErrors((current) => ({ ...current, [key]: '' }));
+      } catch (error) {
+        if (!active) return;
+        setFeatureErrors((current) => ({ ...current, [key]: error?.message || 'This examination feature is unavailable.' }));
+      }
+    };
+    load('timetable', () => examsApi.getExamTimetable(), setExamTimetable);
+    load('seating', () => examsApi.getSeatingArrangements(), setSeatingArrangements);
+    load('hallTickets', () => examsApi.getHallTickets(), setHallTickets);
+    load('grades', () => examsApi.getGradeRoster(), setGradeRoster);
+    load('reevaluations', () => examsApi.getReevaluations(), setReevaluationRequests);
+    load('circulars', () => examsApi.getExamCirculars(), setExamCirculars);
+    load('moderation', () => examsApi.getModerationMarks('CS501'), setModerationData);
+    return () => { active = false; };
+  }, []);
+
   // --- Handlers: Exam Cycles ---
-  const handleCreateCycle = (e) => {
+  const handleCreateCycle = async (e) => {
     e.preventDefault();
     if (!cycleForm.title.trim()) {
       triggerToast('Please provide an examination cycle title');
       return;
     }
-    erpStore.createExamCycle(cycleForm);
-    setNewCycleModal(false);
-    setCycleForm({
-      title: '',
-      session: 'Autumn 2026 (Sem 3, 5, 7)',
-      startDate: '2026-11-10',
-      endDate: '2026-11-28',
-      totalRegisteredStudents: 1420,
-      totalPapers: 36,
-    });
-    triggerToast('New Autonomous Examination Cycle configured successfully!');
+    setCycleSaving(true);
+    try {
+      const created = await examsApi.createExamCycle({
+        title: cycleForm.title.trim(),
+        session: cycleForm.session.trim(),
+        startDate: cycleForm.startDate,
+        endDate: cycleForm.endDate,
+      });
+      setExamCycles((current) => [created, ...current]);
+      setNewCycleModal(false);
+      setCycleForm({ title: '', session: 'Autumn 2026 (Sem 3, 5, 7)', startDate: '2026-11-10', endDate: '2026-11-28' });
+      setCyclesError('');
+      triggerToast('Examination cycle saved.');
+    } catch (error) {
+      triggerToast(error?.message || 'Could not create the examination cycle.');
+    } finally {
+      setCycleSaving(false);
+    }
   };
 
-  const handleToggleHallTickets = (cycleId) => {
-    erpStore.toggleHallTicketsRelease(cycleId);
-    triggerToast('Hall ticket release status updated for cycle');
-  };
-
-  const handlePublishCycle = (cycleId) => {
-    erpStore.publishExamCycle(cycleId);
-    triggerToast('Semester examination results certified and published to student transcripts!');
-  };
-
-  const handleDeleteCycle = (cycleId) => {
-    if (window.confirm('Are you sure you want to remove this examination cycle?')) {
-      erpStore.deleteExamCycle(cycleId);
-      triggerToast('Examination cycle removed');
+  const handleAdvanceCycle = async (cycle) => {
+    const nextStatus = NEXT_EXAM_CYCLE_STATUS[cycle.status];
+    if (!nextStatus) return;
+    try {
+      const result = await examsApi.transitionCycleStatus(cycle.id, nextStatus);
+      setExamCycles((current) => current.map((item) => item.id === cycle.id ? result.data : item));
+      triggerToast(`Cycle advanced to ${nextStatus}.`);
+    } catch (error) {
+      triggerToast(error?.message || 'Could not advance the examination cycle.');
     }
   };
 
   // --- Handlers: Timetable ---
-  const handleCreatePaper = (e) => {
+  const handleCreatePaper = async (e) => {
     e.preventDefault();
     if (!paperForm.code.trim() || !paperForm.subject.trim()) {
       triggerToast('Please specify subject code and course title');
@@ -247,29 +295,19 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
       return;
     }
 
-    erpStore.createTimetableEntry({
-      ...paperForm,
-      branches: branchArr,
-    });
-    setNewPaperModal(false);
-    setPaperForm({
-      code: '',
-      subject: '',
-      date: '2026-11-15',
-      time: '10:00 AM - 01:00 PM',
-      semester: 'Semester 5',
-      branches: 'CSE, AI&DS',
-      roomCount: 8,
-      invigilators: 16,
-    });
-    triggerToast('✓ Exam paper slot scheduled successfully with zero conflicts!');
+    try {
+      const created = await examsApi.createTimetableSlot({ ...paperForm, branches: branchArr });
+      setExamTimetable((current) => [created, ...current]);
+      setNewPaperModal(false);
+      triggerToast('Exam paper slot saved.');
+    } catch (error) {
+      triggerToast(error?.message || 'The examination timetable could not be saved.');
+    }
   };
 
   const handleDeletePaper = (paperId) => {
-    if (window.confirm('Cancel this scheduled examination slot?')) {
-      erpStore.deleteTimetableEntry(paperId);
-      triggerToast('Timetable slot removed');
-    }
+    void paperId;
+    triggerToast('Timetable deletion is unavailable until a persistent timetable endpoint is implemented.');
   };
 
   const handlePrintTimetable = () => {
@@ -283,38 +321,33 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
       triggerToast('Please enter hall number and assigned invigilator');
       return;
     }
-    erpStore.createSeatingArrangement(hallForm);
-    setNewHallModal(false);
-    setHallForm({
-      hall: '',
-      capacity: 60,
-      allocated: 58,
-      invigilator: '',
-      session: 'Morning (10:00 AM)',
-      range: '',
-    });
-    triggerToast('Examination Hall registered with desk allocation!');
+    triggerToast('Hall registration is unavailable until persistent hall and seat allocation storage is implemented.');
   };
 
-  const handleAutoSeating = () => {
-    erpStore.autoGenerateSeating();
-    triggerToast('Smart seating plan with anti-cheating roll staggering generated across all halls!');
+  const handleAutoSeating = async () => {
+    try {
+      await examsApi.autoOptimizeSeating();
+      triggerToast('Seating optimization completed.');
+    } catch (error) {
+      triggerToast(error?.message || 'Seating optimization is unavailable.');
+    }
   };
 
   // --- Handlers: Hall Tickets ---
   const handleBatchReleaseAdmitCards = () => {
-    erpStore.batchReleaseAdmitCards();
-    triggerToast('Admit cards batch released for all attendance & fee cleared candidates!');
+    triggerToast('Hall ticket issuance is unavailable until eligibility and issuance storage is implemented.');
   };
 
   const handleCondoneAttendance = (rollNumber, name) => {
-    erpStore.condoneAttendance(rollNumber, 75);
-    triggerToast(`CoE Attendance Condonation approved for ${name} (Marked 75% Eligible)`);
+    void rollNumber;
+    void name;
+    triggerToast('Attendance condonation cannot be recorded until an approval workflow is implemented.');
   };
 
   const handleClearFeeHold = (rollNumber, name) => {
-    erpStore.clearFeeHold(rollNumber);
-    triggerToast(`Accounts clearance confirmed for ${name}. Hall ticket activated.`);
+    void rollNumber;
+    void name;
+    triggerToast('Fee holds must be cleared through the Accounts workflow; this action is not available here.');
   };
 
   const handleOpenAdmitCard = (student) => {
@@ -322,52 +355,48 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
   };
 
   const handleDownloadStudentAdmitPdf = (student) => {
-    const defaultSchedule = [
-      ['1', '10 Nov 2026', '10:00 AM - 01:00 PM', 'CS501', 'Data Structures & Algorithms', 'Hall B-301', 'Verified [  ]'],
-      ['2', '13 Nov 2026', '10:00 AM - 01:00 PM', 'CS502', 'Operating Systems', 'Hall B-301', 'Verified [  ]'],
-      ['3', '17 Nov 2026', '10:00 AM - 01:00 PM', 'CS503', 'Database Management Systems', 'Hall B-301', 'Verified [  ]'],
-      ['4', '20 Nov 2026', '10:00 AM - 01:00 PM', 'CS504', 'Artificial Intelligence', 'Hall B-301', 'Verified [  ]'],
-      ['5', '24 Nov 2026', '10:00 AM - 01:00 PM', 'CS505', 'Machine Learning', 'Hall B-301', 'Verified [  ]']
-    ];
-    downloadAdmitCardPdf(defaultSchedule, {
-      name: student.name,
-      rollNo: student.regNo || student.rollNumber,
-      rollNumber: student.rollNumber
-    });
-    triggerToast(`Official Admit Card PDF generated for ${student.name}`);
+    void student;
+    triggerToast('An official admit card cannot be generated until hall ticket and timetable data are persisted.');
   };
 
   // --- Handlers: Marks Moderation ---
-  const handleSelectSubjectModeration = (code) => {
-    setActiveSubjectCode(code);
-    setModerationData(erpStore.getModerationMarks(code));
+  const handleSelectSubjectModeration = async () => {
+    try {
+      const data = await examsApi.getModerationMarks(activeSubjectCode.trim());
+      setModerationData(data);
+      setFeatureErrors((current) => ({ ...current, moderation: '' }));
+    } catch (error) {
+      setModerationData({ records: [] });
+      setFeatureErrors((current) => ({ ...current, moderation: error?.message || 'Moderation records could not be loaded.' }));
+    }
   };
 
-  const handleMarkChange = (rollNumber, field, value) => {
-    erpStore.updateStudentMark(activeSubjectCode, rollNumber, field, value);
-    setModerationData({ ...erpStore.getModerationMarks(activeSubjectCode) });
-  };
-
-  const handleApplyGraceMarks = () => {
-    erpStore.applyGraceMarks(activeSubjectCode, 2);
-    setModerationData({ ...erpStore.getModerationMarks(activeSubjectCode) });
-    triggerToast('Moderation Committee grace marks (+2) applied to borderline candidates!');
-  };
-
-  const handleCertifyLockMarks = () => {
-    erpStore.certifyAndLockMarks(activeSubjectCode);
-    setModerationData({ ...erpStore.getModerationMarks(activeSubjectCode) });
-    triggerToast(`Marks for ${activeSubjectCode} certified & permanently locked by Academic Council!`);
+  const handleMarkChange = async (rollNumber, field, value) => {
+    try {
+      await examsApi.updateStudentMark(activeSubjectCode, rollNumber, field, value);
+      setModerationData(await examsApi.getModerationMarks(activeSubjectCode));
+      setMarkDrafts((current) => {
+        const next = { ...current };
+        delete next[`${rollNumber}:${field}`];
+        return next;
+      });
+      triggerToast('Assessment mark saved.');
+    } catch (error) {
+      triggerToast(error?.message || 'Assessment mark could not be saved.');
+    }
   };
 
   // --- Handlers: SGPA / CGPA Engine ---
-  const handleRunGradingEngine = () => {
+  const handleRunGradingEngine = async () => {
     setIsGradingRunning(true);
-    setTimeout(() => {
+    try {
+      await examsApi.executeGradingEngine();
+      setGradeRoster(await examsApi.getGradeRoster());
+    } catch (error) {
+      triggerToast(error?.message || 'Result calculation is unavailable.');
+    } finally {
       setIsGradingRunning(false);
-      erpStore.executeGradingEngine();
-      triggerToast('SGPA/CGPA engine executed: 2,480 students computed and verified!');
-    }, 1200);
+    }
   };
 
   const handleViewMarksheet = (student) => {
@@ -375,43 +404,28 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
   };
 
   const handleDownloadStudentGradeCardPdf = (student) => {
-    downloadGradeCardPdf({
-      semester: student.semester || '5th Semester',
-      sgpa: student.sgpa,
-      result: student.backlogCount === 0 ? 'PASSED' : 'BACKLOG',
-      subjects: [
-        { code: 'CS501', name: 'Data Structures & Algorithms', credits: 4, internal: 19, external: 72, total: 91, grade: 'O', points: 10 },
-        { code: 'CS502', name: 'Operating Systems', credits: 4, internal: 18, external: 68, total: 86, grade: 'A+', points: 9 },
-        { code: 'CS503', name: 'Database Management Systems', credits: 4, internal: 19, external: 70, total: 89, grade: 'A+', points: 9 },
-        { code: 'CS504', name: 'Artificial Intelligence', credits: 3, internal: 18, external: 65, total: 83, grade: 'A+', points: 9 },
-        { code: 'CS505', name: 'Machine Learning', credits: 3, internal: 19, external: 70, total: 89, grade: 'A+', points: 9 },
-        { code: 'CS511', name: 'Advanced Algorithms Laboratory', credits: 2, internal: 20, external: 76, total: 96, grade: 'O', points: 10 },
-        { code: 'CS512', name: 'Database Systems Laboratory', credits: 2, internal: 20, external: 75, total: 95, grade: 'O', points: 10 },
-        { code: 'CS513', name: 'Term Paper & Seminar', credits: 2, internal: 19, external: 74, total: 93, grade: 'O', points: 10 }
-      ]
-    }, {
-      name: student.name,
-      rollNo: student.regNo,
-      rollNumber: student.rollNumber
-    });
-    triggerToast(`Official Semester Grade Card PDF exported for ${student.name}`);
+    void student;
+    triggerToast('A grade card cannot be generated until certified result records are available.');
   };
 
   // --- Handlers: Re-evaluation / Scrutiny ---
-  const handleUpdateScrutinyDecision = (e) => {
+  const handleUpdateScrutinyDecision = async (e) => {
     e.preventDefault();
     if (!scrutinyEditModal) return;
     const form = e.target;
     const status = form.status.value;
     const recheckedMarks = form.recheckedMarks.value;
     const remarks = form.remarks.value;
-    erpStore.updateReevaluationStatus(scrutinyEditModal.id, {
-      status,
-      recheckedMarks: recheckedMarks ? Number(recheckedMarks) : scrutinyEditModal.originalMarks,
-      remarks
-    });
-    setScrutinyEditModal(null);
-    triggerToast(`Scrutiny case ${scrutinyEditModal.id} evaluated & closed!`);
+    try {
+      await examsApi.updateReevaluationStatus(scrutinyEditModal.id, {
+        status,
+        recheckedMarks: recheckedMarks ? Number(recheckedMarks) : scrutinyEditModal.originalMarks,
+        remarks,
+      });
+      setScrutinyEditModal(null);
+    } catch (error) {
+      triggerToast(error?.message || 'The re-evaluation decision could not be saved.');
+    }
   };
 
   // --- Handlers: Circulars ---
@@ -421,24 +435,13 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
       triggerToast('Please provide circular title and official notification text');
       return;
     }
-    erpStore.createExamCircular(circularForm);
-    setNewCircularModal(false);
-    setCircularForm({
-      circularNo: `GIFT/COE/2026/${Math.floor(100 + Math.random() * 900)}`,
-      title: '',
-      audience: 'All Students & Mentors',
-      category: 'Hall Ticket',
-      priority: 'High',
-      content: '',
-    });
-    triggerToast('Official Examination Circular released across campus!');
+    void circularForm;
+    triggerToast('Circular publishing is unavailable until exam circular creation is backed by a persistent workflow.');
   };
 
   const handleDeleteCircular = (id) => {
-    if (window.confirm('Delete this published circular?')) {
-      erpStore.deleteExamCircular(id);
-      triggerToast('Circular removed from bulletin');
-    }
+    void id;
+    triggerToast('Circular deletion is unavailable until a persistent delete workflow is implemented.');
   };
 
   // Filtered Lists
@@ -446,7 +449,7 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
     return examCycles.filter(c =>
       c.title.toLowerCase().includes(cycleSearch.toLowerCase()) ||
       c.id.toLowerCase().includes(cycleSearch.toLowerCase()) ||
-      c.session.toLowerCase().includes(cycleSearch.toLowerCase())
+      (c.session || '').toLowerCase().includes(cycleSearch.toLowerCase())
     );
   }, [examCycles, cycleSearch]);
 
@@ -490,6 +493,17 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
       return matchSearch && matchStatus;
     });
   }, [gradeRoster, gradeSearch, gradeStatusFilter]);
+
+  const featureKeyByTab = {
+    timetable: 'timetable',
+    seating: 'seating',
+    hall_tickets: 'hallTickets',
+    moderation: 'moderation',
+    grading: 'grades',
+    scrutiny: 'reevaluations',
+    circulars: 'circulars',
+  };
+  const activeFeatureError = featureErrors[featureKeyByTab[activeTab]];
 
   return (
     <div className="erp-exam-layout">
@@ -728,6 +742,12 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
             </div>
           </div>
         </header>
+
+        {activeFeatureError && (
+          <div role="status" style={{ margin: '0 1.5rem 1rem', padding: '12px 16px', borderRadius: 8, background: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa' }}>
+            {activeFeatureError}
+          </div>
+        )}
 
         <div className="erp-content-body" style={{ padding: '1.75rem' }}>
           {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
@@ -992,14 +1012,20 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                         <th>Cycle Code & Title</th>
                         <th>Session</th>
                         <th>Exam Dates</th>
-                        <th>Registered Candidates</th>
+                        <th>Candidates</th>
                         <th>Hall Tickets</th>
                         <th>Lifecycle Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredCycles.map(c => (
+                      {cyclesLoading ? (
+                        <tr><td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '24px' }}>Loading examination cycles…</td></tr>
+                      ) : cyclesError ? (
+                        <tr><td colSpan="7" role="alert" style={{ textAlign: 'center', color: '#b91c1c', padding: '24px' }}>{cyclesError}</td></tr>
+                      ) : filteredCycles.length === 0 ? (
+                        <tr><td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '24px' }}>No examination cycles have been created.</td></tr>
+                      ) : filteredCycles.map(c => (
                         <tr key={c.id}>
                           <td>
                             <strong>{c.title}</strong>
@@ -1009,17 +1035,11 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                           <td style={{ fontSize: '0.8rem', color: '#64748b' }}>
                             {c.startDate} to {c.endDate}
                           </td>
-                          <td><strong>{c.totalRegisteredStudents}</strong> Candidates</td>
+                          <td style={{ color: '#64748b' }}>Not configured</td>
                           <td>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleHallTickets(c.id)}
-                              className={`erp-btn erp-btn-sm ${c.hallTicketsReleased ? 'erp-btn-success' : 'erp-btn-secondary'}`}
-                              title="Click to toggle Hall Ticket release status"
-                            >
-                              {c.hallTicketsReleased ? <CheckCircle size={13} /> : <Lock size={13} />}
-                              {c.hallTicketsReleased ? 'Released' : 'Draft / Held'}
-                            </button>
+                            <span className={`status-pill ${c.hallTicketsReleased ? 'success' : 'purple'}`}>
+                              {c.hallTicketsReleased ? 'Released' : 'Not released'}
+                            </span>
                           </td>
                           <td>
                             <span className={`status-pill ${c.status === 'Published' ? 'success' : 'purple'}`}>
@@ -1028,25 +1048,16 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                           </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              {c.status === 'Published' ? (
-                                <span style={{ color: '#16a34a', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                                  <CheckCircle size={14} /> Certified
-                                </span>
-                              ) : (
+                              {NEXT_EXAM_CYCLE_STATUS[c.status] ? (
                                 <button
                                   className="erp-btn erp-btn-primary erp-btn-sm"
-                                  onClick={() => handlePublishCycle(c.id)}
+                                  onClick={() => handleAdvanceCycle(c)}
                                 >
-                                  <Send size={13} /> Publish Results
+                                  <ChevronRight size={13} /> Advance to {NEXT_EXAM_CYCLE_STATUS[c.status]}
                                 </button>
+                              ) : (
+                                <span style={{ color: '#16a34a', fontSize: '0.8rem', fontWeight: 600 }}>Cycle closed</span>
                               )}
-                              <button
-                                className="erp-btn erp-btn-danger erp-btn-sm"
-                                onClick={() => handleDeleteCycle(c.id)}
-                                title="Remove cycle"
-                              >
-                                <Trash2 size={13} />
-                              </button>
                             </div>
                           </td>
                         </tr>
@@ -1399,7 +1410,7 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               <div className="erp-panel-header">
                 <div className="erp-panel-title">
                   <h3>Continuous Internal Evaluation (CIE) & Marks Moderation</h3>
-                  <p>Autonomous moderation committee marks review, grace mark adjustment, and permanent locking</p>
+                  <p>Persisted continuous assessment components for the selected subject</p>
                 </div>
                 <div className="erp-panel-actions">
                   <button
@@ -1411,41 +1422,25 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                   >
                     <FileSpreadsheet size={15} /> Export Marks CSV
                   </button>
-                  <button
-                    className="erp-btn erp-btn-secondary"
-                    onClick={handleApplyGraceMarks}
-                    disabled={moderationData?.isLocked}
-                  >
-                    <Sparkles size={15} /> Apply Grace Marks (+2)
-                  </button>
-                  <button
-                    className="erp-btn erp-btn-primary"
-                    onClick={handleCertifyLockMarks}
-                    disabled={moderationData?.isLocked}
-                  >
-                    <Lock size={15} /> {moderationData?.isLocked ? 'Marks Locked & Certified' : 'Certify & Lock Marks'}
-                  </button>
+                  <span className="erp-stat-note">Final moderation and approval are handled through the HOD approval queue.</span>
                 </div>
               </div>
 
               <div className="exam-toolbar" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Select Course:</span>
-                  <select
+                  <input
                     className="exam-filter-select"
                     value={activeSubjectCode}
-                    onChange={(e) => handleSelectSubjectModeration(e.target.value)}
-                  >
-                    <option value="CS501">CS501 - Data Structures & Algorithms</option>
-                    <option value="CS502">CS502 - Operating Systems</option>
-                    <option value="CS503">CS503 - Database Management Systems</option>
-                  </select>
+                    onChange={(e) => setActiveSubjectCode(e.target.value)}
+                    aria-label="Subject code"
+                    placeholder="Subject code"
+                  />
+                  <button className="erp-btn erp-btn-secondary" onClick={handleSelectSubjectModeration}>Load</button>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className={`status-pill ${moderationData?.isLocked ? 'success' : 'warning'}`}>
-                    {moderationData?.isLocked ? '✓ Permanently Certified & Locked' : '⚠ Active Moderation In Progress'}
-                  </span>
+                  <span className="status-pill warning">Approval status is available in the HOD queue</span>
                 </div>
               </div>
 
@@ -1453,78 +1448,45 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                 <table className="erp-table">
                   <thead>
                     <tr>
-                      <th>Roll Number & Reg No</th>
-                      <th>Candidate Name</th>
-                      <th>Internal (Max 20)</th>
-                      <th>External (Max 80)</th>
-                      <th>Grace Marks</th>
-                      <th>Total (100)</th>
-                      <th>Letter Grade</th>
-                      <th>Classification</th>
+                      <th>Roll Number</th>
+                      <th>Student</th>
+                      {MODERATION_FIELDS.map(([field, label]) => <th key={field}>{label}</th>)}
+                      <th>Recorded Total</th>
+                      <th>Final Weightage</th>
                     </tr>
                   </thead>
                   <tbody>
                     {moderationData?.records?.map(r => (
                       <tr key={r.rollNumber}>
-                        <td>
-                          <strong>Roll {r.rollNumber}</strong>
-                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Reg: {r.regNo}</div>
-                        </td>
-                        <td>{r.name}</td>
-                        <td>
-                          {moderationData.isLocked ? (
-                            <strong>{r.internal}</strong>
-                          ) : (
-                            <input
-                              type="number"
-                              className="mark-edit-input"
-                              min="0"
-                              max="20"
-                              value={r.internal}
-                              onChange={(e) => handleMarkChange(r.rollNumber, 'internal', e.target.value)}
-                            />
-                          )}
-                        </td>
-                        <td>
-                          {moderationData.isLocked ? (
-                            <strong>{r.external}</strong>
-                          ) : (
-                            <input
-                              type="number"
-                              className="mark-edit-input"
-                              min="0"
-                              max="80"
-                              value={r.external}
-                              onChange={(e) => handleMarkChange(r.rollNumber, 'external', e.target.value)}
-                            />
-                          )}
-                        </td>
-                        <td>
-                          <span style={{ color: r.grace > 0 ? '#7c3aed' : '#64748b', fontWeight: 600 }}>
-                            +{r.grace || 0}
-                          </span>
-                        </td>
-                        <td>
-                          <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{r.total}</strong>
-                        </td>
-                        <td>
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            fontWeight: 800,
-                            background: r.grade === 'O' ? '#dcfce7' : r.grade === 'F' ? '#fee2e2' : '#f3e8ff',
-                            color: r.grade === 'O' ? '#15803d' : r.grade === 'F' ? '#b91c1c' : '#6d28d9',
-                          }}>
-                            {r.grade} ({r.points} Pts)
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`status-pill ${r.status.includes('Passed') ? 'success' : 'danger'}`}>
-                            {r.status}
-                          </span>
-                        </td>
+                        <td><strong>{r.rollNumber}</strong></td>
+                        <td>{r.studentName}</td>
+                        {MODERATION_FIELDS.map(([field, label, max]) => {
+                          const draftKey = `${r.rollNumber}:${field}`;
+                          const value = markDrafts[draftKey] ?? r[field] ?? 0;
+                          return (
+                            <td key={draftKey}>
+                              <input
+                                aria-label={`${label} mark for ${r.rollNumber}`}
+                                type="number"
+                                className="mark-edit-input"
+                                min="0"
+                                max={max}
+                                value={value}
+                                onChange={(event) => setMarkDrafts((current) => ({ ...current, [draftKey]: event.target.value }))}
+                                onBlur={(event) => {
+                                  if (String(value) !== String(r[field] ?? 0)) handleMarkChange(r.rollNumber, field, event.target.value);
+                                }}
+                              />
+                            </td>
+                          );
+                        })}
+                        <td>{r.totalMarks ?? '—'}</td>
+                        <td>{r.finalWeightage ?? '—'}</td>
                       </tr>
                     ))}
+                    {moderationData?.records?.length === 0 && (
+                      <tr><td colSpan={MODERATION_FIELDS.length + 4} style={{ textAlign: 'center', padding: 24 }}>No persisted assessment records for this subject.</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1817,16 +1779,6 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                     />
                   </div>
                   <div className="exam-form-group">
-                    <label className="exam-form-label">Total Registered Examinees *</label>
-                    <input
-                      type="number"
-                      className="exam-form-input"
-                      required
-                      value={cycleForm.totalRegisteredStudents}
-                      onChange={(e) => setCycleForm({ ...cycleForm, totalRegisteredStudents: e.target.value })}
-                    />
-                  </div>
-                  <div className="exam-form-group">
                     <label className="exam-form-label">Commencement Date *</label>
                     <input
                       type="date"
@@ -1852,8 +1804,8 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                 <button type="button" className="erp-btn erp-btn-secondary" onClick={() => setNewCycleModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="erp-btn erp-btn-primary">
-                  <Check size={14} /> Create Examination Cycle
+                <button type="submit" className="erp-btn erp-btn-primary" disabled={cycleSaving}>
+                  <Check size={14} /> {cycleSaving ? 'Saving…' : 'Create Examination Cycle'}
                 </button>
               </div>
             </form>

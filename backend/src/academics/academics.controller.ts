@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AcademicsService } from './academics.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -63,10 +63,51 @@ export class AcademicsController {
     return { success: true, count: data.length, data };
   }
 
+  @Post('semesters')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async createSemester(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    if (role !== 'super_admin' && role !== 'admin') throw new ForbiddenException('Only Super Admin or Admin can configure semesters.');
+    const data = await this.academicsService.createSemester(body);
+    return { success: true, data };
+  }
+
+  @Put('semesters/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async updateSemester(@CurrentUser() user: any, @Param('id') id: string, @Body() body: { status?: string }) {
+    const role = normalizeRole(user.role);
+    if (role !== 'super_admin' && role !== 'admin') throw new ForbiddenException('Only Super Admin or Admin can update semesters.');
+    if (!body.status) throw new BadRequestException('A semester status is required.');
+    const data = await this.academicsService.updateSemesterStatus(id, body.status);
+    return { success: true, data };
+  }
+
   @Get('sections')
   @ApiOperation({ summary: 'Get active sections' })
   async getSections() {
     const data = await this.academicsService.getSections();
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('sections')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async createSection(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    if (role !== 'super_admin' && role !== 'admin' && role !== 'hod') throw new ForbiddenException('Only academic administrators can create sections.');
+    const data = await this.academicsService.createSection(body);
+    return { success: true, data };
+  }
+
+  @Get('faculty-directory')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async getFacultyDirectory(@CurrentUser() user: any) {
+    const role = normalizeRole(user.role);
+    if (!['super_admin', 'admin', 'principal', 'hod'].includes(role)) throw new ForbiddenException('Access denied.');
+    const data = await this.academicsService.getFacultyDirectory();
     return { success: true, count: data.length, data };
   }
 
@@ -88,6 +129,19 @@ export class AcademicsController {
     }
     const sub = await this.academicsService.createSubject(body);
     return { success: true, message: `Subject ${sub.name} created.`, data: sub };
+  }
+
+  @Post('curriculum')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a subject and its academic-year course offering atomically' })
+  async createCurriculumItem(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    if (role !== 'hod' && role !== 'admin' && role !== 'super_admin') {
+      throw new ForbiddenException('Access denied. Only HOD or Administrator can create course curricula.');
+    }
+    const data = await this.academicsService.createCurriculumItem(body);
+    return { success: true, message: `Subject ${data.name} and its course offering were created.`, data };
   }
 
   @Put('subjects/:id')

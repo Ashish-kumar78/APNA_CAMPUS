@@ -59,7 +59,7 @@ export class PrincipalController {
   async getLeaves(@CurrentUser() user: any) {
     this.checkPrincipalAccess(user);
     const data = await this.principalService.getLeaves();
-    return { success: true, count: data.length, data };
+    return data;
   }
 
   @Post('leaves/:id/decision')

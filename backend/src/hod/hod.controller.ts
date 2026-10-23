@@ -4,6 +4,7 @@ import { HodService } from './hod.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { normalizeRole } from '../rbac/rbac';
+import { HodQueueActionDto, HodRejectMarksDto, HodUnlockMarksDto } from './hod.dto';
 
 @ApiTags('HOD Academic Governance')
 @Controller('hod')
@@ -24,8 +25,13 @@ export class HodController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get real-time department command centre KPIs and analytics' })
   async getDashboard(@CurrentUser() user: any, @Query('deptCode') deptCode?: string) {
-    this.checkHodAccess(user);
-    return this.hodService.getDashboard(deptCode || user.department || 'CSE');
+    const role = this.checkHodAccess(user);
+    const scope = this.reviewScope(user, role);
+    if (role === 'hod' && deptCode && !scope.departments.includes(deptCode)) {
+      throw new ForbiddenException('HOD dashboard is limited to the assigned department.');
+    }
+    const selectedDept = role === 'hod' ? (user.hod?.deptCode || scope.departments[0]) : (deptCode || user.department || 'CSE');
+    return this.hodService.getDashboard(selectedDept);
   }
 
   @Get('approval-queue')
@@ -33,35 +39,47 @@ export class HodController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get continuous internal assessment approval queue' })
   async getApprovalQueue(@CurrentUser() user: any) {
-    this.checkHodAccess(user);
-    return this.hodService.getApprovalQueue();
+    const role = this.checkHodAccess(user);
+    return this.hodService.getApprovalQueue(this.reviewScope(user, role));
   }
 
   @Post('approve')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Approve marks submission' })
-  async approveMarks(@CurrentUser() user: any, @Body() body: { id: string }) {
-    this.checkHodAccess(user);
-    return this.hodService.approveMarks(body.id, user.name || user.identifier);
+  async approveMarks(@CurrentUser() user: any, @Body() body: HodQueueActionDto) {
+    const role = this.checkHodAccess(user);
+    return this.hodService.approveMarks(body.id, {
+      role,
+      reviewer: user.name || user.identifier,
+      departments: this.reviewScope(user, role).departments,
+    });
   }
 
   @Post('reject')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Reject marks submission with mandatory reason' })
-  async rejectMarks(@CurrentUser() user: any, @Body() body: { id: string; rejectionReason: string }) {
-    this.checkHodAccess(user);
-    return this.hodService.rejectMarks(body.id, body.rejectionReason, user.name || user.identifier);
+  async rejectMarks(@CurrentUser() user: any, @Body() body: HodRejectMarksDto) {
+    const role = this.checkHodAccess(user);
+    return this.hodService.rejectMarks(body.id, body.rejectionReason, {
+      role,
+      reviewer: user.name || user.identifier,
+      departments: this.reviewScope(user, role).departments,
+    });
   }
 
   @Post('unlock')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Controlled reopening of approved marks register' })
-  async unlockMarks(@CurrentUser() user: any, @Body() body: { id: string; reason?: string }) {
-    this.checkHodAccess(user);
-    return this.hodService.unlockMarks(body.id, body.reason, user.name || user.identifier);
+  async unlockMarks(@CurrentUser() user: any, @Body() body: HodUnlockMarksDto) {
+    const role = this.checkHodAccess(user);
+    return this.hodService.unlockMarks(body.id, body.reason, {
+      role,
+      reviewer: user.name || user.identifier,
+      departments: this.reviewScope(user, role).departments,
+    });
   }
 
   @Get('at-risk')
@@ -96,7 +114,19 @@ export class HodController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get department governance audit trail' })
   async getAuditLogs(@CurrentUser() user: any) {
-    this.checkHodAccess(user);
-    return this.hodService.getAuditLogs();
+    const role = this.checkHodAccess(user);
+    return this.hodService.getAuditLogs(this.reviewScope(user, role));
+  }
+
+  private reviewScope(user: any, role: string) {
+    const departments = [...new Set([user?.hod?.deptCode, user?.hod?.department, user?.department].filter(Boolean))];
+    if (role === 'hod' && !departments.length) {
+      throw new ForbiddenException('A verified department assignment is required for HOD operations.');
+    }
+    return {
+      role,
+      reviewer: user?.name || user?.identifier || 'Unknown authenticated user',
+      departments,
+    };
   }
 }

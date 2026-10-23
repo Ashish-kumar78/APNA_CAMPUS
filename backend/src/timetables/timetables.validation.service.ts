@@ -252,6 +252,7 @@ export class TimetableValidationService {
       where: {
         department: scope.department,
         semester: scope.semester,
+        status: 'Active',
       },
     });
 
@@ -263,7 +264,7 @@ export class TimetableValidationService {
 
     // 2. Check Faculty Assignments
     const faculty = await this.prisma.faculty.findMany({
-      where: { department: { contains: scope.department, mode: 'insensitive' } },
+      where: { department: { contains: scope.department, mode: 'insensitive' }, status: 'Active' },
     });
 
     if (faculty.length === 0) {
@@ -278,7 +279,7 @@ export class TimetableValidationService {
     }
 
     // 3. Check Classrooms and Labs
-    const rooms = await this.prisma.room.findMany();
+    const rooms = await this.prisma.room.findMany({ where: { department: scope.department, status: 'Active' } });
     const classrooms = rooms.filter((r) => !r.isLab);
     const labs = rooms.filter((r) => r.isLab);
 

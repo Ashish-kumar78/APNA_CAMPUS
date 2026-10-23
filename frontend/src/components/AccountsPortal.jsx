@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   CreditCard,
   DollarSign,
@@ -44,16 +44,7 @@ import {
   openFeeReceiptPdf,
   openPaymentProofPdf,
   downloadPaymentProofPdf,
-  downloadStudentStatementPdf,
-  downloadDefaultersListPdf
 } from '../utils/pdfGenerator';
-import {
-  initialFeeStructures,
-  initialFeeTransactions,
-  initialScholarships,
-  generateAllStudents
-} from '../data/collegeData.js';
-import { getAllStudents } from '../services/studentStore.js';
 import { api } from '../services/api.js';
 import { feesApi } from '../services/feesApi.js';
 import { useTimeGreeting } from '../utils/timeGreeting.js';
@@ -91,19 +82,23 @@ function exportToCsv(filename, rows) {
   document.body.removeChild(link);
 }
 
+function hasVerifiedReceipt(transaction) {
+  const status = String(transaction?.status || '').toUpperCase();
+  return Boolean(transaction?.receiptNo) && ['VERIFIED', 'RECONCILED', 'SUCCESSFUL', 'APPROVED'].includes(status);
+}
+
 export default function AccountsPortal({ account, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   // Core Data States
-  const [feeStructures, setFeeStructures] = useState(initialFeeStructures);
-  const [transactions, setTransactions] = useState(initialFeeTransactions);
-  const [scholarships, setScholarships] = useState(initialScholarships);
-  const [students] = useState(() => {
-    const list = getAllStudents();
-    return list && list.length > 0 ? list : generateAllStudents();
-  });
+  const [feeStructures, setFeeStructures] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [scholarships, setScholarships] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [studentsLoading, setStudentsLoading] = useState(true);
+  const [studentsError, setStudentsError] = useState('');
 
   // Dashboard Metrics & Filters
   const [dashboardFilter, setDashboardFilter] = useState({
@@ -112,37 +107,9 @@ export default function AccountsPortal({ account, onLogout }) {
     department: 'ALL'
   });
   const [dashboardStats, setDashboardStats] = useState({
-    totalAssessed: 41370000,
-    totalCollected: 36240000,
-    totalOutstanding: 5130000,
-    collectionRate: 87.6,
-    studentsWithDues: 54,
-    pendingVerificationsCount: 1,
-    pendingVerificationsSum: 20000,
-    failedTransactionsCount: 2,
-    scholarshipsSanctioned: 8610000,
-    scholarshipsDisbursed: 6610000,
-    refundsAndReversals: 25000,
-    monthlyTrends: [
-      { month: 'Jun', assessed: 8200000, collected: 7100000 },
-      { month: 'Jul', assessed: 12500000, collected: 11200000 },
-      { month: 'Aug', assessed: 9800000, collected: 8900000 },
-      { month: 'Sep', assessed: 6400000, collected: 5600000 },
-      { month: 'Oct', assessed: 4470000, collected: 3440000 }
-    ],
-    feeHeadBreakdown: [
-      { head: 'Tuition & Academic Fee', percentage: 55, amount: 22753500 },
-      { head: 'Development & Infrastructure', percentage: 18, amount: 7446600 },
-      { head: 'Hostel & Residential Boarding', percentage: 15, amount: 6205500 },
-      { head: 'Transportation Fleet Charges', percentage: 7, amount: 2895900 },
-      { head: 'Examination & Autonomous Evaluation', percentage: 5, amount: 2068500 }
-    ],
-    paymentChannelDistribution: [
-      { channel: 'Online Net Banking', percentage: 48, count: 214 },
-      { channel: 'UPI / QR Campus Scan', percentage: 32, count: 142 },
-      { channel: 'Bank Challan / NEFT', percentage: 14, count: 62 },
-      { channel: 'Accounts Counter Cash', percentage: 6, count: 26 }
-    ]
+    totalAssessed: null, totalCollected: 0, totalOutstanding: null, collectionRate: null,
+    studentsWithDues: null, pendingVerificationsSum: 0, scholarshipsDisbursed: null,
+    refundsAndReversals: null, monthlyTrends: [], feeHeadBreakdown: [], paymentChannelDistribution: [],
   });
 
   // Digital Proof Verification Queue
@@ -156,8 +123,6 @@ export default function AccountsPortal({ account, onLogout }) {
   // Student Fee Ledger States
   const [searchStudent, setSearchStudent] = useState('');
   const [ledgerDeptFilter, setLedgerDeptFilter] = useState('ALL');
-  const [ledgerStatusFilter, setLedgerStatusFilter] = useState('ALL');
-  const [selectedStatementStudent, setSelectedStatementStudent] = useState(null);
 
   // Transaction Search & Channel Filters
   const [searchTxn, setSearchTxn] = useState('');
@@ -168,39 +133,38 @@ export default function AccountsPortal({ account, onLogout }) {
   const [structureProgramFilter, setStructureProgramFilter] = useState('ALL');
   const [isCreateStructureOpen, setIsCreateStructureOpen] = useState(false);
   const [newStructureForm, setNewStructureForm] = useState({
-    program: 'B.Tech Computer Science & Engineering',
-    term: 'Academic Year 2026-27 (Autumn)',
-    tuitionFee: 65000,
-    developmentFee: 15000,
-    labLibraryFee: 10000,
-    examinationFee: 3500,
-    hostelMessFee: 42000
+    program: '',
+    term: '',
+    tuitionFee: '',
+    developmentFee: '',
+    labLibraryFee: '',
+    examinationFee: '',
+    hostelMessFee: ''
   });
 
   // Scholarships Modal
   const [isSanctionScholarshipOpen, setIsSanctionScholarshipOpen] = useState(false);
   const [newScholarshipForm, setNewScholarshipForm] = useState({
-    name: 'PRERANA Post-Matric Scholarship',
-    authority: 'Government of Odisha (ST & SC Welfare Dept)',
-    benefit: '₹45,000 / Year',
-    category: 'Government DBT',
+    name: '',
+    authority: '',
+    category: '',
     beneficiaries: 1,
-    studentRoll: '2305201001',
-    studentName: 'Rakesh Das',
-    sanctionedAmount: 45000
+    studentRoll: '',
+    sanctionedAmount: '',
+    academicYear: ''
   });
 
   // Modals & General Workflow States
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [paymentForm, setPaymentForm] = useState({
-    rollNumber: '2305201001',
-    studentName: 'Rakesh Das',
-    head: 'Tuition & Development Fee',
-    amount: '48500',
-    mode: 'Net Banking',
-    semester: 'Semester 5'
+    rollNumber: '',
+    semester: '',
+    head: '',
+    amount: '',
+    mode: 'Cash at Counter'
   });
+  const paymentRequestRef = useRef(null);
 
   const [toastMessage, setToastMessage] = useState('');
   const showToast = (msg) => {
@@ -216,22 +180,60 @@ export default function AccountsPortal({ account, onLogout }) {
   }, []);
 
   const loadDashboardStats = async () => {
-    const stats = await feesApi.getDashboardStats(dashboardFilter);
-    if (stats) setDashboardStats(stats);
+    try {
+      const stats = await feesApi.getDashboardStats(dashboardFilter);
+      setDashboardStats(stats);
+    } catch (error) {
+      setDashboardStats((current) => ({ ...current, totalCollected: null }));
+      showToast(error?.message || 'Financial dashboard metrics are unavailable.');
+    }
   };
 
   const loadVerifications = async () => {
-    const list = await feesApi.getPaymentVerifications('ALL');
-    if (list) setVerificationList(list);
+    try {
+      const list = await feesApi.getPaymentVerifications('ALL');
+      setVerificationList(list);
+    } catch (error) {
+      setVerificationList([]);
+      showToast(error?.message || 'Payment verification queue is unavailable.');
+    }
   };
 
   const loadInitialBackendData = async () => {
-    const structures = await feesApi.getFeeStructures();
-    if (structures && structures.length > 0) setFeeStructures(structures);
-    const txns = await feesApi.getFeeTransactions();
-    if (txns && txns.length > 0) setTransactions(txns);
-    const sch = await feesApi.getScholarships();
-    if (sch && sch.length > 0) setScholarships(sch);
+    setStudentsLoading(true);
+    setStudentsError('');
+    try {
+      const response = await api.getStudents();
+      if (!response?.success || !Array.isArray(response.data)) {
+        throw new Error('The student roster response was invalid.');
+      }
+      setStudents(response.data);
+    } catch (error) {
+      setStudents([]);
+      setStudentsError(error?.message || 'The student roster is unavailable.');
+    } finally {
+      setStudentsLoading(false);
+    }
+
+    try {
+      setFeeStructures(await feesApi.getFeeStructures());
+    } catch (error) {
+      setFeeStructures([]);
+      showToast(error?.message || 'Fee structures are unavailable.');
+    }
+    try {
+      const txns = await feesApi.getFeeTransactions();
+      setTransactions(txns);
+    } catch (error) {
+      setTransactions([]);
+      showToast(error?.message || 'Fee transaction register is unavailable.');
+    }
+    try {
+      setScholarships(await feesApi.getScholarships());
+    } catch (error) {
+      setScholarships([]);
+      showToast(error?.message || 'Scholarship records are unavailable.');
+    }
   };
 
   const pendingCount = useMemo(() => {
@@ -240,28 +242,21 @@ export default function AccountsPortal({ account, onLogout }) {
 
   // Digital Proof Actions
   const handleApproveProof = async (id) => {
-    const proof = verificationList.find((p) => p.id === id);
-    const res = await feesApi.approvePayment(id);
-    if (res && res.success) {
-      // Auto-post verified transaction into ledger
-      const autoTxn = {
-        id: proof?.transactionId || `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
-        studentName: proof?.studentName || 'Student',
-        rollNumber: proof?.rollNumber || '2305201001',
-        semester: 'Semester 5',
-        head: proof?.remarks || 'Tuition Fee (Online Proof Verified)',
-        amount: Number(proof?.amount || 20000),
-        mode: proof?.paymentMethod || 'UPI',
-        date: 'Today, Just now',
-        status: 'Verified',
-        receiptNo: `RCPT-2026-${Math.floor(1000 + Math.random() * 9000)}`
-      };
-      setTransactions((prev) => [autoTxn, ...prev]);
-
-      showToast(`✓ Payment proof verified & approved! Posted to student ledger with Receipt #${autoTxn.receiptNo}`);
+    try {
+      const res = await feesApi.approvePayment(id);
+      if (!res?.success || !res.transaction) throw new Error('Approval response did not include the persisted ledger transaction.');
+      setTransactions((prev) => [res.transaction, ...prev.filter((item) => item.id !== res.transaction.id)]);
+      showToast(`Payment verified and added to the ledger. Receipt ${res.transaction.receiptNo}.`);
       await loadVerifications();
       await loadDashboardStats();
+      try {
+        setTransactions(await feesApi.getFeeTransactions());
+      } catch {
+        // The confirmed transaction remains visible while a refresh is unavailable.
+      }
       if (selectedProof?.id === id) setSelectedProof(null);
+    } catch (error) {
+      showToast(error?.message || 'Payment approval failed. No ledger entry was recorded.');
     }
   };
 
@@ -270,13 +265,31 @@ export default function AccountsPortal({ account, onLogout }) {
       showToast('Please specify a rejection reason.');
       return;
     }
-    const res = await feesApi.rejectPayment(rejectingProofId, rejectionReasonInput.trim());
-    if (res && res.success) {
-      showToast('✕ Payment proof rejected. Student notified with reason.');
+    try {
+      const res = await feesApi.rejectPayment(rejectingProofId, rejectionReasonInput.trim());
+      if (!res?.success) throw new Error('Payment rejection did not complete.');
+      showToast('Payment proof rejected with the recorded reason.');
       await loadVerifications();
       setRejectingProofId(null);
       setRejectionReasonInput('');
       if (selectedProof?.id === rejectingProofId) setSelectedProof(null);
+    } catch (error) {
+      showToast(error?.message || 'Payment rejection failed.');
+    }
+  };
+
+  const handleAuditPaymentProof = async (item) => {
+    setProofZoomLevel(1);
+    setSelectedProof({ ...item, proofLoading: true, proofError: '' });
+    try {
+      const file = await feesApi.getPaymentProofFile(item.id);
+      setSelectedProof((current) => current?.id === item.id
+        ? { ...current, ...file, proofUrl: file.fileData, proofLoading: false }
+        : current);
+    } catch (error) {
+      setSelectedProof((current) => current?.id === item.id
+        ? { ...current, proofLoading: false, proofError: error?.message || 'Could not load the submitted proof file.' }
+        : current);
     }
   };
 
@@ -289,111 +302,92 @@ export default function AccountsPortal({ account, onLogout }) {
       return;
     }
 
-    const receiptNo = `RCPT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newTxn = {
-      id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
-      studentName: paymentForm.studentName,
-      rollNumber: paymentForm.rollNumber,
-      semester: paymentForm.semester,
-      head: paymentForm.head,
-      amount: amt,
-      mode: paymentForm.mode,
-      date: 'Today, Just now',
-      status: 'Verified',
-      receiptNo
-    };
-
-    setTransactions((prev) => [newTxn, ...prev]);
-    setIsRecordPaymentOpen(false);
-    showToast(`✓ Payment of ₹${amt.toLocaleString('en-IN')} recorded for Roll ${paymentForm.rollNumber}! Receipt: ${receiptNo}`);
-
     try {
-      await api.recordFeePayment(paymentForm);
+      const fingerprint = JSON.stringify([
+        paymentForm.rollNumber, paymentForm.semester, paymentForm.head, amt, paymentForm.mode,
+      ]);
+      if (!paymentRequestRef.current || paymentRequestRef.current.fingerprint !== fingerprint) {
+        paymentRequestRef.current = { fingerprint, key: globalThis.crypto.randomUUID() };
+      }
+      const res = await api.recordFeePayment({
+        idempotencyKey: paymentRequestRef.current.key,
+        rollNumber: paymentForm.rollNumber,
+        semester: paymentForm.semester,
+        head: paymentForm.head,
+        amount: amt,
+        mode: paymentForm.mode,
+      });
+      if (!res?.success || !res.data?.id) throw new Error('The server did not confirm the payment record.');
+      setTransactions((prev) => [res.data, ...prev]);
+      paymentRequestRef.current = null;
+      setIsRecordPaymentOpen(false);
+      showToast(`Payment of ₹${Number(res.data.amount).toLocaleString('en-IN')} recorded for Roll ${res.data.rollNumber}. Receipt ${res.data.receiptNo}.`);
     } catch (err) {
-      console.warn('Backend payment sync fallback:', err.message);
+      showToast(err?.message || 'Payment could not be recorded. No ledger entry was created.');
     }
   };
 
   // Fee Structure Creation Handler
   const handleCreateStructure = async (e) => {
     e.preventDefault();
-    const total =
-      Number(newStructureForm.tuitionFee) +
-      Number(newStructureForm.developmentFee) +
-      Number(newStructureForm.labLibraryFee) +
-      Number(newStructureForm.examinationFee) +
-      Number(newStructureForm.hostelMessFee || 0);
-
-    const newStr = {
-      id: `FS-${Date.now()}`,
-      program: newStructureForm.program,
-      term: newStructureForm.term,
-      tuitionFee: Number(newStructureForm.tuitionFee),
-      developmentFee: Number(newStructureForm.developmentFee),
-      labLibraryFee: Number(newStructureForm.labLibraryFee),
-      examinationFee: Number(newStructureForm.examinationFee),
-      hostelMessFee: Number(newStructureForm.hostelMessFee || 0),
-      total
-    };
-
-    setFeeStructures((prev) => [newStr, ...prev]);
-    setIsCreateStructureOpen(false);
-    showToast(`✓ Published new fee structure for ${newStr.program} (Total: ₹${total.toLocaleString('en-IN')})`);
-
     try {
-      await feesApi.createFeeStructure(newStr);
+      const res = await feesApi.createFeeStructure({
+        program: newStructureForm.program,
+        term: newStructureForm.term,
+        tuitionFee: Number(newStructureForm.tuitionFee),
+        developmentFee: Number(newStructureForm.developmentFee),
+        labLibraryFee: Number(newStructureForm.labLibraryFee),
+        examinationFee: Number(newStructureForm.examinationFee),
+        hostelMessFee: Number(newStructureForm.hostelMessFee),
+      });
+      if (!res?.success || !res.data?.id) throw new Error('The server did not confirm the fee structure.');
+      setFeeStructures((prev) => [res.data, ...prev]);
+      setIsCreateStructureOpen(false);
+      showToast(`Fee structure saved for ${res.data.program}. Total: ₹${Number(res.data.total).toLocaleString('en-IN')}.`);
     } catch (err) {
-      console.warn('Fee structure sync fallback:', err.message);
+      showToast(err?.message || 'Fee structure could not be saved.');
     }
   };
 
   // Sanction Scholarship Handler
   const handleSanctionScholarship = async (e) => {
     e.preventDefault();
-    const newSch = {
-      id: `SCH-${Date.now()}`,
-      name: newScholarshipForm.name,
-      authority: newScholarshipForm.authority,
-      benefit: `₹${Number(newScholarshipForm.sanctionedAmount).toLocaleString('en-IN')} / Year`,
-      category: newScholarshipForm.category,
-      beneficiaries: Number(newScholarshipForm.beneficiaries || 1),
-      status: 'Active'
-    };
-
-    setScholarships((prev) => [newSch, ...prev]);
-    setIsSanctionScholarshipOpen(false);
-    showToast(`✓ Sanctioned scholarship grant for ${newScholarshipForm.studentName} (Roll: ${newScholarshipForm.studentRoll})`);
-
     try {
-      await feesApi.sanctionScholarship(newSch);
+      const res = await feesApi.sanctionScholarship({
+        name: newScholarshipForm.name,
+        authority: newScholarshipForm.authority,
+        category: newScholarshipForm.category,
+        studentRoll: newScholarshipForm.studentRoll,
+        amount: Number(newScholarshipForm.sanctionedAmount),
+        beneficiaries: Number(newScholarshipForm.beneficiaries),
+        academicYear: newScholarshipForm.academicYear,
+      });
+      if (!res?.success || !res.data?.id) throw new Error('The server did not confirm the scholarship sanction.');
+      setScholarships((prev) => [res.data, ...prev]);
+      setIsSanctionScholarshipOpen(false);
+      showToast(`Scholarship sanctioned for ${res.data.studentName} (${res.data.studentRoll}).`);
     } catch (err) {
-      console.warn('Scholarship sync fallback:', err.message);
+      showToast(err?.message || 'Scholarship could not be sanctioned.');
     }
   };
 
   // Filtered Ledger Students
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
-      const matchSearch =
-        s.name.toLowerCase().includes(searchStudent.toLowerCase()) ||
-        s.rollNumber.includes(searchStudent);
-
-      const rollNum = parseInt(s.rollNumber) || 1;
-      const isCleared = rollNum % 3 !== 0;
-
-      let matchStatus = true;
-      if (ledgerStatusFilter === 'CLEARED') matchStatus = isCleared;
-      if (ledgerStatusFilter === 'PENDING') matchStatus = !isCleared;
+      const search = searchStudent.trim().toLowerCase();
+      const matchSearch = !search ||
+        String(s.name || '').toLowerCase().includes(search) ||
+        String(s.rollNumber || '').toLowerCase().includes(search);
 
       let matchDept = true;
       if (ledgerDeptFilter !== 'ALL') {
-        const d = (s.department || 'CSE').toUpperCase();
+        const d = `${s.deptCode || ''} ${s.department || ''}`.toUpperCase();
         matchDept = d.includes(ledgerDeptFilter);
       }
 
-      return matchSearch && matchStatus && matchDept;
+      return matchSearch && matchDept;
     });
-  }, [students, searchStudent, ledgerStatusFilter, ledgerDeptFilter]);
+  }, [students, searchStudent, ledgerDeptFilter]);
 
   // Filtered Transactions
   const filteredTransactions = useMemo(() => {
@@ -425,24 +419,6 @@ export default function AccountsPortal({ account, onLogout }) {
       s.program.toLowerCase().includes(structureProgramFilter.toLowerCase())
     );
   }, [feeStructures, structureProgramFilter]);
-
-  // Defaulters List for Reports & PDF
-  const defaultersList = useMemo(() => {
-    return students
-      .filter((s) => {
-        const rollNum = parseInt(s.rollNumber) || 1;
-        return rollNum % 3 === 0;
-      })
-      .map((s) => ({
-        rollNumber: s.rollNumber,
-        name: s.name,
-        department: s.department || 'CSE',
-        semester: 'Semester 5',
-        dueAmount: 28500,
-        dueDate: '15-Nov-2026',
-        noticeLevel: 'Final Clearance Notice'
-      }));
-  }, [students]);
 
   return (
     <div className="accounts-portal-root">
@@ -701,8 +677,10 @@ export default function AccountsPortal({ account, onLogout }) {
                     <span className="admin-kpi-label">Annual Fees Assessed</span>
                     <div className="admin-kpi-card-icon blue"><Building2 size={18} /></div>
                   </div>
-                  <div className="admin-kpi-val">₹{(dashboardStats.totalAssessed / 10000000).toFixed(2)} Cr</div>
-                  <small style={{ color: '#64748b' }}>For 2,480 enrolled autonomous students</small>
+                  <div className="admin-kpi-val">
+                    {dashboardStats.totalAssessed == null ? 'Not configured' : `₹${(dashboardStats.totalAssessed / 10000000).toFixed(2)} Cr`}
+                  </div>
+                  <small style={{ color: '#64748b' }}>Official assessment totals are not configured.</small>
                 </div>
 
                 <div
@@ -716,34 +694,35 @@ export default function AccountsPortal({ account, onLogout }) {
                     <div className="admin-kpi-card-icon emerald"><CheckCircle2 size={18} /></div>
                   </div>
                   <div className="admin-kpi-val" style={{ color: '#059669' }}>
-                    ₹{(dashboardStats.totalCollected / 10000000).toFixed(2)} Cr
+                    {dashboardStats.totalCollected == null ? 'Not available' : `₹${(dashboardStats.totalCollected / 10000000).toFixed(2)} Cr`}
                   </div>
-                  <div className="accounts-progress-track">
-                    <div className="accounts-progress-fill" style={{ width: `${dashboardStats.collectionRate}%` }}></div>
-                  </div>
-                  <small style={{ color: '#059669', fontWeight: 700 }}>
-                    {dashboardStats.collectionRate}% Institutional Clearance Rate
-                  </small>
+                  {dashboardStats.collectionRate == null ? (
+                    <small style={{ color: '#64748b' }}>Collection rate requires official fee assessments.</small>
+                  ) : <>
+                    <div className="accounts-progress-track">
+                      <div className="accounts-progress-fill" style={{ width: `${dashboardStats.collectionRate}%` }}></div>
+                    </div>
+                    <small style={{ color: '#059669', fontWeight: 700 }}>{dashboardStats.collectionRate}% Institutional Clearance Rate</small>
+                  </>}
                 </div>
 
                 <div
                   className="admin-kpi-card interactive-kpi"
                   onClick={() => {
-                    setLedgerStatusFilter('PENDING');
                     setActiveTab('students');
                   }}
-                  title="Click to view students with outstanding dues"
+                  title="Fee assessments are not configured"
                 >
-                  <div className="kpi-click-indicator">Filter <ArrowUpRight size={13} /></div>
+                  <div className="kpi-click-indicator">Roster <ArrowUpRight size={13} /></div>
                   <div className="admin-kpi-card-header">
                     <span className="admin-kpi-label">Outstanding Student Dues</span>
                     <div className="admin-kpi-card-icon amber"><AlertTriangle size={18} /></div>
                   </div>
                   <div className="admin-kpi-val" style={{ color: '#d97706' }}>
-                    ₹{(dashboardStats.totalOutstanding / 100000).toFixed(1)} L
+                    {dashboardStats.totalOutstanding == null ? 'Not configured' : `₹${(dashboardStats.totalOutstanding / 100000).toFixed(1)} L`}
                   </div>
                   <small style={{ color: '#d97706', fontWeight: 600 }}>
-                    {dashboardStats.studentsWithDues} students pending semester clearance
+                    {dashboardStats.studentsWithDues == null ? 'Official assessments are required to calculate dues.' : `${dashboardStats.studentsWithDues} students pending semester clearance`}
                   </small>
                 </div>
 
@@ -764,7 +743,7 @@ export default function AccountsPortal({ account, onLogout }) {
                     {pendingCount} Claim{pendingCount === 1 ? '' : 's'}
                   </div>
                   <small style={{ color: '#4338ca', fontWeight: 600 }}>
-                    ₹{(dashboardStats.pendingVerificationsSum || 20000).toLocaleString('en-IN')} pending reviewer approval
+                    ₹{Number(dashboardStats.pendingVerificationsSum || 0).toLocaleString('en-IN')} pending reviewer approval
                   </small>
                 </div>
               </div>
@@ -787,9 +766,9 @@ export default function AccountsPortal({ account, onLogout }) {
                     Scholarships Disbursed
                   </div>
                   <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#2563eb', margin: '4px 0' }}>
-                    ₹{(dashboardStats.scholarshipsDisbursed / 100000).toFixed(1)} L
+                    {dashboardStats.scholarshipsDisbursed == null ? 'Not configured' : `₹${(dashboardStats.scholarshipsDisbursed / 100000).toFixed(1)} L`}
                   </div>
-                  <small style={{ color: '#64748b' }}>265 PRERANA &amp; Pragati Beneficiaries</small>
+                  <small style={{ color: '#64748b' }}>Based on persisted scholarship records.</small>
                 </div>
 
                 <div
@@ -801,9 +780,9 @@ export default function AccountsPortal({ account, onLogout }) {
                     Refunds &amp; Bank Reversals
                   </div>
                   <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: '4px 0' }}>
-                    ₹{(dashboardStats.refundsAndReversals || 25000).toLocaleString('en-IN')}
+                    {dashboardStats.refundsAndReversals == null ? 'Not configured' : `₹${dashboardStats.refundsAndReversals.toLocaleString('en-IN')}`}
                   </div>
-                  <small style={{ color: '#64748b' }}>2 audited fee deposit reversals</small>
+                  <small style={{ color: '#64748b' }}>No refund ledger is configured.</small>
                 </div>
 
                 <div
@@ -814,7 +793,7 @@ export default function AccountsPortal({ account, onLogout }) {
                     Gateway Settlement Latency
                   </div>
                   <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#059669', margin: '4px 0' }}>
-                    T+1 Cycle
+                    Not configured
                   </div>
                   <small style={{ color: '#059669' }}>Automated HDFC &amp; SBI e-Pay reconciliation</small>
                 </div>
@@ -835,7 +814,9 @@ export default function AccountsPortal({ account, onLogout }) {
                   </div>
 
                   <div className="accounts-trend-chart-container">
-                    {dashboardStats.monthlyTrends.map((t) => {
+                    {dashboardStats.monthlyTrends.length === 0 ? (
+                      <div style={{ padding: '24px', color: '#64748b', textAlign: 'center' }}>No assessed-versus-collected trend data is available.</div>
+                    ) : dashboardStats.monthlyTrends.map((t) => {
                       const maxVal = 13000000;
                       const assessedH = Math.round((t.assessed / maxVal) * 110);
                       const collectedH = Math.round((t.collected / maxVal) * 110);
@@ -878,14 +859,16 @@ export default function AccountsPortal({ account, onLogout }) {
                     <div>
                       <h3 className="admin-card-title">Fee-Head Revenue Allocation</h3>
                       <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
-                        Autonomous institutional revenue split across heads
+                    Calculated from recorded financial data when fee assessments are configured.
                       </p>
                     </div>
                     <PieChart size={18} color="#2563eb" />
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {dashboardStats.feeHeadBreakdown.map((fh) => (
+                    {dashboardStats.feeHeadBreakdown.length === 0 ? (
+                      <div style={{ padding: '12px', color: '#64748b' }}>No fee-head breakdown is available.</div>
+                    ) : dashboardStats.feeHeadBreakdown.map((fh) => (
                       <div key={fh.head} className="accounts-head-row">
                         <div style={{ flex: 1, paddingRight: '12px' }}>
                           <div style={{ fontWeight: 600, color: '#0f172a' }}>{fh.head}</div>
@@ -954,11 +937,12 @@ export default function AccountsPortal({ account, onLogout }) {
                           <td><strong style={{ color: '#059669' }}>₹{txn.amount.toLocaleString('en-IN')}</strong></td>
                           <td><span className="admin-badge active">{txn.mode}</span></td>
                           <td><code>{txn.receiptNo}</code></td>
-                          <td><span className="admin-badge approved">{txn.status}</span></td>
+                          <td><span className={`admin-badge ${hasVerifiedReceipt(txn) ? 'approved' : 'pending'}`}>{txn.status || 'Unknown'}</span></td>
                           <td style={{ textAlign: 'right' }}>
                             <button
                               className="admin-table-action-btn"
-                              title="Print / View Receipt"
+                              title={hasVerifiedReceipt(txn) ? 'Print / View Receipt' : 'A verified receipt is not available for this transaction'}
+                              disabled={!hasVerifiedReceipt(txn)}
                               onClick={() => setSelectedReceipt(txn)}
                             >
                               <Receipt size={16} />
@@ -1101,10 +1085,7 @@ export default function AccountsPortal({ account, onLogout }) {
                                     borderRadius: '6px',
                                     border: '1px solid #c7d2fe'
                                   }}
-                                  onClick={() => {
-                                    setProofZoomLevel(1);
-                                    setSelectedProof(item);
-                                  }}
+                                  onClick={() => handleAuditPaymentProof(item)}
                                 >
                                   <Eye size={14} /> Audit
                                 </button>
@@ -1158,41 +1139,32 @@ export default function AccountsPortal({ account, onLogout }) {
             <div>
               <div className="admin-view-header">
                 <div>
-                  <h2>Student Fee Ledger &amp; Clearance Accounts</h2>
-                  <p>Individual student statements, annual tuition packages, and semester clearance audit.</p>
+                  <h2>Student Accounts Roster</h2>
+                  <p>Student records are live. Fee assessments, dues, and clearance status are not configured yet.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     className="admin-action-btn-secondary"
                     onClick={() => {
-                      const exportData = filteredStudents.map((s) => {
-                        const rollNum = parseInt(s.rollNumber) || 1;
-                        const isCleared = rollNum % 3 !== 0;
-                        const waiver = rollNum % 5 === 0 ? 15000 : 0;
-                        const annual = 98500;
-                        const paid = isCleared ? annual - waiver : 65000 - waiver;
-                        const due = annual - waiver - paid;
-                        return {
-                          RollNumber: s.rollNumber,
-                          StudentName: s.name,
-                          Department: s.department || 'CSE',
-                          Semester: 'Semester 5',
-                          Category: s.category || 'General',
-                          AnnualFeePackage: annual,
-                          ScholarshipCredit: waiver,
-                          PaidAmount: paid,
-                          OutstandingBalance: due,
-                          ClearanceStatus: due === 0 ? 'No Dues Clear' : 'Dues Pending'
-                        };
-                      });
-                      exportToCsv('Student_Fee_Ledger.csv', exportData);
-                      showToast('Exported Student Fee Ledger to CSV.');
+                      const exportData = filteredStudents.map((s) => ({
+                        RollNumber: s.rollNumber,
+                        StudentName: s.name,
+                        Department: s.department || '',
+                        Semester: s.semester || '',
+                        Section: s.section || '',
+                        EnrollmentStatus: s.status || '',
+                      }));
+                      exportToCsv('Student_Accounts_Roster.csv', exportData);
+                      showToast('Exported the student roster. Fee assessment data is not configured.');
                     }}
                   >
-                    <FileSpreadsheet size={15} /> Export Ledger CSV
+                    <FileSpreadsheet size={15} /> Export Student Roster
                   </button>
-                  <button className="admin-action-btn-primary" onClick={() => setIsRecordPaymentOpen(true)}>
-                    <Plus size={15} /> Record Payment
+                  <button className="admin-action-btn-primary" onClick={() => {
+                    setPaymentForm({ rollNumber: '', semester: '', head: '', amount: '', mode: 'Cash at Counter' });
+                    setIsRecordPaymentOpen(true);
+                  }}>
+                    <Plus size={15} /> Record Verified Receipt
                   </button>
                 </div>
               </div>
@@ -1227,18 +1199,6 @@ export default function AccountsPortal({ account, onLogout }) {
                   </select>
                 </div>
 
-                <div className="accounts-filter-group">
-                  <span className="accounts-filter-label">Clearance Status:</span>
-                  <select
-                    className="accounts-filter-select"
-                    value={ledgerStatusFilter}
-                    onChange={(e) => setLedgerStatusFilter(e.target.value)}
-                  >
-                    <option value="ALL">All Students</option>
-                    <option value="CLEARED">No Dues Cleared</option>
-                    <option value="PENDING">Dues Pending Only</option>
-                  </select>
-                </div>
               </div>
 
               <div className="admin-table-container">
@@ -1247,74 +1207,39 @@ export default function AccountsPortal({ account, onLogout }) {
                     <tr>
                       <th>Roll Number</th>
                       <th>Student Name</th>
-                      <th>Program &amp; Semester</th>
-                      <th>Category</th>
-                      <th>Annual Fee Package</th>
-                      <th>Waiver / Credit</th>
-                      <th>Paid Amount</th>
-                      <th>Outstanding Balance</th>
-                      <th>Clearance Status</th>
+                      <th>Department</th>
+                      <th>Semester</th>
+                      <th>Assessed</th>
+                      <th>Collected</th>
+                      <th>Balance</th>
+                      <th>Fee Status</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredStudents.slice(0, 25).map((s) => {
-                      const rollNum = parseInt(s.rollNumber) || 1;
-                      const isCleared = rollNum % 3 !== 0;
-                      const waiver = rollNum % 5 === 0 ? 15000 : 0;
-                      const annual = 98500;
-                      const paidAmt = isCleared ? annual - waiver : 65000 - waiver;
-                      const dueAmt = annual - waiver - paidAmt;
-
-                      return (
+                    {studentsLoading ? (
+                      <tr><td colSpan="9" style={{ textAlign: 'center', padding: '24px' }}>Loading student records…</td></tr>
+                    ) : studentsError ? (
+                      <tr><td colSpan="9" style={{ textAlign: 'center', padding: '24px', color: '#b91c1c' }}>{studentsError}</td></tr>
+                    ) : filteredStudents.length === 0 ? (
+                      <tr><td colSpan="9" style={{ textAlign: 'center', padding: '24px' }}>No student records found.</td></tr>
+                    ) : filteredStudents.slice(0, 25).map((s) => (
                         <tr key={s.id}>
                           <td><strong>{s.rollNumber}</strong></td>
                           <td style={{ fontWeight: 600 }}>{s.name}</td>
-                          <td>{s.department || 'CSE'} · Semester 5</td>
-                          <td><span className="admin-badge">{s.category || 'General'}</span></td>
-                          <td>₹{annual.toLocaleString('en-IN')}</td>
-                          <td>{waiver > 0 ? <span style={{ color: '#2563eb', fontWeight: 600 }}>₹{waiver.toLocaleString('en-IN')}</span> : '-'}</td>
-                          <td><strong style={{ color: '#059669' }}>₹{paidAmt.toLocaleString('en-IN')}</strong></td>
-                          <td>
-                            <strong style={{ color: dueAmt > 0 ? '#e11d48' : '#64748b' }}>
-                              ₹{dueAmt.toLocaleString('en-IN')}
-                            </strong>
-                          </td>
-                          <td>
-                            <span className={`admin-badge ${dueAmt === 0 ? 'approved' : 'pending'}`}>
-                              {dueAmt === 0 ? 'No Dues Clear' : 'Dues Pending'}
-                            </span>
-                          </td>
+                          <td>{s.department || s.deptCode || '—'}</td>
+                          <td>{s.semester || '—'}</td>
+                          <td>Not configured</td>
+                          <td>—</td>
+                          <td>—</td>
+                          <td><span className="admin-badge">Assessment unavailable</span></td>
                           <td style={{ textAlign: 'right' }}>
                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                               <button
                                 className="admin-action-btn-secondary"
                                 style={{ padding: '0.35rem 0.65rem', fontSize: '0.775rem' }}
-                                title="View Itemized Financial Statement"
-                                onClick={() => {
-                                  setSelectedStatementStudent({
-                                    student: {
-                                      studentName: s.name,
-                                      rollNumber: s.rollNumber,
-                                      department: s.department || 'Computer Science & Engineering',
-                                      program: 'B.Tech (Autonomous)',
-                                      semester: 'Semester 5 (3rd Year)',
-                                      academicYear: '2026-27',
-                                      category: s.category || 'General'
-                                    },
-                                    totalAnnualDues: annual,
-                                    paidAmount: paidAmt,
-                                    scholarshipCredit: waiver,
-                                    outstanding: dueAmt,
-                                    feeHeads: [
-                                      { head: 'Tuition Fee (Autumn Term)', assessed: 48500, paid: isCleared ? 48500 : 38500, balance: isCleared ? 0 : 10000, dueDate: '15 Aug 2026', status: isCleared ? 'Cleared' : 'Partial' },
-                                      { head: 'Development & Infrastructure Fee', assessed: 20000, paid: 20000, balance: 0, dueDate: '15 Aug 2026', status: 'Cleared' },
-                                      { head: 'Laboratory & Systems Deposit', assessed: 6000, paid: 6000, balance: 0, dueDate: '30 Aug 2026', status: 'Cleared' },
-                                      { head: 'Autonomous Examination Fee', assessed: 3500, paid: 3500, balance: 0, dueDate: '10 Sep 2026', status: 'Cleared' },
-                                      { head: 'Hostel & Mess Boarding Charges', assessed: 20500, paid: isCleared ? 20500 : 2000, balance: isCleared ? 0 : 18500, dueDate: '15 Nov 2026', status: isCleared ? 'Cleared' : 'Pending' }
-                                    ]
-                                  });
-                                }}
+                                title="Official fee assessments are not configured"
+                                onClick={() => showToast('Student fee statements are unavailable until official assessments and due dates are configured.')}
                               >
                                 Statement
                               </button>
@@ -1324,22 +1249,20 @@ export default function AccountsPortal({ account, onLogout }) {
                                 onClick={() => {
                                   setPaymentForm({
                                     rollNumber: s.rollNumber,
-                                    studentName: s.name,
-                                    head: 'Semester Dues Clearance',
-                                    amount: String(dueAmt > 0 ? dueAmt : 48500),
-                                    mode: 'Net Banking',
-                                    semester: 'Semester 5'
+                                    semester: s.semester || '',
+                                    head: '',
+                                    amount: '',
+                                    mode: 'Cash at Counter'
                                   });
                                   setIsRecordPaymentOpen(true);
                                 }}
                               >
-                                Collect Fee
+                                Record Receipt
                               </button>
                             </div>
                           </td>
                         </tr>
-                      );
-                    })}
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -1450,11 +1373,12 @@ export default function AccountsPortal({ account, onLogout }) {
                         <td style={{ fontSize: '0.8rem', color: '#64748b' }}>{txn.date}</td>
                         <td><span className="admin-badge active">{txn.mode}</span></td>
                         <td><code>{txn.receiptNo}</code></td>
-                        <td><span className="admin-badge approved">{txn.status}</span></td>
+                        <td><span className={`admin-badge ${hasVerifiedReceipt(txn) ? 'approved' : 'pending'}`}>{txn.status || 'Unknown'}</span></td>
                         <td style={{ textAlign: 'right' }}>
                           <button
                             className="admin-table-action-btn"
-                            title="Generate Official PDF Receipt"
+                            title={hasVerifiedReceipt(txn) ? 'Generate payment receipt PDF' : 'A verified receipt is not available for this transaction'}
+                            disabled={!hasVerifiedReceipt(txn)}
                             onClick={() => setSelectedReceipt(txn)}
                           >
                             <Receipt size={16} />
@@ -1641,27 +1565,21 @@ export default function AccountsPortal({ account, onLogout }) {
                 <div className="admin-card">
                   <h3 className="admin-card-title">Semester Defaulters &amp; Arrears Sheet</h3>
                   <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.5rem 0 1rem 0' }}>
-                    Student-wise dues roster with outstanding balances for semester clearance follow-ups.
+                    This report needs persisted student fee assessments and due dates. Those are not configured yet.
                   </p>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       className="admin-action-btn-primary"
                       style={{ background: '#dc2626', borderColor: '#dc2626' }}
-                      onClick={() => {
-                        downloadDefaultersListPdf(defaultersList);
-                        showToast('Generated & downloaded Fee Defaulters Register PDF.');
-                      }}
+                      disabled
                     >
-                      <Download size={15} /> Download Defaulters PDF
+                      <Download size={15} /> Defaulters PDF unavailable
                     </button>
                     <button
                       className="admin-action-btn-secondary"
-                      onClick={() => {
-                        exportToCsv('Fee_Defaulters_Roster.csv', defaultersList);
-                        showToast('Exported Defaulters Roster to CSV.');
-                      }}
+                      disabled
                     >
-                      <FileSpreadsheet size={15} /> CSV
+                      <FileSpreadsheet size={15} /> CSV unavailable
                     </button>
                   </div>
                 </div>
@@ -1781,71 +1699,18 @@ export default function AccountsPortal({ account, onLogout }) {
                     position: 'relative'
                   }}
                 >
-                  {selectedProof.fileType === 'application/pdf' ? (
-                    <div style={{ padding: '24px', textAlign: 'center', color: '#fff', width: '100%' }}>
-                      <div
-                        style={{
-                          width: '56px',
-                          height: '56px',
-                          borderRadius: '12px',
-                          background: 'rgba(239, 68, 68, 0.2)',
-                          border: '1px solid rgba(239, 68, 68, 0.4)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          marginBottom: '10px'
-                        }}
-                      >
-                        <FileText size={32} style={{ color: '#f87171' }} />
-                      </div>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc', marginBottom: '4px' }}>
-                        {selectedProof.fileName || 'Bank_Remittance_Receipt.pdf'}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '16px' }}>
-                        Official Bank Transfer Counterfoil &bull; Verified UTR: {selectedProof.transactionId}
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={() => openPaymentProofPdf(selectedProof)}
-                          style={{
-                            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: '6px',
-                            fontSize: '0.82rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)'
-                          }}
-                        >
-                          <ExternalLink size={14} /> Open PDF Document ↗
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => downloadPaymentProofPdf(selectedProof)}
-                          style={{
-                            background: '#334155',
-                            color: '#e2e8f0',
-                            border: '1px solid #475569',
-                            padding: '8px 14px',
-                            borderRadius: '6px',
-                            fontSize: '0.82rem',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          <Download size={14} /> Download PDF
-                        </button>
-                      </div>
-                    </div>
+                  {selectedProof.proofLoading ? (
+                    <span style={{ color: '#e2e8f0' }}>Loading submitted proof…</span>
+                  ) : selectedProof.proofError ? (
+                    <span role="alert" style={{ color: '#fecaca', padding: '16px', textAlign: 'center' }}>{selectedProof.proofError}</span>
+                  ) : !selectedProof.proofUrl ? (
+                    <span style={{ color: '#e2e8f0' }}>No stored proof file is available for this submission.</span>
+                  ) : selectedProof.fileType === 'application/pdf' ? (
+                    <iframe
+                      title={`Submitted proof ${selectedProof.fileName}`}
+                      src={selectedProof.proofUrl}
+                      style={{ width: '100%', height: '100%', border: 0, background: '#fff' }}
+                    />
                   ) : (
                     <img
                       src={selectedProof.proofUrl}
@@ -2024,124 +1889,6 @@ export default function AccountsPortal({ account, onLogout }) {
         </div>
       )}
 
-      {/* MODAL / DRAWER: STUDENT FINANCIAL STATEMENT */}
-      {selectedStatementStudent && (
-        <div className="admin-modal-backdrop" onClick={() => setSelectedStatementStudent(null)}>
-          <div className="admin-modal-card" style={{ maxWidth: '750px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <div>
-                <h3>Student Financial Account Statement</h3>
-                <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
-                  {selectedStatementStudent.student.studentName} · Roll {selectedStatementStudent.student.rollNumber}
-                </p>
-              </div>
-              <button className="admin-table-action-btn" onClick={() => setSelectedStatementStudent(null)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="admin-modal-body">
-              {/* Summary Stats Box */}
-              <div className="accounts-statement-box">
-                <div>
-                  <div className="accounts-statement-stat-label">Total Assessed</div>
-                  <div className="accounts-statement-stat-val">₹{selectedStatementStudent.totalAnnualDues.toLocaleString('en-IN')}</div>
-                </div>
-                <div>
-                  <div className="accounts-statement-stat-label">Scholarship Credit</div>
-                  <div className="accounts-statement-stat-val" style={{ color: '#93c5fd' }}>
-                    ₹{selectedStatementStudent.scholarshipCredit.toLocaleString('en-IN')}
-                  </div>
-                </div>
-                <div>
-                  <div className="accounts-statement-stat-label">Paid Amount</div>
-                  <div className="accounts-statement-stat-val" style={{ color: '#34d399' }}>
-                    ₹{selectedStatementStudent.paidAmount.toLocaleString('en-IN')}
-                  </div>
-                </div>
-                <div>
-                  <div className="accounts-statement-stat-label">Net Balance Due</div>
-                  <div
-                    className="accounts-statement-stat-val"
-                    style={{ color: selectedStatementStudent.outstanding > 0 ? '#f87171' : '#34d399' }}
-                  >
-                    ₹{selectedStatementStudent.outstanding.toLocaleString('en-IN')}
-                  </div>
-                </div>
-              </div>
-
-              {/* Itemized Fee Heads */}
-              <h4 style={{ fontSize: '0.9rem', color: '#0f172a', margin: '0 0 8px 0' }}>Itemized Fee Heads Schedule</h4>
-              <div className="admin-table-container">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Fee Component</th>
-                      <th>Assessed (₹)</th>
-                      <th>Paid (₹)</th>
-                      <th>Balance Due (₹)</th>
-                      <th>Due Date</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedStatementStudent.feeHeads.map((fh) => (
-                      <tr key={fh.head}>
-                        <td><strong>{fh.head}</strong></td>
-                        <td>₹{fh.assessed.toLocaleString('en-IN')}</td>
-                        <td><strong style={{ color: '#059669' }}>₹{fh.paid.toLocaleString('en-IN')}</strong></td>
-                        <td>
-                          <strong style={{ color: fh.balance > 0 ? '#dc2626' : '#64748b' }}>
-                            ₹{fh.balance.toLocaleString('en-IN')}
-                          </strong>
-                        </td>
-                        <td><small style={{ color: '#64748b' }}>{fh.dueDate}</small></td>
-                        <td>
-                          <span className={`admin-badge ${fh.balance === 0 ? 'approved' : 'pending'}`}>
-                            {fh.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="admin-modal-footer">
-              <button
-                type="button"
-                className="admin-action-btn-secondary"
-                onClick={() => {
-                  downloadStudentStatementPdf(selectedStatementStudent);
-                  showToast(`Downloaded financial statement PDF for Roll ${selectedStatementStudent.student.rollNumber}.`);
-                }}
-              >
-                <Download size={15} /> Download Official PDF Statement
-              </button>
-              <button
-                type="button"
-                className="admin-action-btn-primary"
-                onClick={() => {
-                  setPaymentForm({
-                    rollNumber: selectedStatementStudent.student.rollNumber,
-                    studentName: selectedStatementStudent.student.studentName,
-                    head: 'Tuition & Development Fee',
-                    amount: String(selectedStatementStudent.outstanding || 48500),
-                    mode: 'Net Banking',
-                    semester: 'Semester 5'
-                  });
-                  setSelectedStatementStudent(null);
-                  setIsRecordPaymentOpen(true);
-                }}
-              >
-                Collect Fee
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* MODAL: PUBLISH NEW FEE STRUCTURE */}
       {isCreateStructureOpen && (
         <div className="admin-modal-backdrop" onClick={() => setIsCreateStructureOpen(false)}>
@@ -2161,7 +1908,9 @@ export default function AccountsPortal({ account, onLogout }) {
                     className="admin-form-select"
                     value={newStructureForm.program}
                     onChange={(e) => setNewStructureForm({ ...newStructureForm, program: e.target.value })}
+                    required
                   >
+                    <option value="">Select degree program</option>
                     <option value="B.Tech Computer Science & Engineering">B.Tech Computer Science &amp; Engineering</option>
                     <option value="B.Tech Electronics & Communication">B.Tech Electronics &amp; Communication</option>
                     <option value="B.Tech Mechanical Engineering">B.Tech Mechanical Engineering</option>
@@ -2290,27 +2039,15 @@ export default function AccountsPortal({ account, onLogout }) {
 
             <form onSubmit={handleSanctionScholarship}>
               <div className="admin-modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
-                  <div className="admin-form-group">
-                    <label>Student Roll</label>
-                    <input
-                      type="text"
-                      className="admin-form-input"
-                      value={newScholarshipForm.studentRoll}
-                      onChange={(e) => setNewScholarshipForm({ ...newScholarshipForm, studentRoll: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Student Name</label>
-                    <input
-                      type="text"
-                      className="admin-form-input"
-                      value={newScholarshipForm.studentName}
-                      onChange={(e) => setNewScholarshipForm({ ...newScholarshipForm, studentName: e.target.value })}
-                      required
-                    />
-                  </div>
+                <div className="admin-form-group">
+                  <label>Student Roll (name is resolved from the database)</label>
+                  <input
+                    type="text"
+                    className="admin-form-input"
+                    value={newScholarshipForm.studentRoll}
+                    onChange={(e) => setNewScholarshipForm({ ...newScholarshipForm, studentRoll: e.target.value })}
+                    required
+                  />
                 </div>
 
                 <div className="admin-form-group">
@@ -2319,7 +2056,9 @@ export default function AccountsPortal({ account, onLogout }) {
                     className="admin-form-select"
                     value={newScholarshipForm.name}
                     onChange={(e) => setNewScholarshipForm({ ...newScholarshipForm, name: e.target.value })}
+                    required
                   >
+                    <option value="">Select scholarship scheme</option>
                     <option value="PRERANA Post-Matric Scholarship">PRERANA Post-Matric Scholarship</option>
                     <option value="AICTE Pragati Scholarship for Girls">AICTE Pragati Scholarship for Girls</option>
                     <option value="GIFT Merit-cum-Means Institutional Waiver">GIFT Merit-cum-Means Institutional Waiver</option>
@@ -2334,6 +2073,17 @@ export default function AccountsPortal({ account, onLogout }) {
                     className="admin-form-input"
                     value={newScholarshipForm.authority}
                     onChange={(e) => setNewScholarshipForm({ ...newScholarshipForm, authority: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="admin-form-group">
+                  <label>Academic Year</label>
+                  <input
+                    type="text"
+                    className="admin-form-input"
+                    value={newScholarshipForm.academicYear}
+                    onChange={(e) => setNewScholarshipForm({ ...newScholarshipForm, academicYear: e.target.value })}
                     required
                   />
                 </div>
@@ -2355,7 +2105,9 @@ export default function AccountsPortal({ account, onLogout }) {
                       className="admin-form-select"
                       value={newScholarshipForm.category}
                       onChange={(e) => setNewScholarshipForm({ ...newScholarshipForm, category: e.target.value })}
+                      required
                     >
+                      <option value="">Select disbursement type</option>
                       <option value="Government DBT">Government Direct Benefit (DBT)</option>
                       <option value="Institutional Waiver">Tuition Fee Waiver Credit</option>
                     </select>
@@ -2381,34 +2133,36 @@ export default function AccountsPortal({ account, onLogout }) {
         <div className="admin-modal-backdrop" onClick={() => setIsRecordPaymentOpen(false)}>
           <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
-              <h3>Record Student Fee Payment</h3>
+              <h3>Record Received Payment</h3>
               <button className="admin-table-action-btn" onClick={() => setIsRecordPaymentOpen(false)}>
                 <X size={18} />
               </button>
             </div>
             <form onSubmit={handleRecordPayment}>
               <div className="admin-modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
-                  <div className="admin-form-group">
-                    <label>Roll Number</label>
-                    <input
-                      type="text"
-                      className="admin-form-input"
-                      value={paymentForm.rollNumber}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, rollNumber: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Student Name</label>
-                    <input
-                      type="text"
-                      className="admin-form-input"
-                      value={paymentForm.studentName}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, studentName: e.target.value })}
-                      required
-                    />
-                  </div>
+                <p style={{ color: '#92400e', background: '#fffbeb', padding: '10px 12px', borderRadius: '8px', fontSize: '0.82rem' }}>
+                  Record only funds you have independently confirmed. This creates a receipt record; fee balances and clearance are not configured.
+                </p>
+                <div className="admin-form-group">
+                  <label>Student Roll Number</label>
+                  <input
+                    type="text"
+                    className="admin-form-input"
+                    value={paymentForm.rollNumber}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, rollNumber: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>Semester / Term</label>
+                  <input
+                    type="text"
+                    className="admin-form-input"
+                    value={paymentForm.semester}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, semester: e.target.value })}
+                    maxLength={80}
+                    required
+                  />
                 </div>
 
                 <div className="admin-form-group">
@@ -2417,7 +2171,9 @@ export default function AccountsPortal({ account, onLogout }) {
                     className="admin-form-select"
                     value={paymentForm.head}
                     onChange={(e) => setPaymentForm({ ...paymentForm, head: e.target.value })}
+                    required
                   >
+                    <option value="" disabled>Select fee head</option>
                     <option value="Tuition & Development Fee">Tuition &amp; Development Fee</option>
                     <option value="Hostel & Mess Charges">Hostel &amp; Mess Charges</option>
                     <option value="Autonomous Examination Fee">Autonomous Examination Fee</option>
@@ -2433,6 +2189,9 @@ export default function AccountsPortal({ account, onLogout }) {
                       className="admin-form-input"
                       value={paymentForm.amount}
                       onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                      min="0.01"
+                      max="10000000"
+                      step="0.01"
                       required
                     />
                   </div>
@@ -2457,7 +2216,7 @@ export default function AccountsPortal({ account, onLogout }) {
                   Cancel
                 </button>
                 <button type="submit" className="admin-action-btn-primary">
-                  Verify &amp; Issue Receipt
+                  Record Confirmed Receipt
                 </button>
               </div>
             </form>
@@ -2470,7 +2229,7 @@ export default function AccountsPortal({ account, onLogout }) {
         <div className="admin-modal-backdrop" onClick={() => setSelectedReceipt(null)}>
           <div className="admin-modal-card" style={{ maxWidth: '490px' }} onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
-              <h3>Official College Fee Receipt</h3>
+              <h3>Recorded Payment Receipt</h3>
               <button className="admin-table-action-btn" onClick={() => setSelectedReceipt(null)}>
                 <X size={18} />
               </button>
@@ -2530,7 +2289,7 @@ export default function AccountsPortal({ account, onLogout }) {
                 </strong>
               </div>
               <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', marginTop: '1rem' }}>
-                Computer generated electronic receipt. Valid for autonomous semester enrollment clearance.
+                This records the payment listed above. It does not certify that any other fee balance is cleared.
               </div>
             </div>
             <div className="admin-modal-footer">

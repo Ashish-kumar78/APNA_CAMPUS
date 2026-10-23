@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ApplicantStatus, Role } from '@prisma/client';
+import { ApplicantStatus, Prisma, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 
@@ -52,82 +52,155 @@ export class AdmissionService {
     name: string;
     email: string;
     phone: string;
-    gender?: string;
-    dob?: string;
-    category?: string;
-    programmeId?: string;
-    programmeName: string;
-    academicYear?: string;
+    gender: string;
+    dob: string;
+    category: string;
+    programmeId: string;
+    academicYear: string;
     tenthMarks?: number;
     twelfthMarks?: number;
     entranceExam?: string;
     entranceRank?: number;
-    documents?: any[];
-  }) {
-    // Generate unique Application Number: APP-YEAR-RANDOM
+  }, actor: { name: string; role: string }) {
     const year = new Date().getFullYear();
-    const count = await this.prisma.applicant.count();
-    const applicationNo = `APP-${year}-${String(count + 1).padStart(4, '0')}`;
-
-    // Verify email unique among applicants
-    const existing = await this.prisma.applicant.findFirst({ where: { email: data.email.trim().toLowerCase() } });
+    if (![data.name, data.phone, data.gender, data.category, data.academicYear].every((value) => value?.trim())) {
+      throw new BadRequestException('Name, phone, gender, category, and academic year are required.');
+    }
+    const birthDate = new Date(data.dob);
+    if (Number.isNaN(birthDate.getTime()) || birthDate.getTime() > Date.now()) {
+      throw new BadRequestException('Enter a valid date of birth that is not in the future.');
+    }
+    if (!/^\d{4}-(?:\d{2}|\d{4})$/.test(data.academicYear.trim())) {
+      throw new BadRequestException('Academic year must use YYYY-YY or YYYY-YYYY format.');
+    }
+    const configuredAcademicYear = await this.prisma.academicYear.findUnique({
+      where: { year: data.academicYear.trim() },
+      select: { id: true },
+    });
+    if (!configuredAcademicYear) {
+      throw new BadRequestException('Select an academic year configured in Academic Setup.');
+    }
+    const email = data.email.trim().toLowerCase();
+    const existing = await this.prisma.applicant.findFirst({ where: { email } });
     if (existing) {
       throw new ConflictException(`An application with email ${data.email} already exists (${existing.applicationNo}).`);
     }
 
-    return this.prisma.applicant.create({
-      data: {
-        applicationNo,
-        name: data.name.trim(),
-        email: data.email.trim().toLowerCase(),
-        phone: data.phone.trim(),
-        gender: data.gender || 'Not Specified',
-        dob: data.dob,
-        category: data.category || 'General',
-        programmeId: data.programmeId || null,
-        programmeName: data.programmeName,
-        academicYear: data.academicYear || '2026-27',
-        tenthMarks: data.tenthMarks ? Number(data.tenthMarks) : null,
-        twelfthMarks: data.twelfthMarks ? Number(data.twelfthMarks) : null,
-        entranceExam: data.entranceExam || 'Direct Merit',
-        entranceRank: data.entranceRank ? Number(data.entranceRank) : null,
-        documents: data.documents || [],
-        status: ApplicantStatus.APPLIED,
-      },
-      include: { programme: true },
-    });
-  }
-
-  async verifyApplicant(id: string, verifiedBy: string) {
-    const applicant = await this.getApplicantById(id);
-    if (applicant.status === ApplicantStatus.ENROLLED) {
-      throw new BadRequestException('Applicant is already enrolled into the institution.');
+    const programme = await this.prisma.programme.findUnique({ where: { id: data.programmeId } });
+    if (!programme || programme.status !== 'Active') {
+      throw new BadRequestException('Select an existing active programme.');
     }
 
-    return this.prisma.applicant.update({
-      where: { id },
-      data: {
-        status: ApplicantStatus.VERIFIED,
-        verifiedBy,
-      },
-      include: { programme: true },
-    });
+    // Random identifiers avoid count-based collisions when multiple admissions arrive together.
+    const applicationNo = `APP-${year}-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const created = await tx.applicant.create({
+          data: {
+            applicationNo,
+            name: data.name.trim(),
+            email,
+            phone: data.phone.trim(),
+            gender: data.gender.trim(),
+            dob: data.dob,
+            category: data.category.trim(),
+            programmeId: programme.id,
+            programmeName: programme.name,
+            academicYear: data.academicYear.trim(),
+            tenthMarks: data.tenthMarks ?? null,
+            twelfthMarks: data.twelfthMarks ?? null,
+            entranceExam: data.entranceExam?.trim() || null,
+            entranceRank: data.entranceRank ?? null,
+            documents: [] as Prisma.InputJsonValue,
+            status: ApplicantStatus.APPLIED,
+          },
+          include: { programme: true },
+        });
+        await tx.auditLog.create({
+          data: {
+            user: actor.name,
+            role: actor.role.toUpperCase(),
+            action: 'ADMISSION_APPLICATION_REGISTERED',
+            target: `Application ${created.applicationNo}`,
+            subject: 'Admissions & Enrollment',
+            reason: 'An admissions application was registered.',
+            changedAt: new Date().toISOString(),
+          },
+        });
+        return created;
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('An application with this identifier already exists. Please retry.');
+      }
+      throw error;
+    }
   }
 
-  async rejectApplicant(id: string, reason: string, rejectedBy: string) {
+  async verifyApplicant(id: string, actor: { name: string; role: string }) {
     const applicant = await this.getApplicantById(id);
-    if (applicant.status === ApplicantStatus.ENROLLED) {
-      throw new BadRequestException('Cannot reject an applicant who is already enrolled.');
+    if (applicant.status !== ApplicantStatus.APPLIED) {
+      throw new BadRequestException(`Only applications in APPLIED status can be verified (current status: ${applicant.status}).`);
     }
 
-    return this.prisma.applicant.update({
-      where: { id },
-      data: {
-        status: ApplicantStatus.REJECTED,
-        rejectionReason: reason,
-        approvedBy: rejectedBy,
-      },
+    const changed = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.applicant.updateMany({
+        where: { id, status: ApplicantStatus.APPLIED },
+        data: { status: ApplicantStatus.VERIFIED, verifiedBy: actor.name },
+      });
+      if (result.count === 1) {
+        await tx.auditLog.create({
+          data: {
+            user: actor.name,
+            role: actor.role.toUpperCase(),
+            action: 'ADMISSION_APPLICATION_VERIFIED',
+            target: `Application ${applicant.applicationNo}`,
+            subject: 'Admissions & Enrollment',
+            reason: 'Eligibility was marked verified by an admissions reviewer.',
+            changedAt: new Date().toISOString(),
+          },
+        });
+      }
+      return result;
     });
+    if (changed.count !== 1) throw new ConflictException('The application changed while it was being verified. Refresh and try again.');
+    return this.getApplicantById(id);
+  }
+
+  async rejectApplicant(id: string, reason: string, actor: { name: string; role: string }) {
+    const applicant = await this.getApplicantById(id);
+    if (applicant.status !== ApplicantStatus.APPLIED && applicant.status !== ApplicantStatus.VERIFIED) {
+      throw new BadRequestException(`This application cannot be rejected from ${applicant.status} status.`);
+    }
+
+    const changed = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.applicant.updateMany({
+        where: { id, status: applicant.status },
+        data: {
+          status: ApplicantStatus.REJECTED,
+          rejectionReason: reason.trim(),
+        },
+      });
+      if (result.count === 1) {
+        await tx.auditLog.create({
+          data: {
+            user: actor.name,
+            role: actor.role.toUpperCase(),
+            action: 'ADMISSION_APPLICATION_REJECTED',
+            target: `Application ${applicant.applicationNo}`,
+            oldValue: applicant.status,
+            newValue: ApplicantStatus.REJECTED,
+            subject: 'Admissions & Enrollment',
+            reason: reason.trim(),
+            changedAt: new Date().toISOString(),
+          },
+        });
+      }
+      return result;
+    });
+    if (changed.count !== 1) throw new ConflictException('The application changed while it was being rejected. Refresh and try again.');
+    return this.getApplicantById(id);
   }
 
   /**
@@ -142,37 +215,60 @@ export class AdmissionService {
    * 8. Mark Applicant as ENROLLED.
    * 9. Write audit log trail.
    */
-  async approveAndEnroll(applicantId: string, approvedBy: string) {
+  async approveAndEnroll(applicantId: string, actor: { id: string; name: string; role: string }) {
     const applicant = await this.getApplicantById(applicantId);
 
-    if (applicant.status === ApplicantStatus.ENROLLED) {
-      throw new BadRequestException(`Applicant ${applicant.applicationNo} has already been enrolled into the college.`);
+    if (applicant.status !== ApplicantStatus.VERIFIED) {
+      throw new BadRequestException(`Only verified applications can be enrolled (current status: ${applicant.status}).`);
     }
 
-    // Resolve programme
-    let prog = applicant.programme;
-    if (!prog && applicant.programmeId) {
-      prog = await this.prisma.programme.findUnique({ where: { id: applicant.programmeId } });
+    if (!applicant.dob) {
+      throw new BadRequestException('The applicant date of birth is required before enrollment.');
     }
 
-    const deptCode = prog?.departmentCode || 'CSE';
-    const deptName = prog?.name || 'Computer Science & Engineering';
-    const academicYear = applicant.academicYear || '2026-27';
+    const prog = applicant.programmeId
+      ? await this.prisma.programme.findUnique({ where: { id: applicant.programmeId } })
+      : null;
+    if (!prog || prog.status !== 'Active') {
+      throw new BadRequestException('A valid active programme is required before enrollment.');
+    }
+    const department = await this.prisma.department.findUnique({ where: { code: prog.departmentCode } });
+    if (!department || department.status !== 'Active') {
+      throw new BadRequestException('The programme department must be configured and active before enrollment.');
+    }
 
-    // Generate unique institutional registration number & roll number
-    const totalStudents = await this.prisma.student.count();
-    const batchYear = academicYear.slice(2, 4); // "26"
-    const rollSequence = String(totalStudents + 1).padStart(2, '0'); // e.g. "04"
-    const uniqueRollNumber = `${batchYear}${deptCode}${String(totalStudents + 101).padStart(4, '0')}`; // e.g. "26CSE0104"
-    const studentIdNumber = `STU-${batchYear}-${String(totalStudents + 1).padStart(4, '0')}`;
+    const academicYear = applicant.academicYear;
+    const batchYear = academicYear.slice(2, 4);
+    const uniqueSuffix = crypto.randomBytes(6).toString('hex').toUpperCase();
+    const uniqueRollNumber = `${batchYear}${prog.departmentCode}${uniqueSuffix}`;
+    const studentIdNumber = `STU-${batchYear}-${uniqueSuffix}`;
 
     // Cryptographic activation token
     const activationToken = crypto.randomBytes(24).toString('hex');
-    const tempSalt = await bcrypt.genSalt(10);
-    const tempPasswordHash = await bcrypt.hash(`Gift@${new Date().getFullYear()}`, tempSalt);
+    const tempPasswordHash = await bcrypt.hash(crypto.randomBytes(32).toString('base64url'), 12);
 
     // Atomic Prisma Transaction guarantees integrity
     const result = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.applicant.updateMany({
+        where: { id: applicant.id, status: ApplicantStatus.VERIFIED },
+        data: { status: ApplicantStatus.APPROVED, approvedBy: actor.name },
+      });
+      if (claimed.count !== 1) {
+        throw new ConflictException('The application changed while enrollment was being processed. Refresh and try again.');
+      }
+
+      const existingUser = await tx.user.findFirst({
+        where: { OR: [{ email: applicant.email }, { identifier: uniqueRollNumber }] },
+        select: { id: true },
+      });
+      const existingStudent = await tx.student.findFirst({
+        where: { OR: [{ email: applicant.email }, { rollNumber: uniqueRollNumber }] },
+        select: { id: true },
+      });
+      if (existingUser || existingStudent) {
+        throw new ConflictException('An account or student record already exists for this applicant. Resolve the duplicate before enrollment.');
+      }
+
       // 1. Create Student record
       const student = await tx.student.create({
         data: {
@@ -182,18 +278,18 @@ export class AdmissionService {
           email: applicant.email,
           phone: applicant.phone,
           gender: applicant.gender,
-          dob: applicant.dob || '01-01-2005',
+          dob: applicant.dob,
           category: applicant.category,
-          department: deptName,
-          deptCode: deptCode,
+          department: department.name,
+          deptCode: department.code,
           semester: 'Semester 1',
-          section: 'Section A',
+          section: 'Unassigned',
           academicYear: academicYear,
           status: 'Active',
-          cgpa: 0.0,
-          attendance: 100,
-          walletBalance: 500.0,
-          programmeId: prog?.id || null,
+          cgpa: 0,
+          attendance: 0,
+          walletBalance: 0,
+          programmeId: prog.id,
         },
       });
 
@@ -201,12 +297,12 @@ export class AdmissionService {
       const enrollment = await tx.studentEnrollment.create({
         data: {
           studentId: student.id,
-          programmeId: prog?.id || null,
+          programmeId: prog.id,
           academicYear: academicYear,
           semester: 'Semester 1',
-          section: 'Section A',
+          section: 'Unassigned',
           status: 'Enrolled',
-          attendanceRate: 100.0,
+          attendanceRate: 0,
         },
       });
 
@@ -219,8 +315,8 @@ export class AdmissionService {
           phone: applicant.phone,
           passwordHash: tempPasswordHash,
           role: Role.STUDENT,
-          department: deptName,
-          detail: 'Semester 1 · Section A',
+          department: department.name,
+          detail: 'Semester 1 · Section Unassigned',
           isActive: true,
           isActivated: false,
           activationToken: activationToken,
@@ -235,21 +331,23 @@ export class AdmissionService {
       });
 
       // 5. Update Applicant to ENROLLED
-      const updatedApplicant = await tx.applicant.update({
-        where: { id: applicant.id },
+      const completed = await tx.applicant.updateMany({
+        where: { id: applicant.id, status: ApplicantStatus.APPROVED },
         data: {
           status: ApplicantStatus.ENROLLED,
-          approvedBy,
           studentId: student.id,
           enrolledUserId: user.id,
         },
       });
+      if (completed.count !== 1) {
+        throw new ConflictException('The application changed before enrollment could be completed.');
+      }
 
       // 6. Record audit log
       await tx.auditLog.create({
         data: {
-          user: approvedBy,
-          role: 'ADMIN',
+          user: actor.name,
+          role: actor.role.toUpperCase(),
           targetStudent: student.name,
           subject: 'Admissions & Enrollment',
           reason: `Approved admission for applicant ${applicant.applicationNo} -> Created Student ID: ${student.rollNumber}`,
@@ -257,7 +355,7 @@ export class AdmissionService {
         },
       });
 
-      return { student, enrollment, user, updatedApplicant };
+      return { student, enrollment, user };
     });
 
     return {
@@ -271,9 +369,8 @@ export class AdmissionService {
         email: result.student.email,
         department: result.student.department,
         semester: result.student.semester,
-        activationToken,
-        activationUrl: `/activate?token=${activationToken}`,
         loginId: result.user.identifier,
+        activationStatus: 'PENDING_EMAIL_CONFIGURATION',
         status: 'ENROLLED',
       },
     };

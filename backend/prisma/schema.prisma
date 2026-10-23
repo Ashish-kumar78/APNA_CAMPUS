@@ -1,6 +1,7 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider     = "mongodb"
+  relationMode = "prisma"
+  url          = env("DATABASE_URL")
 }
 
 generator client {
@@ -30,9 +31,9 @@ enum Role {
 }
 
 model User {
-  id              String     @id @default(cuid())
-  email           String     @unique
-  identifier      String     @unique
+  id              String    @id @default(cuid()) @map("_id")
+  email           String    @unique
+  identifier      String    @unique
   passwordHash    String
   name            String
   role            Role
@@ -40,80 +41,86 @@ model User {
   designation     String?
   phone           String?
   detail          String?
-  permissions     String[]   @default([])
+  permissions     String[]  @default([])
   lastLogin       DateTime?
-  isActive        Boolean    @default(true)
-  activationToken String?    @unique
-  resetToken      String?    @unique
+  isActive        Boolean   @default(true)
+  // These are optional bearer tokens. MongoDB's unique indexes also index
+  // missing/null values unless sparse, which Prisma cannot model here; keeping
+  // them unique prevented a second User with a null token from being created.
+  // The tokens are high-entropy and are looked up only when present.
+  activationToken String?
+  resetToken      String?
   tokenExpiresAt  DateTime?
-  isActivated     Boolean    @default(true)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  isActivated     Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  student         Student?
-  faculty         Faculty?
-  hod             Hod?
-  userRoles       UserRole[]
+  student   Student?
+  faculty   Faculty?
+  hod       Hod?
+  userRoles UserRole[]
 
-  @@index([identifier])
-  @@index([email])
+  @@index([activationToken])
+  @@index([resetToken])
 }
 
 model Student {
-  id                 String             @id @default(cuid())
-  userId             String?            @unique
-  user               User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
-  studentId          String             @unique
-  rollNumber         String             @unique
-  name               String
-  email              String             @unique
-  phone              String?
-  gender             String?            @default("Female")
-  dob                String?            @default("15-03-2005")
-  bloodGroup         String?            @default("O+")
-  category           String?            @default("General")
-  religion           String?            @default("Hindu")
-  department         String             @default("Computer Science & Engineering")
-  deptCode           String             @default("CSE")
-  semester           String             @default("Semester 5")
-  section            String             @default("Section A")
-  academicYear       String             @default("2026-27")
-  status             String             @default("Active")
-  cgpa               Float              @default(8.42)
-  attendance         Int                @default(92)
-  walletBalance      Float              @default(1450.0)
-  hostelName         String?            @default("Sarojini Girls Residence (Block A)")
-  roomNumber         String?            @default("204")
-  bedNumber          String?            @default("Bed 01 (Window Side)")
-  floor              String?            @default("Floor 2")
-  wardenName         String?            @default("Mrs. Nibedita Das")
-  wardenContact      String?            @default("+91 94370 33445")
-  transferConfirmed  Boolean            @default(false)
-  transferCampus     String?
-  transferCity       String?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  id                   String                     @id @default(cuid()) @map("_id")
+  userId               String?                    @unique
+  user                 User?                      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  studentId            String                     @unique
+  rollNumber           String                     @unique
+  name                 String
+  email                String                     @unique
+  phone                String?
+  gender               String?
+  dob                  String?
+  bloodGroup           String?
+  category             String?
+  religion             String?
+  department           String
+  deptCode             String?
+  semester             String?
+  section              String?
+  academicYear         String?
+  status               String?
+  cgpa                 Float?
+  attendance           Int?
+  walletBalance        Float                      @default(0)
+  walletTransactions   CanteenWalletTransaction[]
+  transportPassActive  Boolean                    @default(false)
+  transportPassRouteId String?
+  hostelName           String?
+  roomNumber           String?
+  bedNumber            String?
+  floor                String?
+  wardenName           String?
+  wardenContact        String?
+  transferConfirmed    Boolean                    @default(false)
+  transferCampus       String?
+  transferCity         String?
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
 
-  guardians          Guardian[]
-  addresses          Address[]
-  documents          Document[]
-  marks              AssessmentMark[]
-  attendanceRecords  AttendanceRecord[]
-  biometrics         BiometricLog[]
-  complaints         HostelComplaint[]
-  orders             CanteenOrder[]
-  programmeId        String?
-  programme          Programme?         @relation(fields: [programmeId], references: [id], onDelete: SetNull)
-  enrollments        StudentEnrollment[]
+  guardians         Guardian[]
+  addresses         Address[]
+  documents         Document[]
+  marks             AssessmentMark[]
+  attendanceRecords AttendanceRecord[]
+  biometrics        BiometricLog[]
+  complaints        HostelComplaint[]
+  orders            CanteenOrder[]
+  programmeId       String?
+  programme         Programme?          @relation(fields: [programmeId], references: [id], onDelete: SetNull)
+  enrollments       StudentEnrollment[]
 
-  @@index([rollNumber])
-  @@index([studentId])
+  @@index([programmeId])
 }
 
 model Guardian {
-  id            String   @id @default(cuid())
+  id            String  @id @default(cuid()) @map("_id")
   studentId     String
-  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student       Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   name          String
   relationship  String
   contactNumber String?
@@ -121,19 +128,19 @@ model Guardian {
 }
 
 model Address {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid()) @map("_id")
   studentId   String
-  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  type        String   @default("Permanent")
+  student     Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type        String  @default("Permanent")
   addressLine String
   city        String
   state       String
-  country     String   @default("India")
+  country     String  @default("India")
   pincode     String
 }
 
 model Document {
-  id              String   @id @default(cuid())
+  id              String   @id @default(cuid()) @map("_id")
   studentId       String
   student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   category        String
@@ -145,7 +152,7 @@ model Document {
 }
 
 model Faculty {
-  id               String   @id @default(cuid())
+  id               String   @id @default(cuid()) @map("_id")
   userId           String?  @unique
   user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   employeeId       String   @unique
@@ -165,7 +172,7 @@ model Faculty {
 }
 
 model Hod {
-  id            String   @id @default(cuid())
+  id            String   @id @default(cuid()) @map("_id")
   userId        String?  @unique
   user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   employeeId    String   @unique
@@ -182,63 +189,63 @@ model Hod {
 }
 
 model Department {
-  id            String   @id @default(cuid())
-  code          String   @unique
+  id            String @id @default(cuid()) @map("_id")
+  code          String @unique
   name          String
   hod           String
   hodEmail      String
-  studentsCount Int      @default(0)
-  facultyCount  Int      @default(0)
-  subjectsCount Int      @default(0)
-  status        String   @default("Active")
+  studentsCount Int    @default(0)
+  facultyCount  Int    @default(0)
+  subjectsCount Int    @default(0)
+  status        String @default("Active")
 }
 
 model Semester {
-  id            String   @id @default(cuid())
-  number        Int      @unique
+  id            String @id @default(cuid()) @map("_id")
+  number        Int    @unique
   label         String
   year          String
-  academicYear  String   @default("2026-27")
-  status        String   @default("Active")
-  subjectsCount Int      @default(6)
-  studentsCount Int      @default(540)
+  academicYear  String
+  status        String @default("Active")
+  subjectsCount Int    @default(0)
+  studentsCount Int    @default(0)
 }
 
 model Section {
-  id                  String   @id @default(cuid())
+  id                  String  @id @default(cuid()) @map("_id")
   semester            String
   section             String
   department          String
-  studentsCount       Int      @default(0)
+  studentsCount       Int     @default(0)
   classRepresentative String?
   room                String?
   facultyCoordinator  String?
 }
 
 model Subject {
-  id              String   @id @default(cuid())
-  code            String   @unique
+  id              String  @id @default(cuid()) @map("_id")
+  code            String  @unique
   name            String
-  department      String   @default("CSE")
-  semester        String   @default("Semester 5")
-  credits         Int      @default(4)
-  type            String   @default("Theory + Lab")
+  department      String
+  semester        String
+  credits         Int
+  type            String
   assignedFaculty String?
-  status          String   @default("Active")
+  status          String  @default("Active")
 }
 
 model MarkingScheme {
-  id             String  @id @default(cuid())
+  id             String @id @default(cuid()) @map("_id")
   assessmentType String
   count          Int
   maxMarks       Float
   weightage      Float
   formula        String
-  status         String  @default("Active")
+  status         String @default("Active")
 }
 
 model AssessmentMark {
-  id             String   @id @default(cuid())
+  id             String   @id @default(cuid()) @map("_id")
   studentId      String
   student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   rollNumber     String
@@ -268,24 +275,28 @@ model AssessmentMark {
 }
 
 model ApprovalQueue {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid()) @map("_id")
   subjectCode   String
   subject       String
   faculty       String
   semester      String
   section       String
   submittedDate String
-  status        String    @default("Pending")
+  status        String   @default("Pending")
   hodRemarks    String?
   reviewedAt    String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model AuditLog {
-  id            String   @id @default(cuid())
+  id            String   @id @default(cuid()) @map("_id")
   user          String
   role          String
+  action        String?
+  target        String?
+  oldValue      String?
+  newValue      String?
   targetStudent String?
   subject       String?
   assessment    String?
@@ -297,22 +308,48 @@ model AuditLog {
 }
 
 model AttendanceRecord {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid()) @map("_id")
   studentId   String
-  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student     Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   subjectCode String
   subjectName String
   faculty     String
-  type        String   @default("Theory")
-  held        Int      @default(0)
-  attended    Int      @default(0)
-  percentage  Float    @default(0)
+  type        String  @default("Theory")
+  held        Int     @default(0)
+  attended    Int     @default(0)
+  percentage  Float   @default(0)
+}
+
+model AttendanceSession {
+  id                  String            @id @default(cuid()) @map("_id")
+  sessionKey          String            @unique
+  facultyAssignmentId String
+  facultyAssignment   FacultyAssignment @relation(fields: [facultyAssignmentId], references: [id], onDelete: Cascade)
+  recordedByUserId    String
+  facultyName         String
+  subjectCode         String
+  subjectName         String
+  semester            String
+  section             String
+  date                String
+  period              String
+  totalCount          Int
+  presentCount        Int
+  absentCount         Int
+  percentage          Float
+  status              String            @default("Finalized")
+  entries             Json
+  recordedAt          DateTime          @default(now())
+
+  @@index([facultyAssignmentId, date])
+  @@index([subjectCode, section, date])
+  @@index([recordedByUserId])
 }
 
 model BiometricLog {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid()) @map("_id")
   studentId  String
-  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student    Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   rollNumber String
   date       String
   time       String
@@ -323,7 +360,7 @@ model BiometricLog {
 }
 
 model FeeStructure {
-  id             String @id @default(cuid())
+  id             String @id @default(cuid()) @map("_id")
   term           String
   program        String
   tuitionFee     Float
@@ -335,7 +372,7 @@ model FeeStructure {
 }
 
 model FeeTransaction {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   studentName String
   rollNumber  String
   semester    String
@@ -350,7 +387,7 @@ model FeeTransaction {
 }
 
 model Scholarship {
-  id            String @id @default(cuid())
+  id            String @id @default(cuid()) @map("_id")
   name          String
   authority     String
   benefit       String
@@ -359,7 +396,7 @@ model Scholarship {
 }
 
 model Hostel {
-  id            String @id @default(cuid())
+  id            String @id @default(cuid()) @map("_id")
   name          String
   type          String
   totalFloors   Int
@@ -372,7 +409,7 @@ model Hostel {
 }
 
 model HostelRoom {
-  id         String @id @default(cuid())
+  id         String @id @default(cuid()) @map("_id")
   hostelId   String
   hostelName String
   floor      String
@@ -383,7 +420,7 @@ model HostelRoom {
 }
 
 model HostelComplaint {
-  id                 String    @id @default(cuid())
+  id                 String    @id @default(cuid()) @map("_id")
   studentId          String?
   student            Student?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
   studentName        String
@@ -392,9 +429,9 @@ model HostelComplaint {
   roomNumber         String
   category           String
   title              String
-  description        String?   @db.Text
-  location           String?   // Hostel, Classroom, Washroom, Laboratory, Library, etc.
-  predictedCategory  String?   // plumbing, electrical, cleaning, maintenance, internet_it, other
+  description        String?
+  location           String? // Hostel, Classroom, Washroom, Laboratory, Library, etc.
+  predictedCategory  String? // plumbing, electrical, cleaning, maintenance, internet_it, other
   confidence         Float?    @default(0.0)
   needsReview        Boolean   @default(false)
   reviewReason       String?
@@ -402,7 +439,7 @@ model HostelComplaint {
   assignedStaffName  String?
   assignedStaffPhone String?
   assignedStaffRole  String?
-  attachmentUrl      String?   @db.Text
+  attachmentUrl      String?
   assignedAt         DateTime?
   resolvedAt         DateTime?
   priority           String    @default("Medium")
@@ -412,27 +449,34 @@ model HostelComplaint {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  @@index([rollNumber])
   @@index([category])
   @@index([status])
   @@index([assignedStaffId])
 }
 
 model HostelVisitor {
-  id          String   @id @default(cuid())
-  visitorName String
-  relation    String
-  studentName String
-  rollNumber  String
-  inTime      String
-  outTime     String?  @default("Pending Sign-out")
-  passNumber  String   @unique
-  purpose     String
-  createdAt   DateTime @default(now())
+  id             String    @id @default(cuid()) @map("_id")
+  visitorName    String
+  relation       String
+  studentName    String
+  rollNumber     String
+  inTime         String
+  outTime        String?   @default("Pending Sign-out")
+  passNumber     String    @unique
+  purpose        String
+  status         String    @default("ISSUED")
+  badgeNumber    String?
+  checkedInAt    DateTime?
+  checkedOutAt   DateTime?
+  issuedByUserId String?
+  createdAt      DateTime  @default(now())
+
+  @@index([rollNumber, createdAt])
+  @@index([status, createdAt])
 }
 
 model FoodItem {
-  id          String  @id @default(cuid())
+  id          String  @id @default(cuid()) @map("_id")
   name        String
   category    String
   price       Float
@@ -442,7 +486,7 @@ model FoodItem {
 }
 
 model CanteenOrder {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   studentId   String?
   student     Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
   studentName String
@@ -457,35 +501,52 @@ model CanteenOrder {
   updatedAt   DateTime @updatedAt
 }
 
+model CanteenWalletTransaction {
+  id           String   @id @default(cuid()) @map("_id")
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type         String // TOP_UP, ORDER_PAYMENT, ORDER_REFUND
+  amount       Float // Positive for credits, negative for debits
+  balanceAfter Float
+  reference    String   @unique
+  actorUserId  String?
+  actorRole    String?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([studentId, createdAt])
+  @@index([type, createdAt])
+}
+
 model StaffRoster {
-  id                  String   @id @default(cuid())
-  staffType           String   // WARDEN, SECURITY, CANTEEN, SUPPORT
-  name                String
-  gender              String?
-  roleOrCategory      String?
-  outletOrZone        String?
+  id                   String   @id @default(cuid()) @map("_id")
+  staffType            String // WARDEN, SECURITY, CANTEEN, SUPPORT
+  name                 String
+  gender               String?
+  roleOrCategory       String?
+  outletOrZone         String?
   assignedHostelOrPost String?
-  roomOffice          String?
-  phone               String
-  email               String?
-  shift               String
-  badgeNumber         String?
-  fssaiLicense        String?
-  emergencyContact    String?
-  speciality          String?
-  qualification       String?
-  assignedAgency      String?
-  bloodGroup          String?
-  residentsCount      Int?
-  totalBeds           Int?
-  status              String   @default("Active")
-  joiningYear         String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  roomOffice           String?
+  phone                String
+  email                String?
+  shift                String
+  badgeNumber          String?
+  fssaiLicense         String?
+  emergencyContact     String?
+  speciality           String?
+  qualification        String?
+  assignedAgency       String?
+  bloodGroup           String?
+  residentsCount       Int?
+  totalBeds            Int?
+  status               String   @default("Active")
+  joiningYear          String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model Notice {
-  id         String   @id @default(cuid())
+  id         String   @id @default(cuid()) @map("_id")
   title      String
   tag        String
   date       String
@@ -498,7 +559,7 @@ model Notice {
 }
 
 model BlogPost {
-  id         String   @id @default(cuid())
+  id         String   @id @default(cuid()) @map("_id")
   author     String
   dept       String
   initials   String
@@ -514,7 +575,7 @@ model BlogPost {
 }
 
 model FeedbackSurvey {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   formType    String
   targetId    String?
   targetName  String?
@@ -525,7 +586,7 @@ model FeedbackSurvey {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @map("_id")
   role      String
   title     String
   message   String
@@ -535,46 +596,47 @@ model Notification {
 }
 
 model Holiday {
-  id        String @id @default(cuid())
-  rawDate   String
-  name      String
-  daysLeft  Int?
+  id       String @id @default(cuid()) @map("_id")
+  rawDate  String
+  name     String
+  daysLeft Int?
 }
 
 model ExamSchedule {
-  id              String   @id @default(cuid())
-  examCode        String   @unique
-  title           String
-  semester        String
-  department      String   @default("All Departments")
-  session         String   @default("Morning (10:00 AM - 01:00 PM)")
-  startDate       String
-  endDate         String
-  status          String   @default("Scheduled")
-  totalAppeared   Int      @default(0)
-  passPercentage  Float    @default(0)
-  hallTicketLive  Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid()) @map("_id")
+  examCode       String   @unique
+  title          String
+  semester       String
+  department     String   @default("All Departments")
+  session        String   @default("Morning (10:00 AM - 01:00 PM)")
+  startDate      String
+  endDate        String
+  status         String   @default("Scheduled")
+  totalAppeared  Int      @default(0)
+  passPercentage Float    @default(0)
+  hallTicketLive Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model LibraryBook {
-  id              String   @id @default(cuid())
+  id              String   @id @default(cuid()) @map("_id")
   isbn            String   @unique
   title           String
   author          String
-  department      String   @default("General")
-  category        String   @default("Textbook")
-  totalCopies     Int      @default(5)
-  availableCopies Int      @default(5)
-  shelfLocation   String   @default("Stack A-1")
+  department      String
+  category        String
+  totalCopies     Int
+  availableCopies Int
+  shelfLocation   String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
 
 model LibraryTransaction {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   bookId      String
+  copyId      String?
   bookTitle   String
   studentRoll String
   studentName String
@@ -585,17 +647,19 @@ model LibraryTransaction {
   status      String   @default("Issued")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([copyId])
 }
 
 model PlacementDrive {
-  id               String   @id @default(cuid())
+  id               String   @id @default(cuid()) @map("_id")
   companyName      String
   roleTitle        String
   packageLPA       Float
-  minCgpa          Float    @default(6.5)
+  minCgpa          Float
   eligibleBranches String[]
   driveDate        String
-  venue            String   @default("Auditorium / Online")
+  venue            String
   registeredCount  Int      @default(0)
   shortlistedCount Int      @default(0)
   selectedCount    Int      @default(0)
@@ -605,34 +669,42 @@ model PlacementDrive {
 }
 
 model PlacementApplication {
-  id          String   @id @default(cuid())
-  driveId     String
-  companyName String
-  studentRoll String
-  studentName String
-  cgpa        Float
-  status      String   @default("Applied")
-  appliedAt   DateTime @default(now())
+  id               String   @id @default(cuid()) @map("_id")
+  driveId          String
+  companyName      String
+  studentRoll      String
+  studentName      String
+  cgpa             Float
+  status           String   @default("Applied")
+  currentStage     String   @default("Applied")
+  interviewerNotes String?
+  roundScore       String?
+  appliedAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([driveId, studentRoll])
+  @@index([studentRoll])
 }
 
 model TransportRoute {
-  id             String   @id @default(cuid())
-  routeNumber    String   @unique
-  routeName      String
-  busNumber      String
-  driverName     String
-  driverContact  String
-  totalCapacity  Int      @default(45)
-  allocatedCount Int      @default(0)
-  departureTime  String   @default("07:15 AM")
-  stops          String[]
-  status         String   @default("Active")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String   @id @default(cuid()) @map("_id")
+  routeNumber      String   @unique
+  routeName        String
+  busNumber        String
+  driverName       String
+  driverContact    String
+  totalCapacity    Int
+  allocatedCount   Int      @default(0)
+  departureTime    String
+  stops            String[]
+  status           String   @default("Active")
+  disruptionNotice String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model LabEquipment {
-  id            String   @id @default(cuid())
+  id            String   @id @default(cuid()) @map("_id")
   equipmentCode String   @unique
   equipmentName String
   labName       String
@@ -645,7 +717,7 @@ model LabEquipment {
 }
 
 model SystemSetting {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @map("_id")
   key       String   @unique
   value     String
   category  String   @default("General")
@@ -654,26 +726,26 @@ model SystemSetting {
 }
 
 model WorkflowRequest {
-  id             String   @id @default(cuid())
-  workflowType   String
-  title          String
-  requesterId    String
-  requesterName  String
-  requesterRole  String
-  department     String?
-  details        Json
-  currentStage   String
-  status         String   @default("Pending")
-  approverId     String?
-  approverName   String?
-  approvalNotes  String?
-  history        Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(cuid()) @map("_id")
+  workflowType  String
+  title         String
+  requesterId   String
+  requesterName String
+  requesterRole String
+  department    String?
+  details       Json
+  currentStage  String
+  status        String   @default("Pending")
+  approverId    String?
+  approverName  String?
+  approvalNotes String?
+  history       Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Institution {
-  id           String   @id @default(cuid())
+  id           String   @id @default(cuid()) @map("_id")
   code         String   @unique
   name         String
   tagline      String?
@@ -688,7 +760,7 @@ model Institution {
 }
 
 model Campus {
-  id            String      @id @default(cuid())
+  id            String      @id @default(cuid()) @map("_id")
   institutionId String
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   code          String      @unique
@@ -698,20 +770,22 @@ model Campus {
   isMainCampus  Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  @@index([institutionId])
 }
 
 model Programme {
-  id              String              @id @default(cuid())
-  code            String              @unique
+  id              String   @id @default(cuid()) @map("_id")
+  code            String   @unique
   name            String
-  degreeType      String              @default("UG")
-  departmentCode  String              @default("CSE")
-  durationYears   Int                 @default(4)
-  totalSemesters  Int                 @default(8)
-  creditsRequired Int                 @default(160)
-  status          String              @default("Active")
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  degreeType      String   @default("UG")
+  departmentCode  String   @default("CSE")
+  durationYears   Int      @default(4)
+  totalSemesters  Int      @default(8)
+  creditsRequired Int      @default(160)
+  status          String   @default("Active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   students        Student[]
   enrollments     StudentEnrollment[]
@@ -720,7 +794,7 @@ model Programme {
 }
 
 model AcademicYear {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @map("_id")
   year      String   @unique
   startDate String?
   endDate   String?
@@ -737,10 +811,10 @@ enum ApplicantStatus {
 }
 
 model Applicant {
-  id              String          @id @default(cuid())
+  id              String          @id @default(cuid()) @map("_id")
   applicationNo   String          @unique
   name            String
-  email           String
+  email           String          @unique
   phone           String
   gender          String          @default("Not Specified")
   dob             String?
@@ -763,12 +837,12 @@ model Applicant {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
-  @@index([applicationNo])
   @@index([status])
+  @@index([programmeId])
 }
 
 model StudentEnrollment {
-  id             String     @id @default(cuid())
+  id             String     @id @default(cuid()) @map("_id")
   studentId      String
   student        Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
   programmeId    String?
@@ -783,22 +857,22 @@ model StudentEnrollment {
   enrolledAt     DateTime   @default(now())
   promotedAt     DateTime?
 
-  @@index([studentId])
   @@index([academicYear])
   @@index([semester])
+  @@index([programmeId])
 }
 
 model CourseOffering {
-  id           String     @id @default(cuid())
+  id           String     @id @default(cuid()) @map("_id")
   subjectCode  String
   subjectName  String
   programmeId  String?
   programme    Programme? @relation(fields: [programmeId], references: [id], onDelete: SetNull)
-  department   String     @default("CSE")
-  semester     String     @default("Semester 5")
-  academicYear String     @default("2026-27")
-  credits      Int        @default(4)
-  type         String     @default("Theory + Lab")
+  department   String
+  semester     String
+  academicYear String
+  credits      Int
+  type         String
   status       String     @default("Active")
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
@@ -806,26 +880,29 @@ model CourseOffering {
   facultyAssignments FacultyAssignment[]
 
   @@unique([subjectCode, academicYear, semester])
+  @@index([programmeId])
 }
 
 model FacultyAssignment {
-  id               String         @id @default(cuid())
-  courseOfferingId String
-  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
-  facultyId        String
-  faculty          Faculty        @relation(fields: [facultyId], references: [id], onDelete: Cascade)
-  section          String         @default("Section A")
-  academicYear     String         @default("2026-27")
-  role             String         @default("Lead Instructor")
-  allocatedHours   Int            @default(4)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  id                 String              @id @default(cuid()) @map("_id")
+  courseOfferingId   String
+  courseOffering     CourseOffering      @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+  facultyId          String
+  faculty            Faculty             @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  section            String              @default("Section A")
+  academicYear       String              @default("2026-27")
+  role               String              @default("Lead Instructor")
+  allocatedHours     Int                 @default(4)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  attendanceSessions AttendanceSession[]
 
   @@unique([courseOfferingId, facultyId, section])
+  @@index([facultyId])
 }
 
 model Permission {
-  id          String     @id @default(cuid())
+  id          String     @id @default(cuid()) @map("_id")
   slug        String     @unique
   name        String
   module      String
@@ -834,7 +911,7 @@ model Permission {
 }
 
 model UserRole {
-  id           String      @id @default(cuid())
+  id           String      @id @default(cuid()) @map("_id")
   userId       String
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   role         Role
@@ -845,6 +922,7 @@ model UserRole {
 
   @@index([userId])
   @@index([role])
+  @@index([permissionId])
 }
 
 enum RoomType {
@@ -859,34 +937,33 @@ enum RoomType {
 }
 
 model Room {
-  id                 String             @id @default(cuid())
-  roomNumber         String             @unique
-  building           String             @default("Main Academic Block")
-  floor              String             @default("3rd Floor")
-  roomType           RoomType           @default(CLASSROOM)
-  capacity           Int                @default(60)
-  department         String             @default("CSE")
-  isLab              Boolean            @default(false)
-  facilities         String[]           @default([])
-  status             String             @default("Active")
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  id         String   @id @default(cuid()) @map("_id")
+  roomNumber String   @unique
+  building   String   @default("Main Academic Block")
+  floor      String   @default("3rd Floor")
+  roomType   RoomType @default(CLASSROOM)
+  capacity   Int      @default(60)
+  department String   @default("CSE")
+  isLab      Boolean  @default(false)
+  facilities String[] @default([])
+  status     String   @default("Active")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   timetableEntries   TimetableEntry[]
   roomAvailabilities RoomAvailability[]
 
-  @@index([roomNumber])
   @@index([roomType])
   @@index([department])
 }
 
 model AcademicScheduleConfig {
-  id                     String   @id @default(cuid())
+  id                     String   @id @default(cuid()) @map("_id")
   academicYear           String   @default("2026-27")
   department             String   @default("CSE")
   workingDays            String[] @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
   periodsPerDay          Int      @default(7)
-  slotTimings            Json     // array of { period: 1, startTime: "09:00 AM", endTime: "10:00 AM", isBreak: false, label: "Period 1" }
+  slotTimings            Json // array of { period: 1, startTime: "09:00 AM", endTime: "10:00 AM", isBreak: false, label: "Period 1" }
   maxConsecutiveTheory   Int      @default(3)
   maxDailyFacultyPeriods Int      @default(4)
   preferredLabDays       String[] @default(["Tuesday", "Thursday", "Friday"])
@@ -899,11 +976,11 @@ model AcademicScheduleConfig {
 }
 
 model FacultyAvailability {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   facultyId   String
   faculty     Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
-  dayOfWeek   String   // Monday, Tuesday, ...
-  periodIndex Int      // 0, 1, 2, ...
+  dayOfWeek   String // Monday, Tuesday, ...
+  periodIndex Int // 0, 1, 2, ...
   isAvailable Boolean  @default(true)
   reason      String?
   createdAt   DateTime @default(now())
@@ -914,7 +991,7 @@ model FacultyAvailability {
 }
 
 model RoomAvailability {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   roomId      String
   room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   dayOfWeek   String
@@ -939,60 +1016,60 @@ enum TimetableStatus {
 }
 
 model Timetable {
-  id                 String              @id @default(cuid())
+  id                 String          @id @default(cuid()) @map("_id")
   title              String
-  academicYear       String              @default("2026-27")
-  semester           String              @default("Semester 5")
-  department         String              @default("CSE")
+  academicYear       String          @default("2026-27")
+  semester           String          @default("Semester 5")
+  department         String          @default("CSE")
   programmeId        String?
-  section            String              @default("Section A")
-  status             TimetableStatus     @default(DRAFT)
-  version            Int                 @default(1)
-  isPublished        Boolean             @default(false)
-  qualityScore       Float               @default(100.0)
-  conflictCount      Int                 @default(0)
+  section            String          @default("Section A")
+  status             TimetableStatus @default(DRAFT)
+  version            Int             @default(1)
+  isPublished        Boolean         @default(false)
+  qualityScore       Float           @default(100.0)
+  conflictCount      Int             @default(0)
   solverDiagnostics  Json?
   infeasibilityNotes String?
   generationJobId    String?
-  createdBy          String              @default("System / HOD")
+  createdBy          String          @default("System / HOD")
   approvedBy         String?
   approvedAt         DateTime?
   publishedBy        String?
   publishedAt        DateTime?
   rejectionReason    String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
-  entries            TimetableEntry[]
-  conflicts          TimetableConflict[]
+  entries   TimetableEntry[]
+  conflicts TimetableConflict[]
 
   @@index([academicYear, department, semester, section])
   @@index([status])
 }
 
 model TimetableEntry {
-  id             String    @id @default(cuid())
-  timetableId    String
-  timetable      Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
-  dayOfWeek      String    // Monday, Tuesday, Wednesday, Thursday, Friday, Saturday
-  periodIndex    Int       // 0 to periodsPerDay - 1
-  startTime      String    // e.g. "09:00 AM"
-  endTime        String    // e.g. "10:00 AM"
-  subjectCode    String
-  subjectName    String
-  subjectCredits Int       @default(4)
-  sessionType    String    @default("THEORY") // THEORY, LAB, PRACTICAL, SEMINAR, BREAK
-  facultyId      String?
-  facultyName    String?
-  roomId         String?
-  room           Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  roomNumber     String?
-  section        String    @default("Section A")
-  durationPeriods Int      @default(1)
-  isConsecutive  Boolean   @default(false)
-  notes          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id              String    @id @default(cuid()) @map("_id")
+  timetableId     String
+  timetable       Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  dayOfWeek       String // Monday, Tuesday, Wednesday, Thursday, Friday, Saturday
+  periodIndex     Int // 0 to periodsPerDay - 1
+  startTime       String // e.g. "09:00 AM"
+  endTime         String // e.g. "10:00 AM"
+  subjectCode     String
+  subjectName     String
+  subjectCredits  Int       @default(4)
+  sessionType     String    @default("THEORY") // THEORY, LAB, PRACTICAL, SEMINAR, BREAK
+  facultyId       String?
+  facultyName     String?
+  roomId          String?
+  room            Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  roomNumber      String?
+  section         String    @default("Section A")
+  durationPeriods Int       @default(1)
+  isConsecutive   Boolean   @default(false)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([timetableId])
   @@index([dayOfWeek, periodIndex])
@@ -1001,7 +1078,7 @@ model TimetableEntry {
 }
 
 model TimetableGenerationJob {
-  id                  String   @id @default(cuid())
+  id                  String   @id @default(cuid()) @map("_id")
   status              String   @default("PENDING") // PENDING, VALIDATING, PREPARING, SOLVING, OPTIMIZING, COMPLETED, INFEASIBLE, FAILED
   progress            Int      @default(0) // 0 - 100
   stepName            String   @default("Initiating generation...")
@@ -1011,7 +1088,7 @@ model TimetableGenerationJob {
   section             String?
   programmeId         String?
   scope               String   @default("SECTION") // SECTION, DEPARTMENT
-  constraintsConfig   Json?    // soft weights, max consecutive, preferred days, etc.
+  constraintsConfig   Json? // soft weights, max consecutive, preferred days, etc.
   diagnostics         Json?
   infeasibilityReport Json?
   resultTimetableId   String?
@@ -1025,10 +1102,10 @@ model TimetableGenerationJob {
 }
 
 model TimetableConflict {
-  id              String    @id @default(cuid())
+  id              String    @id @default(cuid()) @map("_id")
   timetableId     String
   timetable       Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
-  conflictType    String    // FACULTY_DOUBLE_BOOKING, ROOM_DOUBLE_BOOKING, SECTION_DOUBLE_BOOKING, CAPACITY_BREACH, LAB_MISMATCH, WORKLOAD_EXCEEDED, CONSECUTIVE_LIMIT, UNSCHEDULED_REQUIREMENT
+  conflictType    String // FACULTY_DOUBLE_BOOKING, ROOM_DOUBLE_BOOKING, SECTION_DOUBLE_BOOKING, CAPACITY_BREACH, LAB_MISMATCH, WORKLOAD_EXCEEDED, CONSECUTIVE_LIMIT, UNSCHEDULED_REQUIREMENT
   severity        String    @default("HARD") // HARD, SOFT, WARNING
   dayOfWeek       String?
   periodIndex     Int?
@@ -1043,6 +1120,3 @@ model TimetableConflict {
 
   @@index([timetableId])
 }
-
-
-

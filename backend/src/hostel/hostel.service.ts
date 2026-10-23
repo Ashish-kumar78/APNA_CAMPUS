@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
+import { createHash, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiAssignmentService } from './ai-assignment.service';
+import { CreateGatePassDto } from './hostel.dto';
 
 @Injectable()
 export class HostelService {
@@ -15,61 +17,29 @@ export class HostelService {
   // 1. HOSTEL & INFRASTRUCTURE MANAGEMENT
   // ==========================================
   async getHostels() {
-    let hostels = await this.prisma.hostel.findMany();
-    if (hostels.length === 0) {
-      // Seed default institutional hostels if DB empty
-      const defaultHostels = [
-        {
-          name: 'Gandhi Boys Residence (Hostel 1)',
-          type: 'Boys',
-          totalFloors: 3,
-          totalRooms: 60,
-          totalBeds: 180,
-          occupiedBeds: 168,
-          availableBeds: 12,
-          warden: 'Mr. Rajesh Jena',
-          contact: '+91 94370 11223',
-        },
-        {
-          name: 'Kalam Boys Residence (Hostel 2)',
-          type: 'Boys',
-          totalFloors: 3,
-          totalRooms: 60,
-          totalBeds: 180,
-          occupiedBeds: 172,
-          availableBeds: 8,
-          warden: 'Mr. Manoj Sahoo',
-          contact: '+91 94370 22334',
-        },
-        {
-          name: 'Sarojini Girls Residence (Hostel 1)',
-          type: 'Girls',
-          totalFloors: 3,
-          totalRooms: 50,
-          totalBeds: 150,
-          occupiedBeds: 142,
-          availableBeds: 8,
-          warden: 'Mrs. Nibedita Das',
-          contact: '+91 94370 33445',
-        },
-        {
-          name: 'Kalpana Chawla Girls Residence (Hostel 2)',
-          type: 'Girls',
-          totalFloors: 3,
-          totalRooms: 50,
-          totalBeds: 150,
-          occupiedBeds: 130,
-          availableBeds: 20,
-          warden: 'Mrs. Pratima Mohapatra',
-          contact: '+91 94370 44556',
-        },
-      ];
-      for (const h of defaultHostels) {
-        await this.prisma.hostel.create({ data: h });
-      }
-      hostels = await this.prisma.hostel.findMany();
+    const [hostels, rooms] = await Promise.all([
+      this.prisma.hostel.findMany(),
+      this.prisma.hostelRoom.findMany(),
+    ]);
+    const byHostel = new Map<string, typeof rooms>();
+    for (const room of rooms) {
+      const hostelRooms = byHostel.get(room.hostelId) || [];
+      hostelRooms.push(room);
+      byHostel.set(room.hostelId, hostelRooms);
     }
-    return hostels;
+
+    return hostels.map((hostel) => {
+      const hostelRooms = byHostel.get(hostel.id) || [];
+      const totalBeds = hostelRooms.reduce((total, room) => total + room.capacity, 0);
+      const occupiedBeds = hostelRooms.reduce((total, room) => total + room.occupied, 0);
+      return {
+        ...hostel,
+        totalRooms: hostelRooms.length,
+        totalBeds,
+        occupiedBeds,
+        availableBeds: Math.max(0, totalBeds - occupiedBeds),
+      };
+    });
   }
 
   async getHostelRooms(hostelId?: string, floor?: string) {
@@ -77,173 +47,324 @@ export class HostelService {
     if (hostelId && hostelId !== 'ALL' && hostelId !== 'All') where.hostelId = hostelId;
     if (floor && floor !== 'ALL' && floor !== 'All') where.floor = floor;
 
-    let rooms = await this.prisma.hostelRoom.findMany({ where });
-    if (rooms.length === 0 && (!hostelId || hostelId === 'hostel-b1' || hostelId === 'hostel-g1')) {
-      const defaultRooms = [
-        { hostelId: 'hostel-g1', hostelName: 'Sarojini Girls Residence', floor: 'Floor 1', roomNumber: '101', capacity: 3, occupied: 3, type: 'Non-AC Triple' },
-        { hostelId: 'hostel-g1', hostelName: 'Sarojini Girls Residence', floor: 'Floor 1', roomNumber: '102', capacity: 3, occupied: 2, type: 'Non-AC Triple' },
-        { hostelId: 'hostel-g1', hostelName: 'Sarojini Girls Residence', floor: 'Floor 2', roomNumber: '204', capacity: 3, occupied: 3, type: 'AC Triple Deluxe' },
-        { hostelId: 'hostel-b1', hostelName: 'Gandhi Boys Residence', floor: 'Floor 1', roomNumber: '101', capacity: 3, occupied: 3, type: 'Non-AC Triple' },
-        { hostelId: 'hostel-b1', hostelName: 'Gandhi Boys Residence', floor: 'Floor 1', roomNumber: '102', capacity: 3, occupied: 2, type: 'Non-AC Triple' },
-        { hostelId: 'hostel-b1', hostelName: 'Gandhi Boys Residence', floor: 'Floor 2', roomNumber: '201', capacity: 3, occupied: 3, type: 'AC Triple Deluxe' },
-      ];
-      for (const r of defaultRooms) {
-        await this.prisma.hostelRoom.create({ data: r });
-      }
-      rooms = await this.prisma.hostelRoom.findMany({ where });
+    return this.prisma.hostelRoom.findMany({ where });
+  }
+
+  async getStaffRosterIdForUser(user: { id: string; email?: string }) {
+    if (user.email) {
+      const matches = await this.prisma.staffRoster.findMany({
+        where: { email: { equals: user.email, mode: 'insensitive' } },
+        select: { id: true },
+        take: 2,
+      });
+      if (matches.length === 1) return matches[0].id;
+      if (matches.length > 1) throw new ForbiddenException('This login matches more than one staff roster record. Contact an administrator.');
     }
-    return rooms;
+
+    const rosterMember = await this.prisma.staffRoster.findUnique({ where: { id: user.id }, select: { id: true } });
+    if (!rosterMember) throw new ForbiddenException('The staff account is not linked to a maintenance roster record.');
+    return rosterMember.id;
   }
 
   // ==========================================
   // 2. RESIDENT BED ALLOCATION & TRANSFERS
   // ==========================================
-  async allocateBed(data: {
-    studentRoll: string;
+  private hostelBedClaimId(hostelName: string, roomNumber: string, bedNumber: string) {
+    const key = `${hostelName.trim().toLowerCase()}|${roomNumber.trim().toLowerCase()}|${bedNumber.trim().toLowerCase()}`;
+    return `hostelbed_${createHash('sha256').update(key).digest('hex')}`;
+  }
+
+  private async reserveBedSlot(tx: any, args: {
     hostelName: string;
     roomNumber: string;
     bedNumber: string;
-    floor?: string;
+    floor: string;
+    student: { id: string; name: string; rollNumber: string; department: string };
+    actor: { id: string; name: string; role: string };
+    reason?: string;
   }) {
-    const student = await this.prisma.student.findFirst({
-      where: { rollNumber: data.studentRoll },
-    });
-    if (!student) {
-      throw new NotFoundException(`Student with Roll Number "${data.studentRoll}" not found in institutional registry.`);
+    const id = this.hostelBedClaimId(args.hostelName, args.roomNumber, args.bedNumber);
+    const existing = await tx.workflowRequest.findUnique({ where: { id } });
+    const details = {
+      studentId: args.student.id,
+      studentName: args.student.name,
+      studentRoll: args.student.rollNumber,
+      hostelName: args.hostelName,
+      roomNumber: args.roomNumber,
+      bedNumber: args.bedNumber,
+      floor: args.floor,
+      reason: args.reason || null,
+      claimedAt: new Date().toISOString(),
+    };
+
+    if (!existing) {
+      await tx.workflowRequest.create({
+        data: {
+          id,
+          workflowType: 'HOSTEL_BED_ALLOCATION',
+          title: `Hostel bed ${args.hostelName} ${args.roomNumber}-${args.bedNumber}`,
+          requesterId: args.actor.id,
+          requesterName: args.actor.name,
+          requesterRole: args.actor.role,
+          department: args.student.department,
+          details,
+          currentStage: 'ACTIVE',
+          status: 'ACTIVE',
+        },
+      });
+      return;
     }
 
-    // Check if room exists and check capacity
+    if (existing.workflowType !== 'HOSTEL_BED_ALLOCATION' || existing.status === 'ACTIVE') {
+      throw new ConflictException(`Bed ${args.bedNumber} in room ${args.roomNumber} is already allocated.`);
+    }
+
+    const changed = await tx.workflowRequest.updateMany({
+      where: { id, workflowType: 'HOSTEL_BED_ALLOCATION', status: existing.status },
+      data: {
+        requesterId: args.actor.id,
+        requesterName: args.actor.name,
+        requesterRole: args.actor.role,
+        department: args.student.department,
+        details,
+        currentStage: 'ACTIVE',
+        status: 'ACTIVE',
+        approverId: null,
+        approverName: null,
+        approvalNotes: null,
+      },
+    });
+    if (changed.count !== 1) throw new ConflictException('This bed was allocated by another request. Refresh and try again.');
+  }
+
+  private async releaseBedSlot(tx: any, student: { id: string; hostelName: string; roomNumber: string; bedNumber: string }, status: 'TRANSFERRED' | 'VACATED', actor: { id: string; name: string }) {
+    const id = this.hostelBedClaimId(student.hostelName, student.roomNumber, student.bedNumber);
+    const claim = await tx.workflowRequest.findUnique({ where: { id } });
+    if (!claim) return;
+    const details = typeof claim.details === 'object' && claim.details !== null ? claim.details as Record<string, unknown> : {};
+    if (details.studentId !== student.id) {
+      throw new ConflictException('The bed claim belongs to another student; checkout was not applied.');
+    }
+    const changed = await tx.workflowRequest.updateMany({
+      where: { id, workflowType: 'HOSTEL_BED_ALLOCATION', status: 'ACTIVE' },
+      data: {
+        status,
+        currentStage: status,
+        approverId: actor.id,
+        approverName: actor.name,
+        approvalNotes: status === 'VACATED' ? 'Bed vacated' : 'Student transferred',
+      },
+    });
+    if (changed.count !== 1) throw new ConflictException('The bed claim changed during checkout. Refresh and try again.');
+  }
+
+  async allocateBed(
+    data: { studentRoll: string; hostelName: string; roomNumber: string; bedNumber: string; floor?: string },
+    actor: { id: string; name: string; role: string },
+  ) {
+    const student = await this.prisma.student.findUnique({
+      where: { rollNumber: data.studentRoll.trim() },
+      select: { id: true, name: true, rollNumber: true, department: true, hostelName: true, roomNumber: true, bedNumber: true },
+    });
+    if (!student) throw new NotFoundException(`Student with Roll Number "${data.studentRoll}" not found in institutional registry.`);
+    if (student.hostelName || student.roomNumber || student.bedNumber) {
+      throw new ConflictException('This student already has a hostel allocation. Use the transfer workflow or vacate the current bed first.');
+    }
+
     const room = await this.prisma.hostelRoom.findFirst({
-      where: { roomNumber: data.roomNumber },
+      where: { hostelName: data.hostelName.trim(), roomNumber: data.roomNumber.trim() },
     });
+    if (!room) throw new NotFoundException('The selected hostel room does not exist.');
 
-    if (room && room.occupied >= room.capacity) {
-      throw new BadRequestException(`Room ${data.roomNumber} has already reached maximum approved capacity of ${room.capacity} beds.`);
-    }
+    try {
+      const updatedStudent = await this.prisma.$transaction(async (tx) => {
+        const occupiedBed = await tx.student.findFirst({
+          where: { hostelName: room.hostelName, roomNumber: room.roomNumber, bedNumber: data.bedNumber.trim() },
+          select: { id: true },
+        });
+        if (occupiedBed) throw new ConflictException('The selected bed is already occupied.');
 
-    // Atomic update of student and room
-    const updatedStudent = await this.prisma.student.update({
-      where: { id: student.id },
-      data: {
-        hostelName: data.hostelName,
-        roomNumber: data.roomNumber,
-        bedNumber: data.bedNumber,
-        floor: data.floor || 'Floor 1',
-      },
-    });
+        await this.reserveBedSlot(tx, {
+          hostelName: room.hostelName,
+          roomNumber: room.roomNumber,
+          bedNumber: data.bedNumber.trim(),
+          floor: data.floor?.trim() || room.floor,
+          student,
+          actor,
+        });
 
-    if (room) {
-      await this.prisma.hostelRoom.update({
-        where: { id: room.id },
-        data: { occupied: { increment: 1 } },
+        const capacityChanged = await tx.hostelRoom.updateMany({
+          where: { id: room.id, capacity: room.capacity, occupied: { lt: room.capacity } },
+          data: { occupied: { increment: 1 } },
+        });
+        if (capacityChanged.count !== 1) throw new ConflictException('The selected room is at capacity or changed during allocation.');
+
+        const studentChanged = await tx.student.updateMany({
+          where: { id: student.id, hostelName: null, roomNumber: null, bedNumber: null },
+          data: {
+            hostelName: room.hostelName,
+            roomNumber: room.roomNumber,
+            bedNumber: data.bedNumber.trim(),
+            floor: data.floor?.trim() || room.floor,
+          },
+        });
+        if (studentChanged.count !== 1) throw new ConflictException('The student received another hostel allocation. Refresh the roster.');
+        return tx.student.findUnique({
+          where: { id: student.id },
+          select: { id: true, name: true, rollNumber: true, hostelName: true, roomNumber: true, bedNumber: true, floor: true },
+        });
       });
-    }
 
-    return {
-      success: true,
-      message: `Bed ${data.bedNumber} in Room ${data.roomNumber} successfully allocated to ${student.name} (${student.rollNumber}).`,
-      student: updatedStudent,
-    };
+      return {
+        success: true,
+        message: `Bed ${data.bedNumber} in Room ${data.roomNumber} allocated to ${student.name} (${student.rollNumber}).`,
+        student: updatedStudent,
+      };
+    } catch (error) {
+      if (['P2002', 'P2034'].includes((error as any)?.code)) throw new ConflictException('This bed or room capacity changed during allocation. Refresh and try again.');
+      throw error;
+    }
   }
 
-  async transferBed(data: {
-    studentRoll: string;
-    newHostelName: string;
-    newRoomNumber: string;
-    newBedNumber: string;
-    newFloor?: string;
-    transferReason?: string;
-  }) {
-    const student = await this.prisma.student.findFirst({
-      where: { rollNumber: data.studentRoll },
+  async transferBed(
+    data: { studentRoll: string; newHostelName: string; newRoomNumber: string; newBedNumber: string; newFloor?: string; transferReason?: string },
+    actor: { id: string; name: string; role: string },
+  ) {
+    const student = await this.prisma.student.findUnique({
+      where: { rollNumber: data.studentRoll.trim() },
+      select: { id: true, name: true, rollNumber: true, department: true, hostelName: true, roomNumber: true, bedNumber: true, floor: true },
     });
-    if (!student) {
-      throw new NotFoundException(`Student ${data.studentRoll} not found.`);
+    if (!student) throw new NotFoundException(`Student ${data.studentRoll} not found.`);
+    if (!student.hostelName || !student.roomNumber || !student.bedNumber) {
+      throw new BadRequestException('The student has no current hostel bed to transfer.');
     }
-
-    const oldRoomNumber = student.roomNumber;
-
-    // Verify new room capacity
     const targetRoom = await this.prisma.hostelRoom.findFirst({
-      where: { roomNumber: data.newRoomNumber },
+      where: { hostelName: data.newHostelName.trim(), roomNumber: data.newRoomNumber.trim() },
     });
-    if (targetRoom && targetRoom.occupied >= targetRoom.capacity) {
-      throw new BadRequestException(`Target Room ${data.newRoomNumber} is currently at full capacity.`);
+    if (!targetRoom) throw new NotFoundException('The selected target room does not exist.');
+    if (student.hostelName === targetRoom.hostelName && student.roomNumber === targetRoom.roomNumber && student.bedNumber === data.newBedNumber.trim()) {
+      throw new BadRequestException('The student is already assigned to the selected bed.');
     }
+    const oldRoom = await this.prisma.hostelRoom.findFirst({
+      where: { hostelName: student.hostelName, roomNumber: student.roomNumber },
+    });
+    if (!oldRoom) throw new ConflictException('The current room record is missing; transfer was not applied.');
 
-    // Decrement old room
-    if (oldRoomNumber) {
-      const oldRoom = await this.prisma.hostelRoom.findFirst({
-        where: { roomNumber: oldRoomNumber },
-      });
-      if (oldRoom && oldRoom.occupied > 0) {
-        await this.prisma.hostelRoom.update({
-          where: { id: oldRoom.id },
-          data: { occupied: { decrement: 1 } },
+    try {
+      const updatedStudent = await this.prisma.$transaction(async (tx) => {
+        const occupiedBed = await tx.student.findFirst({
+          where: {
+            hostelName: targetRoom.hostelName,
+            roomNumber: targetRoom.roomNumber,
+            bedNumber: data.newBedNumber.trim(),
+            id: { not: student.id },
+          },
+          select: { id: true },
         });
-      }
-    }
+        if (occupiedBed) throw new ConflictException('The selected target bed is already occupied.');
 
-    // Increment new room
-    if (targetRoom) {
-      await this.prisma.hostelRoom.update({
-        where: { id: targetRoom.id },
-        data: { occupied: { increment: 1 } },
+        await this.reserveBedSlot(tx, {
+          hostelName: targetRoom.hostelName,
+          roomNumber: targetRoom.roomNumber,
+          bedNumber: data.newBedNumber.trim(),
+          floor: data.newFloor?.trim() || targetRoom.floor,
+          student,
+          actor,
+          reason: data.transferReason,
+        });
+
+        if (oldRoom.id !== targetRoom.id) {
+          const capacityChanged = await tx.hostelRoom.updateMany({
+            where: { id: targetRoom.id, capacity: targetRoom.capacity, occupied: { lt: targetRoom.capacity } },
+            data: { occupied: { increment: 1 } },
+          });
+          if (capacityChanged.count !== 1) throw new ConflictException('The target room is at capacity or changed during transfer.');
+          const oldRoomChanged = await tx.hostelRoom.updateMany({
+            where: { id: oldRoom.id, occupied: { gt: 0 } },
+            data: { occupied: { decrement: 1 } },
+          });
+          if (oldRoomChanged.count !== 1) throw new ConflictException('The current room occupancy is inconsistent; transfer was not applied.');
+        }
+
+        await this.releaseBedSlot(tx, student as { id: string; hostelName: string; roomNumber: string; bedNumber: string }, 'TRANSFERRED', actor);
+        const studentChanged = await tx.student.updateMany({
+          where: {
+            id: student.id,
+            hostelName: student.hostelName,
+            roomNumber: student.roomNumber,
+            bedNumber: student.bedNumber,
+          },
+          data: {
+            hostelName: targetRoom.hostelName,
+            roomNumber: targetRoom.roomNumber,
+            bedNumber: data.newBedNumber.trim(),
+            floor: data.newFloor?.trim() || targetRoom.floor,
+          },
+        });
+        if (studentChanged.count !== 1) throw new ConflictException('The student allocation changed during transfer. Refresh and try again.');
+        return tx.student.findUnique({
+          where: { id: student.id },
+          select: { id: true, name: true, rollNumber: true, hostelName: true, roomNumber: true, bedNumber: true, floor: true },
+        });
       });
+
+      return {
+        success: true,
+        message: `Student transferred from Room ${student.roomNumber} to ${targetRoom.roomNumber} (${data.newBedNumber}).`,
+        student: updatedStudent,
+      };
+    } catch (error) {
+      if (['P2002', 'P2034'].includes((error as any)?.code)) throw new ConflictException('The selected bed or room capacity changed during transfer. Refresh and try again.');
+      throw error;
     }
-
-    // Update student residency
-    const updatedStudent = await this.prisma.student.update({
-      where: { id: student.id },
-      data: {
-        hostelName: data.newHostelName,
-        roomNumber: data.newRoomNumber,
-        bedNumber: data.newBedNumber,
-        floor: data.newFloor || 'Floor 1',
-      },
-    });
-
-    return {
-      success: true,
-      message: `Student transferred from Room ${oldRoomNumber || 'N/A'} to ${data.newRoomNumber} (${data.newBedNumber}).`,
-      student: updatedStudent,
-    };
   }
 
-  async vacateBed(studentRoll: string, checkoutNotes?: string) {
-    const student = await this.prisma.student.findFirst({
-      where: { rollNumber: studentRoll },
+  async vacateBed(
+    studentRoll: string,
+    checkoutNotes: string | undefined,
+    actor: { id: string; name: string },
+  ) {
+    const student = await this.prisma.student.findUnique({
+      where: { rollNumber: studentRoll.trim() },
+      select: { id: true, name: true, rollNumber: true, hostelName: true, roomNumber: true, bedNumber: true },
     });
-    if (!student) {
-      throw new NotFoundException(`Student ${studentRoll} not found.`);
+    if (!student) throw new NotFoundException(`Student ${studentRoll} not found.`);
+    if (!student.hostelName || !student.roomNumber || !student.bedNumber) {
+      throw new BadRequestException('The student does not have an active hostel bed to vacate.');
     }
+    const oldRoom = await this.prisma.hostelRoom.findFirst({
+      where: { hostelName: student.hostelName, roomNumber: student.roomNumber },
+    });
+    if (!oldRoom) throw new ConflictException('The current room record is missing; the bed was not vacated.');
 
-    const oldRoomNumber = student.roomNumber;
-    if (oldRoomNumber) {
-      const oldRoom = await this.prisma.hostelRoom.findFirst({
-        where: { roomNumber: oldRoomNumber },
+    const updatedStudent = await this.prisma.$transaction(async (tx) => {
+      const roomChanged = await tx.hostelRoom.updateMany({
+        where: { id: oldRoom.id, occupied: { gt: 0 } },
+        data: { occupied: { decrement: 1 } },
       });
-      if (oldRoom && oldRoom.occupied > 0) {
-        await this.prisma.hostelRoom.update({
-          where: { id: oldRoom.id },
-          data: { occupied: { decrement: 1 } },
-        });
-      }
-    }
+      if (roomChanged.count !== 1) throw new ConflictException('The room occupancy is inconsistent; the bed was not vacated.');
 
-    const updatedStudent = await this.prisma.student.update({
-      where: { id: student.id },
-      data: {
-        hostelName: null,
-        roomNumber: null,
-        bedNumber: null,
-        floor: null,
-      },
+      await this.releaseBedSlot(tx, student as { id: string; hostelName: string; roomNumber: string; bedNumber: string }, 'VACATED', actor);
+      const studentChanged = await tx.student.updateMany({
+        where: {
+          id: student.id,
+          hostelName: student.hostelName,
+          roomNumber: student.roomNumber,
+          bedNumber: student.bedNumber,
+        },
+        data: { hostelName: null, roomNumber: null, bedNumber: null, floor: null },
+      });
+      if (studentChanged.count !== 1) throw new ConflictException('The student allocation changed during checkout. Refresh and try again.');
+      return tx.student.findUnique({
+        where: { id: student.id },
+        select: { id: true, name: true, rollNumber: true, hostelName: true, roomNumber: true, bedNumber: true, floor: true },
+      });
     });
 
     return {
       success: true,
-      message: `Bed vacated for student ${student.name}. Room ${oldRoomNumber || 'N/A'} capacity restored.`,
+      message: `Bed vacated for student ${student.name}. Room ${student.roomNumber} capacity restored.`,
+      checkoutNotes: checkoutNotes?.trim() || null,
       student: updatedStudent,
     };
   }
@@ -251,22 +372,44 @@ export class HostelService {
   // ==========================================
   // 3. STUDENT SELF RESIDENCE VIEW
   // ==========================================
-  async getMyResidence(rollNumber = '01') {
+  async getMyResidence(rollNumber: string) {
     const student = await this.prisma.student.findFirst({
       where: { rollNumber },
     });
+    if (!student) {
+      throw new NotFoundException('Student residence record was not found.');
+    }
+
+    const roommates = student.hostelName && student.roomNumber
+      ? await this.prisma.student.findMany({
+          where: {
+            id: { not: student.id },
+            hostelName: student.hostelName,
+            roomNumber: student.roomNumber,
+          },
+          select: {
+            name: true,
+            rollNumber: true,
+            department: true,
+            semester: true,
+            bedNumber: true,
+          },
+        })
+      : [];
 
     return {
-      hostelName: student?.hostelName || 'Sarojini Girls Residence (Block A)',
-      roomNumber: student?.roomNumber || '204',
-      bedNumber: student?.bedNumber || 'Bed 01 (Window Side)',
-      floor: student?.floor || 'Floor 2',
-      wardenName: student?.wardenName || 'Mrs. Nibedita Das',
-      wardenContact: student?.wardenContact || '+91 94370 33445',
-      roommates: [
-        { name: 'Priya Patra', roll: '04', branch: 'CSE - Sem 5', bed: 'Bed 02' },
-        { name: 'Sneha Mohanty', roll: '06', branch: 'CSE - Sem 5', bed: 'Bed 03' },
-      ],
+      hostelName: student.hostelName,
+      roomNumber: student.roomNumber,
+      bedNumber: student.bedNumber,
+      floor: student.floor,
+      wardenName: student.wardenName,
+      wardenContact: student.wardenContact,
+      roommates: roommates.map((roommate) => ({
+        name: roommate.name,
+        roll: roommate.rollNumber,
+        branch: [roommate.department, roommate.semester].filter(Boolean).join(' - '),
+        bed: roommate.bedNumber,
+      })),
       rules: [
         'Night curfews strictly implemented at 8:30 PM.',
         'Biometric attendance check-in compulsory before 8:45 PM.',
@@ -309,12 +452,7 @@ export class HostelService {
     });
   }
 
-  async lodgeComplaint(data: {
-    studentId?: string;
-    studentName?: string;
-    rollNumber?: string;
-    hostel?: string;
-    roomNumber?: string;
+  async lodgeComplaint(studentId: string, data: {
     location?: string;
     category?: string;
     title?: string;
@@ -323,22 +461,34 @@ export class HostelService {
     attachmentUrl?: string;
     filename?: string;
   }) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      select: { id: true, name: true, rollNumber: true, hostelName: true, roomNumber: true },
+    });
+    if (!student) throw new NotFoundException('The authenticated student record was not found.');
+    if (!student.hostelName || !student.roomNumber) {
+      throw new BadRequestException('A current hostel room allocation is required before lodging a hostel maintenance complaint.');
+    }
+
     let resolvedTitle = (data.title || '').trim();
     let resolvedDesc = (data.description || '').trim();
     let resolvedPriority = data.priority || 'Medium';
+    if (!resolvedTitle && !data.attachmentUrl) {
+      throw new BadRequestException('Provide a complaint title or an image for analysis.');
+    }
 
     // Duplicate submission suppression (same student + title within last 60s)
     if (resolvedTitle) {
       const oneMinuteAgo = new Date(Date.now() - 60000);
       const existingRecent = await this.prisma.hostelComplaint.findFirst({
         where: {
-          rollNumber: data.rollNumber || '01',
+          rollNumber: student.rollNumber,
           title: resolvedTitle,
           createdAt: { gte: oneMinuteAgo },
         },
       });
       if (existingRecent) {
-        this.logger.warn(`Duplicate complaint suppressed for ${data.rollNumber}: "${resolvedTitle}". Returning existing record.`);
+        this.logger.warn(`Duplicate complaint suppressed for ${student.rollNumber}: "${resolvedTitle}". Returning existing record.`);
         return existingRecent;
       }
     }
@@ -406,15 +556,15 @@ export class HostelService {
         : `Assigned to ${assignmentResult.assignedStaffName || 'maintenance staff'}.`
     );
 
-    // 4. Save to PostgreSQL database safely
+    // 4. Save the complaint through the configured Prisma database connector.
     const complaint = await this.prisma.hostelComplaint.create({
       data: {
-        studentId: data.studentId || null,
-        studentName: data.studentName || 'Rakesh Das',
-        rollNumber: data.rollNumber || '01',
-        hostel: data.hostel || 'Sarojini Girls Residence',
-        roomNumber: data.roomNumber || '204',
-        location: data.location || (data.hostel ? `${data.hostel} · Rm ${data.roomNumber || 'N/A'}` : 'Campus'),
+        studentId: student.id,
+        studentName: student.name,
+        rollNumber: student.rollNumber,
+        hostel: student.hostelName,
+        roomNumber: student.roomNumber,
+        location: data.location || `${student.hostelName} · Room ${student.roomNumber}`,
         category: finalCategory,
         predictedCategory: aiResult.category || finalCategory,
         confidence: aiResult.confidence,
@@ -458,11 +608,34 @@ export class HostelService {
     status: string,
     assignedStaff?: string,
     resolutionNotes?: string,
-    assignedStaffId?: string,
+    assignedStaffId?: string | null,
+    actor?: { id: string; role: string },
   ) {
     const existing = await this.prisma.hostelComplaint.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException(`Complaint ticket with ID #${id} not found.`);
+    }
+
+    const transitions: Record<string, string[]> = {
+      Pending: ['Assigned', 'Needs Review', 'Rejected', 'Closed'],
+      Assigned: ['Assigned', 'In Progress', 'Needs Review', 'Closed'],
+      'Needs Review': ['Assigned', 'Rejected', 'Closed'],
+      'In Progress': ['Resolved', 'Assigned', 'Closed'],
+      Resolved: ['Closed'],
+      Rejected: [],
+      Closed: [],
+    };
+    if (!transitions[existing.status]?.includes(status)) {
+      throw new ConflictException(`Complaint status cannot transition from ${existing.status} to ${status}.`);
+    }
+
+    if (actor?.role === 'staff') {
+      if (existing.assignedStaffId !== actor.id) {
+        throw new ForbiddenException('Staff may only update complaints assigned to their own account.');
+      }
+      if (!['In Progress', 'Resolved'].includes(status) || assignedStaffId !== undefined || assignedStaff) {
+        throw new ForbiddenException('Assigned staff may only move their own ticket into progress or mark it resolved.');
+      }
     }
 
     const updateData: any = { status };
@@ -470,7 +643,7 @@ export class HostelService {
     if (resolutionNotes) {
       updateData.resolutionNotes = resolutionNotes;
     } else if (status === 'Resolved' && !existing.resolutionNotes?.includes('Resolved')) {
-      updateData.resolutionNotes = 'Work verified and marked resolved by maintenance supervisor.';
+      updateData.resolutionNotes = 'Marked resolved by authorized maintenance staff.';
     }
 
     if (status === 'Resolved') {
@@ -478,18 +651,24 @@ export class HostelService {
     }
 
     // Support admin reassignment or manual staff assignment
-    if (assignedStaff) {
-      updateData.assignedStaffName = assignedStaff;
-      updateData.assignedAt = new Date();
-    }
-    if (assignedStaffId) {
-      updateData.assignedStaffId = assignedStaffId;
+    if (assignedStaffId === null) {
+      updateData.assignedStaffId = null;
+      updateData.assignedStaffName = null;
+      updateData.assignedStaffPhone = null;
+      updateData.assignedStaffRole = null;
+      updateData.assignedAt = null;
+    } else if (assignedStaffId) {
       const staffMember = await this.prisma.staffRoster.findUnique({ where: { id: assignedStaffId } });
-      if (staffMember) {
-        updateData.assignedStaffName = staffMember.name;
-        updateData.assignedStaffPhone = staffMember.phone;
-        updateData.assignedStaffRole = staffMember.roleOrCategory;
+      if (!staffMember || !['Active', 'On Duty'].includes(staffMember.status)) {
+        throw new NotFoundException('The selected maintenance staff member is not active.');
       }
+      updateData.assignedStaffId = staffMember.id;
+      updateData.assignedStaffName = staffMember.name;
+      updateData.assignedStaffPhone = staffMember.phone;
+      updateData.assignedStaffRole = staffMember.roleOrCategory;
+      updateData.assignedAt = new Date();
+    } else if (assignedStaff) {
+      throw new BadRequestException('Select an active staff record; a display name alone cannot assign a complaint.');
     }
 
     // If supervisor manually approves/assigns a ticket previously in "Needs Review"
@@ -497,10 +676,12 @@ export class HostelService {
       updateData.needsReview = false;
     }
 
-    return this.prisma.hostelComplaint.update({
-      where: { id },
+    const result = await this.prisma.hostelComplaint.updateMany({
+      where: { id, status: existing.status },
       data: updateData,
     });
+    if (result.count !== 1) throw new ConflictException('Complaint status changed concurrently. Refresh and retry.');
+    return this.prisma.hostelComplaint.findUnique({ where: { id } });
   }
 
   // ==========================================
@@ -515,46 +696,77 @@ export class HostelService {
   async issueVisitorPass(data: {
     visitorName: string;
     relation: string;
-    studentName: string;
     rollNumber: string;
-    inTime: string;
+    inTime?: string;
     purpose: string;
-  }) {
-    const passNumber = `PASS-${Math.floor(800 + Math.random() * 200)}`;
+  }, issuedByUserId: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { rollNumber: data.rollNumber.trim() },
+      select: { id: true, name: true, rollNumber: true, hostelName: true, roomNumber: true, bedNumber: true },
+    });
+    if (!student) throw new NotFoundException('Resident student was not found.');
+    if (!student.hostelName || !student.roomNumber || !student.bedNumber) {
+      throw new BadRequestException('Visitor passes can only be issued for a student with an active hostel allocation.');
+    }
+    const bedClaim = await this.prisma.workflowRequest.findUnique({
+      where: { id: this.hostelBedClaimId(student.hostelName, student.roomNumber, student.bedNumber) },
+    });
+    const claimDetails = bedClaim?.details && typeof bedClaim.details === 'object' && !Array.isArray(bedClaim.details)
+      ? bedClaim.details as Record<string, unknown>
+      : {};
+    if (bedClaim?.workflowType !== 'HOSTEL_BED_ALLOCATION' || bedClaim.status !== 'ACTIVE' || claimDetails.studentId !== student.id) {
+      throw new BadRequestException('A validated active hostel bed allocation is required before issuing a visitor pass.');
+    }
+
     return this.prisma.hostelVisitor.create({
       data: {
-        ...data,
+        visitorName: data.visitorName.trim(),
+        relation: data.relation.trim(),
+        studentName: student.name,
+        rollNumber: student.rollNumber,
+        inTime: data.inTime?.trim() || 'Not scheduled',
         outTime: 'Pending Sign-out',
-        passNumber,
+        passNumber: `VP-${randomUUID()}`,
+        purpose: data.purpose.trim(),
+        status: 'ISSUED',
+        issuedByUserId,
       },
     });
   }
 
   async checkInVisitor(id: string, badgeNumber?: string) {
-    const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    return this.prisma.hostelVisitor.update({
-      where: { id },
-      data: {
-        inTime: timeStr,
-      },
+    const visitor = await this.prisma.hostelVisitor.findUnique({ where: { id } });
+    if (!visitor) throw new NotFoundException('Visitor pass was not found.');
+    if (visitor.status !== 'ISSUED') throw new ConflictException('Only an issued visitor pass can be checked in.');
+    const checkedInAt = new Date();
+    const result = await this.prisma.hostelVisitor.updateMany({
+      where: { id, status: 'ISSUED' },
+      data: { status: 'CHECKED_IN', badgeNumber: badgeNumber?.trim() || null, checkedInAt },
     });
+    if (result.count !== 1) throw new ConflictException('Visitor pass changed while check-in was being recorded. Refresh and retry.');
+    return this.prisma.hostelVisitor.findUnique({ where: { id } });
   }
 
   async checkOutVisitor(id: string) {
-    const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    return this.prisma.hostelVisitor.update({
-      where: { id },
-      data: {
-        outTime: timeStr,
-      },
+    const visitor = await this.prisma.hostelVisitor.findUnique({ where: { id } });
+    if (!visitor) throw new NotFoundException('Visitor pass was not found.');
+    if (visitor.status !== 'CHECKED_IN') throw new ConflictException('Only a checked-in visitor can be checked out.');
+    const checkedOutAt = new Date();
+    const timeStr = checkedOutAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const result = await this.prisma.hostelVisitor.updateMany({
+      where: { id, status: 'CHECKED_IN' },
+      data: { status: 'CHECKED_OUT', outTime: timeStr, checkedOutAt },
     });
+    if (result.count !== 1) throw new ConflictException('Visitor pass changed while check-out was being recorded. Refresh and retry.');
+    return this.prisma.hostelVisitor.findUnique({ where: { id } });
   }
 
   // ==========================================
   // 6. OUTING, HOME LEAVE & GATE PASSES
   // ==========================================
-  async getGatePasses(status?: string, hostelName?: string) {
+  async getGatePasses(status?: string, hostelName?: string, requesterId?: string) {
     const where: any = { workflowType: 'HOSTEL_GATE_PASS' };
+    if (requesterId) where.requesterId = requesterId;
     const requests = await this.prisma.workflowRequest.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -564,27 +776,31 @@ export class HostelService {
       const d = (r.details as any) || {};
       return {
         id: r.id,
-        passId: d.passId || `GP-2026-${r.id.slice(-4).toUpperCase()}`,
+        passId: d.passId || r.id,
         studentName: r.requesterName,
-        rollNumber: d.rollNumber || '01',
-        department: r.department || 'Computer Science & Engineering',
-        hostelName: d.hostelName || 'Gandhi Boys Residence',
-        roomNumber: d.roomNumber || 'Room 101',
-        bedNo: d.bedNo || 'Bed 01',
-        purposeType: d.purposeType || 'Home Visit',
-        destination: d.destination || '',
-        outDateTime: d.outDateTime || '',
-        inDateTime: d.inDateTime || '',
-        parentConsentVerified: d.parentConsentVerified ?? true,
-        mentorStatus: d.mentorStatus || 'Verified & Recommended',
-        mentorRemarks: d.mentorRemarks || 'Verified by Faculty Mentor',
+        rollNumber: d.rollNumber || null,
+        department: r.department || null,
+        hostelName: d.hostelName || null,
+        roomNumber: d.roomNumber || null,
+        bedNo: d.bedNo || null,
+        purposeType: d.purposeType || null,
+        destination: d.destination || null,
+        outDateTime: d.outDateTime || null,
+        inDateTime: d.inDateTime || null,
+        emergencyContact: d.emergencyContact || null,
+        parentConsentVerified: d.parentConsentVerified ?? false,
+        mentorStatus: d.mentorStatus || 'Not verified',
+        mentorRemarks: d.mentorRemarks || null,
         status: r.status,
         wardenRemarks: d.wardenRemarks || '',
+        approvedBy: d.approvedBy || null,
+        approvedAt: d.approvedAt || null,
+        rejectedAt: d.rejectedAt || null,
         actualExitTime: d.actualExitTime || null,
         actualReturnTime: d.actualReturnTime || null,
-        isOverdue: d.isOverdue || false,
-        qrCodeString: d.qrCodeString || `BPUT-GP-${r.id}`,
-        createdAt: r.createdAt.toISOString(),
+        isOverdue: r.status === 'Exited' && !d.actualReturnTime && Boolean(d.inDateTime) && new Date(d.inDateTime).getTime() < Date.now(),
+        qrCodeString: d.qrCodeString || null,
+        createdAt: r.createdAt?.toISOString?.() || null,
       };
     });
 
@@ -597,38 +813,49 @@ export class HostelService {
     return passes;
   }
 
-  async createGatePass(data: any, user: any) {
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const passId = `GP-2026-${randomSuffix}`;
-
+  async createGatePass(data: CreateGatePassDto, user: any) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: user.student.id },
+      select: { id: true, name: true, rollNumber: true, department: true, hostelName: true, roomNumber: true, bedNumber: true },
+    });
+    if (!student) throw new NotFoundException('The authenticated student record was not found.');
+    if (!student.hostelName || !student.roomNumber) {
+      throw new BadRequestException('A current hostel room allocation is required before requesting a gate pass.');
+    }
+    const departure = new Date(data.outDateTime);
+    const expectedReturn = new Date(data.inDateTime);
+    if (!Number.isFinite(departure.getTime()) || !Number.isFinite(expectedReturn.getTime()) || departure <= new Date() || expectedReturn <= departure) {
+      throw new BadRequestException('Departure must be in the future and expected return must follow departure.');
+    }
+    const passId = `GP-${randomUUID()}`;
     const details = {
       passId,
-      rollNumber: data.rollNumber || user.identifier || '01',
-      hostelName: data.hostelName || 'Gandhi Boys Residence',
-      roomNumber: data.roomNumber || 'Room 101',
-      bedNo: data.bedNo || 'Bed 01',
-      purposeType: data.purposeType || 'Home Visit',
-      destination: data.destination || 'Home',
-      outDateTime: data.outDateTime || '',
-      inDateTime: data.inDateTime || '',
-      emergencyContact: data.emergencyContact || '',
-      parentConsentVerified: Boolean(data.parentConsentVerified),
-      mentorStatus: 'Verified & Recommended',
-      mentorRemarks: data.mentorRemarks || 'Academic attendance verified (>85%). Recommended.',
-      wardenRemarks: '',
+      rollNumber: student.rollNumber,
+      hostelName: student.hostelName,
+      roomNumber: student.roomNumber,
+      bedNo: student.bedNumber,
+      purposeType: data.purposeType.trim(),
+      destination: data.destination.trim(),
+      outDateTime: departure.toISOString(),
+      inDateTime: expectedReturn.toISOString(),
+      emergencyContact: data.emergencyContact?.trim() || null,
+      parentConsentVerified: false,
+      mentorStatus: 'Not verified',
+      mentorRemarks: null,
+      wardenRemarks: null,
       actualExitTime: null,
       actualReturnTime: null,
-      qrCodeString: `BPUT-${passId}-${(data.studentName || user.name || 'STUDENT').toUpperCase()}-PENDING`,
+      qrCodeString: null,
     };
 
     return this.prisma.workflowRequest.create({
       data: {
         workflowType: 'HOSTEL_GATE_PASS',
-        title: `Gate Pass for ${data.studentName || user.name} (${details.purposeType})`,
-        requesterId: user.id || 'STD-01',
-        requesterName: data.studentName || user.name,
+        title: `Gate Pass for ${student.name} (${details.purposeType})`,
+        requesterId: user.id,
+        requesterName: student.name,
         requesterRole: 'STUDENT',
-        department: data.department || user.department || 'Computer Science & Engineering',
+        department: student.department,
         details,
         currentStage: 'Warden Review',
         status: 'Pending Warden Approval',
@@ -636,7 +863,7 @@ export class HostelService {
           {
             action: 'SUBMITTED',
             stage: 'Pending Warden Approval',
-            by: data.studentName || user.name,
+            by: student.name,
             timestamp: new Date().toISOString(),
           },
         ],
@@ -647,48 +874,58 @@ export class HostelService {
   async actionGatePass(
     id: string,
     action: 'APPROVE' | 'REJECT' | 'RECORD_EXIT' | 'RECORD_RETURN',
-    wardenName = 'Resident Warden',
+    actor: { id: string; name: string; role: string },
     remarks?: string,
   ) {
     const req = await this.prisma.workflowRequest.findUnique({ where: { id } });
     if (!req) throw new NotFoundException('Gate pass request not found.');
+    if (req.workflowType !== 'HOSTEL_GATE_PASS') throw new NotFoundException('Gate pass request not found.');
 
-    const details = (req.details as any) || {};
+    const allowedTransitions: Record<string, { status: string; nextStatus: string }> = {
+      APPROVE: { status: 'Pending Warden Approval', nextStatus: 'Approved' },
+      REJECT: { status: 'Pending Warden Approval', nextStatus: 'Rejected' },
+      RECORD_EXIT: { status: 'Approved', nextStatus: 'Exited' },
+      RECORD_RETURN: { status: 'Exited', nextStatus: 'Returned' },
+    };
+    const transition = allowedTransitions[action];
+    if (!transition) throw new BadRequestException('Unsupported gate pass action.');
+    if (req.status !== transition.status) {
+      throw new ConflictException(`Gate pass is ${req.status} and cannot perform ${action}.`);
+    }
+
+    const details = { ...((req.details as any) || {}) };
     const history = (req.history as any[]) || [];
-    let newStatus = req.status;
     const nowIso = new Date().toISOString();
     const timeFormatted = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
     if (action === 'APPROVE') {
-      newStatus = 'Approved';
-      details.wardenRemarks = remarks || 'Approved by Resident Warden';
+      details.wardenRemarks = remarks || `Approved by ${actor.name}`;
       details.approvedAt = nowIso;
-      details.approvedBy = wardenName;
-      details.qrCodeString = `BPUT-${details.passId || req.id}-APPROVED-VALID`;
-      history.push({ action: 'APPROVED', by: wardenName, timestamp: nowIso, notes: remarks });
+      details.approvedBy = actor.name;
+      history.push({ action: 'APPROVED', by: actor.name, actorId: actor.id, role: actor.role, timestamp: nowIso, notes: remarks });
     } else if (action === 'REJECT') {
-      newStatus = 'Rejected';
-      details.wardenRemarks = remarks || 'Rejected by Warden';
+      details.wardenRemarks = remarks || `Rejected by ${actor.name}`;
       details.rejectedAt = nowIso;
-      history.push({ action: 'REJECTED', by: wardenName, timestamp: nowIso, notes: remarks });
+      history.push({ action: 'REJECTED', by: actor.name, actorId: actor.id, role: actor.role, timestamp: nowIso, notes: remarks });
     } else if (action === 'RECORD_EXIT') {
-      newStatus = 'Exited';
       details.actualExitTime = timeFormatted;
-      history.push({ action: 'PHYSICAL_EXIT_LOGGED', by: 'Security Post', timestamp: nowIso });
+      history.push({ action: 'PHYSICAL_EXIT_LOGGED', by: actor.name, actorId: actor.id, role: actor.role, timestamp: nowIso });
     } else if (action === 'RECORD_RETURN') {
-      newStatus = 'Returned';
       details.actualReturnTime = timeFormatted;
-      history.push({ action: 'CAMPUS_RETURN_LOGGED', by: 'Security Post', timestamp: nowIso });
+      history.push({ action: 'CAMPUS_RETURN_LOGGED', by: actor.name, actorId: actor.id, role: actor.role, timestamp: nowIso });
     }
 
-    return this.prisma.workflowRequest.update({
-      where: { id },
+    const result = await this.prisma.workflowRequest.updateMany({
+      where: { id, workflowType: 'HOSTEL_GATE_PASS', status: transition.status },
       data: {
-        status: newStatus,
+        status: transition.nextStatus,
+        currentStage: transition.nextStatus,
         details,
         history,
       },
     });
+    if (result.count !== 1) throw new ConflictException('Gate pass state changed concurrently. Refresh and retry.');
+    return this.prisma.workflowRequest.findUnique({ where: { id } });
   }
 
   // ==========================================
@@ -703,10 +940,10 @@ export class HostelService {
 
     const totalHostels = hostels.length;
     const totalRooms = rooms.length;
-    const totalBeds = hostels.reduce((acc, h) => acc + (h.totalBeds || 0), 0);
-    const occupiedBeds = hostels.reduce((acc, h) => acc + (h.occupiedBeds || 0), 0);
+    const totalBeds = rooms.reduce((acc, room) => acc + room.capacity, 0);
+    const occupiedBeds = rooms.reduce((acc, room) => acc + room.occupied, 0);
     const availableBeds = totalBeds - occupiedBeds;
-    const occupancyPercentage = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100 * 10) / 10 : 92.4;
+    const occupancyPercentage = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100 * 10) / 10 : null;
 
     const pendingGatePasses = gatePasses.filter(p => p.status === 'Pending Warden Approval').length;
     const activeComplaints = complaints.filter(c => c.status !== 'Resolved' && c.status !== 'Closed').length;
@@ -730,22 +967,23 @@ export class HostelService {
   // ==========================================
   // 8. RESIDENT DOCUMENTS REPOSITORY
   // ==========================================
-  async getStudentDocuments(rollNumber?: string) {
+  async getStudentDocuments(rollNumber?: string, requesterId?: string) {
     const where: any = { workflowType: 'HOSTEL_DOCUMENT' };
+    if (requesterId) where.requesterId = requesterId;
     const requests = await this.prisma.workflowRequest.findMany({
       where,
       orderBy: { createdAt: 'desc' },
     });
 
-    return requests.map(r => {
+    const documents = requests.map(r => {
       const d = (r.details as any) || {};
       return {
         id: r.id,
         studentName: r.requesterName,
-        rollNumber: d.rollNumber || '01',
-        docType: d.docType || 'Hostel Admission Undertaking',
-        fileName: d.fileName || 'Document.pdf',
-        fileSize: d.fileSize || '320 KB',
+        rollNumber: d.rollNumber || null,
+        docType: d.docType || null,
+        fileName: d.fileName || null,
+        fileSize: d.fileSize || null,
         status: r.status,
         verifiedBy: d.verifiedBy || null,
         verifiedAt: d.verifiedAt || null,
@@ -753,6 +991,7 @@ export class HostelService {
         createdAt: r.createdAt.toISOString(),
       };
     });
+    return rollNumber ? documents.filter((document) => document.rollNumber?.toLowerCase() === rollNumber.toLowerCase()) : documents;
   }
 
   async verifyDocument(id: string, status: 'Verified' | 'Rejected', reviewer = 'Chief Warden', notes?: string) {

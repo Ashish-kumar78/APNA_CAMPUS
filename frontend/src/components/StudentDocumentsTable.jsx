@@ -252,8 +252,7 @@ export default function StudentDocumentsTable({ portalRole = 'faculty', titleOve
       }
       showToast(`✓ Document "${record.docName}" downloaded for ${record.studentName}`);
     } catch (err) {
-      console.error('Download error:', err);
-      showToast('Document downloaded successfully.');
+      showToast(err?.message || 'This document is unavailable for download.');
     }
   };
 

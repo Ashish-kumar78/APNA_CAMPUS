@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Put, Delete, Body, Param, Query, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Put, Delete, Body, Param, Query, UseGuards, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { EnterpriseService } from './enterprise.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -11,6 +11,14 @@ import { normalizeRole } from '../rbac/rbac';
 @ApiBearerAuth()
 export class EnterpriseController {
   constructor(private readonly enterpriseService: EnterpriseService) {}
+
+  private requireRole(user: any, allowed: string[], message = 'Your role cannot perform this operation.') {
+    if (!allowed.includes(normalizeRole(user?.role))) throw new ForbiddenException(message);
+  }
+
+  private readonly libraryStaffRoles = ['library', 'admin', 'super_admin', 'principal', 'management'];
+  private readonly placementStaffRoles = ['placement', 'admin', 'super_admin', 'principal', 'management'];
+  private readonly transportStaffRoles = ['transport', 'admin', 'super_admin'];
 
   // ==========================================
   // 1. EXAM CELL ENDPOINTS
@@ -49,7 +57,8 @@ export class EnterpriseController {
   // ==========================================
   @Get('library/dashboard-stats')
   @ApiOperation({ summary: 'Get live library KPIs, copies breakdown & monthly circulation' })
-  async getLibraryDashboardStats() {
+  async getLibraryDashboardStats(@CurrentUser() user: any) {
+    this.requireRole(user, this.libraryStaffRoles);
     const data = await this.enterpriseService.getLibraryDashboardStats();
     return { success: true, data };
   }
@@ -78,7 +87,8 @@ export class EnterpriseController {
 
   @Get('library/copies')
   @ApiOperation({ summary: 'Get physical copy inventory' })
-  async getLibraryCopies(@Query('bookId') bookId?: string) {
+  async getLibraryCopies(@CurrentUser() user: any, @Query('bookId') bookId?: string) {
+    this.requireRole(user, this.libraryStaffRoles);
     const data = await this.enterpriseService.getLibraryCopies(bookId);
     return { success: true, count: data.length, data };
   }
@@ -117,13 +127,15 @@ export class EnterpriseController {
     @Query('status') status?: string,
   ) {
     const role = normalizeRole(user.role);
-    let targetRoll = studentRoll;
-
+    const canReadAll = this.libraryStaffRoles.includes(role);
     if (role === 'student') {
-      targetRoll = user.student?.rollNumber || user.identifier;
+      if (!user.student?.rollNumber) throw new ForbiddenException('Your account has no linked student profile.');
+      studentRoll = user.student.rollNumber;
+    } else if (!canReadAll) {
+      throw new ForbiddenException('Only students can view their own loans; Library staff can view circulation records.');
     }
 
-    const data = await this.enterpriseService.getLibraryTransactions(targetRoll, status);
+    const data = await this.enterpriseService.getLibraryTransactions(studentRoll, status);
     return { success: true, count: data.length, data };
   }
 
@@ -137,8 +149,8 @@ export class EnterpriseController {
     if (role !== 'library' && role !== 'super_admin') {
       throw new ForbiddenException('Access denied. Only Librarian can execute book circulation issues.');
     }
-    const txn = await this.enterpriseService.issueBook(body);
-    return { success: true, message: `Book issued to ${body.studentName} (${body.studentRoll})`, data: txn };
+    const txn = await this.enterpriseService.issueBook({ bookId: body.bookId, studentRoll: body.studentRoll });
+    return { success: true, message: `Book issued to ${txn.studentName} (${txn.studentRoll})`, data: txn };
   }
 
   @Post('library/return')
@@ -155,34 +167,53 @@ export class EnterpriseController {
   @Post('library/renew')
   @ApiOperation({ summary: 'Renew an active book loan' })
   async renewBook(@CurrentUser() user: any, @Body() body: { transactionId: string }) {
-    const txn = await this.enterpriseService.renewBook(body.transactionId);
+    if (normalizeRole(user.role) !== 'student' && !this.libraryStaffRoles.includes(normalizeRole(user.role))) {
+      throw new ForbiddenException('Only the borrower or Library staff can renew a loan.');
+    }
+    if (normalizeRole(user.role) === 'student' && !user.student?.rollNumber) {
+      throw new ForbiddenException('Your account has no linked student profile.');
+    }
+    const txn = await this.enterpriseService.renewBook(body.transactionId, normalizeRole(user.role) === 'student' ? user.student.rollNumber : undefined);
     return { success: true, message: 'Book loan renewed for an additional period.', data: txn };
   }
 
   @Get('library/reservations')
   @ApiOperation({ summary: 'Get active book reservations & waitlists' })
-  async getLibraryReservations() {
+  async getLibraryReservations(@CurrentUser() user: any) {
+    this.requireRole(user, this.libraryStaffRoles);
     const data = await this.enterpriseService.getLibraryReservations();
     return { success: true, count: data.length, data };
   }
 
   @Post('library/reservations')
   @ApiOperation({ summary: 'Place a book reservation' })
-  async createLibraryReservation(@Body() body: any) {
-    const res = await this.enterpriseService.createLibraryReservation(body);
+  async createLibraryReservation(@CurrentUser() user: any, @Body() body: any) {
+    if (normalizeRole(user.role) !== 'student' || !user.student?.id || !user.student?.rollNumber) {
+      throw new ForbiddenException('A linked student identity is required to reserve a library title.');
+    }
+    const res = await this.enterpriseService.createLibraryReservation({
+      bookTitle: body.bookTitle,
+      isbn: body.isbn,
+      studentName: user.student.name,
+      studentRoll: user.student.rollNumber,
+    });
     return { success: true, message: `Reservation placed for "${body.bookTitle}".`, data: res };
   }
 
   @Delete('library/reservations/:id')
   @ApiOperation({ summary: 'Cancel a reservation' })
-  async cancelLibraryReservation(@Param('id') id: string) {
-    await this.enterpriseService.cancelLibraryReservation(id);
+  async cancelLibraryReservation(@CurrentUser() user: any, @Param('id') id: string) {
+    const role = normalizeRole(user.role);
+    if (role !== 'student' && !this.libraryStaffRoles.includes(role)) throw new ForbiddenException('Access denied.');
+    if (role === 'student' && !user.student?.rollNumber) throw new ForbiddenException('Your account has no linked student profile.');
+    await this.enterpriseService.cancelLibraryReservation(id, role === 'student' ? user.student.rollNumber : undefined);
     return { success: true, message: 'Reservation cancelled.' };
   }
 
   @Get('library/fines')
   @ApiOperation({ summary: 'Get overdue fines and penalty ledgers' })
-  async getLibraryFines() {
+  async getLibraryFines(@CurrentUser() user: any) {
+    this.requireRole(user, ['library', 'accounts', 'admin', 'super_admin', 'principal', 'management']);
     const data = await this.enterpriseService.getLibraryFines();
     return { success: true, count: data.length, data };
   }
@@ -194,7 +225,10 @@ export class EnterpriseController {
     if (role !== 'library' && role !== 'accounts' && role !== 'super_admin') {
       throw new ForbiddenException('Only Library or Accounts staff can settle fines.');
     }
-    const receipt = await this.enterpriseService.settleLibraryFine(body);
+    if (typeof body?.studentRoll !== 'string' || typeof body?.paymentMode !== 'string' || !body.paymentMode.trim()) {
+      throw new BadRequestException('A student roll number and payment mode are required for settlement.');
+    }
+    const receipt = await this.enterpriseService.settleLibraryFine(body, { id: user.id, name: user.name || user.identifier, role: user.role });
     return { success: true, message: `Fine settlement recorded. Receipt: ${receipt.receiptNo || 'Issued'}`, data: receipt };
   }
 
@@ -214,7 +248,8 @@ export class EnterpriseController {
 
   @Get('library/acquisitions')
   @ApiOperation({ summary: 'Get new book acquisitions and indents' })
-  async getLibraryAcquisitions() {
+  async getLibraryAcquisitions(@CurrentUser() user: any) {
+    this.requireRole(user, this.libraryStaffRoles);
     const data = await this.enterpriseService.getLibraryAcquisitions();
     return { success: true, count: data.length, data };
   }
@@ -222,7 +257,8 @@ export class EnterpriseController {
   @Post('library/acquisitions')
   @ApiOperation({ summary: 'Create new purchase indent/order' })
   async createLibraryAcquisition(@CurrentUser() user: any, @Body() body: any) {
-    const res = await this.enterpriseService.createLibraryAcquisition(body);
+    this.requireRole(user, ['library', 'admin', 'super_admin']);
+    const res = await this.enterpriseService.createLibraryAcquisition(body, user);
     return { success: true, message: 'Purchase requisition logged.', data: res };
   }
 
@@ -248,13 +284,15 @@ export class EnterpriseController {
   @Get('placement/dashboard-stats')
   @ApiOperation({ summary: 'Get placement KPIs and analytics' })
   async getPlacementDashboardStats(@CurrentUser() user: any) {
+    this.requireRole(user, this.placementStaffRoles);
     const data = await this.enterpriseService.getPlacementDashboardStats();
     return { success: true, data };
   }
 
   @Get('placement/companies')
   @ApiOperation({ summary: 'Get corporate recruiting partners directory' })
-  async getPlacementCompanies() {
+  async getPlacementCompanies(@CurrentUser() user: any) {
+    this.requireRole(user, [...this.placementStaffRoles, 'student', 'faculty', 'hod']);
     const data = await this.enterpriseService.getPlacementCompanies();
     return { success: true, count: data.length, data };
   }
@@ -272,7 +310,8 @@ export class EnterpriseController {
 
   @Get('placement/drives')
   @ApiOperation({ summary: 'Get active and upcoming campus placement drives' })
-  async getPlacementDrives() {
+  async getPlacementDrives(@CurrentUser() user: any) {
+    this.requireRole(user, [...this.placementStaffRoles, 'student', 'faculty', 'hod']);
     const data = await this.enterpriseService.getPlacementDrives();
     return { success: true, count: data.length, data };
   }
@@ -303,7 +342,7 @@ export class EnterpriseController {
   @ApiOperation({ summary: 'Evaluate candidate eligibility using deterministic engine' })
   async evaluateDriveEligibility(@CurrentUser() user: any, @Param('id') id: string) {
     const role = normalizeRole(user.role);
-    const authorized = ['placement', 'principal', 'management', 'super_admin', 'hod', 'faculty'];
+    const authorized = this.placementStaffRoles;
     if (!authorized.includes(role)) {
       throw new ForbiddenException('Access denied to eligibility evaluation engine.');
     }
@@ -313,18 +352,15 @@ export class EnterpriseController {
 
   @Post('placement/apply')
   @ApiOperation({ summary: 'Student applies for placement drive' })
-  async applyToDrive(@CurrentUser() user: any, @Body() body: { driveId: string; cgpa: number }) {
+  async applyToDrive(@CurrentUser() user: any, @Body() body: { driveId: string }) {
     const role = normalizeRole(user.role);
     if (role !== 'student') {
       throw new ForbiddenException('Only enrolled students can apply for campus placement drives.');
     }
-    const studentRoll = user.student?.rollNumber || user.identifier;
-    const studentName = user.name;
+    if (!user.student?.id || !user.student?.rollNumber) throw new ForbiddenException('A linked student profile is required to apply.');
     const application = await this.enterpriseService.applyToDrive({
       driveId: body.driveId,
-      studentRoll,
-      studentName,
-      cgpa: Number(body.cgpa) || 8.0,
+      studentId: user.student.id,
     });
     return { success: true, message: 'Application submitted successfully to T&P cell!', data: application };
   }
@@ -332,11 +368,7 @@ export class EnterpriseController {
   @Get('placement/applications')
   @ApiOperation({ summary: 'View drive applicants across ATS stages' })
   async getPlacementApplications(@CurrentUser() user: any, @Query('driveId') driveId?: string) {
-    const role = normalizeRole(user.role);
-    const authorized = ['placement', 'principal', 'management', 'super_admin', 'hod'];
-    if (!authorized.includes(role)) {
-      throw new ForbiddenException('Access denied to placement applicant records.');
-    }
+    this.requireRole(user, this.placementStaffRoles, 'Access denied to placement applicant records.');
     const data = await this.enterpriseService.getPlacementApplications(driveId);
     return { success: true, count: data.length, data };
   }
@@ -364,12 +396,26 @@ export class EnterpriseController {
       throw new ForbiddenException('Access denied.');
     }
     const offer = await this.enterpriseService.releasePlacementOffer(body, user);
-    return { success: true, message: `Placement offer letter issued to ${offer.studentName}!`, data: offer };
+    return { success: true, message: `Placement offer record saved for ${offer.studentName}. No email or employer delivery is configured.`, data: offer };
+  }
+
+  @Get('placement/offers')
+  @ApiOperation({ summary: 'List persisted placement offers in the caller’s permitted scope' })
+  async getPlacementOffers(@CurrentUser() user: any) {
+    const role = normalizeRole(user.role);
+    const authorized = ['placement', 'principal', 'management', 'super_admin', 'student'];
+    if (!authorized.includes(role)) throw new ForbiddenException('Access denied to placement offer records.');
+    if (role === 'student' && !user.student?.rollNumber) throw new ForbiddenException('Your account has no linked student profile.');
+    const data = await this.enterpriseService.getPlacementOffers(user);
+    return { success: true, count: data.length, data };
   }
 
   @Post('placement/offers/:id/action')
   @ApiOperation({ summary: 'Student accepts or declines job offer' })
   async actionPlacementOffer(@CurrentUser() user: any, @Param('id') id: string, @Body() body: { action: string; notes?: string }) {
+    const role = normalizeRole(user.role);
+    if (role !== 'student') throw new ForbiddenException('Only the student can accept or decline their offer.');
+    if (!user.student?.rollNumber) throw new ForbiddenException('Your account has no linked student profile.');
     const updated = await this.enterpriseService.actionPlacementOffer(id, body.action, body.notes, user);
     return { success: true, message: `Offer response recorded: ${body.action}`, data: updated };
   }
@@ -380,14 +426,19 @@ export class EnterpriseController {
   @Get('transport/dashboard-stats')
   @ApiOperation({ summary: 'Get transport fleet & operations KPI stats' })
   async getTransportDashboardStats(@CurrentUser() user: any) {
+    this.requireRole(user, this.transportStaffRoles);
     const data = await this.enterpriseService.getTransportDashboardStats();
     return { success: true, data };
   }
 
   @Get('transport/routes')
   @ApiOperation({ summary: 'Get college transit bus routes and timings' })
-  async getTransportRoutes() {
-    const data = await this.enterpriseService.getTransportRoutes();
+  async getTransportRoutes(@CurrentUser() user: any) {
+    this.requireRole(user, [...this.transportStaffRoles, 'student', 'faculty', 'hod']);
+    const routes = await this.enterpriseService.getTransportRoutes();
+    const data = this.transportStaffRoles.includes(normalizeRole(user.role))
+      ? routes
+      : routes.map(({ driverContact: _driverContact, ...route }) => route);
     return { success: true, count: data.length, data };
   }
 
@@ -419,7 +470,8 @@ export class EnterpriseController {
 
   @Get('transport/fleet')
   @ApiOperation({ summary: 'Get fleet vehicles with compliance certificates' })
-  async getTransportFleet() {
+  async getTransportFleet(@CurrentUser() user: any) {
+    this.requireRole(user, this.transportStaffRoles);
     const data = await this.enterpriseService.getTransportFleet();
     return { success: true, count: data.length, data };
   }
@@ -467,7 +519,8 @@ export class EnterpriseController {
 
   @Get('transport/drivers')
   @ApiOperation({ summary: 'Get drivers roster and license validity' })
-  async getTransportDrivers() {
+  async getTransportDrivers(@CurrentUser() user: any) {
+    this.requireRole(user, this.transportStaffRoles);
     const data = await this.enterpriseService.getTransportDrivers();
     return { success: true, count: data.length, data };
   }
@@ -486,7 +539,10 @@ export class EnterpriseController {
   @Get('transport/passes')
   @ApiOperation({ summary: 'Get bus pass applications & active passes' })
   async getTransportPasses(@CurrentUser() user: any) {
-    const data = await this.enterpriseService.getTransportPasses();
+    const role = normalizeRole(user.role);
+    const staff = this.transportStaffRoles.includes(role);
+    if (!staff && (role !== 'student' || !user.student?.rollNumber)) throw new ForbiddenException('Access denied to transport passes.');
+    const data = await this.enterpriseService.getTransportPasses(staff ? undefined : user.student.rollNumber);
     return { success: true, count: data.length, data };
   }
 
@@ -518,7 +574,8 @@ export class EnterpriseController {
 
   @Get('transport/trips')
   @ApiOperation({ summary: 'Get today scheduled and active trip operations' })
-  async getTransportTrips() {
+  async getTransportTrips(@CurrentUser() user: any) {
+    this.requireRole(user, this.transportStaffRoles);
     const data = await this.enterpriseService.getTransportTrips();
     return { success: true, count: data.length, data };
   }
@@ -540,9 +597,9 @@ export class EnterpriseController {
 
   @Get('transport/telemetry')
   @ApiOperation({ summary: 'Get live GPS and telematics location freshness' })
-  async getTransportTelemetry() {
-    const data = await this.enterpriseService.getTransportTelemetry();
-    return { success: true, count: data.length, data };
+  async getTransportTelemetry(@CurrentUser() user: any): Promise<never> {
+    this.requireRole(user, this.transportStaffRoles);
+    return this.enterpriseService.getTransportTelemetry();
   }
 
   // ==========================================

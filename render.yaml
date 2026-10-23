@@ -6,15 +6,13 @@ services:
     region: oregon
     rootDir: backend
     buildCommand: npm install --include=dev && npx prisma generate && npm run build
-    startCommand: npx prisma migrate deploy || true && npm run start:prod
+    startCommand: npm run start:prod
     healthCheckPath: /api
     envVars:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: apna-campus-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
@@ -23,10 +21,5 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-
-databases:
-  - name: apna-campus-db
-    databaseName: college_management
-    user: postgres
-    plan: free
-    region: oregon
+      - key: AI_SERVICE_URL
+        sync: false

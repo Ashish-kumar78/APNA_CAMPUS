@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface WorkQueueItem {
@@ -27,103 +27,11 @@ export interface DepartmentNotice {
   isUrgent?: boolean;
 }
 
+type HodReviewScope = { role: string; reviewer: string; departments: string[] };
+
 @Injectable()
 export class HodService {
   constructor(private readonly prisma: PrismaService) {}
-
-  // In-memory persistent queue items for HOD review
-  private approvalQueue = [
-    {
-      id: 'AQ-101',
-      subject: 'Data Structures',
-      subjectCode: 'CS501',
-      faculty: 'Dr. S. Mohanty',
-      semester: 'Semester 5',
-      section: 'Section A',
-      cohortSize: 32,
-      courseTotalEnrollment: 91,
-      evaluatedCount: 28,
-      missingMarksCount: 4,
-      componentsCount: 13,
-      status: 'Pending',
-      submittedDate: '2026-10-09',
-      dueDate: '2026-10-12',
-      hodRemarks: '',
-      reviewedAt: '',
-    },
-    {
-      id: 'AQ-102',
-      subject: 'Operating Systems',
-      subjectCode: 'CS502',
-      faculty: 'Prof. R. K. Jena',
-      semester: 'Semester 5',
-      section: 'Section A',
-      cohortSize: 32,
-      courseTotalEnrollment: 91,
-      evaluatedCount: 32,
-      missingMarksCount: 0,
-      componentsCount: 13,
-      status: 'Approved',
-      submittedDate: '2026-10-08',
-      dueDate: '2026-10-11',
-      hodRemarks: 'Approved by HOD. Verified continuous internal assessment components.',
-      reviewedAt: '2026-10-08 17:30',
-    },
-    {
-      id: 'AQ-103',
-      subject: 'Database Management Systems',
-      subjectCode: 'CS503',
-      faculty: 'Dr. M. R. Senapati',
-      semester: 'Semester 5',
-      section: 'Section B',
-      cohortSize: 30,
-      courseTotalEnrollment: 91,
-      evaluatedCount: 30,
-      missingMarksCount: 0,
-      componentsCount: 13,
-      status: 'Approved',
-      submittedDate: '2026-10-07',
-      dueDate: '2026-10-10',
-      hodRemarks: 'Approved & Moderated for Exam Cell.',
-      reviewedAt: '2026-10-07 16:15',
-    },
-    {
-      id: 'AQ-104',
-      subject: 'Design & Analysis of Algorithms',
-      subjectCode: 'CS504',
-      faculty: 'Prof. S. K. Swain',
-      semester: 'Semester 5',
-      section: 'Section C',
-      cohortSize: 29,
-      courseTotalEnrollment: 91,
-      evaluatedCount: 24,
-      missingMarksCount: 5,
-      componentsCount: 13,
-      status: 'Rejected',
-      submittedDate: '2026-10-06',
-      dueDate: '2026-10-09',
-      hodRemarks: 'Quiz 3 and Lab viva marks missing for 5 borderline candidates. Returned for correction.',
-      reviewedAt: '2026-10-06 18:40',
-    },
-    {
-      id: 'AQ-105',
-      subject: 'Object Oriented Programming',
-      subjectCode: 'CS301',
-      faculty: 'Dr. B. K. Mishra',
-      semester: 'Semester 3',
-      section: 'Section A',
-      cohortSize: 35,
-      courseTotalEnrollment: 95,
-      evaluatedCount: 35,
-      missingMarksCount: 0,
-      componentsCount: 13,
-      status: 'Approved',
-      submittedDate: '2026-10-05',
-      dueDate: '2026-10-08',
-      hodRemarks: 'Certified autonomous evaluation returns.',
-      reviewedAt: '2026-10-05 14:20',
-    },
-  ];
 
   // In-memory intervention records
   private interventions = [
@@ -160,9 +68,16 @@ export class HodService {
    * 1. Get comprehensive real-time department dashboard metrics
    */
   async getDashboard(deptCode = 'CSE') {
-    const pendingCount = this.approvalQueue.filter(q => q.status === 'Pending').length;
-    const approvedCount = this.approvalQueue.filter(q => q.status === 'Approved').length;
-    const rejectedCount = this.approvalQueue.filter(q => q.status === 'Rejected').length;
+    const subjectCodes = (await this.prisma.subject.findMany({
+      where: { department: deptCode },
+      select: { code: true },
+    })).map((subject) => subject.code);
+    const queueWhere = { subjectCode: { in: subjectCodes } };
+    const [pendingCount, approvedCount, rejectedCount] = await Promise.all([
+      this.prisma.approvalQueue.count({ where: { ...queueWhere, status: 'Pending' } }),
+      this.prisma.approvalQueue.count({ where: { ...queueWhere, status: 'Approved' } }),
+      this.prisma.approvalQueue.count({ where: { ...queueWhere, status: 'Rejected' } }),
+    ]);
 
     const workQueue: WorkQueueItem[] = [
       {
@@ -297,97 +212,119 @@ export class HodService {
   /**
    * 2. Get Marks Approval Queue with validation diagnostics
    */
-  async getApprovalQueue() {
+  async getApprovalQueue(scope: HodReviewScope) {
+    let where: any = {};
+    if (scope.role === 'hod') {
+      const departments = scope.departments.filter(Boolean);
+      if (!departments.length) return { success: true, count: 0, data: [] };
+      const subjects = await this.prisma.subject.findMany({
+        where: { department: { in: departments } },
+        select: { code: true },
+      });
+      if (!subjects.length) return { success: true, count: 0, data: [] };
+      where.subjectCode = { in: subjects.map((subject) => subject.code) };
+    }
+    const data = await this.prisma.approvalQueue.findMany({ where, orderBy: { createdAt: 'desc' } });
     return {
       success: true,
-      count: this.approvalQueue.length,
-      data: this.approvalQueue,
+      count: data.length,
+      data,
     };
   }
 
   /**
    * 3. Approve marks submission
    */
-  async approveMarks(id: string, reviewer = 'Dr. P. K. Pattnaik (HOD CSE)') {
-    const item = this.approvalQueue.find(q => q.id === id);
-    if (!item) throw new NotFoundException(`Approval queue item ${id} not found`);
-
-    item.status = 'Approved';
-    item.reviewedAt = new Date().toISOString();
-    item.hodRemarks = 'Approved by HOD. Verified continuous internal assessment components.';
-
-    this.logAudit({
-      actor: reviewer,
-      role: 'HOD',
-      action: 'Approved Faculty Assessment Marks',
-      target: `Subject: ${item.subject} (${item.subjectCode})`,
-      oldValue: 'Pending HOD Approval',
-      newValue: 'Approved & Moderated for Exam Cell',
+  async approveMarks(id: string, scope: HodReviewScope) {
+    const item = await this.findApprovalItem(id);
+    await this.assertDepartmentScope(item.subjectCode, scope);
+    if (item.status !== 'Pending') throw new BadRequestException(`Only pending marks submissions can be approved (current status: ${item.status}).`);
+    const updated = await this.prisma.approvalQueue.update({
+      where: { id },
+      data: { status: 'Approved', reviewedAt: new Date().toISOString(), hodRemarks: `Approved by ${scope.reviewer}.` },
     });
-
+    await this.writeReviewAudit(item, scope, 'Pending', 'Approved', 'Marks submission approved.');
     return {
       success: true,
-      message: `Marks for ${item.subject} (${item.subjectCode}) officially APPROVED and moderated.`,
-      data: item,
+      message: `Marks for ${updated.subject} (${updated.subjectCode}) officially approved and moderated.`,
+      data: updated,
     };
   }
 
   /**
    * 4. Reject marks submission with mandatory reason
    */
-  async rejectMarks(id: string, rejectionReason: string, reviewer = 'Dr. P. K. Pattnaik (HOD CSE)') {
+  async rejectMarks(id: string, rejectionReason: string, scope: HodReviewScope) {
     if (!rejectionReason || !rejectionReason.trim()) {
       throw new BadRequestException('Mandatory rejection reason required for returning marks to faculty.');
     }
 
-    const item = this.approvalQueue.find(q => q.id === id);
-    if (!item) throw new NotFoundException(`Approval queue item ${id} not found`);
-
-    item.status = 'Rejected';
-    item.reviewedAt = new Date().toISOString();
-    item.hodRemarks = rejectionReason;
-
-    this.logAudit({
-      actor: reviewer,
-      role: 'HOD',
-      action: 'Rejected Marks Assessment & Returned for Revision',
-      target: `Subject: ${item.subject} (${item.subjectCode})`,
-      oldValue: 'Submitted for Approval',
-      newValue: `Revision Required: ${rejectionReason}`,
+    const item = await this.findApprovalItem(id);
+    await this.assertDepartmentScope(item.subjectCode, scope);
+    if (item.status !== 'Pending') throw new BadRequestException(`Only pending marks submissions can be rejected (current status: ${item.status}).`);
+    const updated = await this.prisma.approvalQueue.update({
+      where: { id },
+      data: { status: 'Rejected', reviewedAt: new Date().toISOString(), hodRemarks: rejectionReason.trim() },
     });
-
+    await this.writeReviewAudit(item, scope, 'Pending', 'Rejected', rejectionReason.trim());
     return {
       success: true,
-      message: `Marks for ${item.subject} returned to faculty for revision.`,
-      data: item,
+      message: `Marks for ${updated.subject} returned to faculty for revision.`,
+      data: updated,
     };
   }
 
   /**
    * 5. Controlled unlocking of approved marks
    */
-  async unlockMarks(id: string, reason = 'Unlocked for faculty correction', reviewer = 'Dr. P. K. Pattnaik (HOD CSE)') {
-    const item = this.approvalQueue.find(q => q.id === id);
-    if (!item) throw new NotFoundException(`Approval queue item ${id} not found`);
-
-    const prevStatus = item.status;
-    item.status = 'Pending';
-    item.hodRemarks = `HOD Reopened: ${reason}`;
-
-    this.logAudit({
-      actor: reviewer,
-      role: 'HOD',
-      action: 'Unlocked Frozen Marks Register for Corrections',
-      target: `Subject: ${item.subject} (${item.subjectCode})`,
-      oldValue: prevStatus,
-      newValue: 'Unlocked for Faculty Edits',
+  async unlockMarks(id: string, reason: string, scope: HodReviewScope) {
+    if (!reason?.trim()) throw new BadRequestException('A reason is required to reopen a reviewed marks submission.');
+    const item = await this.findApprovalItem(id);
+    await this.assertDepartmentScope(item.subjectCode, scope);
+    if (!['Approved', 'Rejected'].includes(item.status)) {
+      throw new BadRequestException(`Only approved or rejected submissions can be reopened (current status: ${item.status}).`);
+    }
+    const updated = await this.prisma.approvalQueue.update({
+      where: { id },
+      data: { status: 'Returned', reviewedAt: new Date().toISOString(), hodRemarks: reason.trim() },
     });
-
+    await this.writeReviewAudit(item, scope, item.status, 'Returned', reason.trim());
     return {
       success: true,
-      message: `Marks for ${item.subject} unlocked. Faculty can now edit.`,
-      data: item,
+      message: `Marks for ${updated.subject} reopened for faculty corrections.`,
+      data: updated,
     };
+  }
+
+  private async findApprovalItem(id: string) {
+    const item = await this.prisma.approvalQueue.findUnique({ where: { id } });
+    if (!item) throw new NotFoundException(`Approval queue item ${id} was not found.`);
+    return item;
+  }
+
+  private async assertDepartmentScope(subjectCode: string, scope: HodReviewScope) {
+    if (scope.role !== 'hod') return;
+    const subject = await this.prisma.subject.findUnique({ where: { code: subjectCode } });
+    if (!subject) throw new NotFoundException('Subject was not found.');
+    if (!scope.departments.includes(subject.department)) {
+      throw new ForbiddenException('HOD access is limited to the assigned department.');
+    }
+  }
+
+  private async writeReviewAudit(item: { subjectCode: string; subject: string; section: string }, scope: HodReviewScope, oldStatus: string, newStatus: string, reason: string) {
+    await this.prisma.auditLog.create({
+      data: {
+        user: scope.reviewer,
+        role: scope.role.toUpperCase(),
+        targetStudent: `Section ${item.section}`,
+        subject: item.subject,
+        assessment: 'Marks moderation',
+        oldMark: oldStatus,
+        newMark: newStatus,
+        changedAt: new Date().toISOString(),
+        reason,
+      },
+    });
   }
 
   /**
@@ -482,11 +419,23 @@ export class HodService {
     });
   }
 
-  async getAuditLogs() {
+  async getAuditLogs(scope: HodReviewScope) {
+    let where: any = {};
+    if (scope.role === 'hod') {
+      const departments = scope.departments.filter(Boolean);
+      if (!departments.length) return { success: true, count: 0, data: [] };
+      const subjects = await this.prisma.subject.findMany({
+        where: { department: { in: departments } },
+        select: { name: true },
+      });
+      if (!subjects.length) return { success: true, count: 0, data: [] };
+      where.subject = { in: subjects.map((subject) => subject.name) };
+    }
+    const data = await this.prisma.auditLog.findMany({ where, orderBy: { createdAt: 'desc' }, take: 200 });
     return {
       success: true,
-      count: this.auditEvents.length,
-      data: this.auditEvents,
+      count: data.length,
+      data,
     };
   }
 }

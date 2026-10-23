@@ -11,6 +11,8 @@ import {
   Res,
   UseGuards,
   ForbiddenException,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -331,24 +333,54 @@ export class TimetablesController {
   // ROLE-SPECIFIC TIMETABLE VIEWS
   // ==========================================
   @Get('view/student')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current student course schedule' })
   async getStudentTimetable(
+    @CurrentUser() user: any,
     @Query('department') department?: string,
     @Query('semester') semester?: string,
     @Query('section') section?: string,
+    @Query('academicYear') academicYear?: string,
   ) {
+    const role = normalizeRole(user.role);
+    if (role === 'student') {
+      if (!user.student) throw new NotFoundException('Your account is not linked to a student profile.');
+      const student = user.student;
+      if (!student.department || !student.semester || !student.section) {
+        throw new NotFoundException('Your department, semester, or section is not configured.');
+      }
+      const data = await this.timetablesService.getStudentTimetable(
+        student.department,
+        student.semester,
+        student.section,
+        student.academicYear || undefined,
+      );
+      return { success: true, data };
+    }
+    this.checkAuthorizedRole(user, ['super_admin', 'admin', 'principal', 'management', 'hod']);
+    if (!department || !semester || !section) {
+      throw new BadRequestException('Department, semester, and section are required when an administrator previews a timetable.');
+    }
     const data = await this.timetablesService.getStudentTimetable(
-      department || 'CSE',
-      semester || 'Semester 5',
-      section || 'Section A',
+      department,
+      semester,
+      section,
+      academicYear,
     );
     return { success: true, data };
   }
 
   @Get('view/faculty')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get official teaching timetable for a specific faculty member' })
-  async getFacultyTimetable(@Query('facultyName') facultyName: string) {
-    const data = await this.timetablesService.getFacultyTimetable(facultyName || 'Dr. P. Mohapatra');
+  async getFacultyTimetable(@CurrentUser() user: any) {
+    if (normalizeRole(user.role) !== 'faculty') {
+      throw new ForbiddenException('This timetable endpoint is scoped to the authenticated faculty account.');
+    }
+    if (!user.faculty?.id) throw new NotFoundException('Your account is not linked to a faculty profile.');
+    const data = await this.timetablesService.getFacultyTimetable(user.faculty.id);
     return { success: true, count: data.length, data };
   }
 }

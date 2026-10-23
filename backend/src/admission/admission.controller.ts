@@ -15,6 +15,7 @@ import { AdmissionService } from './admission.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { normalizeRole } from '../rbac/rbac';
+import { CreateApplicantDto, RejectApplicantDto } from './admission.dto';
 
 @ApiTags('Admissions & Intake')
 @Controller('admission')
@@ -94,13 +95,17 @@ export class AdmissionController {
 
   @Post('applicants')
   @ApiOperation({ summary: 'Register a new applicant into admission system' })
-  async createApplicant(@CurrentUser() user: any, @Body() body: any) {
-    this.checkAccess(
-      user,
-      ['super_admin', 'admin', 'admissions'],
-      'Registering applicants'
-    );
-    const applicant = await this.admissionService.createApplicant(body);
+  async createApplicant(@CurrentUser() user: any, @Body() body: CreateApplicantDto) {
+    const role = normalizeRole(user.role);
+    const allowed = ['super_admin', 'admin', 'admissions'];
+    if (!allowed.includes(role)) {
+      throw new ForbiddenException('Only Admissions or Administrative staff can register applicants.');
+    }
+
+    const applicant = await this.admissionService.createApplicant(body, {
+      name: user.name || user.identifier,
+      role: user.role,
+    });
     return {
       success: true,
       message: `Applicant ${applicant.name} registered with App No: ${applicant.applicationNo}`,
@@ -108,21 +113,19 @@ export class AdmissionController {
     };
   }
 
-  @Patch('applicants/:id/document/:docId')
-  @ApiOperation({ summary: 'Verify individual document, request replacement, or reject' })
-  async verifyDocument(
-    @CurrentUser() user: any,
-    @Param('id') applicantId: string,
-    @Param('docId') docId: string,
-    @Body() body: { status: 'VERIFIED' | 'REJECTED' | 'REPLACEMENT_REQUESTED' | 'UNDER_REVIEW'; remarks?: string; replacementReason?: string },
-  ) {
-    this.checkAccess(
-      user,
-      ['super_admin', 'admin', 'admissions', 'principal'],
-      'Document verification'
-    );
-    const verifierName = `${user.name} (${user.role})`;
-    const updated = await this.admissionService.verifyDocument(applicantId, docId, body, verifierName);
+  @Patch('applicants/:id/verify')
+  @ApiOperation({ summary: 'Record an admissions eligibility review' })
+  async verifyApplicant(@CurrentUser() user: any, @Param('id') id: string) {
+    const role = normalizeRole(user.role);
+    const allowed = ['super_admin', 'admin', 'admissions'];
+    if (!allowed.includes(role)) {
+      throw new ForbiddenException('Only Admissions staff can verify applicants.');
+    }
+
+    const updated = await this.admissionService.verifyApplicant(id, {
+      name: user.name || user.identifier,
+      role: user.role,
+    });
     return {
       success: true,
       message: `Document status updated to ${body.status}.`,
@@ -130,36 +133,19 @@ export class AdmissionController {
     };
   }
 
-  @Post('applicants/bulk-verify')
-  @ApiOperation({ summary: 'Bulk verify documents for selected applicants' })
-  async bulkVerifyDocuments(
-    @CurrentUser() user: any,
-    @Body('applicantIds') applicantIds: string[],
-  ) {
-    this.checkAccess(
-      user,
-      ['super_admin', 'admin', 'admissions'],
-      'Bulk document verification'
-    );
-    const verifierName = `${user.name} (${user.role})`;
-    const result = await this.admissionService.bulkVerifyDocuments(applicantIds || [], verifierName);
-    return result;
-  }
+  @Post('applicants/:id/reject')
+  @ApiOperation({ summary: 'Reject an application with documented rationale' })
+  async rejectApplicant(@CurrentUser() user: any, @Param('id') id: string, @Body() body: RejectApplicantDto) {
+    const role = normalizeRole(user.role);
+    const allowed = ['super_admin', 'admin', 'admissions', 'principal'];
+    if (!allowed.includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
 
-  @Post('applicants/:id/review')
-  @ApiOperation({ summary: 'Record admission review decision (approve, reject, waitlist, under review)' })
-  async reviewApplicant(
-    @CurrentUser() user: any,
-    @Param('id') applicantId: string,
-    @Body() body: { decision: 'APPROVE' | 'REJECT' | 'WAITLIST' | 'UNDER_REVIEW'; notes?: string; reason?: string; bypassIncompleteDocs?: boolean },
-  ) {
-    this.checkAccess(
-      user,
-      ['super_admin', 'principal', 'management', 'admin', 'admissions', 'hod'],
-      'Admission review and decision'
-    );
-    const reviewerName = `${user.name} (${user.role})`;
-    const updated = await this.admissionService.reviewApplicant(applicantId, body, reviewerName);
+    const updated = await this.admissionService.rejectApplicant(id, body.reason, {
+      name: user.name || user.identifier,
+      role: user.role,
+    });
     return {
       success: true,
       message: `Application decision updated to ${body.decision}.`,
@@ -167,95 +153,20 @@ export class AdmissionController {
     };
   }
 
-  @Post('applicants/:id/offer')
-  @ApiOperation({ summary: 'Generate provisional admission offer letter' })
-  async generateAdmissionOffer(
-    @CurrentUser() user: any,
-    @Param('id') applicantId: string,
-    @Body() body: { validUntil?: string; conditions?: string },
-  ) {
-    this.checkAccess(
-      user,
-      ['super_admin', 'principal', 'admin', 'admissions'],
-      'Issuing admission offers'
-    );
-    const officerName = `${user.name} (${user.role})`;
-    return this.admissionService.generateAdmissionOffer(applicantId, body, officerName);
-  }
-
-  @Post('applicants/:id/offer/respond')
-  @ApiOperation({ summary: 'Candidate response to offer letter (accept or decline)' })
-  async respondToOffer(
-    @CurrentUser() user: any,
-    @Param('id') applicantId: string,
-    @Body() body: { action: 'ACCEPT' | 'DECLINE'; remarks?: string },
-  ) {
-    // Both applicant/student and admission staff can record response
-    const responderName = `${user.name} (${user.role})`;
-    const updated = await this.admissionService.respondToOffer(applicantId, body, responderName);
-    return {
-      success: true,
-      message: `Offer ${body.action === 'ACCEPT' ? 'accepted' : 'declined'} successfully.`,
-      data: updated,
-    };
-  }
-
-  @Post('applicants/:id/fee-confirm')
-  @ApiOperation({ summary: 'Confirm admission fee deposit' })
-  async confirmAdmissionFee(
-    @CurrentUser() user: any,
-    @Param('id') applicantId: string,
-    @Body() body: { amount?: number; receiptRef: string; paymentMode?: string; remarks?: string },
-  ) {
-    this.checkAccess(
-      user,
-      ['super_admin', 'admin', 'accounts', 'admissions'],
-      'Fee confirmation'
-    );
-    const confirmedBy = `${user.name} (${user.role})`;
-    const updated = await this.admissionService.confirmAdmissionFee(applicantId, body, confirmedBy);
-    return {
-      success: true,
-      message: `Admission fee payment confirmed. Receipt: ${body.receiptRef}`,
-      data: updated,
-    };
-  }
-
-  @Post('applicants/:id/enroll')
-  @ApiOperation({ summary: 'Finalize institutional enrollment and provision student account' })
-  async approveAndEnroll(
-    @CurrentUser() user: any,
-    @Param('id') applicantId: string,
-    @Body() body?: { section?: string; semester?: string },
-  ) {
-    this.checkAccess(
-      user,
-      ['super_admin', 'principal', 'admin', 'admissions'],
-      'Finalizing enrollment'
-    );
-    const approverName = `${user.name} (${user.role})`;
-    return this.admissionService.approveAndEnroll(applicantId, approverName, body);
-  }
-
-  // Backwards-compatible legacy endpoints
-  @Patch('applicants/:id/verify')
-  async legacyVerify(@CurrentUser() user: any, @Param('id') id: string) {
-    const verifierName = `${user.name} (${user.role})`;
-    const updated = await this.admissionService.reviewApplicant(id, { decision: 'APPROVE', bypassIncompleteDocs: true }, verifierName);
-    return { success: true, message: `Applicant verified.`, data: updated };
-  }
-
-  @Post('applicants/:id/reject')
-  async legacyReject(@CurrentUser() user: any, @Param('id') id: string, @Body('reason') reason: string) {
-    const reviewerName = `${user.name} (${user.role})`;
-    const updated = await this.admissionService.reviewApplicant(id, { decision: 'REJECT', reason }, reviewerName);
-    return { success: true, message: `Application rejected.`, data: updated };
-  }
-
   @Post('applicants/:id/approve')
-  async legacyApprove(@CurrentUser() user: any, @Param('id') id: string) {
-    const approverName = `${user.name} (${user.role})`;
-    return this.admissionService.approveAndEnroll(id, approverName);
+  @ApiOperation({ summary: 'Approve admission and create student and enrollment records' })
+  async approveAndEnroll(@CurrentUser() user: any, @Param('id') id: string) {
+    const role = normalizeRole(user.role);
+    const allowed = ['super_admin', 'admin', 'admissions', 'principal'];
+    if (!allowed.includes(role)) {
+      throw new ForbiddenException('Access denied. Only Admissions Head, CAO or Super Admin can finalize enrollment.');
+    }
+
+    return this.admissionService.approveAndEnroll(id, {
+      id: user.id,
+      name: user.name || user.identifier,
+      role: user.role,
+    });
   }
 
   // Deadlines

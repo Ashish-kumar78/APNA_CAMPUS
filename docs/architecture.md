@@ -1,5 +1,7 @@
 # College Management System Architecture
 
+> **Current implementation note (2026-10-21):** The canonical persistence target is MongoDB Atlas through Prisma. The schema in [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma) is authoritative. This file contains older conceptual ER descriptions and role assumptions; do not treat those as the current database schema or permission contract. MongoDB relations are emulated by Prisma and do not create relational foreign keys. The divergent root `prisma/schema.prisma` and committed SQL migrations are legacy artifacts.
+
 ## 1. Complete feature list
 
 ### Core modules
@@ -62,7 +64,7 @@
 
 ## 3. Database ER diagram description
 
-Entities form a normalized relational structure with one-to-many and many-to-many relationships.
+The current MongoDB model uses collections with references represented by CUID string fields. Prisma emulates relation behavior at the client layer; service validation and indexes are required to protect related data.
 
 Core hierarchy:
 - User -> Role
@@ -78,7 +80,7 @@ Core hierarchy:
 
 ## 4. Database schema
 
-The detailed relational schema is implemented in Prisma in [prisma/schema.prisma](../prisma/schema.prisma).
+The current MongoDB schema is implemented in Prisma in [backend/prisma/schema.prisma](../backend/prisma/schema.prisma).
 
 Key tables:
 - `User`
@@ -290,6 +292,6 @@ This repository currently contains the Phase 1 foundation:
 - modern Vite/React frontend shell
 - Express API scaffold
 - JWT-based auth and RBAC module
-- Prisma relational schema
+- Prisma MongoDB schema and indexes
 - initial design system and dashboard layout
 - unit tests for role permission logic

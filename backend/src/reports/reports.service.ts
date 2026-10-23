@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FacultyService } from '../faculty/faculty.service';
 import { ReportQueryDto } from './reports.dto';
@@ -25,56 +25,29 @@ export class ReportsService {
   async getFilterOptions(user: any) {
     const role = normalizeRole(user?.role || '');
 
-    // Get departments/branches from database with fallback
-    let departments: any[] = [];
-    try {
-      departments = await this.prisma.department.findMany({
-        orderBy: { code: 'asc' },
-        select: { code: true, name: true },
-      });
-    } catch {
-      departments = [
-        { code: 'CSE', name: 'Computer Science & Engineering' },
-        { code: 'AIML', name: 'Artificial Intelligence & Machine Learning' },
-        { code: 'ECE', name: 'Electronics & Communication' },
-        { code: 'EEE', name: 'Electrical & Electronics' },
-        { code: 'MECH', name: 'Mechanical Engineering' },
-        { code: 'CIVIL', name: 'Civil Engineering' },
-        { code: 'MBA', name: 'Master of Business Administration' },
-        { code: 'MCA', name: 'Master of Computer Applications' },
-      ];
-    }
-
-    if (departments.length === 0) {
-      departments = [
-        { code: 'CSE', name: 'Computer Science & Engineering' },
-        { code: 'AIML', name: 'Artificial Intelligence & Machine Learning' },
-        { code: 'ECE', name: 'Electronics & Communication' },
-        { code: 'EEE', name: 'Electrical & Electronics' },
-        { code: 'MECH', name: 'Mechanical Engineering' },
-        { code: 'CIVIL', name: 'Civil Engineering' },
-        { code: 'MBA', name: 'Master of Business Administration' },
-        { code: 'MCA', name: 'Master of Computer Applications' },
-      ];
-    }
-
-    let semesters = [
-      { number: 1, label: 'Semester 1' },
-      { number: 2, label: 'Semester 2' },
-      { number: 3, label: 'Semester 3' },
-      { number: 4, label: 'Semester 4' },
-      { number: 5, label: 'Semester 5' },
-      { number: 6, label: 'Semester 6' },
-      { number: 7, label: 'Semester 7' },
-      { number: 8, label: 'Semester 8' },
-    ];
-
-    let batches = ['2024–2028', '2023–2027', '2022–2026', '2021–2025'];
-    let sections = ['Section A', 'Section B', 'Section C'];
+    const facultyAssignmentsPromise = role === 'faculty' && user?.faculty?.id
+      ? this.prisma.facultyAssignment.findMany({
+          where: { facultyId: user.faculty.id },
+          include: { courseOffering: true },
+          orderBy: [{ academicYear: 'desc' }, { createdAt: 'asc' }],
+        })
+      : Promise.resolve([]);
+    const [departments, students, facultyAssignments] = await Promise.all([
+      this.prisma.department.findMany({ orderBy: { code: 'asc' }, select: { code: true, name: true } }),
+      this.prisma.student.findMany({ select: { semester: true, academicYear: true, section: true } }),
+      facultyAssignmentsPromise,
+    ]);
+    const unique = (values: Array<string | null | undefined>) => [...new Set(values.filter((value): value is string => Boolean(value?.trim())))].sort();
+    const semesters = unique(students.map((student) => student.semester)).map((label) => ({
+      number: Number(label.match(/\d+/)?.[0]) || null,
+      label,
+    }));
+    const batches = unique(students.map((student) => student.academicYear));
+    const sections = unique(students.map((student) => student.section));
     const reportTypes = [
       { id: 'attendance', name: 'Attendance Report', description: 'Subject & class attendance percentages with held/present counts' },
       { id: 'cgpa', name: 'CGPA Report', description: 'Cumulative grade point averages & academic standing' },
-      { id: 'sgpa', name: 'SGPA Report', description: 'Semester-wise performance & examination results' },
+      { id: 'sgpa', name: 'SGPA Report', description: 'Unavailable until certified semester results are configured', available: false },
       { id: 'document', name: 'Document Status Report', description: 'Student document submission, verification & compliance registry' },
     ];
 
@@ -92,47 +65,18 @@ export class ReportsService {
     // Determine role restrictions
     let isBranchRestricted = false;
     let allowedBranches: string[] = departments.map((d) => d.code);
-    let defaultBranch = 'CSE';
+    let defaultBranch = '';
 
     if (role === 'hod') {
       isBranchRestricted = true;
       const deptCode = this.getDeptCodeFromUser(user);
-      allowedBranches = [deptCode];
-      defaultBranch = deptCode;
+      allowedBranches = deptCode ? [deptCode] : [];
+      defaultBranch = deptCode || '';
     } else if (role === 'faculty') {
       isBranchRestricted = true;
       const deptCode = this.getDeptCodeFromUser(user);
-      allowedBranches = [deptCode];
-      defaultBranch = deptCode;
-
-      // Extract dynamic teaching responsibilities
-      try {
-        facultyAssignments = await this.facultyService.getAssignments(user?.name || user?.username || 'Dr. S. Mohanty');
-        if (facultyAssignments && facultyAssignments.length > 0) {
-          academicYears = Array.from(new Set(facultyAssignments.map((a) => a.academicYear))).sort().reverse();
-          const semSet = new Set(facultyAssignments.map((a) => parseInt(a.semester.replace(/[^0-9]/g, ''), 10)));
-          semesters = Array.from(semSet)
-            .sort((a, b) => a - b)
-            .map((num) => ({ number: num, label: `Semester ${num}` }));
-          sections = Array.from(new Set(facultyAssignments.map((a) => a.section))).sort();
-          facultySubjects = Array.from(
-            new Map(
-              facultyAssignments.map((a) => [
-                a.subjectCode,
-                {
-                  code: a.subjectCode,
-                  name: a.subjectName,
-                  semester: a.semester,
-                  section: a.section,
-                  academicYear: a.academicYear,
-                },
-              ]),
-            ).values(),
-          );
-        }
-      } catch {
-        // Fallback to defaults if assignment retrieval fails
-      }
+      allowedBranches = deptCode ? [deptCode] : [];
+      defaultBranch = deptCode || '';
     }
 
     return {
@@ -146,13 +90,20 @@ export class ReportsService {
       semesters,
       batches,
       sections,
-      subjects: facultySubjects,
-      assignedClasses: facultyAssignments,
-      reportScopes,
+      assignedClasses: facultyAssignments.map((assignment) => ({
+        facultyId: user.faculty.employeeId,
+        facultyName: user.name,
+        subjectCode: assignment.courseOffering.subjectCode,
+        subjectName: assignment.courseOffering.subjectName,
+        semester: assignment.courseOffering.semester,
+        academicYear: assignment.academicYear,
+        section: assignment.section,
+        department: assignment.courseOffering.department,
+      })),
       reportTypes,
       userScope: {
         role,
-        department: user?.department || 'Computer Science & Engineering',
+        department: user?.department || null,
         isBranchRestricted,
         allowedBranches,
         defaultBranch,
@@ -187,6 +138,7 @@ export class ReportsService {
     let scopedBranch = query.branch;
     if (role === 'hod' || role === 'faculty') {
       const userDeptCode = this.getDeptCodeFromUser(user);
+      if (!userDeptCode) throw new ForbiddenException('Your account has no verified department assignment for academic reports.');
       if (scopedBranch && scopedBranch !== 'All' && scopedBranch !== userDeptCode) {
         throw new ForbiddenException(
           `Unauthorized scope: ${role.toUpperCase()} is restricted to their assigned department (${userDeptCode}).`,
@@ -195,71 +147,8 @@ export class ReportsService {
       scopedBranch = userDeptCode;
     }
 
-    // Fetch matching students scoped strictly by faculty teaching assignments or department
-    let allStudents: any[] = [];
-    if (role === 'faculty') {
-      const facultyIdent = user?.name || user?.username || 'Dr. S. Mohanty';
-      const scopeMode =
-        query.scopeMode ||
-        (query.rollNumber || query.studentId
-          ? 'individual'
-          : query.subjectCode && !query.section
-          ? 'subject'
-          : query.semester && query.section
-          ? 'section'
-          : 'all_assigned');
-
-      if (scopeMode === 'all_assigned') {
-        allStudents = await this.facultyService.getScopedStudents(facultyIdent, {
-          isConsolidated: true,
-          academicYear: query.academicYear,
-          search: query.search,
-        });
-      } else if (scopeMode === 'subject') {
-        allStudents = await this.facultyService.getScopedStudents(facultyIdent, {
-          subjectCode: query.subjectCode,
-          academicYear: query.academicYear,
-          search: query.search,
-        });
-      } else if (scopeMode === 'class') {
-        allStudents = await this.facultyService.getScopedStudents(facultyIdent, {
-          semester: query.semester,
-          academicYear: query.academicYear,
-          search: query.search,
-        });
-      } else if (scopeMode === 'individual') {
-        const authorized = await this.facultyService.getScopedStudents(facultyIdent, {
-          isConsolidated: true,
-          academicYear: query.academicYear,
-          search: query.search,
-        });
-        const target = query.rollNumber || query.studentId || query.search;
-        if (target) {
-          allStudents = authorized.filter(
-            (s) =>
-              (s.rollNumber && s.rollNumber.toLowerCase() === target.toLowerCase()) ||
-              (s.studentId && s.studentId.toLowerCase() === target.toLowerCase()) ||
-              (s.name && s.name.toLowerCase().includes(target.toLowerCase())),
-          );
-        } else {
-          allStudents = authorized.slice(0, 1);
-        }
-        if (allStudents.length === 0) {
-          throw new BadRequestException('Student not found in your assigned teaching cohorts or unauthorized access.');
-        }
-      } else {
-        // scopeMode === 'section' or default
-        allStudents = await this.facultyService.getScopedStudents(facultyIdent, {
-          academicYear: query.academicYear,
-          semester: query.semester,
-          section: query.section,
-          subjectCode: query.subjectCode,
-          search: query.search,
-        });
-      }
-    } else {
-      allStudents = await this.fetchStudentsFromDbOrFallback(scopedBranch, query.semester, query.section, query.search);
-    }
+    // Fetch matching students from database with relations
+    const allStudents = await this.fetchStudentsFromDb(scopedBranch, query.semester, query.section, query.search, query.batch);
 
     // Compute student reports based on requested type
     const reportType = (query.reportType || 'attendance').toLowerCase();
@@ -274,10 +163,7 @@ export class ReportsService {
         break;
       }
       case 'sgpa': {
-        const res = this.buildSgpaReport(allStudents, query);
-        records = res.records;
-        summary = res.summary;
-        break;
+        throw new ServiceUnavailableException('Semester grades are unavailable until certified semester results are stored.');
       }
       case 'document': {
         const res = this.buildDocumentReport(allStudents, query);
@@ -287,7 +173,7 @@ export class ReportsService {
       }
       case 'attendance':
       default: {
-        const res = this.buildAttendanceReport(allStudents, query);
+        const res = await this.buildAttendanceReport(allStudents, query, scopedBranch);
         records = res.records;
         summary = res.summary;
         break;
@@ -532,266 +418,86 @@ export class ReportsService {
 
   // ─── PRIVATE REPORT BUILDERS & CALCULATIONS ────────────────────────────────
 
-  private buildAttendanceReport(students: any[], query: ReportQueryDto) {
-    let daysInRange = 0;
-    if (query.dateFrom && query.dateTo) {
-      const d1 = new Date(query.dateFrom);
-      const d2 = new Date(query.dateTo);
-      const diffTime = Math.abs(d2.getTime() - d1.getTime());
-      const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-      // Exclude approx Sundays (6/7 ratio)
-      daysInRange = Math.max(1, Math.round(totalDays * (6 / 7)));
+  private async buildAttendanceReport(students: any[], query: ReportQueryDto, branch?: string) {
+    const where: any = {};
+    if (query.dateFrom || query.dateTo) where.date = { ...(query.dateFrom ? { gte: query.dateFrom } : {}), ...(query.dateTo ? { lte: query.dateTo } : {}) };
+    if (query.semester && query.semester !== 'All') where.semester = query.semester.includes('Semester') ? query.semester : `Semester ${query.semester}`;
+    if (query.section && query.section !== 'All') where.section = query.section.includes('Section') ? query.section : `Section ${query.section}`;
+    const sessions = await this.prisma.attendanceSession.findMany({ where, select: { entries: true } });
+    const studentsById = new Map(students.map((student) => [student.id, student]));
+    const attendance = new Map<string, { held: number; present: number }>();
+    for (const session of sessions) {
+      const entries = Array.isArray(session.entries) ? session.entries as any[] : [];
+      for (const entry of entries) {
+        const student = studentsById.get(entry.studentId);
+        if (!student || typeof entry.present !== 'boolean') continue;
+        const current = attendance.get(student.id) || { held: 0, present: 0 };
+        current.held += 1;
+        if (entry.present) current.present += 1;
+        attendance.set(student.id, current);
+      }
     }
-
-    let totalHeldSum = 0;
-    let totalPresentSum = 0;
-    let below75Count = 0;
-
-    const records = students.map((s, idx) => {
-      const rate = typeof s.attendance === 'number' ? s.attendance : 85;
-      const baseHeld = daysInRange > 0 ? daysInRange * 6 : 60; // 6 classes per instructional day
-      const held = Math.max(1, baseHeld);
-      const present = Math.min(held, Math.max(0, Math.round((held * rate) / 100)));
-      const absent = held - present;
-      const pctValue = held > 0 ? (present / held) * 100 : 0;
-      const attendancePercentage = pctValue.toFixed(2) + '%';
-
-      if (pctValue < 75) below75Count++;
-      totalHeldSum += held;
-      totalPresentSum += present;
-
-      return {
-        slNo: idx + 1,
-        studentName: s.name,
-        registrationNumber: s.studentId || s.rollNumber || `23052010${String(idx + 1).padStart(2, '0')}`,
-        branch: s.deptCode || 'CSE',
-        semester: s.semester || 'Semester 5',
-        section: s.section || 'Section A',
-        batch: this.deriveBatch(s.semester),
-        subjectCode: s.subjectCode || query.subjectCode || 'CS501',
-        subjectName: s.subjectName || 'Data Structures & Algorithms',
-        academicYear: s.academicYear || query.academicYear || '2026-27',
-        totalClassesHeld: held,
-        present,
-        absent,
-        attendancePercentage,
-        rawPercentage: pctValue,
-      };
+    if (attendance.size === 0) throw new ServiceUnavailableException('Attendance reports are unavailable because no matching persisted attendance sessions exist.');
+    let totalHeld = 0;
+    let totalPresent = 0;
+    let belowThreshold = 0;
+    const records = students.flatMap((student, index) => {
+      const counts = attendance.get(student.id);
+      if (!counts || counts.held === 0) return [];
+      const percentage = Number(((counts.present / counts.held) * 100).toFixed(2));
+      totalHeld += counts.held;
+      totalPresent += counts.present;
+      if (percentage < 75) belowThreshold += 1;
+      return [{ slNo: index + 1, studentName: student.name, registrationNumber: student.studentId || student.rollNumber || null,
+        branch: student.deptCode || student.department || null, semester: student.semester || null,
+        section: student.section || null, batch: student.academicYear || null, totalClassesHeld: counts.held,
+        present: counts.present, absent: counts.held - counts.present, attendancePercentage: percentage.toFixed(2) + '%', rawPercentage: percentage }];
     });
-
-    const avgAttendance =
-      totalHeldSum > 0 ? Number(((totalPresentSum / totalHeldSum) * 100).toFixed(2)) : 0;
-
-    const summary: ReportSummary = {
-      totalStudents: records.length,
-      averageMetric: avgAttendance,
-      metricLabel: 'Average Attendance Rate (%)',
-      recordsRequiringAttention: below75Count,
-      attentionLabel: 'Students with Shortage (<75%)',
-      totalMatchingRecords: records.length,
-    };
-
-    return { records, summary };
+    const average = totalHeld ? Number(((totalPresent / totalHeld) * 100).toFixed(2)) : 0;
+    return { records, summary: { totalStudents: records.length, averageMetric: average, metricLabel: 'Average Attendance Rate (%)',
+      recordsRequiringAttention: belowThreshold, attentionLabel: 'Students below 75% attendance', totalMatchingRecords: records.length } };
   }
 
-  private buildCgpaReport(students: any[], query: ReportQueryDto) {
-    let totalCgpa = 0;
+  private buildCgpaReport(students: any[], _query: ReportQueryDto) {
+    const graded = students.filter((student) => typeof student.cgpa === 'number' && Number.isFinite(student.cgpa));
+    if (graded.length === 0) throw new ServiceUnavailableException('CGPA reports are unavailable because no persisted CGPA values exist for the selected students.');
     let belowThresholdCount = 0;
-
-    const records = students.map((s, idx) => {
-      const cgpa = typeof s.cgpa === 'number' ? Number(s.cgpa.toFixed(2)) : 8.24;
+    const records = graded.map((student, index) => {
+      const cgpa = Number(student.cgpa.toFixed(2));
       let academicStatus = 'Good Standing';
-
-      if (cgpa >= 9.0) {
-        academicStatus = "Dean's Honors List";
-      } else if (cgpa >= 8.0) {
-        academicStatus = 'Good Standing (Distinction)';
-      } else if (cgpa >= 6.5) {
-        academicStatus = 'Good Standing (First Class)';
-      } else if (cgpa >= 5.0) {
-        academicStatus = 'Good Standing';
-      } else {
-        academicStatus = 'Academic Warning / Review';
-        belowThresholdCount++;
-      }
-
-      totalCgpa += cgpa;
-
-      return {
-        slNo: idx + 1,
-        studentName: s.name,
-        registrationNumber: s.studentId || s.rollNumber || `23052010${String(idx + 1).padStart(2, '0')}`,
-        branch: s.deptCode || 'CSE',
-        semester: s.semester || 'Semester 5',
-        section: s.section || 'Section A',
-        batch: this.deriveBatch(s.semester),
-        subjectCode: s.subjectCode || query.subjectCode || 'CS501',
-        subjectName: s.subjectName || 'Data Structures & Algorithms',
-        academicYear: s.academicYear || query.academicYear || '2026-27',
-        cgpa,
-        academicStatus,
-      };
+      if (cgpa >= 9) academicStatus = "Dean's Honors List";
+      else if (cgpa >= 8) academicStatus = 'Good Standing (Distinction)';
+      else if (cgpa >= 6.5) academicStatus = 'Good Standing (First Class)';
+      else if (cgpa < 5) { academicStatus = 'Academic Warning / Review'; belowThresholdCount += 1; }
+      return { slNo: index + 1, studentName: student.name, registrationNumber: student.studentId || student.rollNumber || null,
+        branch: student.deptCode || student.department || null, semester: student.semester || null,
+        section: student.section || null, batch: student.academicYear || null, cgpa, academicStatus };
     });
-
-    const avgCgpa =
-      records.length > 0 ? Number((totalCgpa / records.length).toFixed(2)) : 0;
-
-    const summary: ReportSummary = {
-      totalStudents: records.length,
-      averageMetric: avgCgpa,
-      metricLabel: 'Average Institutional CGPA',
-      recordsRequiringAttention: belowThresholdCount,
-      attentionLabel: 'Students on Academic Warning (<6.0)',
-      totalMatchingRecords: records.length,
-    };
-
-    return { records, summary };
+    const average = Number((graded.reduce((sum, student) => sum + student.cgpa, 0) / graded.length).toFixed(2));
+    return { records, summary: { totalStudents: records.length, averageMetric: average, metricLabel: 'Average persisted CGPA',
+      recordsRequiringAttention: belowThresholdCount, attentionLabel: 'Students below academic standing threshold', totalMatchingRecords: records.length } };
   }
 
-  private buildSgpaReport(students: any[], query: ReportQueryDto) {
-    let totalSgpa = 0;
-    let backlogsCount = 0;
-
-    const records = students.map((s, idx) => {
-      // SGPA slightly varies around CGPA with credit weighting
-      const rawCgpa = typeof s.cgpa === 'number' ? s.cgpa : 8.24;
-      const variation = (((idx * 17) % 30) - 15) / 100;
-      let sgpa = Number((rawCgpa + variation).toFixed(2));
-      if (sgpa > 10.0) sgpa = 10.0;
-      if (sgpa < 4.5) sgpa = 4.5;
-
-      let resultStatus = 'Pass';
-      if (sgpa >= 9.0) {
-        resultStatus = 'Pass (First Class Distinction)';
-      } else if (sgpa >= 6.5) {
-        resultStatus = 'Pass (First Class)';
-      } else if (sgpa >= 5.0) {
-        resultStatus = 'Pass';
-      } else {
-        resultStatus = 'Fail (Backlog in 1 Paper)';
-        backlogsCount++;
-      }
-
-      totalSgpa += sgpa;
-
-      return {
-        slNo: idx + 1,
-        studentName: s.name,
-        registrationNumber: s.studentId || s.rollNumber || `23052010${String(idx + 1).padStart(2, '0')}`,
-        branch: s.deptCode || 'CSE',
-        semester: s.semester || 'Semester 5',
-        section: s.section || 'Section A',
-        batch: this.deriveBatch(s.semester),
-        subjectCode: s.subjectCode || query.subjectCode || 'CS501',
-        subjectName: s.subjectName || 'Data Structures & Algorithms',
-        academicYear: s.academicYear || query.academicYear || '2026-27',
-        sgpa,
-        resultStatus,
-      };
+  private buildDocumentReport(students: any[], _query: ReportQueryDto) {
+    let submittedTotal = 0;
+    let verifiedTotal = 0;
+    let studentsWithPendingDocuments = 0;
+    const records = students.map((student, index) => {
+      const documents = Array.isArray(student.documents) ? student.documents : [];
+      const submitted = documents.length;
+      const verified = documents.filter((document: any) => document.status?.toLowerCase() === 'verified' || document.verifiedByAdmin === true).length;
+      const pending = submitted - verified;
+      if (pending > 0) studentsWithPendingDocuments += 1;
+      submittedTotal += submitted;
+      verifiedTotal += verified;
+      return { slNo: index + 1, studentName: student.name, registrationNumber: student.studentId || student.rollNumber || null,
+        branch: student.deptCode || student.department || null, semester: student.semester || null,
+        section: student.section || null, batch: student.academicYear || null, totalRequired: null,
+        submitted, verified, pending, verificationStatus: submitted === 0 ? 'No documents recorded' : pending === 0 ? 'All recorded documents verified' : 'Verification pending' };
     });
-
-    const avgSgpa =
-      records.length > 0 ? Number((totalSgpa / records.length).toFixed(2)) : 0;
-
-    const summary: ReportSummary = {
-      totalStudents: records.length,
-      averageMetric: avgSgpa,
-      metricLabel: 'Average Semester SGPA',
-      recordsRequiringAttention: backlogsCount,
-      attentionLabel: 'Students with Backlogs / Arrears',
-      totalMatchingRecords: records.length,
-    };
-
-    return { records, summary };
-  }
-
-  private buildDocumentReport(students: any[], query: ReportQueryDto) {
-    const totalRequired = 5; // Standard Autonomous checklist (10th, 12th, Aadhaar, Migration, Conduct)
-    let totalVerified = 0;
-    let pendingActionCount = 0;
-
-    const records = students.map((s, idx) => {
-      // If student has documents relation in DB
-      let submitted = totalRequired;
-      let verified = totalRequired;
-
-      if (s.documents && Array.isArray(s.documents)) {
-        submitted = Math.min(totalRequired, s.documents.length);
-        verified = s.documents.filter((d: any) => d.status === 'Verified' || d.verifiedByAdmin).length;
-      } else {
-        // Deterministic profile based on roll index
-        if (idx % 11 === 0) {
-          submitted = 4;
-          verified = 3;
-        } else if (idx % 7 === 0) {
-          submitted = 5;
-          verified = 4;
-        } else {
-          submitted = 5;
-          verified = 5;
-        }
-      }
-
-      const pending = Math.max(0, totalRequired - verified);
-      let verificationStatus = 'Verified & Complete';
-
-      if (verified === totalRequired) {
-        verificationStatus = 'Verified & Complete';
-      } else if (submitted === totalRequired && verified < totalRequired) {
-        verificationStatus = 'Pending Office Verification';
-        pendingActionCount++;
-      } else {
-        verificationStatus = 'Action Required (Deficient)';
-        pendingActionCount++;
-      }
-
-      totalVerified += verified;
-
-      return {
-        slNo: idx + 1,
-        studentName: s.name,
-        registrationNumber: s.studentId || s.rollNumber || `23052010${String(idx + 1).padStart(2, '0')}`,
-        branch: s.deptCode || 'CSE',
-        semester: s.semester || 'Semester 5',
-        section: s.section || 'Section A',
-        batch: this.deriveBatch(s.semester),
-        subjectCode: s.subjectCode || query.subjectCode || 'CS501',
-        subjectName: s.subjectName || 'Data Structures & Algorithms',
-        academicYear: s.academicYear || query.academicYear || '2026-27',
-        totalRequired,
-        submitted,
-        verified,
-        pending,
-        verificationStatus,
-      };
-    });
-
-    const complianceRate =
-      records.length > 0
-        ? Number(((totalVerified / (records.length * totalRequired)) * 100).toFixed(1))
-        : 100;
-
-    const summary: ReportSummary = {
-      totalStudents: records.length,
-      averageMetric: complianceRate,
-      metricLabel: 'Document Verification Compliance (%)',
-      recordsRequiringAttention: pendingActionCount,
-      attentionLabel: 'Students with Incomplete Documents',
-      totalMatchingRecords: records.length,
-    };
-
-    return { records, summary };
-  }
-
-  // ─── HELPERS ────────────────────────────────────────────────────────────────
-
-  private deriveBatch(semester?: string): string {
-    if (!semester) return '2023–2027';
-    const num = parseInt(semester.replace(/[^0-9]/g, ''), 10);
-    if (num <= 2) return '2026–2030';
-    if (num <= 4) return '2025–2029';
-    if (num <= 6) return '2023–2027';
-    return '2022–2026';
+    const compliance = submittedTotal ? Number(((verifiedTotal / submittedTotal) * 100).toFixed(1)) : 0;
+    return { records, summary: { totalStudents: records.length, averageMetric: compliance, metricLabel: 'Recorded documents verified (%)',
+      recordsRequiringAttention: studentsWithPendingDocuments, attentionLabel: 'Students with recorded documents pending verification', totalMatchingRecords: records.length } };
   }
 
   private validateDateRange(from?: string, to?: string) {
@@ -807,8 +513,8 @@ export class ReportsService {
     }
   }
 
-  private getDeptCodeFromUser(user: any): string {
-    const raw = (user?.department || '').toUpperCase();
+  private getDeptCodeFromUser(user: any): string | null {
+    const raw = (user?.hod?.deptCode || user?.faculty?.department || user?.department || '').toUpperCase();
     if (raw.includes('CSE') || raw.includes('COMPUTER SCIENCE')) return 'CSE';
     if (raw.includes('AIML') || raw.includes('ARTIFICIAL INTELLIGENCE')) return 'AIML';
     if (raw.includes('ECE') || raw.includes('ELECTRONICS')) return 'ECE';
@@ -817,7 +523,7 @@ export class ReportsService {
     if (raw.includes('CIVIL')) return 'CIVIL';
     if (raw.includes('MBA')) return 'MBA';
     if (raw.includes('MCA')) return 'MCA';
-    return 'CSE';
+    return null;
   }
 
   private getReportTitle(reportType: string): string {
@@ -869,11 +575,12 @@ export class ReportsService {
     });
   }
 
-  private async fetchStudentsFromDbOrFallback(
+  private async fetchStudentsFromDb(
     branch?: string,
     semester?: string,
     section?: string,
     search?: string,
+    academicYear?: string,
   ) {
     const where: any = {};
 
@@ -889,6 +596,8 @@ export class ReportsService {
       where.section = section.includes('Section') ? section : `Section ${section}`;
     }
 
+    if (academicYear && academicYear !== 'All') where.academicYear = academicYear;
+
     if (search && search.trim()) {
       const q = search.trim();
       where.AND = [
@@ -902,71 +611,10 @@ export class ReportsService {
       ];
     }
 
-    try {
-      const dbStudents = await this.prisma.student.findMany({
-        where,
-        include: { documents: true },
-        orderBy: { rollNumber: 'asc' },
-      });
-
-      if (dbStudents && dbStudents.length > 0) {
-        return dbStudents;
-      }
-    } catch {
-      // In-memory fallback if database is currently unreachable
-    }
-
-    // Fallback deterministic student roster (91 students)
-    const fallbackStudents: any[] = [];
-    const firstNames = [
-      'Rakesh', 'Amit', 'Raj', 'Priya', 'Sourav', 'Sneha', 'Deepak', 'Puja', 'Bikash', 'Swati',
-      'Rohit', 'Monika', 'Subham', 'Ipsita', 'Alok', 'Smruti', 'Chandan', 'Tanmay', 'Lipika', 'Manas',
-      'Pragyan', 'Biswajit', 'Archana', 'Gourab', 'Satyajit', 'Sonali', 'Ashish', 'Kiran', 'Pranab', 'Niharika',
-    ];
-    const lastNames = [
-      'Das', 'Nayak', 'Sahoo', 'Patra', 'Mohanty', 'Barik', 'Rout', 'Behera', 'Pradhan', 'Samal',
-      'Panda', 'Mishra', 'Tripathy', 'Parida', 'Jena', 'Swain', 'Mangaraj', 'Muduli', 'Kar', 'Acharya',
-    ];
-
-    for (let i = 1; i <= 91; i++) {
-      const roll = String(i).padStart(2, '0');
-      const fName = firstNames[(i - 1) % firstNames.length];
-      const lName = lastNames[(i * 3) % lastNames.length];
-      const fullName = `${fName} ${lName}`;
-      const studentId = `23052010${roll}`;
-      const deptCode = branch && branch !== 'All' ? branch : 'CSE';
-
-      fallbackStudents.push({
-        id: `std-${i}`,
-        studentId,
-        rollNumber: roll,
-        name: fullName,
-        deptCode,
-        department: 'Computer Science & Engineering',
-        semester: semester && semester !== 'All' ? semester : 'Semester 5',
-        section: section && section !== 'All' ? section : 'Section A',
-        academicYear: '2026-27',
-        status: i > 85 ? 'On Leave' : 'Active',
-        cgpa: Number((7.0 + ((i * 17) % 280) / 100).toFixed(2)),
-        attendance: 65 + ((i * 13) % 34),
-        documents: [],
-      });
-    }
-
-    // Apply filters on fallback
-    return fallbackStudents.filter((s) => {
-      if (branch && branch !== 'All' && s.deptCode !== branch) return false;
-      if (semester && semester !== 'All' && s.semester !== semester) return false;
-      if (section && section !== 'All' && s.section !== section) return false;
-      if (search && search.trim()) {
-        const q = search.trim().toLowerCase();
-        const match =
-          s.name.toLowerCase().includes(q) ||
-          s.rollNumber.toLowerCase().includes(q) ||
-          s.studentId.toLowerCase().includes(q);
-        if (!match) return false;
-      }
-      return true;
+    return this.prisma.student.findMany({
+      where,
+      include: { documents: true },
+      orderBy: { rollNumber: 'asc' },
     });
   }
 }

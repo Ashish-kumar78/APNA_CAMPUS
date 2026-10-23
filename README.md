@@ -14,9 +14,9 @@ c
 CMS/
 ├── backend/                  # NestJS API Server
 │   ├── prisma/
-│   │   ├── migrations/       # Committed version-controlled Prisma migrations
-│   │   ├── schema.prisma     # Active PostgreSQL Prisma data models
-│   │   └── seed.ts           # Comprehensive seed script (14 roles, departments, subjects)
+│   │   ├── migrations/       # Legacy PostgreSQL migrations (not used by Atlas)
+│   │   ├── schema.prisma     # Canonical MongoDB Prisma data models
+│   │   └── seed.ts           # Optional development-only sample domain data; no user accounts
 │   ├── src/                  # NestJS modules (auth, students, marks, academics, fees, etc.)
 │   ├── .env.example          # Backend environment template
 │   └── package.json
@@ -42,15 +42,14 @@ Ensure the following are installed on your Windows machine:
    - Check with: `node -v`
 2. **npm**: `v9.x` or `v10.x`
    - Check with: `npm -v`
-3. **PostgreSQL**: `v14` or higher (running locally or in Docker)
-   - Check with: `psql --version`
+3. **MongoDB Atlas**: a MongoDB cluster, database user, and an IP/network access rule for your development machine.
 4. **PowerShell**: Windows PowerShell 5.1 or PowerShell 7+
 
 ---
 
 ## ⚡ Option A: Automated Developer Setup (Recommended)
 
-Run the included PowerShell onboarding script from the repository root. It checks prerequisites, copies `.env` templates without overwriting existing files, validates configuration keys, installs dependencies, and verifies database connectivity:
+Run the included PowerShell onboarding script from the repository root. It checks prerequisites, creates missing `.env` files without overwriting existing files, validates configuration keys, installs dependencies, and generates Prisma Client. It does not connect to Atlas or write database schema/data:
 
 ```powershell
 # Open PowerShell in the project root:
@@ -81,37 +80,22 @@ cd CMS
 Copy the provided environment templates:
 
 ```powershell
-# 1. Create Backend environment file
-Copy-Item backend\.env.example backend\.env
-
-# 2. Create Frontend environment file
-Copy-Item frontend\.env.example frontend\.env
-
-# 3. Create Root environment file (optional for root scripts)
-Copy-Item .env.example .env
+if (-not (Test-Path backend\.env)) { Copy-Item backend\.env.example backend\.env }
+if (-not (Test-Path frontend\.env)) { Copy-Item frontend\.env.example frontend\.env }
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Open `backend\.env` in your text editor and adjust `DATABASE_URL` with your local PostgreSQL password:
+If an `.env` file already exists, keep it and edit only the required keys. See [Atlas setup after backend completion](docs/ATLAS_SETUP_AFTER_BACKEND.md) for the full safe Atlas process, including macOS steps.
+
+Open `backend\.env` in your text editor and set `DATABASE_URL` to the Atlas connection string shown by Atlas under **Connect → Drivers**. Use a database user, not your Atlas website login. Keep the URI private and do not commit it:
 
 ```env
-DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/college_management?schema=public"
+DATABASE_URL="mongodb+srv://<db_user>:<db_password>@<cluster-host>/apna_campus?retryWrites=true&w=majority"
 ```
 
-### Step 3: Set Up Local PostgreSQL Database
+Replace the placeholders locally. URL-encode special characters in the username/password. Atlas must allow the developer machine's IP (or the configured private network) and the database user needs only the permissions required by this application.
 
-Ensure PostgreSQL is running on your machine:
-
-```powershell
-# Check PostgreSQL Windows Service
-Get-Service -Name postgresql* | Start-Service
-
-# Create the database using PostgreSQL CLI (psql)
-psql -U postgres -c "CREATE DATABASE college_management;"
-```
-
-*(If prompted, enter your PostgreSQL superuser password).*
-
-### Step 4: Install Dependencies
+### Step 3: Install Dependencies
 
 Install all dependencies across the root, backend, and frontend with a single command:
 
@@ -126,35 +110,29 @@ npm install --prefix backend
 npm install --prefix frontend
 ```
 
-### Step 5: Generate Prisma Client
-
-Generate the Prisma Client types and query engine for the backend:
+### Step 4: Generate Prisma Client
 
 ```powershell
 npm run prisma:generate --prefix backend
 ```
 
-> **Windows Note**: Always ensure any running backend dev servers are stopped before regenerating the Prisma client, as Windows locks active DLL files (`query_engine-windows.dll.node`).
+> **Windows Note**: Stop a running backend dev server before regenerating Prisma Client because Windows can lock active native files.
 
-### Step 6: Apply Database Migrations
+### Step 5: Prepare the Atlas schema
 
-Apply the committed version-controlled Prisma migrations to your new local database:
-
-```powershell
-npm run prisma:migrate --prefix backend
-```
-
-This creates all database tables, enums, indexes, and foreign keys.
-
-### Step 7: Seed Initial Autonomous ERP Records (Optional but Recommended)
-
-Populate default demo users across all 14 roles, departments (CSE, AIML, ECE, EEE, MECH, CIVIL, MBA, MCA), subjects, and initial campus configurations:
+Only after confirming `DATABASE_URL` points to a new/safe development database and reviewing the schema diff, push the schema and indexes:
 
 ```powershell
-npm run prisma:seed --prefix backend
+npm run prisma:db-push --prefix backend
 ```
 
-### Step 8: Start the Application
+MongoDB does not use Prisma Migrate. The committed SQL files under `backend/prisma/migrations` are retained as legacy PostgreSQL history and are not applied to Atlas. Do not run `db push` against a production cluster without a reviewed change and backup plan.
+
+### Step 6: Add Institutional Data
+
+The demo-data seed has been removed. Add verified departments, students, faculty, and other institutional records through the application workflows when they are ready. Do not import fabricated records into the real-data environment.
+
+### Step 7: Start the Application
 
 You can start both backend and frontend concurrently from the root directory:
 
@@ -181,20 +159,9 @@ npm run dev
 
 ---
 
-## 🔑 Default Demo Accounts
+## Account setup
 
-After running `npm run prisma:seed --prefix backend`, the following accounts are available for instant testing (default password for all demo accounts: `gift123`):
-
-| Role | Username / Identifier | Email | Portal Access |
-|---|---|---|---|
-| **Super Admin** | `superadmin` / `SA-001` | `superadmin@gift.edu.in` | Full System Governance & Security |
-| **Principal** | `principal` / `PRN-001` | `principal@gift.edu.in` | Executive Institution Dashboard |
-| **HOD (CSE)** | `hod` / `HOD-CSE-001` | `hod.cse@gift.edu.in` | Department Analytics & Mark Verification |
-| **Faculty** | `faculty` / `FAC-CSE-001` | `faculty@gift.edu.in` | Attendance, Marks Entry & Notes Moderation |
-| **Student** | `student` / `2305201001` | `student@gift.edu.in` | Student Academic Portal & Gate Pass |
-| **Accounts** | `accounts` / `ACC-001` | `accounts@gift.edu.in` | Fee Receipts & Payment Proof Approvals |
-| **Hostel Warden** | `warden` / `HSTL-001` | `warden.demo@gift.edu.in` | Hostel Allotment, Rooms & Night Passes |
-| **Smart Canteen**| `canteen` / `CAN-001` | `canteen.demo@gift.edu.in` | Token Verification & Food Orders |
+There are no shared demo sign-in credentials. Create the first development Super Admin with `npm run admin:bootstrap` from `backend/`, then provision accounts through the authenticated Super Admin Portal. The optional development data seed does not create user accounts.
 
 ---
 
@@ -209,7 +176,7 @@ After running `npm run prisma:seed --prefix backend`, the following accounts are
 | `CLIENT_URL` | Allowed origin for frontend CORS requests | No | `http://localhost:5173` |
 | `JWT_SECRET` | Secret key used to sign and verify authentication tokens | **Yes** (in prod) | `development-super-secret-jwt-key-min-32-chars-change-in-production` |
 | `JWT_EXPIRES_IN`| Token lifespan string (e.g. `8h`, `7d`) | No | `8h` |
-| `DATABASE_URL` | PostgreSQL connection string for Prisma ORM | **Yes** | `postgresql://postgres:postgres@localhost:5432/college_management?schema=public` |
+| `DATABASE_URL` | MongoDB Atlas connection string for Prisma ORM | **Yes** | `mongodb+srv://<user>:<password>@<cluster-host>/apna_campus?...` |
 | `GEMINI_API_KEY`| Google Gemini AI API key for Chatbot | No | *(Optional — falls back to deterministic Campus Engine)* |
 
 ### Frontend (`frontend/.env`)
@@ -228,14 +195,11 @@ After running `npm run prisma:seed --prefix backend`, the following accounts are
 
 ### 2. `Environment variable not found: DATABASE_URL`
 - **Cause**: `backend/.env` is missing or was named incorrectly.
-- **Fix**: Ensure `backend/.env` exists. Run `Copy-Item backend\.env.example backend\.env` and configure your PostgreSQL password.
+- **Fix**: Ensure `backend/.env` exists and contains a valid Atlas `mongodb+srv://` URI. Confirm the database user and Atlas IP/network access rule.
 
-### 3. `Can't reach database server at localhost:5432`
-- **Cause**: PostgreSQL service is stopped or listening on a different port.
-- **Fix**:
-  1. Open PowerShell as Administrator and run: `Get-Service -Name postgresql* | Start-Service`
-  2. Verify PostgreSQL is listening: `Test-NetConnection -ComputerName localhost -Port 5432`
-  3. Verify username and password: `psql -U postgres -d college_management`
+### 3. Atlas connection timeout or authentication failure
+- **Cause**: Atlas network access does not include your IP, credentials are wrong, or the URI is malformed.
+- **Fix**: Check the Atlas project's Network Access list, database user, URI encoding, and cluster status. Never paste the connection string into issue reports or chat.
 
 ### 4. `Port 4000 or 5173 is already in use`
 - **Cause**: An orphaned Node process is holding the port.
@@ -282,9 +246,8 @@ From the repository root:
 - `npm run install:all` — Installs dependencies across root, backend, and frontend.
 - `npm run build` — Builds both backend (`nest build`) and frontend (`vite build`) for production.
 - `npm run prisma:generate` — Generates backend Prisma Client.
-- `npm run prisma:migrate` — Deploys Prisma migrations to the configured PostgreSQL database.
-- `npm run prisma:seed` — Runs the idempotent database seed script.
-- `npm run setup:db` — Runs Prisma generate, migrate, and seed in sequence.
+- `npm run prisma:db-push` — Applies the Prisma MongoDB schema/indexes. Run only after checking the URI and confirming a safe target.
+- `npm run setup:db` — Generates Prisma Client and pushes the schema. This writes to the configured database; verify the URI first.
 - `npm run test:frontend` — Runs the frontend Vitest suite.
 
 ---
@@ -293,14 +256,13 @@ From the repository root:
 
 ### Part 1: Deploy Backend on Render
 
-You can deploy the backend using Render's free tier with a connected PostgreSQL database:
+Deploy the backend with a MongoDB Atlas cluster configured separately:
 
 #### Method A: Using Render Blueprint (`render.yaml`) — Recommended
 1. Log in to [Render](https://dashboard.render.com).
 2. Click **New +** > **Blueprint**.
 3. Connect your repository (`https://github.com/sahooprasadbishnu1234/CMS.git`) and branch (`backend`).
 4. Render will detect [`render.yaml`](render.yaml) and automatically create:
-   - **PostgreSQL Database**: `apna-campus-db`
    - **Web Service**: `apna-campus-backend` with all required build and start commands.
 5. In the blueprint review:
    - Set `CLIENT_URL` to your Vercel URL (or `*` during initial setup).
@@ -309,7 +271,7 @@ You can deploy the backend using Render's free tier with a connected PostgreSQL 
 
 #### Method B: Manual Web Service on Render
 If configuring manually:
-1. Create a **PostgreSQL Database** on Render (or Supabase/Neon). Copy the **Internal/External Database URL**.
+1. Create/configure a MongoDB Atlas cluster. Set its Network Access rules to allow the backend deployment's outbound connection, or use an appropriate private networking setup.
 2. Click **New +** > **Web Service**.
 3. Connect the GitHub repository and branch `backend`.
 4. Configure settings:
@@ -319,13 +281,13 @@ If configuring manually:
    - **Start Command**: `npm run start:prod`
 5. Under **Environment Variables**, add:
    - `NODE_ENV`: `production`
-   - `DATABASE_URL`: `postgresql://...` (your PostgreSQL connection string)
+   - `DATABASE_URL`: your private `mongodb+srv://...` Atlas connection string
    - `JWT_SECRET`: A long random secret string (32+ characters)
    - `JWT_EXPIRES_IN`: `8h`
    - `CLIENT_URL`: `https://<your-frontend-app>.vercel.app`
 6. Click **Create Web Service**.
 7. Test the health endpoint: `https://<your-backend>.onrender.com/api` should return `{"message":"..."}`.
-8. (Optional) In the Render Shell tab, run: `npm run prisma:seed` to populate default demo accounts.
+8. Before first launch, run the reviewed Prisma `db push` explicitly against the intended Atlas database. Do not run a seed on production; use a dedicated development/test database for demo data.
 
 ---
 

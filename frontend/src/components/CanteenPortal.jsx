@@ -24,7 +24,6 @@ import './Navigation/MasterNavigation.css';
 import './CanteenPortal.css';
 import '../components/AdminPortal.css';
 import { downloadCanteenStatementPdf } from '../utils/pdfGenerator';
-import { initialFoodItems, initialCanteenOrders } from '../data/collegeData.js';
 import { api } from '../services/api.js';
 import { useTimeGreeting } from '../utils/timeGreeting.js';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
@@ -33,17 +32,8 @@ export default function CanteenPortal({ account, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
-
-  // Reset scroll position to top whenever activeTab changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    if (document.documentElement) document.documentElement.scrollTop = 0;
-    if (document.body) document.body.scrollTop = 0;
-    const scrollables = document.querySelectorAll('.canteen-main, .role-dash-container');
-    scrollables.forEach((el) => { el.scrollTop = 0; });
-  }, [activeTab]);
-  const [foodItems, setFoodItems] = useState(initialFoodItems);
-  const [orders, setOrders] = useState(initialCanteenOrders);
+  const [foodItems, setFoodItems] = useState([]);
+  const [orders, setOrders] = useState([]);
 
   // Modals
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
@@ -61,41 +51,45 @@ export default function CanteenPortal({ account, onLogout }) {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
+  React.useEffect(() => {
+    let active = true;
+    Promise.all([api.getCanteenMenu(), api.getCanteenOrders()])
+      .then(([menu, orderList]) => {
+        if (!active) return;
+        if (menu?.success) setFoodItems(menu.data || []);
+        if (orderList?.success) setOrders(orderList.data || []);
+      })
+      .catch((err) => {
+        if (active) showToast(`Could not load canteen records: ${err.message}`);
+      });
+    return () => { active = false; };
+  }, []);
+
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id === orderId) {
-        return { ...o, status: newStatus };
-      }
-      return o;
-    }));
-    showToast(`Order ${orderId} is now marked as "${newStatus}"!`);
     try {
-      await api.updateCanteenOrderStatus(orderId, newStatus);
+      const result = await api.updateCanteenOrderStatus(orderId, newStatus);
+      if (!result?.success) throw new Error(result?.message || 'Order update was rejected.');
+      setOrders(prev => prev.map(o => o.id === orderId ? result.data : o));
+      showToast(`Order ${orderId} is now marked as "${newStatus}"!`);
     } catch (err) {
-      console.warn('Backend order status sync failed:', err.message);
+      showToast(`Could not update order: ${err.message}`);
     }
   };
 
   const handleToggleAvailability = async (itemId) => {
-    setFoodItems(prev => prev.map(item => {
-      if (item.id === itemId) {
-        const nextState = !item.isAvailable;
-        showToast(`${item.name} marked as ${nextState ? 'Available' : 'Out of Stock'}.`);
-        return { ...item, isAvailable: nextState };
-      }
-      return item;
-    }));
     try {
-      await api.toggleFoodAvailability(itemId);
+      const result = await api.toggleFoodAvailability(itemId);
+      if (!result?.success) throw new Error(result?.message || 'Availability update was rejected.');
+      setFoodItems(prev => prev.map(item => item.id === itemId ? result.data : item));
+      showToast(`${result.data.name} marked as ${result.data.isAvailable ? 'Available' : 'Out of Stock'}.`);
     } catch (err) {
-      console.warn('Backend food toggle sync failed:', err.message);
+      showToast(`Could not update menu item: ${err.message}`);
     }
   };
 
   const handleAddItem = async (e) => {
     e.preventDefault();
     const newItem = {
-      id: `food-${Date.now()}`,
       name: itemForm.name,
       category: itemForm.category,
       price: Number(itemForm.price),
@@ -103,20 +97,21 @@ export default function CanteenPortal({ account, onLogout }) {
       calories: itemForm.calories,
       isAvailable: true
     };
-    setFoodItems(prev => [...prev, newItem]);
-    setIsAddItemModalOpen(false);
-    showToast(`Added ${newItem.name} (₹${newItem.price}) to Smart Canteen menu!`);
     try {
-      await api.addFoodItem(newItem);
+      const result = await api.addFoodItem(newItem);
+      if (!result?.success) throw new Error(result?.message || 'Menu item was not saved.');
+      setFoodItems(prev => [...prev, result.data]);
+      setIsAddItemModalOpen(false);
+      showToast(`Added ${result.data.name} (₹${result.data.price}) to Smart Canteen menu!`);
     } catch (err) {
-      console.warn('Backend food item add failed:', err.message);
+      showToast(`Could not add menu item: ${err.message}`);
     }
   };
 
   const pendingOrders = orders.filter(o => o.status === 'Pending').length;
   const preparingOrders = orders.filter(o => o.status === 'Preparing').length;
   const readyOrders = orders.filter(o => o.status === 'Ready').length;
-  const totalRevenue = orders.reduce((acc, curr) => acc + curr.totalAmount, 0) + 8450;
+  const totalRevenue = orders.reduce((acc, curr) => acc + Number(curr.totalAmount || 0), 0);
 
   return (
     <div className="canteen-portal-root">

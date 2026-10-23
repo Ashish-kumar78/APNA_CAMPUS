@@ -14,55 +14,52 @@ import {
   RotateCcw,
   ShieldCheck,
 } from 'lucide-react'
-import { downloadLibraryBookPdf } from '../utils/pdfGenerator'
 import './LibraryPage.css'
 import api from '../services/api'
-import { erpStore } from '../services/erpStore'
 import LibraryBooksView from '../components/LibraryBooksView'
 
 const categories = ['All', 'Algorithms', 'Systems', 'Databases', 'AI/ML', 'Networks', 'Software Engineering']
 
-export default function LibraryPage() {
+export default function LibraryPage({ account }) {
   const [activeTab, setActiveTab] = useState('erp-library')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
-  const [catalog, setCatalog] = useState(() => erpStore.getBooksCatalog())
+  const [catalog, setCatalog] = useState([])
   const [myLoans, setMyLoans] = useState([])
   const [reservedBooks, setReservedBooks] = useState({})
   const [reserveMsg, setReserveMsg] = useState('')
 
-  const studentRoll = '2305201001'
-  const studentName = 'Rakesh Das'
+  const [loadError, setLoadError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchLibraryData() {
       try {
         const [booksRes, txnsRes] = await Promise.allSettled([
           api.getLibraryBooks(),
-          api.getLibraryTransactions(studentRoll),
+          api.getLibraryTransactions(),
         ])
 
-        if (booksRes.status === 'fulfilled' && booksRes.value?.data?.length > 0) {
+        if (booksRes.status === 'fulfilled' && Array.isArray(booksRes.value?.data)) {
           setCatalog(booksRes.value.data)
         } else {
-          setCatalog(erpStore.getBooksCatalog())
+          setLoadError(booksRes.status === 'rejected' ? 'The library catalog could not be loaded.' : 'The library server returned an invalid catalog response.')
         }
 
         if (txnsRes.status === 'fulfilled' && txnsRes.value?.data) {
           setMyLoans(txnsRes.value.data)
         } else {
-          const localCircs = erpStore.getCirculationRecords().filter(
-            (c) => c.borrowerRegNo === studentRoll || c.studentRoll === studentRoll
-          )
-          setMyLoans(localCircs)
+          setLoadError((current) => current || 'Your library loans could not be loaded.')
         }
       } catch (err) {
-        console.warn('Student Library page sync fallback:', err)
+        setLoadError(err.message || 'Library data could not be loaded.')
+      } finally {
+        setLoading(false)
       }
     }
 
     fetchLibraryData()
-  }, [])
+  }, [account?.identity])
 
   const filteredBooks = useMemo(() => {
     return catalog.filter((book) => {
@@ -94,37 +91,26 @@ export default function LibraryPage() {
   async function handleReserveBook(book) {
     if (book.availableCopies === 0) return
     try {
-      await api.createLibraryReservation({
+      const result = await api.createLibraryReservation({
         bookTitle: book.title,
         isbn: book.isbn,
-        studentName,
-        studentRoll,
-      }).catch(() => null)
-
-      erpStore.addLibraryReservation({
-        bookTitle: book.title,
-        isbn: book.isbn,
-        studentName,
-        studentRoll,
+        studentName: account?.name,
       })
+      if (!result?.success) throw new Error('The server did not confirm the reservation.')
 
       setReservedBooks((prev) => ({ ...prev, [book.id]: true }))
-      setReserveMsg(`"${book.title}" reserved! Please collect it from Central Library Counter within 48 hours.`)
+      setReserveMsg(result.message || `"${book.title}" reservation submitted.`)
       setTimeout(() => setReserveMsg(''), 6000)
-    } catch {
-      setReserveMsg('Failed to process reservation.')
+    } catch (error) {
+      setReserveMsg(error.message || 'The reservation was not saved.')
     }
   }
 
   async function handleRenewBook(issue) {
     try {
-      const res = await api.renewLibraryBook(issue.id).catch(() => null)
-      if (res?.success) {
-        setReserveMsg(`Loan renewed for "${issue.bookTitle}"! New due date assigned.`)
-      } else {
-        erpStore.renewBook(issue.id)
-        setReserveMsg(`Loan renewed for "${issue.bookTitle}"! Extended by 21 days.`)
-      }
+      const res = await api.renewLibraryBook(issue.id)
+      if (!res?.success) throw new Error('The server did not confirm the renewal.')
+      setReserveMsg(res.message || `Loan renewal submitted for "${issue.bookTitle}".`)
       setTimeout(() => setReserveMsg(''), 5000)
     } catch {
       setReserveMsg('Cannot renew: Overdue fine pending or reservation exists on this title.')
@@ -162,49 +148,24 @@ export default function LibraryPage() {
             <BookOpen size={14} />
             View Library of Books
           </button>
-          <div className="library-hours">
-            <Clock size={13} />
-            <div>
-              <strong>Library Hours</strong>
-              <small>Mon–Sat: 8 AM – 8 PM &nbsp;|&nbsp; Sun: 10 AM – 4 PM</small>
-            </div>
-          </div>
+          <div className="library-hours"><Clock size={13} /><div><strong>Library hours</strong><small>Check with the library for current opening hours.</small></div></div>
         </div>
       </div>
 
-      {/* Official Central Library Channel Banner */}
-      <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '12px', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', color: '#fff' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <LibraryBig size={18} />
-          </div>
-          <div>
-            <strong style={{ fontSize: '0.88rem', color: '#fff', display: 'block' }}>📢 Central Library Official Broadcast Channel</strong>
-            <span style={{ fontSize: '0.76rem', color: '#94a3b8' }}>Book return grace period reminders, IEEE digital subscriptions, and extended reading room hours are updated live in Campus Connect.</span>
-          </div>
-        </div>
-        <button
-          type="button"
-          style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('cms_navigate_chat', { detail: { convId: 'conv-library' } }))
-          }}
-        >
-          Open Library Channel →
-        </button>
-      </div>
+      {loadError && <div role="alert" style={{ marginBottom: 14, padding: 12, border: '1px solid #fecaca', borderRadius: 9, color: '#991b1b' }}>{loadError}</div>}
+      {loading && <p role="status">Loading your library data…</p>}
 
       <div className="library-summary-strip">
-        <div><BookOpen size={16} /><strong>{activeIssuedBooks.length}</strong><small>Books Issued</small></div>
+        <div><BookOpen size={16} /><strong>{loading ? '—' : activeIssuedBooks.length}</strong><small>Books Issued</small></div>
         <div>
           <AlertCircle size={16} />
           <strong style={{ color: totalFinePending > 0 ? '#c0392b' : '#16a34a' }}>
-            ₹{totalFinePending}
+            {loading ? '—' : `₹${totalFinePending}`}
           </strong>
           <small>Fine Pending</small>
         </div>
-        <div><BookMarked size={16} /><strong>{Object.keys(reservedBooks).length}</strong><small>Reserved</small></div>
-        <div><ShieldCheck size={16} /><strong style={{ color: '#059669' }}>Eligible</strong><small>Quota: 3 Books</small></div>
+        <div><BookMarked size={16} /><strong>—</strong><small>Reservation status</small></div>
+        <div><ShieldCheck size={16} /><strong>—</strong><small>Eligibility data unavailable</small></div>
       </div>
 
       <div className="library-tabs" role="tablist">
@@ -228,17 +189,12 @@ export default function LibraryPage() {
 
       {reserveMsg && (
         <div className="library-reserve-msg">
-          <Check size={13} />{reserveMsg}
+          {reserveMsg}
         </div>
       )}
 
       {activeTab === 'erp-library' && (
-        <LibraryBooksView
-          studentRoll={studentRoll}
-          studentName={studentName}
-          activeIssuedBooks={activeIssuedBooks}
-          initialView="issued"
-        />
+        <LibraryBooksView />
       )}
 
       {activeTab === 'catalog' && (
@@ -269,7 +225,7 @@ export default function LibraryPage() {
             {filteredBooks.map((book) => {
               const isAvailable = (book.availableCopies !== undefined ? book.availableCopies : (book.available || 0)) > 0
               const availCount = book.availableCopies !== undefined ? book.availableCopies : (book.available || 0)
-              const totalCount = book.totalCopies !== undefined ? book.totalCopies : (book.total || 5)
+              const totalCount = book.totalCopies ?? book.total ?? null
 
               return (
                 <div key={book.id} className={`book-card ${!isAvailable ? 'unavailable' : ''}`}>
@@ -284,7 +240,7 @@ export default function LibraryPage() {
                       <span className={isAvailable ? 'available' : 'not-available'}>
                         {isAvailable ? `${availCount} available` : 'Stack Out of Stock'}
                       </span>
-                      <small>({totalCount} in stack · {book.shelfLocation || 'Stack 1'})</small>
+                      <small>({totalCount == null ? 'copy count unavailable' : `${totalCount} copies`} · {book.shelfLocation || 'Shelf not recorded'})</small>
                     </div>
                   </div>
                   <div className="book-card-actions">
@@ -300,9 +256,7 @@ export default function LibraryPage() {
                         {isAvailable && <ChevronRight size={12} />}
                       </button>
                     )}
-                    <button className="book-detail-btn" onClick={() => downloadLibraryBookPdf(book)}>
-                      <Download size={12} />E-Copy
-                    </button>
+                    {book.fileUrl ? <a className="book-detail-btn" href={book.fileUrl} download><Download size={12} />E-Copy</a> : <span className="book-detail-btn" aria-disabled="true">No e-copy attached</span>}
                   </div>
                 </div>
               )
@@ -425,22 +379,7 @@ export default function LibraryPage() {
                       <td><span className="history-status returned">Returned</span></td>
                     </tr>
                   ))
-                ) : (
-                  [
-                    ['BK001', 'Introduction to Algorithms (CLRS)', '01 Aug 2026', '22 Aug 2026', '₹0', 'Returned'],
-                    ['BK002', 'Computer Networks (Tanenbaum)', '10 Jul 2026', '02 Aug 2026', '₹0', 'Returned'],
-                    ['BK003', 'Database System Concepts (Silberschatz)', '15 Jun 2026', '06 Jul 2026', '₹0', 'Returned'],
-                  ].map(([id, title, issue, ret, fine, status], idx) => (
-                    <tr key={id}>
-                      <td>{idx + 1}</td>
-                      <td><strong>{title}</strong></td>
-                      <td>{issue}</td>
-                      <td>{ret}</td>
-                      <td>{fine}</td>
-                      <td><span className="history-status returned">{status}</span></td>
-                    </tr>
-                  ))
-                )}
+                ) : <tr><td colSpan={6}>{loading ? 'Loading loan history…' : 'No returned library loans found.'}</td></tr>}
               </tbody>
             </table>
           </div>

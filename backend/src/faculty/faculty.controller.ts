@@ -4,16 +4,17 @@ import {
   Post,
   Put,
   Body,
-  Param,
   Query,
   UseGuards,
-  ForbiddenException
+  ForbiddenException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { FacultyService } from './faculty.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { normalizeRole } from '../rbac/rbac';
+import { SubmitAttendanceDto } from './faculty.dto';
 
 @ApiTags('Faculty Portal')
 @Controller('faculty')
@@ -31,8 +32,7 @@ export class FacultyController {
       throw new ForbiddenException(`Role ${user.role} is not authorized for Faculty Portal operations.`);
     }
 
-    const facultyName = user.name || user.identifier || 'Dr. S. Mohanty';
-    const data = await this.facultyService.getDashboard(facultyName);
+    const data = await this.facultyService.getDashboard(user.faculty?.id);
     return { success: true, data };
   }
 
@@ -47,8 +47,7 @@ export class FacultyController {
       throw new ForbiddenException(`Access denied.`);
     }
 
-    const facultyName = user.name || user.identifier || 'Dr. S. Mohanty';
-    const data = await this.facultyService.getAssignments(facultyName);
+    const data = await this.facultyService.getAssignments(user.faculty?.id);
     return { success: true, count: data.length, data };
   }
 
@@ -130,7 +129,26 @@ export class FacultyController {
     @Query('subjectCode') subjectCode?: string,
     @Query('section') section?: string
   ) {
-    const data = await this.facultyService.getAttendanceSessions(subjectCode || 'CS501', section || 'Section A');
+    if (normalizeRole(user.role) !== 'faculty' || !user.faculty?.id) {
+      throw new ForbiddenException('A linked faculty profile is required to view attendance sessions.');
+    }
+    const data = await this.facultyService.getAttendanceSessions(user.faculty.id, subjectCode, section);
+    return { success: true, count: data.length, data };
+  }
+
+  @Get('attendance/roster')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get the active student roster for an assigned subject section' })
+  async getAttendanceRoster(
+    @CurrentUser() user: any,
+    @Query('subjectCode') subjectCode?: string,
+    @Query('section') section?: string
+  ) {
+    if (normalizeRole(user.role) !== 'faculty' || !user.faculty?.id) {
+      throw new ForbiddenException('A linked faculty profile is required to view an attendance roster.');
+    }
+    const data = await this.facultyService.getAttendanceRoster(user.faculty.id, subjectCode, section);
     return { success: true, count: data.length, data };
   }
 
@@ -138,100 +156,54 @@ export class FacultyController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Submit period attendance session for assigned cohort' })
-  async submitAttendance(@CurrentUser() user: any, @Body() body: any) {
-    const role = normalizeRole(user.role);
-    if (role !== 'faculty' && role !== 'hod' && role !== 'super_admin') {
-      throw new ForbiddenException('Access denied. Only course faculty can record attendance.');
+  async submitAttendance(@CurrentUser() user: any, @Body() body: SubmitAttendanceDto) {
+    if (normalizeRole(user.role) !== 'faculty' || !user.faculty?.id) {
+      throw new ForbiddenException('A linked course faculty profile is required to record attendance.');
     }
 
-    const res = await this.facultyService.submitAttendanceSession({
-      ...body,
-      facultyName: user.name || user.identifier
-    });
+    const res = await this.facultyService.submitAttendanceSession(user.faculty.id, user.id, body);
     return { success: true, message: res.message, data: res };
   }
 
   @Get('quizzes')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get course quizzes and assessment status' })
-  async getQuizzes(
-    @CurrentUser() user: any,
-    @Query('subjectCode') subjectCode?: string,
-    @Query('section') section?: string
-  ) {
-    const data = await this.facultyService.getQuizzes(subjectCode, section);
-    return { success: true, count: data.length, data };
+  async getQuizzes() {
+    throw new ServiceUnavailableException('Quiz persistence is not implemented.');
   }
 
   @Post('quizzes')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create or update quiz with questions bank' })
-  async createQuiz(@CurrentUser() user: any, @Body() body: any) {
-    const role = normalizeRole(user.role);
-    if (role !== 'faculty' && role !== 'hod' && role !== 'super_admin') {
-      throw new ForbiddenException('Access denied. Only course faculty can author quizzes.');
-    }
-
-    const data = await this.facultyService.createOrUpdateQuiz(body);
-    return { success: true, message: data.message, data: data.quiz };
+  async createQuiz() {
+    throw new ServiceUnavailableException('Quiz persistence is not implemented.');
   }
 
   @Put('quizzes/:id/publish')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Publish scheduled quiz for student access' })
-  async publishQuiz(@CurrentUser() user: any, @Param('id') id: string) {
-    const role = normalizeRole(user.role);
-    if (role !== 'faculty' && role !== 'hod' && role !== 'super_admin') {
-      throw new ForbiddenException('Access denied.');
-    }
-
-    const data = await this.facultyService.publishQuiz(id);
-    return { success: true, message: data.message, data };
+  async publishQuiz() {
+    throw new ServiceUnavailableException('Quiz persistence is not implemented.');
   }
 
   @Get('performance')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get class continuous internal assessment analytics and score distributions' })
-  async getPerformance(
-    @CurrentUser() user: any,
-    @Query('subjectCode') subjectCode?: string,
-    @Query('section') section?: string
-  ) {
-    const data = await this.facultyService.getClassPerformance(subjectCode || 'CS501', section || 'Section A');
-    return { success: true, data };
+  async getPerformance() {
+    throw new ServiceUnavailableException('Verified class performance analytics are not available.');
   }
 
   @Get('early-warning')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get at-risk students flagged by early-warning rules' })
-  async getEarlyWarning(
-    @CurrentUser() user: any,
-    @Query('subjectCode') subjectCode?: string,
-    @Query('section') section?: string
-  ) {
-    const data = await this.facultyService.getAtRiskStudents(subjectCode || 'CS501', section || 'Section A');
-    return { success: true, count: data.length, data };
+  async getEarlyWarning() {
+    throw new ServiceUnavailableException('Verified faculty early-warning data are not available.');
   }
 
   @Post('early-warning/intervention')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Log faculty remedial intervention for at-risk student' })
-  async logIntervention(@CurrentUser() user: any, @Body() body: any) {
-    const role = normalizeRole(user.role);
-    if (role !== 'faculty' && role !== 'hod' && role !== 'super_admin') {
-      throw new ForbiddenException('Access denied.');
-    }
-
-    const data = await this.facultyService.logRemedialIntervention({
-      ...body,
-      recordedBy: user.name || user.identifier
-    });
-    return { success: true, message: data.message, data: data.data };
+  async logIntervention() {
+    throw new ServiceUnavailableException('Persistent remedial intervention logging is not implemented.');
   }
 }

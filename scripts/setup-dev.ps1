@@ -49,7 +49,7 @@ if (-not (Test-Path $backendEnvExample)) {
 if (-not (Test-Path $backendEnv)) {
     Copy-Item $backendEnvExample $backendEnv
     Write-Host "  [OK] Created backend/.env from backend/.env.example" -ForegroundColor Green
-    Write-Host "       (Please configure DATABASE_URL with your local PostgreSQL password if needed)" -ForegroundColor DarkGray
+    Write-Host "       (Set DATABASE_URL to your MongoDB Atlas URI before starting the backend)" -ForegroundColor DarkGray
 } else {
     Write-Host "  [OK] Existing backend/.env preserved (not overwritten)" -ForegroundColor Green
 }
@@ -138,44 +138,12 @@ try {
     Pop-Location
 }
 
-# 6. Check PostgreSQL and apply migrations
+# 6. Do not write schema changes to Atlas automatically
 Write-Host ""
-Write-Host "[6/6] Checking PostgreSQL and Prisma migrations..." -ForegroundColor Yellow
-if (-not $SkipMigration) {
-    Push-Location $backendDir
-    try {
-        $statusOutput = cmd.exe /c "npx prisma migrate status 2>&1"
-        $statusStr = $statusOutput -join "`n"
-
-        if ($statusStr -match "Database schema is up to date") {
-            Write-Host "  [OK] Database connection verified and schema is up to date!" -ForegroundColor Green
-        } elseif ($statusStr -match "Following migration have not yet been applied") {
-            Write-Host "  -> Applying pending Prisma migrations..." -ForegroundColor Cyan
-            cmd.exe /c "npx prisma migrate deploy"
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "  [OK] Migrations applied successfully." -ForegroundColor Green
-            } else {
-                Write-Host "  [ERROR] Failed to apply migrations." -ForegroundColor Red
-            }
-        } elseif ($LASTEXITCODE -eq 0) {
-            Write-Host "  [OK] PostgreSQL connected and verified." -ForegroundColor Green
-        } else {
-            Write-Host "  [WARN] Could not connect to PostgreSQL." -ForegroundColor Yellow
-            Write-Host ""
-            Write-Host "  PostgreSQL Local Setup Guide:" -ForegroundColor Cyan
-            Write-Host "  1. Ensure PostgreSQL service is started: Start-Service postgresql*"
-            Write-Host "  2. Create development database: psql -U postgres -c 'CREATE DATABASE college_management;'"
-            Write-Host "  3. Verify DATABASE_URL in backend/.env with your postgres password"
-            Write-Host "  4. Apply migrations: npm run prisma:migrate --prefix backend"
-            Write-Host "  5. (Optional) Seed demo records: npm run prisma:seed --prefix backend"
-            Write-Host ""
-        }
-    } finally {
-        Pop-Location
-    }
-} else {
-    Write-Host "  Skipping migration check (-SkipMigration flag specified)." -ForegroundColor DarkGray
-}
+Write-Host "[6/6] Atlas schema sync is a separate, manual step." -ForegroundColor Yellow
+Write-Host "  No database writes were performed by this setup script." -ForegroundColor Green
+Write-Host "  After reviewing the Prisma schema and confirming a safe development/test Atlas database, run:" -ForegroundColor DarkGray
+Write-Host "  npm run prisma:db-push --prefix backend" -ForegroundColor Cyan
 
 Write-Host ""
 Write-Host "========================================================" -ForegroundColor Green

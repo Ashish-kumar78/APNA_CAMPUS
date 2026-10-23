@@ -56,47 +56,55 @@ import './Navigation/MasterNavigation.css';
 import './SuperAdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
-import { erpStore, permissionDefinitions, initialRolesList } from '../services/erpStore.js';
+import { permissionDefinitions, initialRolesList } from '../services/erpStore.js';
+
+const ACCOUNT_ROLE_OPTIONS = [
+  ['super_admin', 'Super Administrator'], ['management', 'Management / Trustee'],
+  ['principal', 'Principal / Director'], ['admin', 'Admin Operations'],
+  ['hod', 'Head of Department (HOD)'], ['faculty', 'Faculty Member'],
+  ['student', 'Student'], ['exam_cell', 'Examination Cell'],
+  ['accounts', 'Accounts & Finance'], ['library', 'Library Staff'],
+  ['placement', 'Placement Officer'], ['transport', 'Transport Officer'],
+  ['hostel', 'Hostel Administrator'], ['staff', 'Staff'], ['warden', 'Hostel Warden'],
+  ['canteen', 'Canteen Staff'], ['admissions', 'Admissions Officer'],
+  ['maintenance', 'Maintenance Staff'], ['non_teaching', 'Non-Teaching Staff'],
+];
+const ACCOUNT_ROLE_RANK = {
+  super_admin: 100, management: 90, principal: 80, admin: 70, hod: 60,
+  faculty: 50, exam_cell: 40, accounts: 40, library: 40, placement: 40,
+  transport: 40, hostel: 40, warden: 40, staff: 40, canteen: 40,
+  admissions: 40, maintenance: 40, non_teaching: 40, student: 10,
+};
 
 export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
-  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
+  const currentAccountRole = String(account?.roleEnum || account?.role || '').toLowerCase();
+  const canChangeAccountStatus = (user) =>
+    ['super_admin', 'admin'].includes(currentAccountRole) &&
+    (ACCOUNT_ROLE_RANK[currentAccountRole] ?? -1) > (ACCOUNT_ROLE_RANK[String(user.role).toLowerCase()] ?? Infinity) &&
+    user.id !== account?.id;
+  const canRequestAccountReset = (user) =>
+    currentAccountRole === 'super_admin' &&
+    (ACCOUNT_ROLE_RANK[currentAccountRole] ?? -1) > (ACCOUNT_ROLE_RANK[String(user.role).toLowerCase()] ?? Infinity);
+  const creatableRoles = currentAccountRole === 'super_admin'
+    ? ACCOUNT_ROLE_OPTIONS
+    : ACCOUNT_ROLE_OPTIONS.filter(([role]) =>
+      (ACCOUNT_ROLE_RANK[currentAccountRole] ?? -1) > (ACCOUNT_ROLE_RANK[role] ?? Infinity),
+    );
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); // overview, security-incidents, system-logs, rbac, users, audit, sessions, settings, integrations, backup, timetable, report-generation
-
-  // Reset scroll position to top whenever activeTab changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    if (document.documentElement) document.documentElement.scrollTop = 0;
-    if (document.body) document.body.scrollTop = 0;
-    const scrollables = document.querySelectorAll('.erp-main-content, .role-dash-container');
-    scrollables.forEach((el) => { el.scrollTop = 0; });
-  }, [activeTab]);
-  const [rolePermissions, setRolePermissions] = useState(() => erpStore.getRolePermissions());
-  const [settings, setSettings] = useState(() => erpStore.getSettings());
-  const [auditLogs, setAuditLogs] = useState(() => erpStore.getAuditLogs());
+  const [rolePermissions, setRolePermissions] = useState({});
+  const [settings, setSettings] = useState({});
+  const [auditLogs, setAuditLogs] = useState([]);
   const [auditSearch, setAuditSearch] = useState('');
   const [auditRoleFilter, setAuditRoleFilter] = useState('ALL');
   const [toastMessage, setToastMessage] = useState('');
+  const [toastVariant, setToastVariant] = useState('success');
+  const [tabLoadError, setTabLoadError] = useState('');
   const [backupStatus, setBackupStatus] = useState('Idle');
   const [selectedRoleForRbac, setSelectedRoleForRbac] = useState('faculty');
 
   // Real backend metrics and diagnostics
-  const [metrics, setMetrics] = useState({
-    totalAccounts: 2698,
-    totalStudents: 2480,
-    totalFaculty: 146,
-    totalStaff: 72,
-    activeAccounts: 2674,
-    inactiveAccounts: 18,
-    suspendedAccounts: 6,
-    auditEventsTotal: 142,
-    auditEvents30Days: 142,
-    managedRolesCount: 14,
-    granularPoliciesCount: 22,
-    systemStatus: 'Operational',
-    dbLatencyMs: 24,
-    uptimeSeconds: 86400,
-    lastUpdated: new Date().toISOString(),
-  });
+  const [metrics, setMetrics] = useState({});
   const [securityAlerts, setSecurityAlerts] = useState([]);
   const [alertsLoading, setAlertsLoading] = useState(false);
   const [diagnosticsModalOpen, setDiagnosticsModalOpen] = useState(false);
@@ -104,47 +112,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
   const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
 
   // 1. Incidents state
-  const [incidents, setIncidents] = useState([
-    {
-      id: 'INC-2026-001',
-      title: 'Repeated Failed Authentications Threshold Exceeded',
-      category: 'Authentication Brute-Force',
-      severity: 'high',
-      status: 'open',
-      affectedAccount: 'FAC-CSE-019 (Prof. S. Mohapatra)',
-      sourceIp: '192.168.1.142',
-      detectedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
-      evidence: '6 consecutive failed credential attempts within 90 seconds. Client user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64). Rate-limiter triggered IP throttling.',
-      resolutionNotes: '',
-      assignedTo: 'Chief Systems Architect',
-    },
-    {
-      id: 'INC-2026-002',
-      title: 'Unauthorized Administrative Endpoint Probing',
-      category: 'Privilege Elevation',
-      severity: 'critical',
-      status: 'investigating',
-      affectedAccount: 'STU-2024-0412 (Anonymous Session)',
-      sourceIp: '172.16.4.88',
-      detectedAt: new Date(Date.now() - 145 * 60 * 1000).toISOString(),
-      evidence: 'Direct REST call to /api/admin/metrics from non-administrative token. JwtAuthGuard intercepted request and returned 403 Forbidden. IP logged.',
-      resolutionNotes: 'Preliminary investigation indicates student portal session exploring Swagger API paths. No privilege elevation occurred.',
-      assignedTo: 'Security Operations',
-    },
-    {
-      id: 'INC-2026-003',
-      title: 'Sensitive Marks Moderation Outside Working Hours',
-      category: 'Policy Anomaly',
-      severity: 'medium',
-      status: 'resolved',
-      affectedAccount: 'HOD-ECE-01 (Dr. P. Senapati)',
-      sourceIp: '10.0.12.5',
-      detectedAt: new Date(Date.now() - 26 * 3600 * 1000).toISOString(),
-      evidence: 'Batch internal assessment moderation unlock executed at 23:45 IST. State-machine workflow recorded tamper-evident approval token.',
-      resolutionNotes: 'Verified with department head as authorized urgent moderation prior to autonomous semester result lock.',
-      assignedTo: 'Dean Academics',
-    },
-  ]);
+  const [incidents, setIncidents] = useState([]);
   const [incidentsLoading, setIncidentsLoading] = useState(false);
   const [incidentSeverityFilter, setIncidentSeverityFilter] = useState('ALL');
   const [incidentStatusFilter, setIncidentStatusFilter] = useState('ALL');
@@ -153,48 +121,19 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
   const [incidentNotesInput, setIncidentNotesInput] = useState('');
 
   // 2. System Logs state
-  const [systemLogs, setSystemLogs] = useState({
-    logs: [
-      { id: 'LOG-9812', timestamp: new Date(Date.now() - 12000).toISOString(), level: 'INFO', component: 'HTTP Gateway', requestId: 'req_89ab31f4', message: 'POST /api/auth/login 200 OK — IP 192.168.1.10 — User ID [REDACTED] — Latency: 18ms', latencyMs: 18 },
-      { id: 'LOG-9811', timestamp: new Date(Date.now() - 45000).toISOString(), level: 'INFO', component: 'Database Engine', requestId: 'req_c74e12a9', message: 'Prisma Connection Pool — Active connections: 4/20 — Idle connections: 16 — Query latency: 4ms', latencyMs: 4 },
-      { id: 'LOG-9810', timestamp: new Date(Date.now() - 110000).toISOString(), level: 'WARN', component: 'Auth Vault', requestId: 'req_55ba8901', message: 'Failed authentication attempt for identifier FAC-CSE-019 — IP: 192.168.1.142 — Password hash verification failed', latencyMs: 64 },
-      { id: 'LOG-9809', timestamp: new Date(Date.now() - 240000).toISOString(), level: 'INFO', component: 'Cron Workers', requestId: 'task_cron_nightly_01', message: 'Automated Snapshot Scheduler heartbeat — 0 errors — S3 replication target verified healthy', latencyMs: 120 },
-      { id: 'LOG-9808', timestamp: new Date(Date.now() - 380000).toISOString(), level: 'ERROR', component: 'HTTP Gateway', requestId: 'req_412d001e', message: 'GET /api/admin/metrics 403 Forbidden — Insufficient privileges for role STUDENT — Client IP 172.16.4.88', latencyMs: 12 },
-      { id: 'LOG-9807', timestamp: new Date(Date.now() - 620000).toISOString(), level: 'DEBUG', component: 'State Machine', requestId: 'req_ee9102c1', message: 'AssessmentMark state transition: DRAFT -> SUBMITTED_TO_HOD verified for Course CSE-301 Section A', latencyMs: 22 },
-    ],
-    total: 6,
-    averageLatencyMs: 24.2,
-    errorRate: '0.04%',
-  });
+  const [systemLogs, setSystemLogs] = useState({ logs: [], total: 0, averageLatencyMs: null, errorRate: null });
   const [logsLoading, setLogsLoading] = useState(false);
   const [logLevelFilter, setLogLevelFilter] = useState('ALL');
   const [logComponentFilter, setLogComponentFilter] = useState('ALL');
   const [logSearch, setLogSearch] = useState('');
 
   // 3. Sessions & Login Security state
-  const [sessionsList, setSessionsList] = useState([
-    { id: 'sess_super_admin_01', identifier: 'SYS-SUPER-01', name: 'Chief Systems Architect', role: 'SUPER_ADMIN', ipAddress: '192.168.1.10 (Campus NOC)', device: 'Chrome 129 · Windows 11', loginTime: new Date(Date.now() - 3600 * 1000).toISOString(), expiresAt: new Date(Date.now() + 7 * 3600 * 1000).toISOString(), status: 'Active', isCurrent: true },
-    { id: 'sess_principal_02', identifier: 'PRI-DIR-01', name: 'Dr. Ramesh Chandra Panda', role: 'PRINCIPAL', ipAddress: '192.168.1.15 (Executive Office)', device: 'Safari 18 · macOS Sonoma', loginTime: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), expiresAt: new Date(Date.now() + 6 * 3600 * 1000).toISOString(), status: 'Active', isCurrent: false },
-    { id: 'sess_exam_03', identifier: 'EXAM-COE-01', name: 'Prof. Aniruddha Sahoo', role: 'EXAM_CELL', ipAddress: '192.168.2.40 (Confidential Cell)', device: 'Edge 128 · Windows 11', loginTime: new Date(Date.now() - 4 * 3600 * 1000).toISOString(), expiresAt: new Date(Date.now() + 4 * 3600 * 1000).toISOString(), status: 'Active', isCurrent: false },
-  ]);
+  const [sessionsList, setSessionsList] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
-  const [sessionPolicies, setSessionPolicies] = useState({
-    idleTimeoutMinutes: 30,
-    maxConcurrentSessions: 3,
-    failedLockoutThreshold: 5,
-    lockoutDurationMinutes: 15,
-    enforceMfaAdmins: true,
-  });
+  const [sessionPolicies] = useState({});
 
   // 4. Integrations state
-  const [integrationsList, setIntegrationsList] = useState([
-    { id: 'smtp', name: 'Institutional SMTP Mail Gateway', provider: 'Amazon SES / Campus Mail Server', endpoint: 'smtp.apnacampus.edu.in:587 (TLSv1.3)', authType: 'App Password / Secret [ENCRYPTED]', status: 'Operational', latencyMs: 38, lastPing: new Date().toISOString(), lastError: null },
-    { id: 'sms', name: 'SMS OTP & Gate Pass Gateway', provider: 'Fast2SMS Enterprise API', endpoint: 'https://api.fast2sms.com/v3/dlr', authType: 'API Bearer Key [••••••••9841]', status: 'Operational', latencyMs: 84, lastPing: new Date().toISOString(), lastError: null },
-    { id: 'payment', name: 'Payment Processing Gateway', provider: 'Razorpay PG & Cashfree Reconcile', endpoint: 'https://api.razorpay.com/v1/payments', authType: 'Key ID & Secret [rzp_live_••••••••3821]', status: 'Operational', latencyMs: 142, lastPing: new Date().toISOString(), lastError: null },
-    { id: 's3', name: 'Cloud Object Storage Vault', provider: 'AWS S3 Glacier Deep Archive', endpoint: 's3.ap-south-1.amazonaws.com/apna-campus-vault', authType: 'IAM Role ARN with AES-256 GCM', status: 'Operational', latencyMs: 62, lastPing: new Date().toISOString(), lastError: null },
-    { id: 'ai_service', name: 'AI Campus Knowledge Assistant Engine', provider: 'Local FastAPI / PyTorch Service', endpoint: 'http://localhost:8000/api/v1/infer', authType: 'Internal VPC Token', status: 'Operational', latencyMs: 19, lastPing: new Date().toISOString(), lastError: null },
-    { id: 'biometric', name: 'Biometric Turnstile Hardware Sync', provider: 'ZK-Teco Campus Access Protocol', endpoint: 'tcp://192.168.10.2:4370', authType: 'Device Secret Handshake', status: 'Operational', latencyMs: 14, lastPing: new Date().toISOString(), lastError: null },
-  ]);
+  const [integrationsList, setIntegrationsList] = useState([]);
   const [integrationsLoading, setIntegrationsLoading] = useState(false);
   const [testingIntegrationId, setTestingIntegrationId] = useState(null);
 
@@ -205,13 +144,9 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
   const [userRoleFilter, setUserRoleFilter] = useState('ALL');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
   const [selectedUserModal, setSelectedUserModal] = useState(null);
-  const [userResetTokenResult, setUserResetTokenResult] = useState(null);
 
   // 6. Backups state
-  const [backupsList, setBackupsList] = useState([
-    { id: 'SNP-2026-10-18', fileName: 'apna_campus_prod_20261018_020000.sql.gz.enc', createdAt: '18 Oct 2026, 02:00 AM', type: 'Automated Nightly Cron', size: '14.8 MB', databaseVersion: 'PostgreSQL 16.3', status: 'Completed', checksum: 'sha256:7f9a12e345b89c01de23f456a789bcde', retentionDays: 90 },
-    { id: 'SNP-2026-10-11', fileName: 'apna_campus_prod_20261011_020000.sql.gz.enc', createdAt: '11 Oct 2026, 02:00 AM', type: 'Automated Nightly Cron', size: '14.2 MB', databaseVersion: 'PostgreSQL 16.3', status: 'Completed', checksum: 'sha256:4a12bc901e345f789abcde0123456789', retentionDays: 90 },
-  ]);
+  const [backupsList, setBackupsList] = useState([]);
   const [backupsLoading, setBackupsLoading] = useState(false);
   const [integrityCheckStatus, setIntegrityCheckStatus] = useState(null);
 
@@ -219,50 +154,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
   const [selectedAuditLogModal, setSelectedAuditLogModal] = useState(null);
 
   // 8. Administrative Approvals Center state
-  const [approvalsList, setApprovalsList] = useState([
-    {
-      id: 'APV-2026-001',
-      title: 'Internal Assessment Marks Moderation Unlock',
-      category: 'Academic Moderation',
-      severity: 'High Impact',
-      status: 'PENDING',
-      requesterName: 'Dr. P. K. Pattnaik',
-      requesterRole: 'HOD (Computer Science & Engineering)',
-      requesterId: 'HOD-CSE',
-      requestedAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
-      scope: 'Course CSE-301 (Operating Systems) — Section A',
-      justification: 'Faculty medical emergency delayed continuous assessment entry past deadline. Requesting 24-hour evaluation portal unlock.',
-      impactStatement: 'Unlocks database records for 64 student marks in CSE-301 before semester grade calculation.',
-    },
-    {
-      id: 'APV-2026-002',
-      title: 'Merit-Cum-Need Tuition Fee Waiver & Exam Clearance',
-      category: 'Financial Clearance',
-      severity: 'Medium Impact',
-      status: 'PENDING',
-      requesterName: 'Mr. S. K. Roy',
-      requesterRole: 'Senior Accounts Officer',
-      requesterId: 'ACC-012',
-      requestedAt: new Date(Date.now() - 8 * 3600 * 1000).toISOString(),
-      scope: 'Student STU-2024-0012 (Rohan Sahoo) — 5th Semester B.Tech',
-      justification: 'State post-matric scholarship disbursement delayed by state portal. Student requests hall ticket issuance with waiver of ₹15,000 late fine.',
-      impactStatement: 'Reconciles account dues and issues autonomous exam hall ticket clearance.',
-    },
-    {
-      id: 'APV-2026-003',
-      title: 'Privilege Elevation for End-Semester Exam Cell Oversight',
-      category: 'Privilege Elevation',
-      severity: 'Critical Impact',
-      status: 'PENDING',
-      requesterName: 'Campus Administrator',
-      requesterRole: 'Admin Operations',
-      requesterId: 'ADM-001',
-      requestedAt: new Date(Date.now() - 14 * 3600 * 1000).toISOString(),
-      scope: 'Autonomous Examination Cell Seating & Admit Card Engine',
-      justification: 'Assigned as Deputy Chief Superintendent for Autumn 2026 End-Semester Examinations. Requires access to seating plan configuration.',
-      impactStatement: 'Grants temporary administrative rights to configure room capacities and print confidential seating charts.',
-    }
-  ]);
+  const [approvalsList, setApprovalsList] = useState([]);
   const [approvalsLoading, setApprovalsLoading] = useState(false);
   const [selectedApprovalModal, setSelectedApprovalModal] = useState(null);
   const [approvalReasonInput, setApprovalReasonInput] = useState('');
@@ -282,7 +174,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
 
   // 11. User Directory Modals (Create User & View Details)
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
-  const [newUserData, setNewUserData] = useState({ name: '', email: '', identifier: '', role: 'faculty', department: 'Computer Science & Engineering', password: 'password123' });
+  const [newUserData, setNewUserData] = useState({ name: '', email: '', identifier: '', role: 'faculty', department: 'Computer Science & Engineering', password: '' });
   const [selectedUserDetailsModal, setSelectedUserDetailsModal] = useState(null);
 
   // 12. Audit Trail Advanced Filters
@@ -329,119 +221,23 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
   const handleRunDiagnostics = async () => {
     setDiagnosticsModalOpen(true);
     setDiagnosticsLoading(true);
+    setDiagnosticsData(null);
     try {
       const res = await api.getAdminDiagnostics();
-      if (res?.success && res?.data) {
-        setDiagnosticsData(res.data);
-        triggerToast('Subsystem diagnostics completed: All parameters verified nominal');
-      } else {
-        // High quality fallback with verified stats
-        setDiagnosticsData({
-          timestamp: new Date().toISOString(),
-          overallStatus: 'Nominal',
-          uptimeSeconds: metrics.uptimeSeconds || 86400,
-          subsystems: [
-            {
-              id: 'db',
-              name: 'PostgreSQL Relational Storage & Connection Pool',
-              status: 'Healthy',
-              latency: `${metrics.dbLatencyMs || 22}ms`,
-              details: 'Prisma client pool initialized, active transaction isolation verified',
-            },
-            {
-              id: 'auth',
-              name: 'Cryptographic Token Engine & Password Vault',
-              status: 'Healthy',
-              latency: '< 1ms',
-              details: 'HMAC SHA-256 JWT signature verification active · bcrypt salt-hash cost 10',
-            },
-            {
-              id: 'rbac',
-              name: 'Strict Role-Based Access Control (RBAC) Guard',
-              status: 'Healthy',
-              latency: '< 1ms',
-              details: 'All REST endpoints guarded by NestJS JwtAuthGuard and permission interceptors',
-            },
-            {
-              id: 'audit',
-              name: 'Tamper-Evident Audit Trail Service',
-              status: 'Healthy',
-              latency: `${Math.max(1, Math.round((metrics.dbLatencyMs || 22) / 2))}ms`,
-              details: 'Real-time append-only stream active across academic, finance, and system operations',
-            },
-            {
-              id: 'runtime',
-              name: 'Node.js Execution Runtime & Heap Allocation',
-              status: 'Healthy',
-              latency: '68MB Heap',
-              details: `Uptime ${Math.floor((metrics.uptimeSeconds || 86400) / 3600)}h ${Math.floor(((metrics.uptimeSeconds || 86400) % 3600) / 60)}m · Node runtime nominal`,
-            },
-          ],
-        });
-        triggerToast('Subsystem diagnostics completed: All parameters verified nominal');
-      }
-    } catch {
-      setDiagnosticsData({
-        timestamp: new Date().toISOString(),
-        overallStatus: 'Nominal',
-        uptimeSeconds: metrics.uptimeSeconds || 86400,
-        subsystems: [
-          {
-            id: 'db',
-            name: 'PostgreSQL Relational Storage & Connection Pool',
-            status: 'Healthy',
-            latency: `${metrics.dbLatencyMs || 22}ms`,
-            details: 'Prisma client pool initialized, active transaction isolation verified',
-          },
-          {
-            id: 'auth',
-            name: 'Cryptographic Token Engine & Password Vault',
-            status: 'Healthy',
-            latency: '< 1ms',
-            details: 'HMAC SHA-256 JWT signature verification active · bcrypt salt-hash cost 10',
-          },
-          {
-            id: 'rbac',
-            name: 'Strict Role-Based Access Control (RBAC) Guard',
-            status: 'Healthy',
-            latency: '< 1ms',
-            details: 'All REST endpoints guarded by NestJS JwtAuthGuard and permission interceptors',
-          },
-          {
-            id: 'audit',
-            name: 'Tamper-Evident Audit Trail Service',
-            status: 'Healthy',
-            latency: '12ms',
-            details: 'Real-time append-only stream active across academic, finance, and system operations',
-          },
-          {
-            id: 'runtime',
-            name: 'Node.js Execution Runtime & Heap Allocation',
-            status: 'Healthy',
-            latency: '68MB Heap',
-            details: 'Uptime verified · Node runtime nominal',
-          },
-        ],
-      });
-      triggerToast('Subsystem diagnostics completed: All parameters verified nominal');
+      if (!res?.success || !res?.data) throw new Error('The backend did not return diagnostic results.');
+      setDiagnosticsData(res.data);
+      triggerToast('Live diagnostics completed.');
+    } catch (error) {
+      setDiagnosticsData({ error: error?.message || 'Diagnostics are unavailable.' });
+      triggerToast('Diagnostics could not be completed.');
     } finally {
       setDiagnosticsLoading(false);
     }
   };
 
-  // Listen to ERP store reactive events
-  useEffect(() => {
-    const handleUpdate = () => {
-      setRolePermissions({ ...erpStore.getRolePermissions() });
-      setSettings({ ...erpStore.getSettings() });
-      setAuditLogs([...erpStore.getAuditLogs()]);
-    };
-    window.addEventListener('erp_store_updated', handleUpdate);
-    return () => window.removeEventListener('erp_store_updated', handleUpdate);
-  }, []);
-
-  const triggerToast = (msg) => {
+  const triggerToast = (msg, variant = 'success') => {
     setToastMessage(msg);
+    setToastVariant(variant);
     setTimeout(() => setToastMessage(''), 3500);
   };
 
@@ -466,44 +262,27 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
     const isAdding = !prevPerms.includes(permId);
     const updatedPerms = isAdding ? [...prevPerms, permId] : prevPerms.filter(p => p !== permId);
 
-    erpStore.togglePermission(roleKey, permId);
-    setRolePermissions(prev => ({ ...prev, [roleKey]: updatedPerms }));
-
     try {
       await api.saveAdminRbacPermissions({ roleKey, permissions: updatedPerms });
-    } catch (e) {
-      console.warn('Backend RBAC save fallback:', e);
+      setRolePermissions(prev => ({ ...prev, [roleKey]: updatedPerms }));
+      triggerToast(`Updated permission ${permId} for ${roleKey}`);
+    } catch {
+      triggerToast('Permission change was not saved. Check the backend and try again.');
     }
-
-    triggerToast(`Updated permission ${permId} for ${roleKey}`);
-    erpStore.logAuditEvent(
-      'Super Administrator',
-      'Super Admin',
-      isAdding ? 'RBAC_GRANT_PERMISSION' : 'RBAC_REVOKE_PERMISSION',
-      `Role: ${roleKey} -> Perm: ${permId}`,
-      isAdding ? 'Revoked' : 'Granted',
-      isAdding ? 'Granted' : 'Revoked'
-    );
   };
 
   // Institutional Settings with Academic Rules change detection & Backend Sync
   const handleSaveSettings = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    erpStore.updateSettings(settings);
     try {
-      await api.saveAdminSettings(settings);
-    } catch (err) {
-      console.warn('Settings backend save fallback:', err);
+      const result = await api.saveAdminSettings(settings);
+      if (!result?.success) throw new Error('Backend did not confirm the settings update.');
+      if (result.settings) setSettings(result.settings);
+      triggerToast('Institutional settings saved to the backend.');
+    } catch {
+      triggerToast('Settings were not saved. Check the backend and try again.');
+      return;
     }
-    triggerToast('Institutional ERP system settings saved and synchronized!');
-    erpStore.logAuditEvent(
-      'Super Administrator',
-      'Super Admin',
-      'UPDATE_SYSTEM_SETTINGS',
-      `Section: ${settingsActiveSubTab.toUpperCase()}`,
-      'Active System Parameters',
-      'Persisted Configuration'
-    );
   };
 
   // Administrative Approval Center Handlers
@@ -513,36 +292,15 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
       return;
     }
     try {
-      const res = await api.decideAdminApproval(approvalId, { decision, justification: reason });
+      const res = await api.decideAdminApproval(approvalId, { decision, reason });
       if (res?.success && res?.data) {
         setApprovalsList(prev => prev.map(a => a.id === approvalId ? res.data : a));
       } else {
-        setApprovalsList(prev => prev.map(a => a.id === approvalId ? {
-          ...a,
-          status: decision === 'APPROVED' ? 'APPROVED' : 'REJECTED',
-          decidedBy: 'Super Administrator',
-          decidedAt: new Date().toISOString(),
-          decisionReason: reason
-        } : a));
+        throw new Error('The backend did not confirm the approval decision.');
       }
       triggerToast(`Approval request ${approvalId} recorded as ${decision}.`);
-      erpStore.logAuditEvent(
-        'Super Administrator',
-        'Super Admin',
-        `DECIDE_APPROVAL_${decision}`,
-        `Approval ID: ${approvalId} (${reason})`,
-        'PENDING',
-        decision
-      );
     } catch {
-      setApprovalsList(prev => prev.map(a => a.id === approvalId ? {
-        ...a,
-        status: decision === 'APPROVED' ? 'APPROVED' : 'REJECTED',
-        decidedBy: 'Super Administrator',
-        decidedAt: new Date().toISOString(),
-        decisionReason: reason
-      } : a));
-      triggerToast(`Approval request ${approvalId} recorded as ${decision.toLowerCase()}.`);
+      triggerToast('Approval decision was not saved. Refresh the queue and try again.');
     } finally {
       setSelectedApprovalModal(null);
       setApprovalReasonInput('');
@@ -552,71 +310,46 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
   // User Directory Provisioning Handler
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    if (!newUserData.name || !newUserData.email || !newUserData.identifier) {
-      triggerToast('Validation Error: Please provide full name, institutional email, and roll/employee identifier.');
+    if (!newUserData.name || !newUserData.email || !newUserData.identifier || newUserData.password.length < 12) {
+      triggerToast('Enter the user details and an initial password with at least 12 characters.');
       return;
     }
     try {
       const res = await api.createAdminUser(newUserData);
       if (res?.success && res?.data) {
         setUsersList(prev => [res.data, ...prev]);
+        setMetrics((prev) => ({
+          ...prev,
+          totalAccounts: typeof prev.totalAccounts === 'number' ? prev.totalAccounts + 1 : prev.totalAccounts,
+          activeAccounts: typeof prev.activeAccounts === 'number' ? prev.activeAccounts + 1 : prev.activeAccounts,
+        }));
+        api.getAdminMetrics().then((metricRes) => {
+          if (metricRes?.success && metricRes?.data) setMetrics((prev) => ({ ...prev, ...metricRes.data }));
+        }).catch(() => {});
         triggerToast(`Account provisioned successfully for ${newUserData.name} (${newUserData.role.toUpperCase()})`);
       } else {
-        const newUserObj = {
-          id: `usr_${Date.now()}`,
-          name: newUserData.name,
-          email: newUserData.email,
-          identifier: newUserData.identifier,
-          role: newUserData.role,
-          department: newUserData.department,
-          isActive: true,
-          isMfaEnabled: false,
-          lastLogin: 'Never',
-          failedLogins: 0,
-          joinedAt: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-        };
-        setUsersList(prev => [newUserObj, ...prev]);
-        triggerToast(`Account provisioned successfully for ${newUserData.name} (${newUserData.role.toUpperCase()})`);
+        throw new Error('The API did not confirm account creation.');
       }
-      erpStore.logAuditEvent(
-        'Super Administrator',
-        'Super Admin',
-        'CREATE_USER_ACCOUNT',
-        `User: ${newUserData.name} (${newUserData.identifier})`,
-        'None',
-        newUserData.role
-      );
       setCreateUserModalOpen(false);
-      setNewUserData({ name: '', email: '', identifier: '', role: 'faculty', department: 'Computer Science & Engineering', password: 'password123' });
-    } catch {
-      triggerToast('Error creating user account. Please check inputs.');
+      setNewUserData({ name: '', email: '', identifier: '', role: 'faculty', department: 'Computer Science & Engineering', password: '' });
+    } catch (error) {
+      triggerToast(error?.message || 'Account could not be created. Check the details and try again.', 'error');
     }
   };
 
   // Disaster Recovery Snapshot Restore Handler
   const handleRestoreSnapshot = async (snapshotId, confirmationCode) => {
     if (confirmationCode !== 'RESTORE-CONFIRM') {
-      triggerToast('Authorization Check Failed: You must enter "RESTORE-CONFIRM" exactly.');
+      triggerToast('Authorization check failed. Enter RESTORE-CONFIRM exactly.');
       return;
     }
     setRestoreProcessing(true);
     try {
       const res = await api.restoreAdminBackup(snapshotId, confirmationCode);
-      if (res?.success) {
-        triggerToast(res.message || 'Database restored successfully from snapshot.');
-      } else {
-        triggerToast('Disaster recovery restoration executed successfully. Schema & data verified nominal.');
-      }
-      erpStore.logAuditEvent(
-        'Super Administrator',
-        'Super Admin',
-        'RESTORE_DATABASE_BACKUP',
-        `Snapshot: ${snapshotId}`,
-        'Online Production State',
-        'Restored from Vault'
-      );
-    } catch {
-      triggerToast('Disaster recovery restore completed.');
+      if (!res?.success) throw new Error('The backend did not confirm the restore.');
+      triggerToast(res.message || 'Database restore completed.');
+    } catch (error) {
+      triggerToast(error?.message || 'Database restore is unavailable until a backup provider is configured.');
     } finally {
       setRestoreProcessing(false);
       setRestoreModalSnapshot(null);
@@ -628,16 +361,11 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
   const handleSaveIncidentResolution = async (id, status, notes) => {
     try {
       const res = await api.updateAdminIncident(id, { status, notes });
-      if (res?.success && res?.data) {
-        setIncidents(prev => prev.map(i => i.id === id ? res.data : i));
-        triggerToast(`Incident ${id} updated to ${status}.`);
-      } else {
-        setIncidents(prev => prev.map(i => i.id === id ? { ...i, status: status.toLowerCase(), resolutionNotes: notes, resolvedAt: new Date().toISOString() } : i));
-        triggerToast(`Incident ${id} status updated to ${status}.`);
-      }
-    } catch {
-      setIncidents(prev => prev.map(i => i.id === id ? { ...i, status: status.toLowerCase(), resolutionNotes: notes, resolvedAt: new Date().toISOString() } : i));
-      triggerToast(`Incident ${id} status updated to ${status}.`);
+      if (!res?.success || !res?.data) throw new Error('The backend did not confirm the incident update.');
+      setIncidents((prev) => prev.map((incident) => incident.id === id ? res.data : incident));
+      triggerToast(`Incident ${id} updated.`);
+    } catch (error) {
+      triggerToast(error?.message || 'Incident tracking is unavailable until a persistent provider is configured.');
     } finally {
       setSelectedIncidentModal(null);
     }
@@ -646,12 +374,12 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
   // Session revocation handler
   const handleRevokeSession = async (sessionId, identifier) => {
     try {
-      await api.revokeAdminSession(sessionId);
-      setSessionsList(prev => prev.filter(s => s.id !== sessionId));
-      triggerToast(`Session for ${identifier} successfully revoked.`);
-    } catch {
-      setSessionsList(prev => prev.filter(s => s.id !== sessionId));
+      const res = await api.revokeAdminSession(sessionId);
+      if (!res?.success) throw new Error('The backend did not confirm session revocation.');
+      setSessionsList((prev) => prev.filter((session) => session.id !== sessionId));
       triggerToast(`Session for ${identifier} revoked.`);
+    } catch (error) {
+      triggerToast(error?.message || 'Session revocation is unavailable until persisted sessions are configured.');
     }
   };
 
@@ -660,14 +388,11 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
     setTestingIntegrationId(intId);
     try {
       const res = await api.testAdminIntegration(intId);
-      if (res?.success && res?.data) {
-        setIntegrationsList(prev => prev.map(item => item.id === intId ? { ...item, status: 'Operational', latencyMs: res.data.latencyMs, lastPing: new Date().toISOString() } : item));
-        triggerToast(`${res.data.id?.toUpperCase() || 'Integration'} connection test: Operational (${res.data.latencyMs}ms)`);
-      } else {
-        triggerToast('Integration connection test verified nominal.');
-      }
-    } catch {
-      triggerToast('Integration connection test verified nominal.');
+      if (!res?.success || !res?.data) throw new Error('The integration test returned no result.');
+      setIntegrationsList((prev) => prev.map((item) => item.id === intId ? { ...item, ...res.data } : item));
+      triggerToast(`${res.data.id?.toUpperCase() || 'Integration'} health check completed.`);
+    } catch (error) {
+      triggerToast(error?.message || 'Integration health check failed.');
     } finally {
       setTestingIntegrationId(null);
     }
@@ -677,25 +402,31 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
   const handleToggleUserStatus = async (userObj) => {
     const nextActive = !userObj.isActive;
     try {
-      await api.updateAdminUserStatus(userObj.id, nextActive);
-      setUsersList(prev => prev.map(u => u.id === userObj.id ? { ...u, isActive: nextActive } : u));
+      const res = await api.updateAdminUserStatus(userObj.id, nextActive);
+      if (!res?.success) throw new Error('The backend did not confirm the account status update.');
+      setUsersList((prev) => prev.map((user) => user.id === userObj.id ? { ...user, isActive: nextActive } : user));
+      setMetrics((prev) => ({
+        ...prev,
+        activeAccounts: typeof prev.activeAccounts === 'number'
+          ? Math.max(0, prev.activeAccounts + (nextActive ? 1 : -1)) : prev.activeAccounts,
+        suspendedAccounts: typeof prev.suspendedAccounts === 'number'
+          ? Math.max(0, prev.suspendedAccounts + (nextActive ? -1 : 1)) : prev.suspendedAccounts,
+      }));
+      api.getAdminMetrics().then((metricRes) => {
+        if (metricRes?.success && metricRes?.data) setMetrics((prev) => ({ ...prev, ...metricRes.data }));
+      }).catch(() => {});
       triggerToast(`User ${userObj.name} account ${nextActive ? 'activated' : 'suspended'}.`);
-    } catch {
-      setUsersList(prev => prev.map(u => u.id === userObj.id ? { ...u, isActive: nextActive } : u));
-      triggerToast(`User ${userObj.name} status updated.`);
+    } catch (error) {
+      triggerToast(error?.message || 'Account status could not be updated.');
     }
   };
 
   const handleResetUserPassword = async (userObj) => {
     try {
-      const res = await api.resetAdminUserPassword(userObj.id);
-      if (res?.success) {
-        setUserResetTokenResult({ user: userObj, token: res.resetToken || `tok_${Math.random().toString(36).substring(2)}` });
-        triggerToast(`Password reset link generated for ${userObj.email}.`);
-      }
-    } catch {
-      setUserResetTokenResult({ user: userObj, token: `tok_${Math.random().toString(36).substring(2)}` });
-      triggerToast(`Password reset link generated for ${userObj.email}.`);
+      await api.resetAdminUserPassword(userObj.id);
+      triggerToast('Password reset request completed.');
+    } catch (error) {
+      triggerToast(error?.message || 'Password recovery is unavailable until secure email delivery is configured.');
     }
   };
 
@@ -726,99 +457,109 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
 
   // Backup & Recovery Handlers
   const handleTriggerBackup = async () => {
-    setBackupStatus('Creating snapshot...');
+    setBackupStatus('Creating backup...');
     try {
       const res = await api.triggerAdminBackup();
-      if (res?.success && res?.data) {
-        setBackupsList(prev => [res.data, ...prev]);
-        setBackupStatus('Backup Completed');
-        triggerToast('Full PostgreSQL system snapshot created and encrypted in cloud storage vault!');
-      } else {
-        const manualSnapshot = {
-          id: `SNP-${new Date().toISOString().split('T')[0]}-MANUAL`,
-          fileName: `apna_campus_prod_${new Date().toISOString().split('T')[0].replace(/-/g, '')}_manual.sql.gz.enc`,
-          createdAt: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
-          type: 'Manual SuperAdmin Snapshot',
-          size: '15.1 MB',
-          databaseVersion: 'PostgreSQL 16.3',
-          status: 'Completed',
-          checksum: `sha256:${Math.random().toString(36).substring(2)}${Math.random().toString(36).substring(2)}`,
-          retentionDays: 90,
-        };
-        setBackupsList(prev => [manualSnapshot, ...prev]);
-        setBackupStatus('Backup Completed');
-        triggerToast('Full PostgreSQL system snapshot created and encrypted in cloud vault!');
-      }
-    } catch {
-      setBackupStatus('Backup Completed');
-      triggerToast('Full PostgreSQL system snapshot created and encrypted in cloud vault!');
+      if (!res?.success || !res?.data) throw new Error('The backend did not confirm backup creation.');
+      setBackupsList((prev) => [res.data, ...prev]);
+      setBackupStatus('Backup completed');
+      triggerToast('Backup created by the configured provider.');
+    } catch (error) {
+      setBackupStatus('Unavailable');
+      triggerToast(error?.message || 'Backup storage is not configured.');
     } finally {
       setTimeout(() => setBackupStatus('Idle'), 3500);
     }
   };
 
   const handleVerifyDatabaseIntegrity = () => {
-    setIntegrityCheckStatus('Verifying schema relations, indexes, and foreign constraints...');
-    setTimeout(() => {
-      setIntegrityCheckStatus('Verified: All 48 database tables, 142 foreign key constraints, and WAL replication nominal with zero corrupt blocks.');
-      triggerToast('Database integrity verified: 0 corrupt blocks detected.');
-    }, 1000);
+    triggerToast('Database integrity verification is not configured.');
   };
 
   // Fetch tab-specific data on tab activation
   useEffect(() => {
     let isMounted = true;
+    setTabLoadError('');
     if (activeTab === 'security-incidents') {
       setIncidentsLoading(true);
       api.getAdminIncidents({ severity: incidentSeverityFilter, status: incidentStatusFilter, search: incidentSearch })
         .then(res => { if (isMounted && res?.success && Array.isArray(res?.data)) setIncidents(res.data); })
-        .catch(() => {})
+        .catch((error) => { if (isMounted) setTabLoadError(error?.message || 'Security incident tracking is unavailable.'); })
         .finally(() => { if (isMounted) setIncidentsLoading(false); });
     }
     if (activeTab === 'system-logs') {
       setLogsLoading(true);
       api.getAdminSystemLogs({ level: logLevelFilter, component: logComponentFilter, search: logSearch })
         .then(res => { if (isMounted && res?.success && res?.data) setSystemLogs(res.data); })
-        .catch(() => {})
+        .catch((error) => { if (isMounted) setTabLoadError(error?.message || 'System log search is unavailable.'); })
         .finally(() => { if (isMounted) setLogsLoading(false); });
     }
     if (activeTab === 'sessions') {
       setSessionsLoading(true);
       api.getAdminSessions()
         .then(res => { if (isMounted && res?.success && Array.isArray(res?.data)) setSessionsList(res.data); })
-        .catch(() => {})
+        .catch((error) => { if (isMounted) setTabLoadError(error?.message || 'Session management is unavailable.'); })
         .finally(() => { if (isMounted) setSessionsLoading(false); });
     }
     if (activeTab === 'integrations') {
       setIntegrationsLoading(true);
       api.getAdminIntegrations()
         .then(res => { if (isMounted && res?.success && Array.isArray(res?.data)) setIntegrationsList(res.data); })
-        .catch(() => {})
+        .catch((error) => { if (isMounted) setTabLoadError(error?.message || 'Integration status is unavailable.'); })
         .finally(() => { if (isMounted) setIntegrationsLoading(false); });
     }
     if (activeTab === 'users') {
       setUsersLoading(true);
       api.getAdminUsers({ search: userSearch, role: userRoleFilter, status: userStatusFilter })
         .then(res => { if (isMounted && res?.success && Array.isArray(res?.data)) setUsersList(res.data); })
-        .catch(() => {})
+        .catch((error) => { if (isMounted) setTabLoadError(error?.message || 'User directory is unavailable.'); })
         .finally(() => { if (isMounted) setUsersLoading(false); });
     }
     if (activeTab === 'backup') {
       setBackupsLoading(true);
       api.getAdminBackups()
         .then(res => { if (isMounted && res?.success && Array.isArray(res?.data)) setBackupsList(res.data); })
-        .catch(() => {})
+        .catch((error) => { if (isMounted) setTabLoadError(error?.message || 'Backup storage is not configured.'); })
         .finally(() => { if (isMounted) setBackupsLoading(false); });
     }
     if (activeTab === 'approvals') {
       setApprovalsLoading(true);
       api.getAdminApprovals()
         .then(res => { if (isMounted && res?.success && Array.isArray(res?.data)) setApprovalsList(res.data); })
-        .catch(() => {})
+        .catch((error) => { if (isMounted) setTabLoadError(error?.message || 'Approval queue is unavailable.'); })
         .finally(() => { if (isMounted) setApprovalsLoading(false); });
     }
+    if (activeTab === 'audit') {
+      api.getAdminAuditLogs(auditSearch)
+        .then((res) => {
+          if (!isMounted || !res?.success || !Array.isArray(res.data)) return;
+          setAuditLogs(res.data.map((log) => ({
+            id: log.id,
+            timestamp: log.createdAt || log.changedAt,
+            user: log.user,
+            role: log.role,
+            action: log.assessment || log.subject || 'Recorded action',
+            target: log.targetStudent || log.subject || '',
+            oldValue: log.oldMark,
+            newValue: log.newMark,
+            status: log.reason,
+            ipAddress: log.ipAddress,
+          })));
+        })
+        .catch(() => { if (isMounted) setAuditLogs([]); });
+    }
+    if (activeTab === 'settings') {
+      api.getAdminSettings()
+        .then(res => { if (isMounted && res?.success && res.data) setSettings(res.data); })
+        .catch((error) => { if (isMounted) setTabLoadError(error?.message || 'Institutional settings could not be loaded.'); });
+    }
+    if (activeTab === 'rbac') {
+      api.getAdminRbacPermissions()
+        .then(res => { if (isMounted && res?.success && res.data) setRolePermissions(res.data); })
+        .catch((error) => { if (isMounted) setTabLoadError(error?.message || 'RBAC settings could not be loaded.'); });
+    }
     return () => { isMounted = false; };
-  }, [activeTab, incidentSeverityFilter, incidentStatusFilter, incidentSearch, logLevelFilter, logComponentFilter, logSearch, userSearch, userRoleFilter, userStatusFilter]);
+  }, [activeTab, incidentSeverityFilter, incidentStatusFilter, incidentSearch, logLevelFilter, logComponentFilter, logSearch, userSearch, userRoleFilter, userStatusFilter, auditSearch]);
 
   const filteredAuditLogs = useMemo(() => {
     return auditLogs.filter(log => {
@@ -868,7 +609,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
           position: 'fixed',
           top: '20px',
           right: '20px',
-          background: 'linear-gradient(135deg, #10b981, #059669)',
+          background: toastVariant === 'error' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #10b981, #059669)',
           color: '#ffffff',
           padding: '12px 20px',
           borderRadius: '10px',
@@ -880,7 +621,13 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
           fontSize: '0.88rem',
           fontWeight: 600,
         }}>
-          <CheckCircle2 size={18} /> {toastMessage}
+          {toastVariant === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />} {toastMessage}
+        </div>
+      )}
+      {tabLoadError && (
+        <div className="erp-alert-box is-error" role="alert" style={{ position: 'fixed', top: 76, right: 20, zIndex: 9998, maxWidth: 460 }}>
+          <span>{tabLoadError}</span>
+          <button type="button" className="erp-alert-close" onClick={() => setTabLoadError('')} aria-label="Dismiss error">×</button>
         </div>
       )}
 
@@ -1216,12 +963,14 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                     </div>
                   </div>
                   <div className="erp-stat-val" style={{ display: 'flex', alignItems: 'center' }}>
-                    <span className="erp-pulse-dot" />
-                    {metrics.systemStatus || 'Operational'}
+                    {metrics.systemStatus ?? 'Unavailable'}
                   </div>
-                  <div className="erp-stat-note">Uptime 99.98% · {metrics.dbLatencyMs || 24}ms Latency</div>
+                  <div className="erp-stat-note">
+                    {metrics.uptimeSeconds == null ? 'Uptime unavailable' : `Uptime ${Math.floor(metrics.uptimeSeconds / 3600)}h`}
+                    {' · '}{metrics.dbLatencyMs == null ? 'Latency unavailable' : `${metrics.dbLatencyMs}ms latency`}
+                  </div>
                   <div className="erp-stat-footer">
-                    <span>Verified: Just now</span>
+                    <span>{metrics.lastUpdated ? `Updated: ${new Date(metrics.lastUpdated).toLocaleString()}` : 'Not checked'}</span>
                     <span style={{ color: '#2563eb', fontWeight: 600 }}>Run Diagnostics →</span>
                   </div>
                 </div>
@@ -1241,10 +990,10 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                       <KeyRound size={18} />
                     </div>
                   </div>
-                  <div className="erp-stat-val">{metrics.managedRolesCount || 14} Roles</div>
-                  <div className="erp-stat-note">{metrics.granularPoliciesCount || 22} Granular Access Policies</div>
+                  <div className="erp-stat-val">{metrics.managedRolesCount ?? '—'} Roles</div>
+                  <div className="erp-stat-note">{metrics.granularPoliciesCount ?? '—'} Runtime policy count</div>
                   <div className="erp-stat-footer">
-                    <span>Enforced on REST gateway</span>
+                    <span>Runtime coverage varies by route</span>
                     <span style={{ color: '#6366f1', fontWeight: 600 }}>Configure →</span>
                   </div>
                 </div>
@@ -1264,16 +1013,16 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                       <Users size={18} />
                     </div>
                   </div>
-                  <div className="erp-stat-val">{(metrics.totalAccounts || 2698).toLocaleString()}</div>
+                  <div className="erp-stat-val">{typeof metrics.totalAccounts === 'number' ? metrics.totalAccounts.toLocaleString() : '—'}</div>
                   <div className="erp-stat-note">
-                    {(metrics.totalStudents || 2480).toLocaleString()} Students · {metrics.totalFaculty || 146} Faculty · {metrics.totalStaff || 72} Staff
+                    {typeof metrics.totalStudents === 'number' ? metrics.totalStudents.toLocaleString() : '—'} Students · {metrics.totalFaculty ?? '—'} Faculty · {metrics.totalStaff ?? '—'} Staff
                   </div>
                   <div className="erp-stat-subnote">
-                    <span style={{ color: '#16a34a', fontWeight: 600 }}>{(metrics.activeAccounts || 2674).toLocaleString()} Active</span>
+                    <span style={{ color: '#16a34a', fontWeight: 600 }}>{typeof metrics.activeAccounts === 'number' ? metrics.activeAccounts.toLocaleString() : '—'} Active</span>
                     <span>·</span>
-                    <span style={{ color: '#64748b' }}>{metrics.inactiveAccounts || 18} Inactive</span>
+                    <span style={{ color: '#64748b' }}>{metrics.inactiveAccounts ?? '—'} Inactive</span>
                     <span>·</span>
-                    <span style={{ color: '#dc2626' }}>{metrics.suspendedAccounts || 6} Suspended</span>
+                    <span style={{ color: '#dc2626' }}>{metrics.suspendedAccounts ?? '—'} Suspended</span>
                   </div>
                   <div className="erp-stat-footer">
                     <span>Identity Registry</span>
@@ -1296,12 +1045,12 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                       <History size={18} />
                     </div>
                   </div>
-                  <div className="erp-stat-val">{metrics.auditEventsTotal || auditLogs.length || 142}</div>
+                  <div className="erp-stat-val">{metrics.auditEventsTotal ?? '—'}</div>
                   <div className="erp-stat-note">
-                    Last 30 Days: {metrics.auditEvents30Days || auditLogs.length || 142} recorded actions
+                    Last 30 Days: {metrics.auditEvents30Days ?? '—'} recorded actions
                   </div>
                   <div className="erp-stat-footer">
-                    <span>Latest: {auditLogs[0]?.timestamp || 'Moments ago'}</span>
+                    <span>Latest: {auditLogs[0]?.timestamp ? new Date(auditLogs[0].timestamp).toLocaleString() : '—'}</span>
                     <span style={{ color: '#d97706', fontWeight: 600 }}>View Ledger →</span>
                   </div>
                 </div>
@@ -1331,15 +1080,15 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                           <strong style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 700 }}>Token Signature & Password Security</strong>
                         </div>
                         <span className="erp-sec-status-badge verified">
-                          <CheckCircle2 size={12} /> Active &amp; Verified
+                          <Info size={12} /> Partial
                         </span>
                       </div>
                       <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: 1.5 }}>
-                        Cryptographically signed HMAC SHA-256 JWT access and refresh tokens. Passwords stored using one-way adaptive bcrypt salt-hashing (cost factor 10) — never plaintext or reversible.
+                        Login uses signed JWTs and stored password hashes. Refresh-token rotation and account-wide session revocation are not configured.
                       </p>
                     </div>
                     <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px dashed #e2e8f0', fontSize: '0.74rem', color: '#16a34a', fontWeight: 600 }}>
-                      ✓ Token rotation active · Zero plaintext passwords stored
+                      Session controls require additional backend support
                     </div>
                   </div>
 
@@ -1354,15 +1103,15 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                           <strong style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 700 }}>Strict RBAC Isolation</strong>
                         </div>
                         <span className="erp-sec-status-badge enforced">
-                          <ShieldCheck size={12} /> Gateway Enforced
+                          <Info size={12} /> Partial Coverage
                         </span>
                       </div>
                       <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: 1.5 }}>
-                        Multi-tier NestJS permission guards and route interceptors on all REST endpoints. Zero client-side privilege bypass with server-side validation against IDOR.
+                        Some NestJS routes enforce roles and ownership on the server. Route coverage still needs a complete audit.
                       </p>
                     </div>
                     <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px dashed #e2e8f0', fontSize: '0.74rem', color: '#2563eb', fontWeight: 600 }}>
-                      ✓ 14 roles isolated · 22 capability gates active
+                      Permission definitions do not prove that every route enforces them
                     </div>
                   </div>
 
@@ -1377,15 +1126,15 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                           <strong style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 700 }}>State-Machine Workflow Engine</strong>
                         </div>
                         <span className="erp-sec-status-badge deterministic">
-                          <History size={12} /> Deterministic Integrity
+                          <Info size={12} /> Partial Coverage
                         </span>
                       </div>
                       <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: 1.5 }}>
-                        Enforces strict non-skippable transition states for continuous marks moderation, leave approvals, fee waivers, and roster changes. Tamper-evident ledger logging.
+                        Some workflows enforce persisted state transitions. Leave approvals, fee waivers, and audit coverage are not fully integrated.
                       </p>
                     </div>
                     <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px dashed #e2e8f0', fontSize: '0.74rem', color: '#b45309', fontWeight: 600 }}>
-                      ✓ Linear transitions enforced · Direct DB mutations bypassed
+                      Workflow coverage varies by module
                     </div>
                   </div>
                 </div>
@@ -1454,12 +1203,11 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                         setAlertsLoading(true);
                         try {
                           const res = await api.getSecurityAlerts();
-                          if (res?.success && Array.isArray(res?.data)) {
-                            setSecurityAlerts(res.data);
-                            triggerToast('Security alerts synchronized: All systems nominal');
-                          }
-                        } catch {
-                          triggerToast('Security monitor refreshed: Zero active anomalies');
+                          if (!res?.success || !Array.isArray(res?.data)) throw new Error('The API did not return security alerts.');
+                          setSecurityAlerts(res.data);
+                          triggerToast('Security alerts refreshed.');
+                        } catch (error) {
+                          triggerToast(error?.message || 'Security alerts could not be refreshed.');
                         } finally {
                           setAlertsLoading(false);
                         }
@@ -1627,10 +1375,11 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                       setIncidentsLoading(true);
                       try {
                         const res = await api.getAdminIncidents({ severity: incidentSeverityFilter, status: incidentStatusFilter, search: incidentSearch });
-                        if (res?.success && Array.isArray(res?.data)) setIncidents(res.data);
+                        if (!res?.success || !Array.isArray(res?.data)) throw new Error('The API did not return incidents.');
+                        setIncidents(res.data);
                         triggerToast('Security incidents refreshed');
-                      } catch {
-                        triggerToast('Incidents synchronized');
+                      } catch (error) {
+                        triggerToast(error?.message || 'Security incident tracking is unavailable.');
                       } finally {
                         setIncidentsLoading(false);
                       }
@@ -1787,10 +1536,11 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                       setLogsLoading(true);
                       try {
                         const res = await api.getAdminSystemLogs({ level: logLevelFilter, component: logComponentFilter, search: logSearch });
-                        if (res?.success && res?.data) setSystemLogs(res.data);
+                        if (!res?.success || !res?.data) throw new Error('The API did not return system logs.');
+                        setSystemLogs(res.data);
                         triggerToast('System logs refreshed');
-                      } catch {
-                        triggerToast('Logs updated');
+                      } catch (error) {
+                        triggerToast(error?.message || 'System log search is unavailable.');
                       } finally {
                         setLogsLoading(false);
                       }
@@ -2134,7 +1884,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
               <div className="erp-panel-header">
                 <div className="erp-panel-title">
                   <h3>All Institutional User Accounts</h3>
-                  <p>Central identity registry covering all 14 university roles with active status management</p>
+                  <p>Central identity registry covering all {ACCOUNT_ROLE_OPTIONS.length} supported roles with active status management</p>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -2155,14 +1905,9 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                     onChange={(e) => setUserRoleFilter(e.target.value)}
                   >
                     <option value="ALL">All Roles</option>
-                    <option value="SUPER_ADMIN">Super Admin</option>
-                    <option value="PRINCIPAL">Principal</option>
-                    <option value="HOD">HOD</option>
-                    <option value="FACULTY">Faculty</option>
-                    <option value="STUDENT">Student</option>
-                    <option value="EXAM_CELL">Exam Cell</option>
-                    <option value="ACCOUNTS">Accounts</option>
-                    <option value="LIBRARY">Library</option>
+                    {ACCOUNT_ROLE_OPTIONS.map(([role, label]) => (
+                      <option key={role} value={role.toUpperCase()}>{label}</option>
+                    ))}
                   </select>
 
                   <select
@@ -2182,10 +1927,13 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                       setUsersLoading(true);
                       try {
                         const res = await api.getAdminUsers({ search: userSearch, role: userRoleFilter, status: userStatusFilter });
-                        if (res?.success && Array.isArray(res?.data)) setUsersList(res.data);
+                        if (!res?.success || !Array.isArray(res?.data)) throw new Error('The API did not return user accounts.');
+                        setUsersList(res.data);
+                        const metricRes = await api.getAdminMetrics();
+                        if (metricRes?.success && metricRes?.data) setMetrics((prev) => ({ ...prev, ...metricRes.data }));
                         triggerToast('User directory refreshed');
-                      } catch {
-                        triggerToast('Users synchronized');
+                      } catch (error) {
+                        triggerToast(error?.message || 'User directory could not be refreshed.');
                       } finally {
                         setUsersLoading(false);
                       }
@@ -2210,19 +1958,19 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Total Registered</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>{metrics.totalAccounts || 2698}</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>{metrics.totalAccounts ?? '—'}</div>
                 </div>
                 <div style={{ background: '#f0fdf4', padding: '1rem', borderRadius: '10px', border: '1px solid #dcfce7' }}>
                   <div style={{ fontSize: '0.76rem', color: '#15803d', fontWeight: 600, textTransform: 'uppercase' }}>Active Accounts</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#16a34a', marginTop: '4px' }}>{metrics.activeAccounts || 2674}</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#16a34a', marginTop: '4px' }}>{metrics.activeAccounts ?? '—'}</div>
                 </div>
                 <div style={{ background: '#fef2f2', padding: '1rem', borderRadius: '10px', border: '1px solid #fee2e2' }}>
                   <div style={{ fontSize: '0.76rem', color: '#b91c1c', fontWeight: 600, textTransform: 'uppercase' }}>Suspended Accounts</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#dc2626', marginTop: '4px' }}>{metrics.suspendedAccounts || 6}</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#dc2626', marginTop: '4px' }}>{metrics.suspendedAccounts ?? '—'}</div>
                 </div>
                 <div style={{ background: '#eff6ff', padding: '1rem', borderRadius: '10px', border: '1px solid #dbeafe' }}>
                   <div style={{ fontSize: '0.76rem', color: '#1e40af', fontWeight: 600, textTransform: 'uppercase' }}>Role Archetypes</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563eb', marginTop: '4px' }}>14 Distinct Roles</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563eb', marginTop: '4px' }}>{ACCOUNT_ROLE_OPTIONS.length} Supported Roles</div>
                 </div>
               </div>
 
@@ -2245,7 +1993,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                         <tr key={u.id}>
                           <td>
                             <strong style={{ fontFamily: 'monospace', color: '#0f172a' }}>{u.identifier || u.id}</strong>
-                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Joined {u.joinedAt || 'Oct 2024'}</div>
+                              {u.createdAt && <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Joined {new Date(u.createdAt).toLocaleDateString()}</div>}
                           </td>
                           <td>
                             <strong>{u.name}</strong>
@@ -2263,7 +2011,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                               {u.role}
                             </span>
                           </td>
-                          <td style={{ color: '#334155', fontSize: '0.82rem' }}>{u.department || 'Central Campus'}</td>
+                          <td style={{ color: '#334155', fontSize: '0.82rem' }}>{u.department || 'Unassigned'}</td>
                           <td>
                             <span style={{
                               background: u.isActive !== false ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
@@ -2316,7 +2064,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                               >
                                 <Eye size={12} style={{ marginRight: '4px' }} /> Details
                               </button>
-                              <button
+                              {canRequestAccountReset(u) && <button
                                 type="button"
                                 className="erp-btn erp-btn-secondary"
                                 style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
@@ -2324,8 +2072,8 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                                 title="Generate secure one-time password reset token"
                               >
                                 <Key size={12} style={{ marginRight: '4px' }} /> Reset
-                              </button>
-                              <button
+                              </button>}
+                              {canChangeAccountStatus(u) && <button
                                 type="button"
                                 className="erp-btn"
                                 style={{
@@ -2342,7 +2090,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                                 title={u.isActive !== false ? 'Suspend Account' : 'Activate Account'}
                               >
                                 {u.isActive !== false ? 'Suspend' : 'Activate'}
-                              </button>
+                              </button>}
                             </div>
                           </td>
                         </tr>
@@ -2350,7 +2098,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                     ) : (
                       <tr>
                         <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
-                          Loading user directory from central database...
+                          {usersLoading ? 'Loading user directory from database...' : 'No accounts match these filters.'}
                         </td>
                       </tr>
                     )}
@@ -2392,7 +2140,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                           <strong>{r.label}</strong>
                           <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Role Key: {r.key}</div>
                         </td>
-                        <td><strong>{r.usersCount.toLocaleString()}</strong> Active</td>
+                        <td><strong>{metrics.userRoleCounts ? (metrics.userRoleCounts[r.key]?.active ?? 0) : '—'}</strong> Active</td>
                         <td style={{ color: '#475569' }}>{r.description}</td>
                         <td>
                           {onSwitchRole && (
@@ -2575,10 +2323,11 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                     setSessionsLoading(true);
                     try {
                       const res = await api.getAdminSessions();
-                      if (res?.success && Array.isArray(res?.data)) setSessionsList(res.data);
+                      if (!res?.success || !Array.isArray(res?.data)) throw new Error('The API did not return session data.');
+                      setSessionsList(res.data);
                       triggerToast('Session registry refreshed');
-                    } catch {
-                      triggerToast('Sessions synchronized');
+                    } catch (error) {
+                      triggerToast(error?.message || 'Session management is unavailable.');
                     } finally {
                       setSessionsLoading(false);
                     }
@@ -2594,28 +2343,28 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                 <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Idle Session Timeout</div>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
-                    {sessionPolicies.idleTimeoutMinutes} Minutes
+                    {sessionPolicies.idleTimeoutMinutes ?? '—'} Minutes
                   </div>
                   <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Automated silent logout</span>
                 </div>
                 <div style={{ background: '#eff6ff', padding: '1rem', borderRadius: '10px', border: '1px solid #dbeafe' }}>
                   <div style={{ fontSize: '0.76rem', color: '#1e40af', fontWeight: 600, textTransform: 'uppercase' }}>Max Concurrent Sessions</div>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#2563eb', marginTop: '4px' }}>
-                    {sessionPolicies.maxConcurrentSessions} Devices / Account
+                    {sessionPolicies.maxConcurrentSessions ?? '—'} Devices / Account
                   </div>
                   <span style={{ fontSize: '0.74rem', color: '#1e40af' }}>Enforces single user per device</span>
                 </div>
                 <div style={{ background: '#fffbeb', padding: '1rem', borderRadius: '10px', border: '1px solid #fef3c7' }}>
                   <div style={{ fontSize: '0.76rem', color: '#b45309', fontWeight: 600, textTransform: 'uppercase' }}>Brute-Force Lockout</div>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#d97706', marginTop: '4px' }}>
-                    {sessionPolicies.failedLockoutThreshold} Bad Attempts
+                    {sessionPolicies.failedLockoutThreshold ?? '—'} Bad Attempts
                   </div>
                   <span style={{ fontSize: '0.74rem', color: '#b45309' }}>Locks account for 15 mins</span>
                 </div>
                 <div style={{ background: '#f0fdf4', padding: '1rem', borderRadius: '10px', border: '1px solid #dcfce7' }}>
                   <div style={{ fontSize: '0.76rem', color: '#15803d', fontWeight: 600, textTransform: 'uppercase' }}>Admin MFA Enforcement</div>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#16a34a', marginTop: '4px' }}>
-                    {sessionPolicies.enforceMfaAdmins ? 'Enforced' : 'Optional'}
+                    {sessionPolicies.enforceMfaAdmins == null ? 'Not configured' : sessionPolicies.enforceMfaAdmins ? 'Enforced' : 'Optional'}
                   </div>
                   <span style={{ fontSize: '0.74rem', color: '#15803d' }}>Required for Super Admin &amp; Principal</span>
                 </div>
@@ -2893,8 +2642,8 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                         type="number"
                         min="5"
                         max="180"
-                        value={sessionPolicies.idleTimeoutMinutes}
-                        onChange={(e) => setSessionPolicies({ ...sessionPolicies, idleTimeoutMinutes: Number(e.target.value) })}
+                        value={sessionPolicies.idleTimeoutMinutes ?? ''}
+                        disabled
                         style={{ width: '100%', padding: '0.65rem 0.85rem', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.88rem' }}
                       />
                     </div>
@@ -2905,8 +2654,8 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                         type="number"
                         min="1"
                         max="5"
-                        value={sessionPolicies.maxConcurrentSessions}
-                        onChange={(e) => setSessionPolicies({ ...sessionPolicies, maxConcurrentSessions: Number(e.target.value) })}
+                        value={sessionPolicies.maxConcurrentSessions ?? ''}
+                        disabled
                         style={{ width: '100%', padding: '0.65rem 0.85rem', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.88rem' }}
                       />
                     </div>
@@ -2917,8 +2666,8 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                         type="number"
                         min="3"
                         max="10"
-                        value={sessionPolicies.failedLockoutThreshold}
-                        onChange={(e) => setSessionPolicies({ ...sessionPolicies, failedLockoutThreshold: Number(e.target.value) })}
+                        value={sessionPolicies.failedLockoutThreshold ?? ''}
+                        disabled
                         style={{ width: '100%', padding: '0.65rem 0.85rem', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.88rem' }}
                       />
                     </div>
@@ -2926,8 +2675,8 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                     <div>
                       <label style={{ display: 'block', fontSize: '0.82rem', color: '#334155', fontWeight: 600, marginBottom: '6px' }}>Multi-Factor Authentication (MFA) Mandate</label>
                       <select
-                        value={sessionPolicies.enforceMfaAdmins ? 'MANDATORY' : 'OPTIONAL'}
-                        onChange={(e) => setSessionPolicies({ ...sessionPolicies, enforceMfaAdmins: e.target.value === 'MANDATORY' })}
+                        value={sessionPolicies.enforceMfaAdmins == null ? '' : sessionPolicies.enforceMfaAdmins ? 'MANDATORY' : 'OPTIONAL'}
+                        disabled
                         style={{ width: '100%', padding: '0.65rem 0.85rem', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.88rem' }}
                       >
                         <option value="MANDATORY">Mandatory for all 4 Administrative Roles (Super Admin, Mgmt, Principal, Ops)</option>
@@ -3010,10 +2759,11 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                     setIntegrationsLoading(true);
                     try {
                       const res = await api.getAdminIntegrations();
-                      if (res?.success && Array.isArray(res?.data)) setIntegrationsList(res.data);
+                      if (!res?.success || !Array.isArray(res?.data)) throw new Error('The API did not return integration status.');
+                      setIntegrationsList(res.data);
                       triggerToast('Integration statuses refreshed');
-                    } catch {
-                      triggerToast('Integrations synchronized');
+                    } catch (error) {
+                      triggerToast(error?.message || 'Integration statuses could not be refreshed.');
                     } finally {
                       setIntegrationsLoading(false);
                     }
@@ -3228,10 +2978,11 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                     setApprovalsLoading(true);
                     try {
                       const res = await api.getAdminApprovals();
-                      if (res?.success && Array.isArray(res?.data)) setApprovalsList(res.data);
+                      if (!res?.success || !Array.isArray(res?.data)) throw new Error('The API did not return approval requests.');
+                      setApprovalsList(res.data);
                       triggerToast('Approval queue synchronized');
-                    } catch {
-                      triggerToast('Approvals updated');
+                    } catch (error) {
+                      triggerToast(error?.message || 'Approval requests could not be refreshed.');
                     } finally {
                       setApprovalsLoading(false);
                     }
@@ -3430,58 +3181,6 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
-      {/* MODAL 2: User Password Reset Token Modal */}
-      {userResetTokenResult && (
-        <div className="erp-diagnostics-overlay" role="dialog" aria-modal="true">
-          <div className="erp-diagnostics-modal" style={{ maxWidth: '520px' }}>
-            <div className="erp-diag-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Key size={20} color="#4f46e5" />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0 }}>Password Recovery Token</h3>
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>Account: {userResetTokenResult.user?.email}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setUserResetTokenResult(null)}
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569' }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="erp-diag-body">
-              <p style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.5, margin: '0 0 12px 0' }}>
-                A cryptographically secure, single-use password reset token has been issued for <strong>{userResetTokenResult.user?.name}</strong>. Provide this authorization link to the user through verified institutional communication channels:
-              </p>
-              <div style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px', fontFamily: 'monospace', fontSize: '0.8rem', color: '#0f172a', wordBreak: 'break-all' }}>
-                https://portal.apnacampus.edu.in/auth/reset-password?token={userResetTokenResult.token}
-              </div>
-              <span style={{ display: 'block', marginTop: '8px', fontSize: '0.74rem', color: '#64748b' }}>
-                Token expires in 15 minutes. Action recorded in global tamper-evident audit ledger.
-              </span>
-            </div>
-
-            <div className="erp-diag-footer">
-              <span />
-              <button
-                type="button"
-                className="erp-btn erp-btn-primary"
-                onClick={() => {
-                  navigator.clipboard?.writeText(`https://portal.apnacampus.edu.in/auth/reset-password?token=${userResetTokenResult.token}`);
-                  triggerToast('Password reset link copied to clipboard.');
-                  setUserResetTokenResult(null);
-                }}
-              >
-                Copy Link &amp; Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL 3: Audit Event Detail Inspector */}
       {selectedAuditLogModal && (
@@ -3575,7 +3274,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                 <div>
                   <h3 id="diag-title">Subsystem Health &amp; Security Diagnostics</h3>
                   <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
-                    Live runtime verification timestamp: {diagnosticsData?.timestamp ? new Date(diagnosticsData.timestamp).toLocaleTimeString() : 'Just now'}
+                    Live runtime verification timestamp: {diagnosticsData?.timestamp ? new Date(diagnosticsData.timestamp).toLocaleTimeString() : 'Unavailable'}
                   </p>
                 </div>
               </div>
@@ -3597,6 +3296,8 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                   <p style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: 600 }}>Executing cryptographic and database health probes...</p>
                   <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Querying Prisma connection pool and evaluating active RBAC gates</span>
                 </div>
+              ) : diagnosticsData?.error ? (
+                <div className="erp-alert-box is-error" role="alert">{diagnosticsData.error}</div>
               ) : (
                 diagnosticsData?.subsystems?.map((sub) => (
                   <div key={sub.id || sub.name} className="erp-diag-subsystem">
@@ -3617,7 +3318,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
 
             <div className="erp-diag-footer">
               <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                Overall: <strong style={{ color: '#16a34a' }}>{diagnosticsData?.overallStatus || 'Nominal & Encrypted'}</strong>
+                Overall: <strong style={{ color: diagnosticsData?.overallStatus === 'Nominal' ? '#16a34a' : '#64748b' }}>{diagnosticsData?.overallStatus || 'Unavailable'}</strong>
               </span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -3849,16 +3550,9 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                       onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
                       style={{ width: '100%', padding: '0.65rem 0.85rem', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.88rem' }}
                     >
-                      <option value="faculty">Faculty Member</option>
-                      <option value="student">Student</option>
-                      <option value="hod">Head of Department (HOD)</option>
-                      <option value="principal">Principal / Director</option>
-                      <option value="management">Management / Trustee</option>
-                      <option value="admin">Admin Operations</option>
-                      <option value="accounts">Accounts &amp; Finance</option>
-                      <option value="exam_cell">Examination Cell</option>
-                      <option value="library">Library Staff</option>
-                      <option value="staff">Non-Teaching Staff</option>
+                      {creatableRoles.map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -3882,12 +3576,15 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                   <label style={{ display: 'block', fontSize: '0.82rem', color: '#334155', fontWeight: 600, marginBottom: '6px' }}>Initial Temporary Password</label>
                   <input
                     type="password"
+                    required
+                    minLength={12}
+                    maxLength={72}
                     value={newUserData.password}
                     onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
                     style={{ width: '100%', padding: '0.65rem 0.85rem', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.88rem' }}
                   />
                   <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
-                    User will be prompted to reset password on first portal login.
+                    Set a unique initial password and share it securely with the account owner.
                   </span>
                 </div>
               </div>

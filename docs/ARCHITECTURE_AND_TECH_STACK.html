@@ -324,9 +324,9 @@
           </tr>
           <tr>
             <td><strong>Persistence (Database)</strong></td>
-            <td>PostgreSQL 14+, Prisma ORM 5.22</td>
-            <td><code>5432</code></td>
-            <td>ACID-compliant relational database with foreign keys, enums, migrations, and idempotent seeder for mock data.</td>
+            <td>MongoDB Atlas, Prisma ORM 5.22</td>
+            <td>Atlas SRV URI</td>
+            <td>Document database; Prisma-emulated relations, explicit indexes, and reviewed db push (no SQL migrations).</td>
           </tr>
         </tbody>
       </table>
@@ -452,9 +452,9 @@
           </tr>
           <tr>
             <td><strong>Database</strong></td>
-            <td>PostgreSQL</td>
+            <td>MongoDB Atlas</td>
             <td><code>14+</code></td>
-            <td>ACID relational database engine with indexes, cascading deletes & enums</td>
+            <td>Document database with indexes; related-document rules are enforced by application logic and Prisma.</td>
           </tr>
           <tr>
             <td><strong>Database</strong></td>
@@ -464,9 +464,9 @@
           </tr>
           <tr>
             <td><strong>Database</strong></td>
-            <td>Prisma Migrate</td>
+            <td>Prisma db push</td>
             <td><code>5.22.0</code></td>
-            <td>Committed version-controlled migration files in backend/prisma/migrations</td>
+            <td>Schema/index synchronization is explicit; backend/prisma/migrations are legacy PostgreSQL history.</td>
           </tr>
         </tbody>
       </table>
@@ -575,12 +575,12 @@
           <tr>
             <td><strong>Backend Hosting</strong></td>
             <td>Render</td>
-            <td>Defined in <code>render.yaml</code>; auto-injects <code>sslmode=require</code> for cloud databases.</td>
+            <td>Defined in <code>render.yaml</code>; Atlas URI is configured as a private deployment secret.</td>
           </tr>
           <tr>
             <td><strong>Database</strong></td>
-            <td>PostgreSQL (Render / Supabase / Neon)</td>
-            <td>Automated connection pooling and SSL mode enforcement.</td>
+            <td>MongoDB Atlas</td>
+            <td>Managed MongoDB cluster; allow the backend network and keep its URI private.</td>
           </tr>
           <tr>
             <td><strong>Developer Automation</strong></td>

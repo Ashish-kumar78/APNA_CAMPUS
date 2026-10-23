@@ -21,19 +21,13 @@ async function request(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, { ...options, headers });
-    const text = await response.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = { success: response.ok, message: text || `HTTP ${response.status}` };
-    }
-    if (!response.ok && (!data || !data.success)) {
-      const errorMsg = data?.message || `Request failed with status ${response.status}`;
-      const err = new Error(errorMsg);
-      err.response = data;
-      err.status = response.status;
-      throw err;
+    const data = await response.json();
+    if (!response.ok) {
+      const message = data?.message || data?.error || `Request failed with status ${response.status}`;
+      const error = new Error(Array.isArray(message) ? message.join(', ') : message);
+      error.status = response.status;
+      error.data = data;
+      throw error;
     }
     return data;
   } catch (error) {
@@ -69,6 +63,16 @@ export const api = {
     const query = new URLSearchParams(params).toString();
     return request(`/students${query ? '?' + query : ''}`);
   },
+
+  createStudent: (payload) => request('/students', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+
+  updateStudent: (id, payload) => request(`/students/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  }),
 
   getProfile: () => request('/students/profile'),
 
@@ -120,8 +124,13 @@ export const api = {
 
   // 4. Academics
   getDepartments: () => request('/academics/departments'),
+  createDepartment: (data) => request('/academics/departments', { method: 'POST', body: JSON.stringify(data) }),
   getSemesters: () => request('/academics/semesters'),
+  createSemester: (data) => request('/academics/semesters', { method: 'POST', body: JSON.stringify(data) }),
+  updateSemester: (id, data) => request(`/academics/semesters/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
   getSections: () => request('/academics/sections'),
+  createSection: (data) => request('/academics/sections', { method: 'POST', body: JSON.stringify(data) }),
+  getAcademicFaculty: () => request('/academics/faculty-directory'),
   getSubjects: (dept, sem) => {
     const query = new URLSearchParams({ department: dept || '', semester: sem || '' }).toString();
     return request(`/academics/subjects?${query}`);
@@ -129,7 +138,7 @@ export const api = {
   getTimetable: () => request('/academics/timetable'),
 
   // 5. Fees & Accounts
-  getFeeStatement: (rollNumber = '01') => request(`/fees/statement?rollNumber=${rollNumber}`),
+  getFeeStatement: (rollNumber = '') => request(`/fees/statement${rollNumber ? `?rollNumber=${encodeURIComponent(rollNumber)}` : ''}`),
   getFeeTransactions: (search = '') => request(`/fees/transactions?search=${encodeURIComponent(search)}`),
   recordFeePayment: (payload) =>
     request('/fees/record', {
@@ -162,7 +171,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ studentRoll, reason }),
     }),
-  getMyResidence: (rollNumber = '01') => request(`/hostel/my-residence?rollNumber=${rollNumber}`),
+  getMyResidence: (rollNumber = '') => request(`/hostel/my-residence${rollNumber ? `?rollNumber=${encodeURIComponent(rollNumber)}` : ''}`),
   getComplaints: (params = {}) => {
     // Supports both legacy string (rollNumber) or object payload with filters
     let q = new URLSearchParams();
@@ -269,11 +278,13 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     }),
-  topUpCanteenWallet: (amount, rollNumber = '01') =>
+  topUpCanteenWallet: (amount, rollNumber, reference) =>
     request('/canteen/wallet/topup', {
       method: 'POST',
-      body: JSON.stringify({ amount, rollNumber }),
+      body: JSON.stringify({ amount, rollNumber, reference }),
     }),
+  getCanteenWalletTransactions: (rollNumber) =>
+    request(`/canteen/wallet/transactions${rollNumber ? `?rollNumber=${encodeURIComponent(rollNumber)}` : ''}`),
 
   // 8. CMS (Notices, Holidays, Blogs, Feedback)
   getNotices: (search = '', tag = '') =>
@@ -333,16 +344,22 @@ export const api = {
       body: JSON.stringify({ confirmationCode }),
     }),
   getAdminApprovals: () => request('/admin/approvals'),
-  decideAdminApproval: (id, decision, reason) =>
+  createAdminApproval: (payload) => request('/admin/approvals', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  decideAdminApproval: (id, payload) =>
     request(`/admin/approvals/${id}/decide`, {
       method: 'POST',
-      body: JSON.stringify({ decision, reason }),
+      body: JSON.stringify(payload),
     }),
-  saveAdminRbacPermissions: (roleKey, permissions) =>
+  getAdminRbacPermissions: () => request('/admin/rbac/permissions'),
+  saveAdminRbacPermissions: (payload) =>
     request('/admin/rbac/permissions', {
       method: 'POST',
-      body: JSON.stringify({ roleKey, permissions }),
+      body: JSON.stringify(payload),
     }),
+  getAdminSettings: () => request('/admin/settings'),
   saveAdminSettings: (settings) =>
     request('/admin/settings', {
       method: 'POST',
@@ -686,6 +703,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  getPlacementOffers: () => request('/placement/offers'),
   actionPlacementOffer: (id, action, notes) =>
     request(`/placement/offers/${id}/action`, {
       method: 'POST',
@@ -701,11 +719,14 @@ export const api = {
     const q = new URLSearchParams({ status, search }).toString();
     return request(`/fees/payment-verifications?${q}`);
   },
+  getPaymentProofFile: (id) => request(`/fees/payment-verifications/${encodeURIComponent(id)}/proof`),
   uploadPaymentProof: (payload) =>
     request('/fees/payment-proof', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  getMyPaymentProofs: () => request('/fees/payment-proofs'),
   approvePaymentProof: (id) =>
     request(`/fees/payment-verifications/${id}/approve`, {
       method: 'POST',
@@ -744,6 +765,9 @@ export const api = {
   // 22. Faculty Portal Academic Operations
   getFacultyDashboard: () => request('/faculty/dashboard'),
   getFacultyAssignments: () => request('/faculty/assignments'),
+  getFacultyAssignments: () => request('/faculty/assignments'),
+  getFacultyAttendanceRoster: (subjectCode, section) =>
+    request(`/faculty/attendance/roster?subjectCode=${encodeURIComponent(subjectCode)}&section=${encodeURIComponent(section)}`),
   getFacultyAttendanceSessions: (subjectCode = 'CS501', section = 'Section A') =>
     request(`/faculty/attendance/sessions?subjectCode=${encodeURIComponent(subjectCode)}&section=${encodeURIComponent(section)}`),
   submitFacultyAttendance: (payload) =>
@@ -773,8 +797,8 @@ export const api = {
     }),
 
   // 23. HOD Department Academic Governance Operations
-  getHodDashboard: (deptCode = 'CSE') =>
-    request(`/hod/dashboard?deptCode=${encodeURIComponent(deptCode)}`),
+  getHodDashboard: (deptCode) =>
+    request(deptCode ? `/hod/dashboard?deptCode=${encodeURIComponent(deptCode)}` : '/hod/dashboard'),
   getHodApprovalQueue: () => request('/hod/approval-queue'),
   hodApproveMarks: (id) =>
     request('/hod/approve', {
@@ -975,6 +999,8 @@ export const api = {
     const q = new URLSearchParams(params).toString();
     return request(`/academics/course-offerings${q ? '?' + q : ''}`);
   },
+  createSubject: (data) => request('/academics/subjects', { method: 'POST', body: JSON.stringify(data) }),
+  createCurriculumItem: (data) => request('/academics/curriculum', { method: 'POST', body: JSON.stringify(data) }),
   createCourseOffering: (data) =>
     request('/academics/course-offerings', {
       method: 'POST',
@@ -1120,6 +1146,7 @@ export const api = {
   // 38. Admin & Institutional Command Center Operations
   getAdminMetrics: () => request('/admin/metrics'),
   getAdminDiagnostics: () => request('/admin/diagnostics'),
+  getAiModelMetrics: () => request('/admin/ai-metrics'),
   getAdminSecurityAlerts: () => request('/admin/security-alerts'),
   getAdminAuditLogs: (search = '') =>
     request(`/admin/audit-logs${search ? `?search=${encodeURIComponent(search)}` : ''}`),

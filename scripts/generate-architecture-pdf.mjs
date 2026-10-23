@@ -127,7 +127,7 @@ autoTable(doc, {
     ['Presentation (Client)', 'React 18, Vite 6, Tailwind CSS', '5173', 'SPA with 14 role-based portals, glassmorphism UI, client PDF generation, and real-time dashboard analytics.'],
     ['Application (API)', 'NestJS 10, TypeScript 5.7', '4000', 'Enterprise REST API gateway with dependency injection, Passport JWT, RBAC guards, global validation, and Swagger docs.'],
     ['Auxiliary Feeds (API)', 'Express.js 4 (Node.js)', '5000', 'Lightweight social feed microservice powering CampusConnect posts, media, and universal WhatsApp launcher.'],
-    ['Persistence (Data)', 'PostgreSQL 14+, Prisma ORM 5.22', '5432', 'Relational database with strict foreign keys, enums, migrations, and idempotent seed generation.'],
+    ['Persistence (Data)', 'MongoDB Atlas, Prisma ORM 5.22', 'SRV', 'Document database; Prisma-emulated relations, explicit indexes, and reviewed db push (no SQL migrations).'],
   ],
   theme: 'striped',
   headStyles: {
@@ -180,9 +180,9 @@ autoTable(doc, {
     ['Backend', 'class-validator & transformer', '0.14 / 0.5', 'Global ValidationPipe whitelist parsing, type casting & DTO contracts'],
     ['Backend', 'Multer', '2.4.0', 'Multipart file processing for payment proofs & student doc uploads'],
     ['Backend', 'RxJS', '7.8.1', 'Reactive stream operators for interceptors and async request handlers'],
-    ['Database', 'PostgreSQL', '14+', 'ACID relational database engine with indexes, cascading deletes & enums'],
+    ['Database', 'MongoDB Atlas', 'Managed cluster', 'Document database with indexes; related-document rules are enforced by application logic and Prisma.'],
     ['Database', 'Prisma ORM', '5.22.0', 'Type-safe schema modeling, query engine & automated client generation'],
-    ['Database', 'Prisma Migrate', '5.22.0', 'Committed version-controlled migration files in backend/prisma/migrations'],
+    ['Database', 'Prisma db push', '5.22.0', 'Explicit schema/index synchronization; backend/prisma/migrations are legacy PostgreSQL history.'],
   ],
   theme: 'grid',
   headStyles: {
@@ -308,10 +308,10 @@ autoTable(doc, {
   head: [['Component', 'Target Platform / Tool', 'Configuration Details']],
   body: [
     ['Frontend Hosting', 'Vercel / Static CDN', 'Configured via vercel.json with SPA catch-all rewrites to /index.html.'],
-    ['Backend Hosting', 'Render / Docker Node.js', 'Configured via render.yaml; auto-detects cloud SSL mode (sslmode=require) for databases.'],
-    ['Database Hosting', 'PostgreSQL (Render / Supabase / Neon)', 'PostgreSQL connection string with automated pooling & SSL enforcement.'],
+    ['Backend Hosting', 'Render / Docker Node.js', 'Configured via render.yaml; DATABASE_URL is configured as a private deployment secret.'],
+    ['Database Hosting', 'MongoDB Atlas', 'Private mongodb+srv:// URI configured as DATABASE_URL; Atlas network access must allow the backend.'],
     ['Monorepo Concurrency', 'Concurrently 9.2', 'Root npm run dev runs dev:backend and dev:frontend in parallel with color-coded logs.'],
-    ['Developer Onboarding', 'PowerShell Script', 'Automated setup via scripts/setup-dev.ps1 checking Node, npm, PostgreSQL, env & migrations.'],
+    ['Developer Onboarding', 'PowerShell Script', 'Automated setup via scripts/setup-dev.ps1 checking Node, npm, env and Prisma generation; Atlas schema sync is manual.'],
   ],
   theme: 'grid',
   headStyles: {

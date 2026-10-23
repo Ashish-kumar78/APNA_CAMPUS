@@ -28,89 +28,25 @@ import {
   Check,
   Maximize2
 } from 'lucide-react'
-import { downloadFeeReceiptPdf, openFeeReceiptPdf, openPaymentProofPdf, downloadPaymentProofPdf, convertNumberToIndianWords } from '../utils/pdfGenerator'
+import { openPaymentProofPdf, downloadPaymentProofPdf, convertNumberToIndianWords } from '../utils/pdfGenerator'
 import { feesApi } from '../services/feesApi'
 import './FeesPage.css'
 
-const COLLEGE_PAYMENT_QR_URL = '/college_payment_qr_placeholder.svg'
-
-export const yearlyFeeLedger = [
-  {
-    year: '1st Year',
-    session: 'Academic Session 2023–24',
-    semesters: 'Semester 1 & 2',
-    totalDue: 75000,
-    amountPaid: 75000,
-    outstanding: 0,
-    status: 'Cleared',
-    percent: '100%',
-    receiptsCount: 2,
-    details: 'Admission fee, 1st & 2nd semester academic packages, basic workshop & university registration'
-  },
-  {
-    year: '2nd Year',
-    session: 'Academic Session 2024–25',
-    semesters: 'Semester 3 & 4',
-    totalDue: 78400,
-    amountPaid: 78400,
-    outstanding: 0,
-    status: 'Cleared',
-    percent: '100%',
-    receiptsCount: 2,
-    details: 'Tuition fees, lab maintenance, university semester registration, development fee'
-  },
-  {
-    year: '3rd Year',
-    session: 'Academic Session 2025–26',
-    semesters: 'Semester 5 & 6',
-    totalDue: 82000,
-    amountPaid: 82000,
-    outstanding: 0,
-    status: 'Cleared',
-    percent: '100%',
-    receiptsCount: 2,
-    details: 'Specialization labs, cloud computing resources, mid-term & end-term examination fee'
-  },
-  {
-    year: '4th Year (Current)',
-    session: 'Academic Session 2026–27',
-    semesters: 'Semester 7 & 8',
-    totalDue: 89000,
-    amountPaid: 77000,
-    outstanding: 12000,
-    status: 'Pending: ₹12,000',
-    percent: '86.5%',
-    receiptsCount: 4,
-    details: 'Semester 7 tuition fee, library caution, university exams, hostel & mess charge (balance ₹12,000 due 30 Oct 2026)'
-  }
-];
-
-export const feeHistory = [
-  { id: 'TXN-98421', term: 'Semester 7 (4th Year)', head: 'Tuition & Development Fee', amount: 48500, paid: 48500, status: 'Paid', date: '12 Aug 2026', mode: 'Net Banking (HDFC)' },
-  { id: 'TXN-98422', term: 'Semester 7 (4th Year)', head: 'Examination & University Reg.', amount: 3500, paid: 3500, status: 'Paid', date: '15 Aug 2026', mode: 'UPI' },
-  { id: 'TXN-98423', term: 'Semester 7 (4th Year)', head: 'Hostel & Mess Charges', amount: 32000, paid: 20000, due: 12000, status: 'Partial', date: '20 Aug 2026', mode: 'Credit Card' },
-  { id: 'TXN-98424', term: 'Semester 7 (4th Year)', head: 'Library & Laboratory Caution', amount: 5000, paid: 5000, status: 'Paid', date: '10 Aug 2026', mode: 'Challan' },
-  { id: 'TXN-87211', term: 'Semester 6 (3rd Year)', head: 'Full Semester Academic Package', amount: 41000, paid: 41000, status: 'Paid', date: '18 Jan 2026', mode: 'Net Banking' },
-  { id: 'TXN-76192', term: 'Semester 5 (3rd Year)', head: 'Full Semester Academic Package', amount: 41000, paid: 41000, status: 'Paid', date: '22 Jul 2025', mode: 'Net Banking' },
-  { id: 'TXN-24751', term: 'Semester 4 (2nd Year)', head: 'Tuition & Examination Fee', amount: 39200, paid: 39200, status: 'Paid', date: '12 Jan 2025', mode: 'UPI' },
-  { id: 'TXN-24103', term: 'Semester 3 (2nd Year)', head: 'Tuition & Development Fee', amount: 39200, paid: 39200, status: 'Paid', date: '10 Jul 2024', mode: 'Net Banking' },
-  { id: 'TXN-23842', term: 'Semester 2 (1st Year)', head: 'Tuition & Laboratory Fee', amount: 35000, paid: 35000, status: 'Paid', date: '15 Jan 2024', mode: 'Net Banking' },
-  { id: 'TXN-23011', term: 'Semester 1 (1st Year)', head: 'Admission & 1st Sem Tuition', amount: 40000, paid: 40000, status: 'Paid', date: '12 Aug 2023', mode: 'Online SBI' },
-];
+export const yearlyFeeLedger = [];
+export const feeHistory = [];
 
 export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studentCourseBatch, studentSection }) {
   const r = receipt || {}
-  const regd = r.rollNumber || r.registrationNumber || studentRoll || '2401432265'
-  const name = (r.studentName || studentName || 'BISHNU PRASAD SAHOO').toUpperCase()
-  const batch = r.courseBatch || studentCourseBatch || 'BTECH 2028-P'
-  const sec = r.section || studentSection || 'CSE (AI) - Genius'
-  const rawNo = r.receiptNo || r.referenceNumber || (r.id ? String(r.id).replace(/\D/g, '') || '128680' : '128680')
-  const recNo = String(rawNo).startsWith('GIFT/ACC') ? rawNo : `GIFT/ACC/${rawNo}`
-  const recDate = r.paymentDate || r.receiptDate || r.date || '27-07-2026'
-  const amt = Number(r.amount || 20000)
-  const mode = r.paymentMethod || r.mode || 'Bank Transfer'
-  const txn = r.transactionId || r.txnId || '126928800409'
-  const head = r.head || r.remarks || 'Tuition Fee'
+  const regd = r.rollNumber || r.registrationNumber || studentRoll || '—'
+  const name = (r.studentName || studentName || 'Student').toUpperCase()
+  const batch = r.courseBatch || studentCourseBatch || '—'
+  const sec = r.section || studentSection || '—'
+  const recNo = r.receiptNo || 'Not issued — pending Accounts review'
+  const recDate = r.paymentDate || r.receiptDate || r.date || '—'
+  const amt = Number(r.amount || 0)
+  const mode = r.paymentMethod || r.mode || '—'
+  const txn = r.transactionId || r.txnId || '—'
+  const head = r.head || r.remarks || '—'
   const words = convertNumberToIndianWords(amt)
 
   return (
@@ -146,13 +82,13 @@ export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studen
           <img src="/gift_logo.svg" alt="GIFT Logo" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
           <div>
             <div style={{ fontSize: '1.22rem', fontWeight: 800, color: '#000000', lineHeight: 1.2 }}>
-              Gandhi Institute for Technology (GIFT)
+              APNA CAMPUS
             </div>
             <div style={{ fontSize: '1.02rem', fontWeight: 700, color: '#000000', marginTop: '2px' }}>
-              (Autonomous)
+              Payment Review
             </div>
             <div style={{ fontSize: '0.82rem', color: '#333333', marginTop: '2px' }}>
-              At- Gramadiha, P.o- Gangapada
+              Student payment proof workflow
             </div>
           </div>
         </div>
@@ -162,7 +98,7 @@ export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studen
 
         {/* Centered Title */}
         <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '0.96rem', color: '#000000', marginBottom: '12px' }}>
-          Fees Receipt (Student Copy)
+          Payment Proof Submission Copy
         </div>
 
         {/* 2-Column Metadata */}
@@ -177,7 +113,7 @@ export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studen
             <strong>Name : </strong> {name}
           </div>
           <div>
-            <strong>Receipt Date : </strong> {recDate}
+            <strong>Payment Date : </strong> {recDate}
           </div>
           <div>
             <strong>Course/Batch: </strong> {batch}
@@ -191,7 +127,7 @@ export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studen
 
         {/* Statement */}
         <div style={{ fontSize: '0.87rem', color: '#000000', lineHeight: 1.6, marginBottom: '12px' }}>
-          Received <strong>RS. {amt.toLocaleString('en-IN')}.00</strong> (<em>{words}</em>) by {mode} transcation id-{txn} on {recDate} from {name} towards <strong>{head}</strong>.
+          Submitted payment claim for <strong>₹{amt.toLocaleString('en-IN')}</strong> (<em>{words}</em>) by {mode}, transaction id {txn}, dated {recDate}, from {name} towards <strong>{head}</strong>.
         </div>
 
         {/* Solid Line */}
@@ -199,7 +135,7 @@ export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studen
 
         {/* Disclaimer */}
         <div style={{ fontSize: '0.73rem', color: '#222222', lineHeight: 1.45 }}>
-          This money receipt is computer generated by the student through his/her CMS login and does not require the Accountant's signature or the Institute's stamp in order to be considered valid. This is a duplicate money receipt and the original receipt is available with Accounts Department.
+          This is not an official receipt and does not confirm that funds were received. The claim remains pending until Accounts reviews and approves the proof. A verified receipt is issued only after approval.
         </div>
       </div>
     </div>
@@ -207,39 +143,26 @@ export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studen
 }
 
 export default function FeesPage({ account }) {
-  const studentName = account?.name || 'BISHNU PRASAD SAHOO'
-  const studentRoll = account?.rollNumber || account?.registrationNumber || '2401432265'
-  const studentCourseBatch = 'BTECH 2028-P'
-  const studentSection = 'CSE (AI) - Genius'
+  const studentName = account?.student?.name || account?.name || 'Student'
+  const studentRoll = account?.student?.rollNumber || account?.rollNumber || account?.registrationNumber || '—'
+  const studentCourseBatch = account?.student?.program || account?.program || account?.courseBatch || '—'
+  const studentSection = account?.student?.section || account?.section || '—'
 
   const [activeTab, setActiveTab] = useState('current')
-  const [showPayModal, setShowPayModal] = useState(false)
   const [showYearlyModal, setShowYearlyModal] = useState(false)
-  const [selectedPayMode, setSelectedPayMode] = useState('upi')
-  const [paidSuccess, setPaidSuccess] = useState(false)
 
   // Feature 1: Upload Payment Proof State
   const [showProofModal, setShowProofModal] = useState(false)
   const [proofHistory, setProofHistory] = useState([])
+  const [proofHistoryLoading, setProofHistoryLoading] = useState(true)
+  const [proofHistoryError, setProofHistoryError] = useState('')
   const [proofStep, setProofStep] = useState('form') // 'form' | 'preview'
   const [submittingProof, setSubmittingProof] = useState(false)
   const [selectedProofView, setSelectedProofView] = useState(null)
-  const [recentlyGeneratedReceipt, setRecentlyGeneratedReceipt] = useState(null)
 
   // Bank & QR Details State
-  const [showEnlargedQr, setShowEnlargedQr] = useState(false)
-  const [copiedField, setCopiedField] = useState(null)
-
-  const handleCopyText = (fieldKey, text) => {
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(text)
-    }
-    setCopiedField(fieldKey)
-    setTimeout(() => setCopiedField(null), 2000)
-  }
-
   // Form inputs
-  const [formAmount, setFormAmount] = useState('12000')
+  const [formAmount, setFormAmount] = useState('')
   const [formDate, setFormDate] = useState(() => new Date().toISOString().split('T')[0])
   const [formMethod, setFormMethod] = useState('UPI')
   const [formTxnId, setFormTxnId] = useState('')
@@ -251,20 +174,21 @@ export default function FeesPage({ account }) {
   const [formErrors, setFormErrors] = useState({})
   const [toastMessage, setToastMessage] = useState('')
 
-  // Overall calculations
-  const totalOverallPaid = yearlyFeeLedger.reduce((sum, item) => sum + item.amountPaid, 0)
-  const totalOverallDues = yearlyFeeLedger.reduce((sum, item) => sum + item.totalDue, 0)
-  const overallClearedPercent = ((totalOverallPaid / totalOverallDues) * 100).toFixed(1)
-
   // Load digital payment proof history
   useEffect(() => {
-    loadFeeStatement()
+    loadPaymentProofs()
   }, [])
 
-  const loadFeeStatement = async () => {
-    const data = await feesApi.getFeeStatement('2305201001')
-    if (data && data.paymentHistory) {
-      setProofHistory(data.paymentHistory)
+  const loadPaymentProofs = async () => {
+    try {
+      setProofHistoryLoading(true)
+      setProofHistoryError('')
+      setProofHistory(await feesApi.getMyPaymentProofs())
+    } catch (error) {
+      setProofHistory([])
+      setProofHistoryError(error?.message || 'Could not load payment proof history.')
+    } finally {
+      setProofHistoryLoading(false)
     }
   }
 
@@ -341,74 +265,65 @@ export default function FeesPage({ account }) {
       amount: formAmount,
       paymentDate: formDate,
       paymentMethod: formMethod,
-      transactionId: formTxnId.trim() || '126928800409',
-      referenceNumber: formRefNo.trim() || '128680',
-      remarks: formRemarks.trim() || 'Tuition Fee',
-      head: formRemarks.trim() || 'Tuition Fee',
-      previewUrl: filePreviewUrl,
+      transactionId: formTxnId.trim(),
+      referenceNumber: formRefNo.trim() || undefined,
+      remarks: formRemarks.trim(),
+      head: formRemarks.trim() || 'Payment proof submission',
+      fileData: filePreviewUrl,
       fileName: selectedFile ? selectedFile.name : 'proof.png',
       fileType: selectedFile ? selectedFile.type : 'image/png',
-      studentName,
-      rollNumber: studentRoll,
-      courseBatch: studentCourseBatch,
-      section: studentSection,
-      department: 'Computer Science & Engineering (Artificial Intelligence)'
     }
 
     try {
       const res = await feesApi.uploadPaymentProof(payload)
       if (res && res.success) {
-        triggerToast('Payment receipt uploaded successfully! Generating GIFT Autonomous Fee Receipt...')
-        await loadFeeStatement()
+        triggerToast('Payment proof submitted for Accounts review. It becomes a verified payment only after approval.')
+        await loadPaymentProofs()
         setShowProofModal(false)
         resetProofForm()
         setActiveTab('proofs')
-        setRecentlyGeneratedReceipt(payload)
       }
-    } catch {
-      triggerToast('Failed to submit payment proof. Please try again.')
+    } catch (error) {
+      triggerToast(error?.message || 'Failed to submit payment proof. Please try again.')
     } finally {
       setSubmittingProof(false)
     }
   }
 
+  const handleViewProof = async (item) => {
+    setSelectedProofView({ ...item, attachmentLoading: true, attachmentError: '' })
+    try {
+      const attachment = await feesApi.getPaymentProofFile(item.id)
+      setSelectedProofView((current) => current?.id === item.id
+        ? { ...current, ...attachment, attachmentLoading: false }
+        : current)
+    } catch (error) {
+      setSelectedProofView((current) => current?.id === item.id
+        ? { ...current, attachmentLoading: false, attachmentError: error?.message || 'The submitted file could not be loaded.' }
+        : current)
+    }
+  }
+
   const resetProofForm = () => {
     setProofStep('form')
-    setFormAmount('20000')
+    setFormAmount('')
     setFormDate(new Date().toISOString().split('T')[0])
-    setFormMethod('Bank Transfer')
+    setFormMethod('UPI')
     setFormTxnId('')
     setFormRefNo('')
-    setFormRemarks('Tuition Fee')
+    setFormRemarks('')
     setSelectedFile(null)
     setFilePreviewUrl('')
     setFileTypeError('')
     setFormErrors({})
   }
 
-  const handlePay = () => {
-    setPaidSuccess(true)
-    setTimeout(() => {
-      setPaidSuccess(false)
-      setShowPayModal(false)
-    }, 2000)
-  }
-
   const handleDownload = (id) => {
-    const row = feeHistory.find(item => item.id === id) || { id, amount: 20000, head: 'Tuition Fee', mode: 'Bank Transfer' }
-    downloadFeeReceiptPdf(row, { name: studentName, rollNo: studentRoll, batch: studentCourseBatch, section: studentSection })
+    triggerToast(`Official student receipt ${id} is unavailable until fee statements are implemented.`)
   }
 
   const handleDownloadConsolidatedStatement = () => {
-    downloadFeeReceiptPdf({
-      id: 'GIFT-CONS-FEE-2026',
-      term: 'BTECH 2028-P (Consolidated Statement)',
-      head: 'Tuition Fee Clearance Statement',
-      amount: totalOverallDues,
-      paid: totalOverallPaid,
-      mode: 'Bank Transfer',
-      date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    }, { name: studentName, rollNo: studentRoll, batch: studentCourseBatch, section: studentSection })
+    triggerToast('Consolidated statements are unavailable until official fee assessments are configured.')
   }
 
   const getStatusBadge = (status) => {
@@ -463,11 +378,11 @@ export default function FeesPage({ account }) {
             onClick={() => setShowYearlyModal(true)}
           >
             <History size={16} />
-            <span>1st Yr to Date Statement</span>
+            <span>Year-Wise Statement</span>
           </button>
-          <button className="btn-pay-now" onClick={() => setShowPayModal(true)}>
+          <button className="btn-pay-now" disabled title="A payment gateway and official fee assessment are not configured.">
             <CreditCard size={18} />
-            <span>Pay Outstanding (₹12,000)</span>
+            <span>Online Payment Unavailable</span>
           </button>
         </div>
       </div>
@@ -484,14 +399,14 @@ export default function FeesPage({ account }) {
           <div className="fee-metric-icon indigo"><History size={24} /></div>
           <div className="fee-metric-body" style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-              <h4>Overall Paid (4-Years)</h4>
+              <h4>Overall Paid</h4>
               <span style={{ fontSize: '0.66rem', fontWeight: 700, background: '#e0e7ff', color: '#4338ca', padding: '2px 6px', borderRadius: '4px' }}>
                 All Years
               </span>
             </div>
-            <div className="fee-val" style={{ color: '#4338ca' }}>₹{totalOverallPaid.toLocaleString('en-IN')}</div>
+            <div className="fee-val" style={{ color: '#4338ca' }}>Not configured</div>
             <div className="fee-sub" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#6366f1', fontWeight: 600 }}>
-              <span>{overallClearedPercent}% cleared</span> · <span>Details →</span>
+              <span>Official assessments are unavailable</span>
             </div>
           </div>
         </div>
@@ -500,9 +415,9 @@ export default function FeesPage({ account }) {
         <div className="fee-metric-card">
           <div className="fee-metric-icon blue"><DollarSign size={24} /></div>
           <div className="fee-metric-body">
-            <h4>Total College Fee</h4>
-            <div className="fee-val">₹89,000</div>
-            <div className="fee-sub">Semester 7 · Session 2026–27</div>
+            <h4>Total Assessed</h4>
+            <div className="fee-val">Not configured</div>
+            <div className="fee-sub">No official assessment is available</div>
           </div>
         </div>
 
@@ -510,9 +425,9 @@ export default function FeesPage({ account }) {
         <div className="fee-metric-card">
           <div className="fee-metric-icon green"><CheckCircle2 size={24} /></div>
           <div className="fee-metric-body">
-            <h4>Paid Amount</h4>
-            <div className="fee-val">₹77,000</div>
-            <div className="fee-sub">86.5% cleared</div>
+            <h4>Verified Collections</h4>
+            <div className="fee-val">Open proof history</div>
+            <div className="fee-sub">Use the Digital Payment Proofs tab</div>
           </div>
         </div>
 
@@ -521,8 +436,8 @@ export default function FeesPage({ account }) {
           <div className="fee-metric-icon amber"><Clock size={24} /></div>
           <div className="fee-metric-body">
             <h4>Pending Balance</h4>
-            <div className="fee-val" style={{ color: '#d97706' }}>₹12,000</div>
-            <div className="fee-sub">Due date: 30 Oct 2026</div>
+            <div className="fee-val" style={{ color: '#d97706' }}>Not configured</div>
+            <div className="fee-sub">No official due dates are available</div>
           </div>
         </div>
       </div>
@@ -565,8 +480,8 @@ export default function FeesPage({ account }) {
       {activeTab === 'current' && (
         <div className="fees-section-card">
           <div className="fee-sec-header">
-            <h3>Semester 7 Current Academic Invoices</h3>
-            <span style={{ fontSize: '0.84rem', color: '#64748b' }}>Curated Accounts Ledger</span>
+            <h3>Current Fee Assessments</h3>
+            <span style={{ fontSize: '0.84rem', color: '#64748b' }}>Official assessments are unavailable</span>
           </div>
 
           <div className="fee-table-wrap">
@@ -584,9 +499,9 @@ export default function FeesPage({ account }) {
                 </tr>
               </thead>
               <tbody>
-                {feeHistory
-                  .filter(item => item.term.includes('Semester 7'))
-                  .map((row) => (
+                {feeHistory.length === 0 ? (
+                  <tr><td colSpan="8" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>No official fee assessment data is configured yet.</td></tr>
+                ) : feeHistory.map((row) => (
                     <tr key={row.id}>
                       <td><strong style={{ fontFamily: 'monospace', color: '#2563eb' }}>{row.id}</strong></td>
                       <td>{row.term}</td>
@@ -622,7 +537,7 @@ export default function FeesPage({ account }) {
             <div>
               <h3>Uploaded Payment Proofs & Digital Verification Tracker</h3>
               <p style={{ margin: '2px 0 0', fontSize: '0.84rem', color: '#64748b' }}>
-                Track approval status of digital screenshots & bank transfer receipts submitted to the Accounts section.
+                Track proofs submitted to Accounts. A pending claim is not a verified payment or official receipt.
               </p>
             </div>
             <button 
@@ -638,11 +553,15 @@ export default function FeesPage({ account }) {
             </button>
           </div>
 
-          {proofHistory.length === 0 ? (
+          {proofHistoryLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>Loading payment proof history…</div>
+          ) : proofHistoryError ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#b91c1c' }} role="alert">{proofHistoryError}</div>
+          ) : proofHistory.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
               <UploadCloud size={48} style={{ opacity: 0.4, marginBottom: '12px' }} />
               <h4>No payment proofs uploaded yet</h4>
-              <p style={{ fontSize: '0.88rem' }}>Upload your UPI or bank transfer screenshot to avoid visiting the Accounts section physically.</p>
+              <p style={{ fontSize: '0.88rem' }}>Submit a payment proof for Accounts review. Only Accounts can verify that funds were received.</p>
               <button 
                 type="button" 
                 className="btn-receipt"
@@ -679,14 +598,14 @@ export default function FeesPage({ account }) {
                       <td><span style={{ fontSize: '0.78rem', background: '#e0e7ff', color: '#3730a3', padding: '3px 8px', borderRadius: '4px', fontWeight: 600 }}>{item.paymentMethod}</span></td>
                       <td><code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#0f172a' }}>{item.transactionId}</code></td>
                       <td>{getStatusBadge(item.status)}</td>
-                      <td><small style={{ color: '#64748b' }}>{item.submittedAt ? new Date(item.submittedAt).toLocaleDateString() : 'Today'}</small></td>
+                      <td><small style={{ color: '#64748b' }}>{item.submittedAt ? new Date(item.submittedAt).toLocaleDateString() : '—'}</small></td>
                       <td>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <button 
                             type="button"
                             className="btn-receipt" 
                             style={{ padding: '4px 10px', fontSize: '0.76rem' }}
-                            onClick={() => setSelectedProofView(item)}
+                            onClick={() => handleViewProof(item)}
                           >
                             <Eye size={13} /> View Proof
                           </button>
@@ -714,9 +633,9 @@ export default function FeesPage({ account }) {
         <div className="fees-section-card">
           <div className="fee-sec-header">
             <div>
-              <h3>Cumulative Year-Wise Fee Breakdown (1st Year to Till Now)</h3>
+              <h3>Year-Wise Fee Statement</h3>
               <p style={{ margin: '4px 0 0', fontSize: '0.84rem', color: '#64748b' }}>
-                Complete certified financial ledger from admission session (2023) through current 4th Year (2026).
+                Official fee assessments and due dates have not been configured, so a certified statement is unavailable.
               </p>
             </div>
             <button className="btn-receipt" onClick={handleDownloadConsolidatedStatement}>
@@ -740,7 +659,9 @@ export default function FeesPage({ account }) {
                 </tr>
               </thead>
               <tbody>
-                {yearlyFeeLedger.map((row) => (
+                {yearlyFeeLedger.length === 0 ? (
+                  <tr><td colSpan="8" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>No official fee assessment data is configured yet.</td></tr>
+                ) : yearlyFeeLedger.map((row) => (
                   <tr key={row.year} style={{ background: row.year.includes('Current') ? '#fffdfa' : '#ffffff' }}>
                     <td><strong style={{ color: '#0f172a', fontWeight: 700 }}>{row.year}</strong></td>
                     <td style={{ color: '#475569' }}>{row.session}</td>
@@ -776,8 +697,8 @@ export default function FeesPage({ account }) {
       {activeTab === 'history' && (
         <div className="fees-section-card">
           <div className="fee-sec-header">
-            <h3>All Past Transactions & Ledgers (1st Year to Till Now)</h3>
-            <span style={{ fontSize: '0.84rem', color: '#64748b' }}>Curated Accounts Ledger</span>
+            <h3>Official Fee Receipts</h3>
+            <span style={{ fontSize: '0.84rem', color: '#64748b' }}>Student statement integration is unavailable</span>
           </div>
 
           <div className="fee-table-wrap">
@@ -795,7 +716,9 @@ export default function FeesPage({ account }) {
                 </tr>
               </thead>
               <tbody>
-                {feeHistory.map((row) => (
+                {feeHistory.length === 0 ? (
+                  <tr><td colSpan="8" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>Official receipts are not available through the student statement yet.</td></tr>
+                ) : feeHistory.map((row) => (
                   <tr key={row.id}>
                     <td><strong style={{ fontFamily: 'monospace', color: '#2563eb' }}>{row.id}</strong></td>
                     <td>{row.term}</td>
@@ -824,184 +747,15 @@ export default function FeesPage({ account }) {
         </div>
       )}
 
-      {/* Tab 5: Bank & QR Details */}
+      {/* Tab 5: Payment Details */}
       {activeTab === 'bank-qr' && (
-        <div className="bank-qr-grid">
-          {/* Card 1: College Payment QR Code */}
-          <div className="bank-qr-card">
-            <div>
-              <div className="bank-qr-header">
-                <h3>
-                  <QrCode size={20} color="#2563eb" /> Scan &amp; Pay College Fees
-                </h3>
-                <p>Unified UPI Gateway for Semester Fees, Caution Deposits &amp; Examination dues</p>
-              </div>
-
-              {/* QR Display Area */}
-              <div className="qr-display-box">
-                <div className="qr-image-container">
-                  <img
-                    src={COLLEGE_PAYMENT_QR_URL}
-                    alt="Scan & Pay College Fees Official QR Code"
-                    style={{ width: '220px', height: '220px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
-                  />
-                </div>
-                <p className="qr-caption-text">
-                  Scan this QR code using a supported UPI payment application.
-                </p>
-                <p className="qr-subcaption-text">
-                  Supports Google Pay, PhonePe, Paytm, BHIM, Cred, and all UPI-enabled banking apps.
-                </p>
-              </div>
-
-              {/* Buttons: Download QR Code & View QR Code */}
-              <div className="qr-buttons-row">
-                <a
-                  href={COLLEGE_PAYMENT_QR_URL}
-                  download="College_Payment_QR.svg"
-                  className="btn-qr-action download"
-                >
-                  <Download size={15} /> Download QR Code
-                </a>
-                <button
-                  type="button"
-                  className="btn-qr-action view"
-                  onClick={() => setShowEnlargedQr(true)}
-                >
-                  <Eye size={15} /> View QR Code
-                </button>
-              </div>
-            </div>
-
-            {/* Verification Reminder Note */}
-            <div className="qr-reminder-box">
-              <AlertTriangle size={17} style={{ flexShrink: 0, marginTop: '2px' }} />
-              <div>
-                <strong>Important Verification Reminder:</strong> Before authorizing the payment, always verify that the beneficiary name displays as <strong>"APNA CAMPUS / COLLEGE ACCOUNTS"</strong> in your UPI application.
-              </div>
-            </div>
+        <div className="fees-section-card" role="status">
+          <div className="fee-sec-header">
+            <h3>Payment Instructions</h3>
           </div>
-
-          {/* Card 2: Official College Bank Details */}
-          <div className="bank-qr-card">
-            <div>
-              <div className="bank-qr-header">
-                <h3>
-                  <Building2 size={20} color="#2563eb" /> Official College Bank Details
-                </h3>
-                <p>Direct Electronic Fund Transfer via NEFT / RTGS / IMPS</p>
-              </div>
-
-              {/* Bank Details List */}
-              <div className="bank-details-list">
-                {/* Account Holder */}
-                <div className="bank-detail-item">
-                  <div className="bank-detail-meta">
-                    <span className="bank-detail-label">Account Holder / College Name</span>
-                    <strong className="bank-detail-value">Apna Campus Autonomous College of Engineering &amp; Technology</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className={`btn-copy-mini ${copiedField === 'holder' ? 'copied' : ''}`}
-                    onClick={() => handleCopyText('holder', 'Apna Campus Autonomous College of Engineering & Technology')}
-                    title="Copy Account Holder Name"
-                  >
-                    {copiedField === 'holder' ? <Check size={12} /> : <Copy size={12} />}
-                    {copiedField === 'holder' ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-
-                {/* Bank Name */}
-                <div className="bank-detail-item">
-                  <div className="bank-detail-meta">
-                    <span className="bank-detail-label">Bank Name</span>
-                    <strong className="bank-detail-value">State Bank of India (SBI)</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className={`btn-copy-mini ${copiedField === 'bank' ? 'copied' : ''}`}
-                    onClick={() => handleCopyText('bank', 'State Bank of India')}
-                    title="Copy Bank Name"
-                  >
-                    {copiedField === 'bank' ? <Check size={12} /> : <Copy size={12} />}
-                    {copiedField === 'bank' ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-
-                {/* Branch Name */}
-                <div className="bank-detail-item">
-                  <div className="bank-detail-meta">
-                    <span className="bank-detail-label">Branch Name</span>
-                    <strong className="bank-detail-value">Campus Tech Complex Branch, Bhubaneswar</strong>
-                  </div>
-                </div>
-
-                {/* Account Number */}
-                <div className="bank-detail-item" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
-                  <div className="bank-detail-meta">
-                    <span className="bank-detail-label" style={{ color: '#1d4ed8' }}>Account Number</span>
-                    <strong className="bank-detail-value monospace">394200109842</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className={`btn-copy-mini ${copiedField === 'accountNo' ? 'copied' : ''}`}
-                    onClick={() => handleCopyText('accountNo', '394200109842')}
-                    title="Copy Account Number"
-                  >
-                    {copiedField === 'accountNo' ? <Check size={12} /> : <Copy size={12} />}
-                    {copiedField === 'accountNo' ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-
-                {/* Account Type */}
-                <div className="bank-detail-item">
-                  <div className="bank-detail-meta">
-                    <span className="bank-detail-label">Account Type</span>
-                    <strong className="bank-detail-value">Institutional Current Account</strong>
-                  </div>
-                </div>
-
-                {/* IFSC Code */}
-                <div className="bank-detail-item" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
-                  <div className="bank-detail-meta">
-                    <span className="bank-detail-label" style={{ color: '#1d4ed8' }}>IFSC Code</span>
-                    <strong className="bank-detail-value monospace">SBIN0010234</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className={`btn-copy-mini ${copiedField === 'ifsc' ? 'copied' : ''}`}
-                    onClick={() => handleCopyText('ifsc', 'SBIN0010234')}
-                    title="Copy IFSC Code"
-                  >
-                    {copiedField === 'ifsc' ? <Check size={12} /> : <Copy size={12} />}
-                    {copiedField === 'ifsc' ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-
-                {/* Bank Address */}
-                <div className="bank-detail-item">
-                  <div className="bank-detail-meta">
-                    <span className="bank-detail-label">Bank Address</span>
-                    <strong className="bank-detail-value" style={{ fontSize: '0.84rem', fontWeight: 600, color: '#475569' }}>
-                      Academic Block B, Infocity Avenue, Patia, Bhubaneswar, Odisha – 751024
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bank-verified-badge">
-                <ShieldCheck size={16} /> Verified Institutional Banking Partner
-              </div>
-            </div>
-
-            {/* Instruction for upload */}
-            <div className="bank-notice-card" style={{ marginTop: '16px' }}>
-              <FileCheck size={17} style={{ flexShrink: 0, marginTop: '2px' }} />
-              <div>
-                <strong>Next Step After Transfer:</strong> After completing your transaction, note the <strong>UTR / Reference ID</strong> and upload your payment receipt in the <strong>"Digital Payment Proofs"</strong> tab above for automated accounts clearance.
-              </div>
-            </div>
-          </div>
+          <p style={{ color: '#64748b' }}>
+            Official bank account details, UPI QR code, and online payment gateway are not configured. Contact the Accounts office for verified payment instructions before transferring funds.
+          </p>
         </div>
       )}
 
@@ -1156,15 +910,15 @@ export default function FeesPage({ account }) {
                 </div>
               </form>
             ) : (
-              /* FEATURE 1 — STEP 3: OFFICIAL GIFT FEE RECEIPT PREVIEW BEFORE SUBMIT */
+              /* Payment proof submission preview */
               <div>
                 <div style={{ marginBottom: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <h4 style={{ margin: 0, fontSize: '0.92rem', color: '#0f172a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <CheckCircle2 size={16} color="#16a34a" /> Official Fee Receipt Generation Preview
+                      <Clock size={16} color="#d97706" /> Payment Proof Submission Preview
                     </h4>
                     <span style={{ fontSize: '0.74rem', color: '#0284c7', background: '#f0f9ff', padding: '2px 8px', borderRadius: '4px', border: '1px solid #bae6fd', fontWeight: 600 }}>
-                      Image 5 Standard &bull; GIFT Autonomous
+                      Pending Accounts review
                     </span>
                   </div>
 
@@ -1173,9 +927,9 @@ export default function FeesPage({ account }) {
                       amount: formAmount,
                       paymentDate: formDate,
                       paymentMethod: formMethod,
-                      transactionId: formTxnId || '126928800409',
-                      referenceNumber: formRefNo || '128680',
-                      remarks: formRemarks || 'Tuition Fee',
+                      transactionId: formTxnId,
+                      referenceNumber: formRefNo,
+                      remarks: formRemarks || 'Payment proof submission',
                       rollNumber: studentRoll,
                       studentName: studentName,
                       courseBatch: studentCourseBatch,
@@ -1199,9 +953,9 @@ export default function FeesPage({ account }) {
                           amount: formAmount,
                           paymentDate: formDate,
                           paymentMethod: formMethod,
-                          transactionId: formTxnId || '126928800409',
-                          referenceNumber: formRefNo || '128680',
-                          remarks: formRemarks || 'Tuition Fee',
+                          transactionId: formTxnId,
+                          referenceNumber: formRefNo,
+                          remarks: formRemarks || 'Payment proof submission',
                           studentName,
                           rollNumber: studentRoll,
                           courseBatch: studentCourseBatch,
@@ -1216,7 +970,7 @@ export default function FeesPage({ account }) {
                 </div>
 
                 <div style={{ background: '#eff6ff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.78rem', color: '#1e40af', marginBottom: '14px', border: '1px solid #bfdbfe' }}>
-                  ℹ️ When submitted, the official <strong>GIFT Autonomous Fee Receipt (Student Copy) PDF</strong> matching Image 5 will be generated and ready for instant download and verification.
+                  ℹ️ This summary records details you submitted. Accounts must independently verify the transaction before payment is posted to the register.
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -1236,16 +990,16 @@ export default function FeesPage({ account }) {
                         amount: formAmount,
                         paymentDate: formDate,
                         paymentMethod: formMethod,
-                        transactionId: formTxnId || '126928800409',
-                        referenceNumber: formRefNo || '128680',
-                        remarks: formRemarks || 'Tuition Fee',
+                        transactionId: formTxnId,
+                        referenceNumber: formRefNo,
+                        remarks: formRemarks || 'Payment proof submission',
                         studentName,
                         rollNumber: studentRoll,
                         courseBatch: studentCourseBatch,
                         section: studentSection
                       })}
                     >
-                      <ExternalLink size={14} /> Open PDF ↗
+                      <ExternalLink size={14} /> Open Submission Summary ↗
                     </button>
                     <button 
                       type="button" 
@@ -1253,7 +1007,7 @@ export default function FeesPage({ account }) {
                       onClick={handleSubmitProof}
                       disabled={submittingProof}
                     >
-                      {submittingProof ? 'Generating & Submitting...' : 'Submit & Generate Receipt PDF ✓'}
+                      {submittingProof ? 'Submitting…' : 'Submit for Accounts Review'}
                     </button>
                   </div>
                 </div>
@@ -1263,7 +1017,7 @@ export default function FeesPage({ account }) {
         </div>
       )}
 
-      {/* MODAL 2: View Single Proof Details & GIFT Autonomous Money Receipt */}
+      {/* MODAL 2: View the submitted payment proof */}
       {selectedProofView && (
         <div className="payment-modal-backdrop" onClick={() => setSelectedProofView(null)}>
           <div className="payment-modal" style={{ maxWidth: '680px' }} onClick={e => e.stopPropagation()}>
@@ -1272,7 +1026,7 @@ export default function FeesPage({ account }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Receipt size={18} color="#0284c7" />
-                GIFT Autonomous Money Receipt
+                Payment Proof Submission
               </h3>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button
@@ -1292,7 +1046,7 @@ export default function FeesPage({ account }) {
                     gap: '5px'
                   }}
                 >
-                  <ExternalLink size={14} /> Open PDF ↗
+                  <ExternalLink size={14} /> Open Submission Summary ↗
                 </button>
                 <button
                   type="button"
@@ -1311,7 +1065,7 @@ export default function FeesPage({ account }) {
                     gap: '5px'
                   }}
                 >
-                  <Download size={14} /> Download PDF
+                  <Download size={14} /> Download Submission Summary
                 </button>
               </div>
             </div>
@@ -1325,11 +1079,25 @@ export default function FeesPage({ account }) {
                 studentSection={selectedProofView.section || studentSection}
               />
 
+              <div style={{ marginTop: '12px', minHeight: '120px', display: 'grid', placeItems: 'center', background: '#0f172a', borderRadius: '8px', padding: '12px' }}>
+                {selectedProofView.attachmentLoading ? (
+                  <span style={{ color: '#fff' }}>Loading submitted file…</span>
+                ) : selectedProofView.attachmentError ? (
+                  <span style={{ color: '#fecaca' }} role="alert">{selectedProofView.attachmentError}</span>
+                ) : selectedProofView.fileData?.startsWith('data:image/') ? (
+                  <img src={selectedProofView.fileData} alt="Submitted payment proof" style={{ maxWidth: '100%', maxHeight: '55vh', objectFit: 'contain' }} />
+                ) : selectedProofView.fileType === 'application/pdf' && selectedProofView.fileData ? (
+                  <iframe title="Submitted payment proof PDF" src={selectedProofView.fileData} style={{ width: '100%', height: '55vh', border: 0, background: '#fff' }} />
+                ) : (
+                  <span style={{ color: '#cbd5e1' }}>The original proof attachment is unavailable.</span>
+                )}
+              </div>
+
               {/* Status details */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.82rem', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
                 <div><strong>Transaction ID:</strong> <code style={{ color: '#0284c7' }}>{selectedProofView.transactionId}</code></div>
                 <div><strong>Verification Status:</strong> {getStatusBadge(selectedProofView.status)}</div>
-                <div><strong>Payment Method:</strong> {selectedProofView.paymentMethod || 'Bank Transfer'}</div>
+                <div><strong>Payment Method:</strong> {selectedProofView.paymentMethod || '—'}</div>
                 <div><strong>Value Date:</strong> {selectedProofView.paymentDate}</div>
               </div>
             </div>
@@ -1343,76 +1111,6 @@ export default function FeesPage({ account }) {
         </div>
       )}
 
-      {/* MODAL 3: Recently Generated Receipt Success Dialog */}
-      {recentlyGeneratedReceipt && (
-        <div className="payment-modal-backdrop" onClick={() => setRecentlyGeneratedReceipt(null)}>
-          <div className="payment-modal" style={{ maxWidth: '680px' }} onClick={e => e.stopPropagation()}>
-            <button className="payment-modal-close" onClick={() => setRecentlyGeneratedReceipt(null)}>×</button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#dcfce7', display: 'grid', placeItems: 'center', color: '#16a34a' }}>
-                <Check size={20} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#14532d' }}>Payment Receipt Uploaded &amp; PDF Generated!</h3>
-                <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-                  Your official money receipt matching Gandhi Institute for Technology (GIFT) Autonomous format is ready.
-                </p>
-              </div>
-            </div>
-
-            <div style={{ maxHeight: '60vh', overflowY: 'auto', marginBottom: '14px', paddingRight: '4px' }}>
-              <GiftReceiptPaperView
-                receipt={recentlyGeneratedReceipt}
-                studentName={recentlyGeneratedReceipt.studentName || studentName}
-                studentRoll={recentlyGeneratedReceipt.rollNumber || studentRoll}
-                studentCourseBatch={recentlyGeneratedReceipt.courseBatch || studentCourseBatch}
-                studentSection={recentlyGeneratedReceipt.section || studentSection}
-              />
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <button 
-                type="button" 
-                className="btn-receipt" 
-                onClick={() => setRecentlyGeneratedReceipt(null)}
-              >
-                Close &amp; View Ledger
-              </button>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  style={{
-                    background: '#f0f9ff',
-                    color: '#0369a1',
-                    border: '1px solid #bae6fd',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    fontSize: '0.84rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                  onClick={() => openPaymentProofPdf(recentlyGeneratedReceipt)}
-                >
-                  <ExternalLink size={15} /> Open PDF in New Window ↗
-                </button>
-                <button
-                  type="button"
-                  className="btn-pay-now"
-                  style={{ padding: '8px 18px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                  onClick={() => downloadPaymentProofPdf(recentlyGeneratedReceipt)}
-                >
-                  <Download size={15} /> Download PDF Receipt (Image 5)
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* MODAL 3: Overall Paid from 1st Year Modal */}
       {showYearlyModal && (
         <div className="payment-modal-backdrop" onClick={() => setShowYearlyModal(false)}>
@@ -1421,25 +1119,19 @@ export default function FeesPage({ account }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
               <div className="fee-metric-icon indigo" style={{ width: '38px', height: '38px' }}><History size={20} /></div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 800 }}>Overall Amount Paid (1st Year to Till Now)</h3>
-                <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#64748b' }}>Consolidated institutional fee ledger across all 4 undergraduate years.</p>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 800 }}>Year-Wise Statement Unavailable</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#64748b' }}>Official fee assessments and due dates have not been configured.</p>
               </div>
             </div>
 
             <div style={{ background: 'linear-gradient(135deg, #1e1b4b, #312e81)', color: '#ffffff', borderRadius: '12px', padding: '16px 20px', margin: '16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <span style={{ fontSize: '0.78rem', color: '#c7d2fe', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Total Cumulative Paid:</span>
-                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#ffffff' }}>₹{totalOverallPaid.toLocaleString('en-IN')}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.78rem', color: '#c7d2fe' }}>4-Year Program Demand:</span>
-                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#e0e7ff' }}>₹{totalOverallDues.toLocaleString('en-IN')}</div>
-                <span style={{ fontSize: '0.75rem', color: '#a5b4fc', fontWeight: 600 }}>{overallClearedPercent}% Cleared</span>
-              </div>
+              <p style={{ margin: 0, color: '#e0e7ff' }}>Paid totals, balances, and historical receipts cannot be shown until official fee assessments and student statements are implemented.</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '300px', overflowY: 'auto', paddingRight: '4px' }}>
-              {yearlyFeeLedger.map((y) => (
+              {yearlyFeeLedger.length === 0 ? (
+                <p style={{ color: '#64748b', textAlign: 'center' }}>No official year-wise fee records are available.</p>
+              ) : yearlyFeeLedger.map((y) => (
                 <div key={y.year} style={{ padding: '12px 14px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>{y.year}</strong>
@@ -1465,7 +1157,7 @@ export default function FeesPage({ account }) {
                 style={{ flex: 1, justifyContent: 'center' }}
                 onClick={handleDownloadConsolidatedStatement}
               >
-                <Download size={16} /> Download 4-Year Statement PDF
+                <Download size={16} /> Statement unavailable
               </button>
               <button 
                 type="button" 
@@ -1480,114 +1172,6 @@ export default function FeesPage({ account }) {
         </div>
       )}
 
-      {/* MODAL 4: Gateway Pay Modal */}
-      {showPayModal && (
-        <div className="payment-modal-backdrop" onClick={() => setShowPayModal(false)}>
-          <div className="payment-modal" onClick={e => e.stopPropagation()}>
-            <button className="payment-modal-close" onClick={() => setShowPayModal(false)}>×</button>
-            <h3 style={{ margin: '0 0 8px', fontSize: '1.25rem' }}>Secure Dues Payment Gateway</h3>
-            <p style={{ color: '#64748b', fontSize: '0.88rem', margin: '0 0 16px' }}>
-              Pending Hostel & Mess balance: <strong style={{ color: '#0a0f1e' }}>₹12,000</strong>
-            </p>
-
-            {paidSuccess ? (
-              <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                <CheckCircle2 size={54} color="#10b981" style={{ margin: '0 auto 12px' }} />
-                <h4 style={{ margin: 0, color: '#065f46', fontSize: '1.2rem' }}>Payment Successful!</h4>
-                <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '6px' }}>Generating digital receipt and clearing dues...</p>
-              </div>
-            ) : (
-              <>
-                <div className="pay-opts">
-                  <div 
-                    className={`pay-opt-btn ${selectedPayMode === 'upi' ? 'active' : ''}`}
-                    onClick={() => setSelectedPayMode('upi')}
-                  >
-                    UPI / QR Code
-                  </div>
-                  <div 
-                    className={`pay-opt-btn ${selectedPayMode === 'cards' ? 'active' : ''}`}
-                    onClick={() => setSelectedPayMode('cards')}
-                  >
-                    Debit / Credit Card
-                  </div>
-                  <div 
-                    className={`pay-opt-btn ${selectedPayMode === 'netbanking' ? 'active' : ''}`}
-                    onClick={() => setSelectedPayMode('netbanking')}
-                  >
-                    Net Banking
-                  </div>
-                  <div 
-                    className={`pay-opt-btn ${selectedPayMode === 'challan' ? 'active' : ''}`}
-                    onClick={() => setSelectedPayMode('challan')}
-                  >
-                    Bank Challan (Offline)
-                  </div>
-                </div>
-
-                <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', fontSize: '0.82rem', color: '#475569', marginBottom: '20px' }}>
-                  256-Bit SSL Encrypted Transaction. Automatic ERP clearance receipt generated immediately.
-                </div>
-
-                <button 
-                  className="btn-pay-now" 
-                  style={{ width: '100%', justifyContent: 'center' }}
-                  onClick={handlePay}
-                >
-                  Confirm & Pay ₹12,000
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 5: Enlarged QR Modal */}
-      {showEnlargedQr && (
-        <div className="payment-modal-backdrop" onClick={() => setShowEnlargedQr(false)}>
-          <div className="payment-modal" style={{ maxWidth: '440px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-            <button className="payment-modal-close" onClick={() => setShowEnlargedQr(false)}>×</button>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
-              <QrCode size={22} color="#2563eb" />
-              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 800 }}>Scan &amp; Pay College Fees</h3>
-            </div>
-            <div style={{ background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '16px', padding: '16px', display: 'inline-block', marginBottom: '14px' }}>
-              <img 
-                src={COLLEGE_PAYMENT_QR_URL} 
-                alt="Scan & Pay College Fees Official QR Code" 
-                style={{ width: '280px', height: '280px', objectFit: 'contain', display: 'block', margin: '0 auto' }} 
-              />
-            </div>
-            <p style={{ fontSize: '0.88rem', color: '#334155', fontWeight: 600, margin: '0 0 12px' }}>
-              Scan this QR code using a supported UPI payment application.
-            </p>
-            <div className="qr-reminder-box" style={{ textAlign: 'left', marginBottom: '16px' }}>
-              <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-              <span style={{ fontSize: '0.78rem' }}>
-                Please verify recipient name as <strong>"APNA CAMPUS / COLLEGE ACCOUNTS"</strong> before confirming payment.
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <a 
-                href={COLLEGE_PAYMENT_QR_URL} 
-                download="College_Payment_QR.svg" 
-                className="btn-qr-action download"
-                style={{ flex: 1, justifyContent: 'center' }}
-              >
-                <Download size={15} /> Download QR Code
-              </a>
-              <button 
-                type="button" 
-                className="btn-qr-action view"
-                style={{ padding: '8px 18px' }}
-                onClick={() => setShowEnlargedQr(false)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

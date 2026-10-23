@@ -1,66 +1,86 @@
-import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { normalizeRole } from '../rbac/rbac';
 import { CanteenService } from './canteen.service';
+import { CreateFoodItemDto, PlaceOrderDto, UpdateOrderStatusDto, WalletTopUpDto } from './canteen.dto';
 
 @ApiTags('Smart Canteen & Mess')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('canteen')
 export class CanteenController {
   constructor(private readonly canteenService: CanteenService) {}
 
+  private requireRole(user: any, allowed: string[]) {
+    const role = normalizeRole(user.role);
+    if (!allowed.includes(role)) throw new ForbiddenException('Your role cannot perform this canteen operation.');
+  }
+
   @Get('menu')
-  @ApiOperation({ summary: 'Get canteen menu food items and live stock availability' })
+  @ApiOperation({ summary: 'Get persisted canteen menu and live availability' })
   async getMenu() {
     const data = await this.canteenService.getMenu();
     return { success: true, count: data.length, data };
   }
 
   @Post('menu')
-  @ApiOperation({ summary: 'Add new food item to smart canteen' })
-  async addFoodItem(@Body() body: any) {
+  async addFoodItem(@CurrentUser() user: any, @Body() body: CreateFoodItemDto) {
+    this.requireRole(user, ['canteen', 'admin', 'super_admin']);
     const item = await this.canteenService.addFoodItem(body);
-    return { success: true, message: `Added ${item.name} (₹${item.price}) to Smart Canteen menu!`, data: item };
+    return { success: true, message: `Added ${item.name} to the canteen menu.`, data: item };
   }
 
   @Patch('menu/:id/toggle')
-  @ApiOperation({ summary: 'Toggle food item availability (In-stock / Out-of-stock)' })
-  async toggleAvailability(@Param('id') id: string) {
+  async toggleAvailability(@CurrentUser() user: any, @Param('id') id: string) {
+    this.requireRole(user, ['canteen', 'admin', 'super_admin']);
     const item = await this.canteenService.toggleAvailability(id);
-    return {
-      success: true,
-      message: `${item?.name} marked as ${item?.isAvailable ? 'Available' : 'Out of Stock'}.`,
-      data: item,
-    };
+    return { success: true, data: item };
   }
 
   @Get('orders')
-  @ApiOperation({ summary: 'Get live kitchen orders queue' })
-  async getOrders() {
+  async getOrders(@CurrentUser() user: any) {
+    this.requireRole(user, ['canteen', 'admin', 'super_admin']);
     const data = await this.canteenService.getOrders();
     return { success: true, count: data.length, data };
   }
 
   @Post('order')
-  @ApiOperation({ summary: 'Place food order and deduct from RFID wallet' })
-  async placeOrder(@Body() body: any) {
-    const result = await this.canteenService.placeOrder(body);
-    return {
-      success: true,
-      message: `Order placed! Token #${result.token} issued.`,
-      data: result,
-    };
+  async placeOrder(@CurrentUser() user: any, @Body() body: PlaceOrderDto) {
+    this.requireRole(user, ['student']);
+    if (!user.student?.id) throw new ForbiddenException('This account is not linked to a student record.');
+    const data = await this.canteenService.placeOrder(user.student.id, body.items);
+    return { success: true, message: `Order placed. Token ${data.token} issued.`, data };
   }
 
   @Patch('orders/:id/status')
-  @ApiOperation({ summary: 'Update kitchen order status (Pending, Preparing, Ready, Completed)' })
-  async updateOrderStatus(@Param('id') id: string, @Body() body: { status: string }) {
-    const updated = await this.canteenService.updateOrderStatus(id, body.status);
-    return { success: true, message: `Order ${id} is now marked as "${body.status}"!`, data: updated };
+  async updateOrderStatus(@CurrentUser() user: any, @Param('id') id: string, @Body() body: UpdateOrderStatusDto) {
+    this.requireRole(user, ['canteen', 'admin', 'super_admin']);
+    const data = await this.canteenService.updateOrderStatus(id, body.status);
+    return { success: true, message: `Order status updated to ${data.status}.`, data };
   }
 
   @Post('wallet/topup')
-  @ApiOperation({ summary: 'Top up student RFID smart card balance' })
-  async topUpWallet(@Body() body: { rollNumber?: string; amount: number }) {
-    const res = await this.canteenService.topUpWallet(body.rollNumber || '01', body.amount);
-    return { success: true, message: `Wallet topped up by ₹${body.amount}!`, data: res };
+  async topUpWallet(@CurrentUser() user: any, @Body() body: WalletTopUpDto) {
+    this.requireRole(user, ['accounts', 'admin', 'super_admin']);
+    const data = await this.canteenService.topUpWallet(body.rollNumber.trim(), body.amount, body.reference, { id: user.id, role: user.role });
+    return { success: true, data };
+  }
+
+  @Get('wallet/transactions')
+  async getWalletTransactions(@CurrentUser() user: any, @Query('rollNumber') rollNumber?: string) {
+    let studentId: string;
+    if (normalizeRole(user.role) === 'student') {
+      if (!user.student?.id) throw new ForbiddenException('This account is not linked to a student record.');
+      studentId = user.student.id;
+    } else {
+      this.requireRole(user, ['accounts', 'canteen', 'admin', 'super_admin']);
+      if (!rollNumber?.trim()) throw new ForbiddenException('A student roll number is required for staff ledger lookup.');
+      const student = await this.canteenService.findStudentIdByRollNumber(rollNumber.trim());
+      studentId = student.id;
+    }
+    const data = await this.canteenService.getWalletTransactions(studentId);
+    return { success: true, count: data.length, data };
   }
 }

@@ -32,7 +32,7 @@ export const initialSystemSettings = {
 
 export const initialRolesList = [
   { key: 'super_admin', label: 'Super Administrator', category: 'System', usersCount: 2, description: 'Unrestricted institutional configuration & security' },
-  { key: 'management', label: 'Management & Trustees', category: 'Executive', usersCount: 4, description: 'Governing board analytics, strategic review & approvals' },
+  { key: 'management', label: 'Management', category: 'Executive', usersCount: 4, description: 'Institutional analytics, strategic review & approvals' },
   { key: 'principal', label: 'Principal / Director', category: 'Executive', usersCount: 2, description: 'Campus academic administration & institutional clearances' },
   { key: 'admin', label: 'Academic Administrator', category: 'Administration', usersCount: 6, description: 'Day-to-day admissions, courses, sections & timetables' },
   { key: 'hod', label: 'Head of Department (HOD)', category: 'Academic', usersCount: 8, description: 'Department-specific academic governance & workload' },

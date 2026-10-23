@@ -28,7 +28,6 @@ import {
   Info,
   Check,
   QrCode,
-  FileCheck,
   Menu,
   RotateCcw,
   UserCheck,
@@ -59,21 +58,12 @@ import { downloadHostelCensusPdf } from '../utils/pdfGenerator';
 import {
   initialHostels,
   initialHostelRooms,
-  initialHostelComplaints,
-  initialHostelVisitors
+  initialHostelComplaints
 } from '../data/collegeData.js';
 import { getAllStudents } from '../services/studentStore.js';
-import {
-  getAllGatePasses,
-  approveGatePass,
-  rejectGatePass,
-  recordGatePassExit,
-  recordGatePassReturn
-} from '../services/gatePassStore.js';
 import { api } from '../services/api.js';
 import { useTimeGreeting } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
-import HandwrittenApplicationLetter from './HandwrittenApplicationLetter.jsx';
 
 // ── 15 New Hostel Warden Submodules ──
 import HostelAttendanceSection from './hostel/HostelAttendanceSection.jsx';
@@ -109,16 +99,20 @@ export default function HostelPortal({ account, onLogout }) {
   const [hostels, setHostels] = useState(initialHostels);
   const [rooms, setRooms] = useState(initialHostelRooms);
   const [complaints, setComplaints] = useState(initialHostelComplaints);
-  const [visitors, setVisitors] = useState(initialHostelVisitors);
+  const [visitors, setVisitors] = useState([]);
+  const [visitorActionPendingId, setVisitorActionPendingId] = useState(null);
   const [students] = useState(() => getAllStudents());
 
   // Gate Pass Management State
-  const [gatePasses, setGatePasses] = useState(() => getAllGatePasses());
+  const [gatePasses, setGatePasses] = useState([]);
+  const [gatePassesLoading, setGatePassesLoading] = useState(true);
+  const [gatePassesError, setGatePassesError] = useState('');
+  const [gatePassActionPendingId, setGatePassActionPendingId] = useState(null);
   const [selectedGatePassModal, setSelectedGatePassModal] = useState(null);
   const [gatePassStatusFilter, setGatePassStatusFilter] = useState('ALL');
   const [gatePassHostelFilter, setGatePassHostelFilter] = useState('ALL');
   const [gatePassSearch, setGatePassSearch] = useState('');
-  const [wardenReviewRemarks, setWardenReviewRemarks] = useState('Application and mentor verification reviewed. Outstation gate pass granted.');
+  const [wardenReviewRemarks, setWardenReviewRemarks] = useState('');
 
   // Bed Allocation & Transfer Modals
   const [isAllocateModalOpen, setIsAllocateModalOpen] = useState(false);
@@ -150,8 +144,8 @@ export default function HostelPortal({ account, onLogout }) {
   const [complaintStatusFilter, setComplaintStatusFilter] = useState('ALL');
   const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
   const [complaintForm, setComplaintForm] = useState({
-    studentName: 'Rakesh Das',
-    rollNumber: '01',
+    studentName: '',
+    rollNumber: '',
     hostel: 'Gandhi Boys Residence',
     roomNumber: '101',
     category: 'Electrical',
@@ -182,18 +176,39 @@ export default function HostelPortal({ account, onLogout }) {
   // Visitor Printable Pass Modal
   const [selectedVisitorForPass, setSelectedVisitorForPass] = useState(null);
 
-  // Listen for real-time gate pass updates from Student Portal
+  const loadGatePasses = async () => {
+    setGatePassesLoading(true);
+    setGatePassesError('');
+    try {
+      const response = await api.getHostelGatePasses();
+      const rows = Array.isArray(response?.data) ? response.data : [];
+      setGatePasses(rows);
+      return rows;
+    } catch (error) {
+      setGatePassesError(error.message || 'Gate pass queue could not be loaded.');
+      return [];
+    } finally {
+      setGatePassesLoading(false);
+    }
+  };
+
+  useEffect(() => { loadGatePasses(); }, []);
+
+  const loadVisitors = async () => {
+    try {
+      const response = await api.getVisitors();
+      const rows = Array.isArray(response?.data) ? response.data : [];
+      setVisitors(rows);
+      return rows;
+    } catch (error) {
+      showToast(error.message || 'Visitor records could not be loaded.');
+      return [];
+    }
+  };
+
   useEffect(() => {
-    const syncPasses = () => {
-      setGatePasses(getAllGatePasses());
-    };
-    window.addEventListener('bput_gate_passes_changed', syncPasses);
-    window.addEventListener('storage', syncPasses);
-    return () => {
-      window.removeEventListener('bput_gate_passes_changed', syncPasses);
-      window.removeEventListener('storage', syncPasses);
-    };
-  }, []);
+    if (activeTab === 'visitors') loadVisitors();
+  }, [activeTab]);
 
   // Interactive Hostel & Room Drilldown State
   const [selectedHostelId, setSelectedHostelId] = useState('hostel-b1');
@@ -207,11 +222,9 @@ export default function HostelPortal({ account, onLogout }) {
   const [visitorForm, setVisitorForm] = useState({
     visitorName: '',
     relation: 'Father',
-    studentName: 'Rakesh Das',
-    rollNumber: '01',
-    inTime: '05:00 PM',
-    purpose: 'Academic visit',
-    badgeNumber: 'BADGE-01'
+    rollNumber: '',
+    inTime: '17:00',
+    purpose: 'Academic visit'
   });
 
   const [toastMessage, setToastMessage] = useState('');
@@ -240,30 +253,22 @@ export default function HostelPortal({ account, onLogout }) {
   }, [visitors]);
 
   const exitedStudentsCount = useMemo(() => {
-    return gatePasses.filter(p => p.status === 'Exited Campus').length;
+    return gatePasses.filter(p => p.status === 'Exited').length;
   }, [gatePasses]);
 
   const overduePasses = useMemo(() => {
-    const now = Date.now();
-    return gatePasses.filter(p => {
-      if (p.status === 'Exited Campus' && p.inDateTime) {
-        return new Date(p.inDateTime).getTime() < now;
-      }
-      return false;
-    });
+    return gatePasses.filter((pass) => pass.isOverdue);
   }, [gatePasses]);
 
   const filteredGatePasses = useMemo(() => {
-    const now = Date.now();
     return gatePasses.filter(p => {
-      const isOverdue = p.status === 'Exited Campus' && p.inDateTime && new Date(p.inDateTime).getTime() < now;
       let matchesStatus = true;
       if (gatePassStatusFilter === 'PENDING') matchesStatus = p.status === 'Pending Warden Approval';
       else if (gatePassStatusFilter === 'APPROVED') matchesStatus = p.status === 'Approved';
-      else if (gatePassStatusFilter === 'EXITED') matchesStatus = p.status === 'Exited Campus';
-      else if (gatePassStatusFilter === 'RETURNED') matchesStatus = p.status === 'Returned to Hostel';
+      else if (gatePassStatusFilter === 'EXITED') matchesStatus = p.status === 'Exited';
+      else if (gatePassStatusFilter === 'RETURNED') matchesStatus = p.status === 'Returned';
       else if (gatePassStatusFilter === 'REJECTED') matchesStatus = p.status === 'Rejected';
-      else if (gatePassStatusFilter === 'OVERDUE') matchesStatus = isOverdue;
+      else if (gatePassStatusFilter === 'OVERDUE') matchesStatus = p.isOverdue;
 
       const matchesHostel =
         gatePassHostelFilter === 'ALL' || p.hostelName === gatePassHostelFilter;
@@ -271,8 +276,8 @@ export default function HostelPortal({ account, onLogout }) {
       const query = gatePassSearch.trim().toLowerCase();
       const matchesSearch =
         !query ||
-        p.id.toLowerCase().includes(query) ||
-        p.studentName.toLowerCase().includes(query) ||
+        String(p.passId || p.id).toLowerCase().includes(query) ||
+        String(p.studentName || '').toLowerCase().includes(query) ||
         (p.rollNumber && String(p.rollNumber).toLowerCase().includes(query)) ||
         (p.destination && p.destination.toLowerCase().includes(query));
 
@@ -280,45 +285,47 @@ export default function HostelPortal({ account, onLogout }) {
     });
   }, [gatePasses, gatePassStatusFilter, gatePassHostelFilter, gatePassSearch]);
 
-  const handleApproveGatePass = (passId) => {
-    const wardenName = account?.name ? `${account.name} (Resident Warden)` : 'Mr. Rajesh Jena (Resident Warden)';
-    const approved = approveGatePass(passId, wardenName, wardenReviewRemarks || 'Application and mentor verification reviewed. Outstation gate pass granted.');
-    setGatePasses(getAllGatePasses());
-    if (selectedGatePassModal && selectedGatePassModal.id === passId) {
-      setSelectedGatePassModal(approved);
-    }
-    showToast(`✓ Gate Pass ${passId} Approved! Status updated automatically for student.`);
-  };
-
-  const handleRejectGatePass = (passId) => {
-    const wardenName = account?.name ? `${account.name} (Resident Warden)` : 'Mr. Rajesh Jena (Resident Warden)';
-    const rejected = rejectGatePass(passId, wardenName, wardenReviewRemarks || 'Application rejected.');
-    setGatePasses(getAllGatePasses());
-    if (selectedGatePassModal && selectedGatePassModal.id === passId) {
-      setSelectedGatePassModal(rejected);
-    }
-    showToast(`Gate Pass ${passId} rejected.`);
-  };
-
-  const handleRecordExit = (passId) => {
-    recordGatePassExit(passId);
-    setGatePasses(getAllGatePasses());
-    showToast(`✓ Campus Exit recorded for pass ${passId}. Student is now physically off campus.`);
+  const handleGatePassAction = async (passId, action) => {
+    setGatePassActionPendingId(passId);
     try {
-      api.actionHostelGatePass(passId, 'RECORD_EXIT', 'Logged at Campus Security Gate');
-    } catch (e) {
-      console.warn('Backend sync failed:', e);
+      await api.actionHostelGatePass(passId, action, wardenReviewRemarks.trim() || undefined);
+      const rows = await loadGatePasses();
+      setSelectedGatePassModal((current) => current?.id === passId ? rows.find((pass) => pass.id === passId) || current : current);
+      showToast(action === 'APPROVE' ? `Gate pass ${passId} approved.` : `Gate pass ${passId} rejected.`);
+      setWardenReviewRemarks('');
+    } catch (error) {
+      showToast(error.message || 'Gate pass action was not saved. Refresh the queue and retry.');
+    } finally {
+      setGatePassActionPendingId(null);
     }
   };
 
-  const handleRecordReturn = (passId) => {
-    recordGatePassReturn(passId);
-    setGatePasses(getAllGatePasses());
-    showToast(`✓ Campus Return recorded for pass ${passId}. Resident arrival confirmed.`);
+  const handleRejectGatePass = (passId) => handleGatePassAction(passId, 'REJECT');
+  const handleApproveGatePass = (passId) => handleGatePassAction(passId, 'APPROVE');
+
+  const handleRecordExit = async (passId) => {
+    setGatePassActionPendingId(passId);
     try {
-      api.actionHostelGatePass(passId, 'RECORD_RETURN', 'Returned to Hostel');
-    } catch (e) {
-      console.warn('Backend sync failed:', e);
+      await api.actionHostelGatePass(passId, 'RECORD_EXIT');
+      await loadGatePasses();
+      showToast(`Exit recorded for gate pass ${passId}.`);
+    } catch (error) {
+      showToast(error.message || 'Exit was not recorded. Refresh the queue and retry.');
+    } finally {
+      setGatePassActionPendingId(null);
+    }
+  };
+
+  const handleRecordReturn = async (passId) => {
+    setGatePassActionPendingId(passId);
+    try {
+      await api.actionHostelGatePass(passId, 'RECORD_RETURN');
+      await loadGatePasses();
+      showToast(`Return recorded for gate pass ${passId}.`);
+    } catch (error) {
+      showToast(error.message || 'Return was not recorded. Refresh the queue and retry.');
+    } finally {
+      setGatePassActionPendingId(null);
     }
   };
 
@@ -343,41 +350,40 @@ export default function HostelPortal({ account, onLogout }) {
 
   const handleAddVisitor = async (e) => {
     e.preventDefault();
-    const newVisitor = {
-      id: `VIS-${Math.floor(500 + Math.random() * 500)}`,
-      visitorName: visitorForm.visitorName,
-      relation: visitorForm.relation,
-      studentName: visitorForm.studentName,
-      rollNumber: visitorForm.rollNumber,
-      inTime: visitorForm.inTime,
-      outTime: 'Pending Sign-out',
-      passNumber: `PASS-${Math.floor(800 + Math.random() * 200)}`,
-      purpose: visitorForm.purpose,
-      badgeNumber: visitorForm.badgeNumber || 'BADGE-01'
-    };
-    setVisitors(prev => [newVisitor, ...prev]);
-    setIsVisitorModalOpen(false);
-    showToast(`Visitor pass issued for ${newVisitor.visitorName}!`);
     try {
-      await api.issueVisitorPass(visitorForm);
-    } catch (err) {
-      console.warn('Backend visitor pass sync failed:', err.message);
+      const response = await api.issueVisitorPass(visitorForm);
+      if (!response?.success || !response?.data) throw new Error('The backend did not confirm visitor pass creation.');
+      setVisitors(prev => [response.data, ...prev]);
+      setIsVisitorModalOpen(false);
+      showToast(`Visitor pass issued for ${response.data.visitorName}.`);
+    } catch (error) {
+      showToast(error.message || 'Visitor pass was not issued. Check the resident and try again.');
+    }
+  };
+
+  const handleCheckInVisitor = async (visitorId) => {
+    setVisitorActionPendingId(visitorId);
+    try {
+      await api.checkInVisitor(visitorId);
+      await loadVisitors();
+      showToast('Visitor check-in recorded.');
+    } catch (error) {
+      showToast(error.message || 'Visitor check-in was not recorded.');
+    } finally {
+      setVisitorActionPendingId(null);
     }
   };
 
   const handleCheckOutVisitor = async (visitorId) => {
-    const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    setVisitors(prev => prev.map(v => {
-      if (v.id === visitorId || v.passNumber === visitorId) {
-        return { ...v, outTime: nowTime };
-      }
-      return v;
-    }));
-    showToast(`✓ Visitor departure recorded at ${nowTime}. Security badge returned.`);
+    setVisitorActionPendingId(visitorId);
     try {
       await api.checkOutVisitor(visitorId);
-    } catch (e) {
-      console.warn('Backend sync failed:', e);
+      await loadVisitors();
+      showToast('Visitor check-out recorded.');
+    } catch (error) {
+      showToast(error.message || 'Visitor check-out was not recorded.');
+    } finally {
+      setVisitorActionPendingId(null);
     }
   };
 
@@ -1698,7 +1704,7 @@ export default function HostelPortal({ account, onLogout }) {
                   </div>
                   <div>
                     <div className="gate-pass-stat-value" style={{ color: '#16a34a' }}>
-                      {visitors.filter(v => v.outTime === 'Pending Sign-out' || !v.outTime).length}
+                      {visitors.filter(v => v.status === 'CHECKED_IN').length}
                     </div>
                     <div className="gate-pass-stat-label">Currently on Campus</div>
                   </div>
@@ -1709,7 +1715,7 @@ export default function HostelPortal({ account, onLogout }) {
                   </div>
                   <div>
                     <div className="gate-pass-stat-value">
-                      {visitors.filter(v => v.outTime && v.outTime !== 'Pending Sign-out').length}
+                      {visitors.filter(v => v.status === 'CHECKED_OUT').length}
                     </div>
                     <div className="gate-pass-stat-label">Departed / Checked Out</div>
                   </div>
@@ -1732,7 +1738,8 @@ export default function HostelPortal({ account, onLogout }) {
                   </thead>
                   <tbody>
                     {visitors.map(v => {
-                      const isOnCampus = v.outTime === 'Pending Sign-out' || !v.outTime;
+                      const isOnCampus = v.status === 'CHECKED_IN';
+                      const canCheckIn = v.status === 'ISSUED';
                       return (
                         <tr key={v.id}>
                           <td><code>{v.passNumber}</code></td>
@@ -1749,7 +1756,7 @@ export default function HostelPortal({ account, onLogout }) {
                           <td>{v.purpose}</td>
                           <td>
                             <span className={`admin-badge ${isOnCampus ? 'pending' : 'approved'}`}>
-                              {isOnCampus ? 'On Campus' : 'Departed'}
+                              {v.status === 'CHECKED_OUT' ? 'Departed' : isOnCampus ? 'On Campus' : 'Pass Issued'}
                             </span>
                           </td>
                           <td style={{ textAlign: 'right' }}>
@@ -1761,10 +1768,21 @@ export default function HostelPortal({ account, onLogout }) {
                               >
                                 Print Pass
                               </button>
+                              {canCheckIn && (
+                                <button
+                                  className="admin-action-btn-secondary"
+                                  style={{ padding: '0.25rem 0.55rem', fontSize: '0.74rem' }}
+                                  disabled={visitorActionPendingId === v.id}
+                                  onClick={() => handleCheckInVisitor(v.id)}
+                                >
+                                  Check In
+                                </button>
+                              )}
                               {isOnCampus && (
                                 <button
                                   className="hostel-quick-reject-btn"
                                   style={{ padding: '0.25rem 0.55rem', fontSize: '0.74rem' }}
+                                  disabled={visitorActionPendingId === v.id}
                                   onClick={() => handleCheckOutVisitor(v.id)}
                                 >
                                   Check Out
@@ -1926,26 +1944,29 @@ export default function HostelPortal({ account, onLogout }) {
                       <th>Hostel &amp; Room</th>
                       <th>Destination &amp; Purpose</th>
                       <th>Departure &amp; Return</th>
-                      <th>Mentor Verification</th>
+                      <th>Consent / Mentor status</th>
                       <th>Status</th>
                       <th style={{ textAlign: 'right' }}>Warden Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredGatePasses.map(pass => {
+                    {gatePassesLoading ? <tr><td colSpan="8">Loading gate pass queue…</td></tr>
+                      : gatePassesError ? <tr><td colSpan="8" role="alert">{gatePassesError}</td></tr>
+                        : filteredGatePasses.length === 0 ? <tr><td colSpan="8">No matching gate pass applications.</td></tr>
+                          : filteredGatePasses.map(pass => {
                       const isPending = pass.status === 'Pending Warden Approval';
                       const isApproved = pass.status === 'Approved';
-                      const isExited = pass.status === 'Exited Campus';
-                      const isReturned = pass.status === 'Returned to Hostel';
-                      const isOverdue = isExited && pass.inDateTime && new Date(pass.inDateTime).getTime() < Date.now();
+                      const isExited = pass.status === 'Exited';
+                      const isReturned = pass.status === 'Returned';
+                      const isOverdue = Boolean(pass.isOverdue);
 
                       return (
                         <tr key={pass.id}>
                           <td>
                             <strong style={{ color: '#4338ca', fontFamily: 'monospace', fontSize: '0.88rem' }}>
-                              {pass.id}
+                              {pass.passId || pass.id}
                             </strong>
-                            <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '2px' }}>{pass.appliedAt}</div>
+                            <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '2px' }}>{pass.createdAt ? new Date(pass.createdAt).toLocaleString() : 'Date unavailable'}</div>
                           </td>
 
                           <td>
@@ -1954,22 +1975,19 @@ export default function HostelPortal({ account, onLogout }) {
                                 width: '32px',
                                 height: '32px',
                                 borderRadius: '50%',
-                                background: pass.gender === 'Female' ? '#fdf2f8' : '#eff6ff',
-                                color: pass.gender === 'Female' ? '#db2777' : '#2563eb',
+                                background: '#eff6ff',
+                                color: '#2563eb',
                                 display: 'grid',
                                 placeItems: 'center',
                                 fontWeight: 700,
                                 fontSize: '0.85rem'
                               }}>
-                                {pass.studentName.charAt(0)}
+                                {(pass.studentName || 'S').charAt(0)}
                               </div>
                               <div>
                                 <div style={{ fontWeight: 700, color: '#0f172a' }}>{pass.studentName}</div>
                                 <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                                  Roll {pass.rollNumber} · {pass.department}
-                                </div>
-                                <div style={{ fontSize: '0.72rem', color: '#2563eb' }}>
-                                  📞 {pass.studentPhone}
+                                  Roll {pass.rollNumber || 'Not recorded'} · {pass.department || 'Department not recorded'}
                                 </div>
                               </div>
                             </div>
@@ -1978,13 +1996,13 @@ export default function HostelPortal({ account, onLogout }) {
                           <td>
                             <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.85rem' }}>{pass.hostelName}</div>
                             <div style={{ fontSize: '0.75rem', color: '#7c3aed', fontWeight: 700 }}>
-                              {pass.roomNumber} ({pass.bedNo})
+                              {pass.roomNumber || 'Room not recorded'}{pass.bedNo ? ` (${pass.bedNo})` : ''}
                             </div>
                           </td>
 
                           <td>
                             <span className="admin-badge active" style={{ fontSize: '0.72rem', padding: '2px 6px' }}>
-                              {pass.purposeType}
+                              {pass.purposeType || 'Purpose not recorded'}
                             </span>
                             <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '2px', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {pass.destination}
@@ -1993,10 +2011,10 @@ export default function HostelPortal({ account, onLogout }) {
 
                           <td>
                             <div style={{ fontSize: '0.78rem' }}>
-                              <span style={{ color: '#64748b' }}>Out:</span> <strong>{pass.outDateTime ? pass.outDateTime.replace('T', ' ') : 'N/A'}</strong>
+                              <span style={{ color: '#64748b' }}>Out:</span> <strong>{pass.outDateTime ? new Date(pass.outDateTime).toLocaleString() : 'Not recorded'}</strong>
                             </div>
                             <div style={{ fontSize: '0.78rem' }}>
-                              <span style={{ color: '#64748b' }}>In:</span> <strong>{pass.inDateTime ? pass.inDateTime.replace('T', ' ') : 'N/A'}</strong>
+                              <span style={{ color: '#64748b' }}>In:</span> <strong>{pass.inDateTime ? new Date(pass.inDateTime).toLocaleString() : 'Not recorded'}</strong>
                             </div>
                           </td>
 
@@ -2005,18 +2023,18 @@ export default function HostelPortal({ account, onLogout }) {
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '4px',
-                              background: '#f0fdf4',
-                              color: '#166534',
-                              border: '1px solid #bbf7d0',
+                              background: pass.mentorStatus === 'Verified' ? '#f0fdf4' : '#fffbeb',
+                              color: pass.mentorStatus === 'Verified' ? '#166534' : '#854d0e',
+                              border: `1px solid ${pass.mentorStatus === 'Verified' ? '#bbf7d0' : '#fde68a'}`,
                               padding: '2px 6px',
                               borderRadius: '4px',
                               fontSize: '0.72rem',
                               fontWeight: 700
                             }}>
-                              <CheckCircle2 size={12} /> {pass.mentorStatus || 'Verified'}
+                              {pass.mentorStatus === 'Verified' ? <CheckCircle2 size={12} /> : <Clock size={12} />} {pass.mentorStatus || 'Not verified'}
                             </span>
                             <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
-                              {pass.mentorName}
+                              Parent consent: {pass.parentConsentVerified ? 'Verified' : 'Not verified'}
                             </div>
                           </td>
 
@@ -2054,7 +2072,7 @@ export default function HostelPortal({ account, onLogout }) {
                                 style={{ padding: '0.35rem 0.65rem', fontSize: '0.76rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                                 onClick={() => {
                                   setSelectedGatePassModal(pass);
-                                  setWardenReviewRemarks(pass.wardenRemarks || 'Application and mentor clearance verified. Outstation pass granted.');
+                                  setWardenReviewRemarks(pass.wardenRemarks || '');
                                 }}
                               >
                                 <Eye size={13} /> View
@@ -2065,7 +2083,8 @@ export default function HostelPortal({ account, onLogout }) {
                                   <button
                                     type="button"
                                     className="hostel-quick-approve-btn"
-                                    onClick={() => handleApproveGatePass(pass.id)}
+                                onClick={() => handleApproveGatePass(pass.id)}
+                                disabled={gatePassActionPendingId === pass.id}
                                     title="Approve Gate Pass"
                                   >
                                     <Check size={13} /> Approve
@@ -2074,6 +2093,7 @@ export default function HostelPortal({ account, onLogout }) {
                                     type="button"
                                     className="hostel-quick-reject-btn"
                                     onClick={() => handleRejectGatePass(pass.id)}
+                                    disabled={gatePassActionPendingId === pass.id}
                                     title="Reject Gate Pass"
                                   >
                                     <X size={13} />
@@ -2087,6 +2107,7 @@ export default function HostelPortal({ account, onLogout }) {
                                   className="admin-action-btn-primary"
                                   style={{ padding: '0.35rem 0.65rem', fontSize: '0.76rem', background: '#4f46e5' }}
                                   onClick={() => handleRecordExit(pass.id)}
+                                  disabled={gatePassActionPendingId === pass.id}
                                   title="Record Student Physical Exit at Gate"
                                 >
                                   Log Exit
@@ -2099,6 +2120,7 @@ export default function HostelPortal({ account, onLogout }) {
                                   className="admin-action-btn-primary"
                                   style={{ padding: '0.35rem 0.65rem', fontSize: '0.76rem', background: '#059669' }}
                                   onClick={() => handleRecordReturn(pass.id)}
+                                  disabled={gatePassActionPendingId === pass.id}
                                   title="Record Student Campus Arrival"
                                 >
                                   Log Return
@@ -2110,14 +2132,6 @@ export default function HostelPortal({ account, onLogout }) {
                       );
                     })}
 
-                    {filteredGatePasses.length === 0 && (
-                      <tr>
-                        <td colSpan={8} style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
-                          <ShieldCheck size={36} style={{ color: '#cbd5e1', marginBottom: '0.5rem' }} />
-                          <p style={{ margin: 0, fontWeight: 600 }}>No gate pass records matching the criteria.</p>
-                        </td>
-                      </tr>
-                    )}
                   </tbody>
                 </table>
               </div>
@@ -2899,7 +2913,7 @@ export default function HostelPortal({ account, onLogout }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className="admin-form-group">
                     <label>Resident Roll #</label>
                     <input
@@ -2911,19 +2925,21 @@ export default function HostelPortal({ account, onLogout }) {
                     />
                   </div>
                   <div className="admin-form-group">
-                    <label>Resident Student Name</label>
+                    <label>Planned Arrival Time</label>
                     <input
-                      type="text"
+                      type="time"
                       className="admin-form-input"
-                      value={visitorForm.studentName}
-                      onChange={e => setVisitorForm({ ...visitorForm, studentName: e.target.value })}
+                      value={visitorForm.inTime}
+                      onChange={e => setVisitorForm({ ...visitorForm, inTime: e.target.value })}
                       required
                     />
                   </div>
                 </div>
+                <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '-0.5rem' }}>
+                  The resident's name and active hostel allocation are verified from the database using this roll number.
+                </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
-                  <div className="admin-form-group">
+                <div className="admin-form-group">
                     <label>Purpose of Visit</label>
                     <input
                       type="text"
@@ -2933,18 +2949,6 @@ export default function HostelPortal({ account, onLogout }) {
                       placeholder="e.g. Delivering essential study materials"
                       required
                     />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Security Badge #</label>
-                    <input
-                      type="text"
-                      className="admin-form-input"
-                      value={visitorForm.badgeNumber}
-                      onChange={e => setVisitorForm({ ...visitorForm, badgeNumber: e.target.value })}
-                      placeholder="BADGE-01"
-                      required
-                    />
-                  </div>
                 </div>
               </div>
               <div className="admin-modal-footer">
@@ -3092,22 +3096,22 @@ export default function HostelPortal({ account, onLogout }) {
                   width: '42px',
                   height: '42px',
                   borderRadius: '50%',
-                  background: selectedGatePassModal.gender === 'Female' ? '#fdf2f8' : '#eff6ff',
-                  color: selectedGatePassModal.gender === 'Female' ? '#db2777' : '#2563eb',
+                  background: '#eff6ff',
+                  color: '#2563eb',
                   display: 'grid',
                   placeItems: 'center',
                   fontWeight: 800,
                   fontSize: '1.1rem',
-                  border: `2px solid ${selectedGatePassModal.gender === 'Female' ? '#fbcfe8' : '#bfdbfe'}`
+                  border: '2px solid #bfdbfe'
                 }}>
-                  {selectedGatePassModal.studentName.charAt(0)}
+                  {(selectedGatePassModal.studentName || 'S').charAt(0)}
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a', fontWeight: 800 }}>
                     Gate Pass Dossier · {selectedGatePassModal.id}
                   </h3>
                   <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                    {selectedGatePassModal.studentName} (Roll: {selectedGatePassModal.rollNumber} · Reg: {selectedGatePassModal.registrationNumber}) · {selectedGatePassModal.department}
+                    {selectedGatePassModal.studentName} · Roll {selectedGatePassModal.rollNumber || 'Not recorded'} · {selectedGatePassModal.department || 'Department not recorded'}
                   </p>
                 </div>
               </div>
@@ -3166,53 +3170,20 @@ export default function HostelPortal({ account, onLogout }) {
                 </div>
               </div>
 
-              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '1.15rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CheckCircle2 size={16} /> Academic Mentor Verification &amp; Endorsement
-                  </div>
-                  <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px', border: '1px solid #86efac' }}>
-                    ✓ Mentor Verified
-                  </span>
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '1.15rem' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#854d0e', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                  Verification status
                 </div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', fontSize: '0.85rem' }}>
-                  <div>
-                    <strong>Faculty Mentor:</strong> {selectedGatePassModal.mentorName} ({selectedGatePassModal.mentorEmpId || 'Faculty Advisor'})
-                  </div>
-                  <div>
-                    <strong>Department:</strong> {selectedGatePassModal.mentorDepartment || selectedGatePassModal.department}
-                  </div>
-                  <div style={{ gridColumn: '1 / -1', background: '#ffffff', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #dcfce7', marginTop: '0.25rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: 600 }}>Mentor Endorsement Remark:</span>
-                    <p style={{ margin: '3px 0 0 0', color: '#166534', fontWeight: 600 }}>
-                      "{selectedGatePassModal.mentorRemarks || 'Verified attendance norms and exams. Student recommended for leave.'}"
-                    </p>
-                  </div>
+                  <div><strong>Mentor:</strong> {selectedGatePassModal.mentorStatus || 'Not verified'}</div>
+                  <div><strong>Parent consent:</strong> {selectedGatePassModal.parentConsentVerified ? 'Verified' : 'Not verified'}</div>
                 </div>
               </div>
-
-              {selectedGatePassModal.uploadedApplicationDoc && (
-                <div style={{ background: '#fdfbf7', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '1.25rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <FileText size={16} /> Attached Handwritten Student Application &amp; Approved Mentor Signature
-                    </div>
-                    <span style={{ fontSize: '0.74rem', color: '#1e3a8a', background: '#eff6ff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #bfdbfe', fontWeight: 600 }}>
-                      ✍️ Verified Handwritten Original · {selectedGatePassModal.uploadedApplicationDoc.fileName}
-                    </span>
-                  </div>
-
-                  <div style={{ maxHeight: '420px', overflowY: 'auto', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', padding: '0.5rem' }}>
-                    <HandwrittenApplicationLetter pass={selectedGatePassModal} doc={selectedGatePassModal.uploadedApplicationDoc} />
-                  </div>
-                </div>
-              )}
 
               {selectedGatePassModal.status === 'Approved' ? (
                 <div className="hostel-stamp-approved-box">
                   <div style={{ fontSize: '1.1rem', fontWeight: 900, letterSpacing: '0.04em' }}>
-                    ✓ OFFICIALLY APPROVED BY HOSTEL WARDEN
+                    WARDEN APPROVAL RECORDED
                   </div>
                   <div style={{ fontSize: '0.85rem', color: '#166534', marginTop: '4px' }}>
                     Approved by: <strong>{selectedGatePassModal.approvedBy}</strong> on {selectedGatePassModal.approvedAt}
@@ -3222,8 +3193,8 @@ export default function HostelPortal({ account, onLogout }) {
                       Remarks: "{selectedGatePassModal.wardenRemarks}"
                     </div>
                   )}
-                  <div style={{ marginTop: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#dcfce7', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}>
-                    <QrCode size={14} /> Digital Biometric Exit Code Active at Campus Gates
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#854d0e' }}>
+                    Gate QR scanning is not configured. Verify this approval through the campus process before allowing exit.
                   </div>
                 </div>
               ) : (
@@ -3240,7 +3211,7 @@ export default function HostelPortal({ account, onLogout }) {
                       className="admin-form-input"
                       value={wardenReviewRemarks}
                       onChange={e => setWardenReviewRemarks(e.target.value)}
-                      placeholder="e.g. Application and mentor verification reviewed. Outstation gate pass granted."
+                      placeholder="Optional decision note"
                     />
                   </div>
                 </div>

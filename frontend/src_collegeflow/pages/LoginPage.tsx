@@ -1,45 +1,16 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowRight, GraduationCap, ShieldCheck } from 'lucide-react';
-import { demoUsers, type UserSession } from '../data/mockData';
-import { saveSession } from '../lib/auth';
+import type { UserSession } from '../data/mockData';
 
 export function LoginPage({ onLogin }: { onLogin: (user: UserSession) => void }) {
-  const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<'student' | 'college_admin'>('student');
-  const [email, setEmail] = useState('student@collegeflow.edu');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-
-    const account = demoUsers.find(
-      (demoUser) => demoUser.email.toLowerCase() === email.toLowerCase() && demoUser.role === selectedRole
-    );
-
-    if (!account) {
-      setError('The selected role does not match that account. Try student@collegeflow.edu or admin@collegeflow.edu.');
-      return;
-    }
-
-    if (account.password !== password) {
-      setError('Incorrect password. Use password123 for demo access.');
-      return;
-    }
-
-    const user: UserSession = {
-      id: account.id,
-      firstName: account.firstName,
-      lastName: account.lastName,
-      email: account.email,
-      role: account.role,
-      token: 'demo-jwt-token',
-    };
-
-    saveSession(user, user.token);
-    onLogin(user);
-    navigate(user.role === 'college_admin' ? '/admin' : '/student/library');
+    setError('This legacy prototype sign-in is disabled. Use the main Apna Campus app.');
   };
 
   return (
@@ -137,7 +108,7 @@ export function LoginPage({ onLogin }: { onLogin: (user: UserSession) => void })
             </form>
 
             <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-              Demo credentials: <span className="font-semibold text-slate-800">student@collegeflow.edu</span> or <span className="font-semibold text-slate-800">admin@collegeflow.edu</span> with password <span className="font-semibold text-slate-800">password123</span>
+              This legacy sign-in is not connected to Apna Campus accounts. Use the main Apna Campus app.
             </div>
           </div>
         </div>

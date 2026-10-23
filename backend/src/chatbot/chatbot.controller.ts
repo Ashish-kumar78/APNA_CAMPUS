@@ -1,19 +1,5 @@
-
-import {
-  Controller,
-  Post,
-  Body,
-  Get,
-  Query,
-  UseGuards,
-  UnauthorizedException,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Controller, Post, Body, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ChatbotService } from './chatbot.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -26,33 +12,18 @@ export class ChatbotController {
   @Post('query')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary:
-      'Send question to AI Campus Assistant with live context and RBAC',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'AI response with live data and guidance',
-  })
+  @ApiOperation({ summary: 'Send question to AI Campus Assistant with live context and RBAC' })
+  @ApiResponse({ status: 200, description: 'AI response with live data and guidance' })
   async query(
+    @CurrentUser() user: any,
     @Body()
     body: {
       message: string;
       history?: any[];
-      context?: {
-        page?: string;
-        tab?: string;
-        branch?: string;
-        semester?: string;
-      };
+      context?: { page?: string; tab?: string; branch?: string; semester?: string };
     },
-    @CurrentUser() user: any,
   ) {
-    if (!user) {
-      throw new UnauthorizedException('Authentication is required.');
-    }
-
-    return this.chatbotService.processQuery(
+    const res = await this.chatbotService.processQuery(
       body.message || '',
       body.history || [],
       body.context || {},

@@ -64,40 +64,9 @@ export class TimetablesService {
   // ACADEMIC SCHEDULE CONFIGURATION
   // ==========================================
   async getScheduleConfig(academicYear = '2026-27', department = 'CSE') {
-    let config = await this.prisma.academicScheduleConfig.findUnique({
+    return this.prisma.academicScheduleConfig.findUnique({
       where: { academicYear_department: { academicYear, department } },
     });
-
-    if (!config) {
-      // Default institutional slots
-      const defaultTimings = [
-        { period: 1, startTime: '08:30 AM', endTime: '09:30 AM', isBreak: false, label: 'Period 1' },
-        { period: 2, startTime: '09:30 AM', endTime: '10:30 AM', isBreak: false, label: 'Period 2' },
-        { period: 3, startTime: '10:30 AM', endTime: '11:30 AM', isBreak: false, label: 'Period 3' },
-        { period: 4, startTime: '11:30 AM', endTime: '12:30 PM', isBreak: false, label: 'Period 4' },
-        { period: 5, startTime: '12:30 PM', endTime: '01:30 PM', isBreak: true, label: 'Lunch Break' },
-        { period: 6, startTime: '01:30 PM', endTime: '02:30 PM', isBreak: false, label: 'Period 5' },
-        { period: 7, startTime: '02:30 PM', endTime: '03:30 PM', isBreak: false, label: 'Period 6' },
-        { period: 8, startTime: '03:30 PM', endTime: '04:30 PM', isBreak: false, label: 'Period 7' },
-      ];
-
-      config = await this.prisma.academicScheduleConfig.create({
-        data: {
-          academicYear,
-          department,
-          workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-          periodsPerDay: 8,
-          slotTimings: defaultTimings,
-          lunchBreakPeriod: 4, // 0-indexed period index 4
-          maxConsecutiveTheory: 3,
-          maxDailyFacultyPeriods: 4,
-          preferredLabDays: ['Tuesday', 'Thursday', 'Friday'],
-          isDefault: true,
-        },
-      });
-    }
-
-    return config;
   }
 
   async updateScheduleConfig(academicYear: string, department: string, data: any) {
@@ -165,6 +134,33 @@ export class TimetablesService {
     constraintsConfig?: any;
     initiatedBy: string;
   }) {
+    const [config, preflight, sections] = await Promise.all([
+      this.getScheduleConfig(params.academicYear, params.department),
+      this.validationService.preValidateMasterData(params),
+      this.prisma.section.findMany({
+        where: {
+          department: params.department,
+          semester: params.semester,
+          ...(params.section && params.section !== 'All' ? { section: params.section } : {}),
+        },
+        select: { id: true, section: true, studentsCount: true },
+      }),
+    ]);
+    const errors = [...preflight.errors];
+    if (!config) errors.push(`No timetable configuration exists for ${params.academicYear} / ${params.department}. Save it first.`);
+    if (!sections.length) errors.push(`No persisted section exists for ${params.department} (${params.semester}).`);
+    if (sections.some((section) => section.studentsCount <= 0)) errors.push('Every selected section must have an accurate student count greater than zero.');
+    if (config && (!config.workingDays.length || !Array.isArray(config.slotTimings) || config.slotTimings.length < config.periodsPerDay)) {
+      errors.push('The saved timetable configuration must include working days and a time slot for every period.');
+    }
+    if (errors.length) {
+      throw new BadRequestException({
+        message: 'Timetable generation prerequisites are incomplete.',
+        errors,
+        warnings: preflight.warnings,
+      });
+    }
+
     const job = await this.prisma.timetableGenerationJob.create({
       data: {
         department: params.department,
@@ -220,9 +216,10 @@ export class TimetablesService {
 
       // Fetch academic schedule config
       const config = await this.getScheduleConfig(params.academicYear, params.department);
-      const workingDays = config.workingDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const periodsPerDay = config.periodsPerDay || 8;
-      const slotTimings = (config.slotTimings as any[]) || [];
+      if (!config) throw new Error('No persisted timetable configuration matched the generation request.');
+      const workingDays = config.workingDays;
+      const periodsPerDay = config.periodsPerDay;
+      const slotTimings = config.slotTimings as any[];
       const breakPeriods: number[] = [];
       slotTimings.forEach((slot, idx) => {
         if (slot.isBreak) breakPeriods.push(idx);
@@ -232,86 +229,36 @@ export class TimetablesService {
       }
 
       // Fetch Sections
-      let targetSections = await this.prisma.section.findMany({
+      const targetSections = await this.prisma.section.findMany({
         where: {
           department: params.department,
           semester: params.semester,
+          ...(params.section && params.section !== 'All' ? { section: params.section } : {}),
         },
       });
 
-      if (targetSections.length === 0) {
-        // Fallback default section if none yet in DB
-        targetSections = [
-          {
-            id: 'sec-a',
-            section: params.section || 'Section A',
-            semester: params.semester,
-            department: params.department,
-            studentsCount: 60,
-            classRepresentative: null,
-            room: 'Room 301',
-            facultyCoordinator: 'Dr. P. Mohapatra',
-          },
-        ];
-      }
-
-      if (params.section && params.section !== 'All') {
-        targetSections = targetSections.filter((s) => s.section === params.section);
-      }
+      if (targetSections.length === 0) throw new Error('No persisted sections matched the timetable request.');
 
       // Fetch Subjects
-      let subjects = await this.prisma.subject.findMany({
+      const subjects = await this.prisma.subject.findMany({
         where: {
           department: params.department,
           semester: params.semester,
         },
       });
 
-      if (subjects.length === 0) {
-        // Seed standard autonomous curriculum subjects if none present
-        subjects = [
-          { id: 'sub-cs501', code: 'CS501', name: 'Artificial Intelligence', department: params.department, semester: params.semester, credits: 4, type: 'Theory', assignedFaculty: 'Dr. P. Mohapatra', status: 'Active' },
-          { id: 'sub-cs502', code: 'CS502', name: 'Machine Learning', department: params.department, semester: params.semester, credits: 4, type: 'Theory', assignedFaculty: 'Dr. S. Rath', status: 'Active' },
-          { id: 'sub-cs503', code: 'CS503', name: 'Cloud Computing & DevOps', department: params.department, semester: params.semester, credits: 3, type: 'Theory', assignedFaculty: 'Prof. R. Nayak', status: 'Active' },
-          { id: 'sub-cs504', code: 'CS504', name: 'Compiler Design', department: params.department, semester: params.semester, credits: 4, type: 'Theory', assignedFaculty: 'Dr. A. Panda', status: 'Active' },
-          { id: 'sub-cs505', code: 'CS505', name: 'AI & Data Science Laboratory', department: params.department, semester: params.semester, credits: 2, type: 'Theory + Lab', assignedFaculty: 'Dr. P. Mohapatra', status: 'Active' },
-          { id: 'sub-cs506', code: 'CS506', name: 'Applied Capstone Project', department: params.department, semester: params.semester, credits: 2, type: 'Theory + Lab', assignedFaculty: 'Dr. S. Mohanty', status: 'Active' },
-        ];
-      }
+      if (subjects.length === 0) throw new Error('No persisted curriculum subjects matched the timetable request.');
 
       // Fetch Faculty
-      let faculty = await this.prisma.faculty.findMany({
+      const faculty = await this.prisma.faculty.findMany({
+        where: { department: { contains: params.department, mode: 'insensitive' }, status: 'Active' },
         include: { availabilities: true },
       });
-
-      if (faculty.length === 0) {
-        faculty = [
-          { id: 'fac-1', userId: null, employeeId: 'FAC-001', name: 'Dr. P. Mohapatra', email: 'p.mohapatra@apnacampus.edu.in', phone: null, department: params.department, designation: 'Professor', assignedSubjects: ['CS501', 'CS505'], assignedSections: ['Section A'], status: 'Active', createdAt: new Date(), updatedAt: new Date(), availabilities: [] },
-          { id: 'fac-2', userId: null, employeeId: 'FAC-002', name: 'Dr. S. Rath', email: 's.rath@apnacampus.edu.in', phone: null, department: params.department, designation: 'Associate Professor', assignedSubjects: ['CS502'], assignedSections: ['Section A'], status: 'Active', createdAt: new Date(), updatedAt: new Date(), availabilities: [] },
-          { id: 'fac-3', userId: null, employeeId: 'FAC-003', name: 'Prof. R. Nayak', email: 'r.nayak@apnacampus.edu.in', phone: null, department: params.department, designation: 'Assistant Professor', assignedSubjects: ['CS503'], assignedSections: ['Section A'], status: 'Active', createdAt: new Date(), updatedAt: new Date(), availabilities: [] },
-          { id: 'fac-4', userId: null, employeeId: 'FAC-004', name: 'Dr. A. Panda', email: 'a.panda@apnacampus.edu.in', phone: null, department: params.department, designation: 'Associate Professor', assignedSubjects: ['CS504'], assignedSections: ['Section A'], status: 'Active', createdAt: new Date(), updatedAt: new Date(), availabilities: [] },
-          { id: 'fac-5', userId: null, employeeId: 'FAC-005', name: 'Dr. S. Mohanty', email: 's.mohanty@apnacampus.edu.in', phone: null, department: params.department, designation: 'Associate Professor', assignedSubjects: ['CS506'], assignedSections: ['Section A'], status: 'Active', createdAt: new Date(), updatedAt: new Date(), availabilities: [] },
-        ];
-      }
+      if (faculty.length === 0) throw new Error('No active persisted faculty matched the timetable department.');
 
       // Fetch Rooms
-      let rooms = await this.prisma.room.findMany();
-      if (rooms.length === 0) {
-        // Seed default institutional rooms & labs
-        await this.prisma.room.createMany({
-          data: [
-            { roomNumber: 'Room 301', building: 'Aryabhatta Block', floor: '3rd Floor', roomType: 'CLASSROOM', capacity: 65, department: params.department, isLab: false, facilities: ['Projector', 'Smart Podium'] },
-            { roomNumber: 'Room 302', building: 'Aryabhatta Block', floor: '3rd Floor', roomType: 'SMART_CLASSROOM', capacity: 65, department: params.department, isLab: false, facilities: ['Interactive Touch Board', 'Surround Sound'] },
-            { roomNumber: 'Room 204', building: 'Ramanujan Block', floor: '2nd Floor', roomType: 'CLASSROOM', capacity: 70, department: params.department, isLab: false, facilities: ['Projector'] },
-            { roomNumber: 'Room 205', building: 'Ramanujan Block', floor: '2nd Floor', roomType: 'CLASSROOM', capacity: 60, department: params.department, isLab: false, facilities: ['Projector'] },
-            { roomNumber: 'CS Lab-1', building: 'Turing Computer Centre', floor: '1st Floor', roomType: 'COMPUTER_LAB', capacity: 65, department: params.department, isLab: true, facilities: ['65 Intel i7 Workstations', 'GPU Cluster', 'Gigabit LAN'] },
-            { roomNumber: 'CS Lab-2', building: 'Turing Computer Centre', floor: '1st Floor', roomType: 'COMPUTER_LAB', capacity: 65, department: params.department, isLab: true, facilities: ['60 Workstations', 'Dual Monitors'] },
-            { roomNumber: 'Lab-3', building: 'Innovation Hub', floor: 'Ground Floor', roomType: 'HARDWARE_LAB', capacity: 60, department: params.department, isLab: true, facilities: ['IoT Testbeds', 'Robotics Kits'] },
-            { roomNumber: 'Seminar Hall-1', building: 'Convention Centre', floor: 'Ground Floor', roomType: 'SEMINAR_HALL', capacity: 150, department: params.department, isLab: false, facilities: ['Dual HD Projectors', 'Wireless Mic Array'] },
-          ],
-        });
-        rooms = await this.prisma.room.findMany();
-      }
+      const rooms = await this.prisma.room.findMany({ where: { status: 'Active' } });
+      if (rooms.length === 0) throw new Error('No active persisted rooms are available for timetable generation.');
 
       // Step 2: Preparing Solver Requirements
       await this.prisma.timetableGenerationJob.update({
@@ -360,7 +307,7 @@ export class TimetablesService {
         workingDays,
         periodsPerDay,
         breakPeriods,
-        sections: targetSections.map((s) => ({ id: s.id, name: s.section, studentCount: s.studentsCount || 60 })),
+        sections: targetSections.map((s) => ({ id: s.id, name: s.section, studentCount: s.studentsCount })),
         rooms: rooms.map((r) => ({
           id: r.id,
           roomNumber: r.roomNumber,
@@ -408,10 +355,8 @@ export class TimetablesService {
 
       // Assign time strings using slotTimings
       const enrichedEntries = solution.entries.map((entry) => {
-        const slot = slotTimings[entry.periodIndex] || {
-          startTime: `${8 + entry.periodIndex}:30 AM`,
-          endTime: `${9 + entry.periodIndex}:30 AM`,
-        };
+        const slot = slotTimings[entry.periodIndex];
+        if (!slot?.startTime || !slot?.endTime) throw new Error(`Saved timetable configuration is missing time data for period ${entry.periodIndex + 1}.`);
         return {
           dayOfWeek: entry.dayOfWeek,
           periodIndex: entry.periodIndex,
@@ -461,7 +406,7 @@ export class TimetablesService {
             status: validation.isValid ? 'VALIDATED' : 'DRAFT',
             version: 1,
             isPublished: false,
-            qualityScore: solution.qualityScore || 96.0,
+            qualityScore: solution.qualityScore,
             conflictCount: validation.hardConflictsCount,
             solverDiagnostics: solution.solverDiagnostics as any,
             generationJobId: jobId,
@@ -810,7 +755,8 @@ export class TimetablesService {
   async exportToExcel(id: string): Promise<Buffer> {
     const tt = await this.getTimetableById(id);
     const config = await this.getScheduleConfig(tt.academicYear, tt.department);
-    const workingDays = config.workingDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    if (!config) throw new BadRequestException('No saved schedule configuration exists for this timetable.');
+    const workingDays = config.workingDays;
 
     // Collect distinct periods
     const maxPeriod = Math.max(...tt.entries.map((e) => e.periodIndex), 7);
@@ -890,9 +836,9 @@ export class TimetablesService {
   }
 
   async getRoomUtilizationReport(department = 'CSE', academicYear = '2026-27') {
-    const rooms = await this.prisma.room.findMany();
+    const rooms = await this.prisma.room.findMany({ where: { department, status: 'Active' } });
     const published = await this.prisma.timetable.findMany({
-      where: { academicYear, isPublished: true },
+      where: { department, academicYear, isPublished: true },
       include: { entries: true },
     });
 
@@ -905,11 +851,16 @@ export class TimetablesService {
       }
     }
 
-    // Assume 36 available periods/week (6 days * 6 working periods)
-    const totalWeeklySlots = 36;
+    const config = await this.getScheduleConfig(academicYear, department);
+    const slotTimings = Array.isArray(config?.slotTimings) ? config.slotTimings as any[] : [];
+    const totalWeeklySlots = config && slotTimings.length >= config.periodsPerDay
+      ? config.workingDays.length * Math.max(0, config.periodsPerDay - slotTimings.filter((slot) => slot?.isBreak).length)
+      : null;
     return rooms.map((r) => {
       const booked = roomUsage.get(r.roomNumber) || 0;
-      const utilizationRate = Math.min(100, Math.round((booked / totalWeeklySlots) * 100));
+      const utilizationRate = totalWeeklySlots
+        ? Math.min(100, Math.round((booked / totalWeeklySlots) * 100))
+        : null;
       return {
         id: r.id,
         roomNumber: r.roomNumber,
@@ -918,9 +869,9 @@ export class TimetablesService {
         isLab: r.isLab,
         capacity: r.capacity,
         bookedPeriods: booked,
-        availablePeriods: Math.max(0, totalWeeklySlots - booked),
+        availablePeriods: totalWeeklySlots === null ? null : Math.max(0, totalWeeklySlots - booked),
         utilizationRate,
-        status: utilizationRate > 80 ? 'High Demand' : utilizationRate < 30 ? 'Underutilized' : 'Optimal',
+        status: utilizationRate === null ? 'Unavailable' : utilizationRate > 80 ? 'High Demand' : utilizationRate < 30 ? 'Underutilized' : 'Optimal',
       };
     });
   }
@@ -928,23 +879,15 @@ export class TimetablesService {
   // ==========================================
   // STUDENT & FACULTY SPECIFIC VIEWS
   // ==========================================
-  async getStudentTimetable(department = 'CSE', semester = 'Semester 5', section = 'Section A') {
-    // 1. Try to find active published timetable
-    let tt = await this.prisma.timetable.findFirst({
-      where: { department, semester, section, isPublished: true },
+  async getStudentTimetable(department: string, semester: string, section: string, academicYear?: string) {
+    const where: any = { department, semester, section, isPublished: true };
+    if (academicYear) where.academicYear = academicYear;
+    const tt = await this.prisma.timetable.findFirst({
+      where,
+      orderBy: academicYear ? undefined : { academicYear: 'desc' },
       include: { entries: { orderBy: [{ dayOfWeek: 'asc' }, { periodIndex: 'asc' }] } },
     });
-
-    // 2. Fallback to latest draft if no published timetable exists yet
-    if (!tt) {
-      tt = await this.prisma.timetable.findFirst({
-        where: { department, semester, section },
-        orderBy: { updatedAt: 'desc' },
-        include: { entries: { orderBy: [{ dayOfWeek: 'asc' }, { periodIndex: 'asc' }] } },
-      });
-    }
-
-    const config = await this.getScheduleConfig('2026-27', department);
+    const config = await this.getScheduleConfig(tt?.academicYear || academicYear || '', department);
 
     return {
       timetable: tt,
@@ -952,10 +895,10 @@ export class TimetablesService {
     };
   }
 
-  async getFacultyTimetable(facultyName: string) {
+  async getFacultyTimetable(facultyId: string) {
     const entries = await this.prisma.timetableEntry.findMany({
       where: {
-        facultyName: { contains: facultyName, mode: 'insensitive' },
+        facultyId,
         timetable: { isPublished: true },
       },
       include: { timetable: { select: { title: true, department: true, semester: true } } },

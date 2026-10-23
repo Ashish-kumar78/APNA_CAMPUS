@@ -22,7 +22,6 @@ import {
   Search,
   ShieldCheck,
   MessageSquare,
-  Rss,
   TrendingUp,
   UserRound,
   UsersRound,
@@ -46,7 +45,6 @@ import './DashboardHome.css'
 import { getGreetingDisplayName } from './utils/timeGreeting.js'
 import StudentProfile from './StudentProfile.jsx'
 import AcademicsPage from './pages/AcademicsPage.jsx'
-import BloggingPage from './pages/BloggingPage.jsx'
 import ExaminationPage from './pages/ExaminationPage.jsx'
 import FeedbackPage from './pages/FeedbackPage.jsx'
 import InternshipPage from './pages/InternshipPage.jsx'
@@ -126,9 +124,7 @@ const navSections = [
     title: 'ACADEMICS',
     items: [
       { label: 'Academics', icon: BookOpen, page: 'academics' },
-      { label: 'Timetable', icon: CalendarDays, page: 'timetable' },
       { label: 'Online Examination', icon: ClipboardList, page: 'online-exam' },
-      { label: 'Class Notes & Sharing', icon: FileText, page: 'class-notes' },
     ]
   },
   {
@@ -145,7 +141,6 @@ const navSections = [
     items: [
       { label: 'Anonymous Complaints', icon: ShieldCheck, page: 'anonymous-complaints' },
       { label: 'Feedback/Appraisal/Survey', icon: ChatBubbleIcon, page: 'feedback' },
-      { label: 'Blogging & Stories', icon: Rss, page: 'blogging' },
     ]
   }
 ];

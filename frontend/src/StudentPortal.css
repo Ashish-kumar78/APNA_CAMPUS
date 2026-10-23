@@ -1283,7 +1283,7 @@ button, .btn-pay-now, .btn-receipt, .btn-notice-action {
   align-items: flex-start;
 }
 
-/* Floating White Sidebar Card */
+/* Fixed & Stable Sidebar Card */
 .campus-os-sidebar {
   width: 280px;
   flex-shrink: 0;
@@ -1291,68 +1291,58 @@ button, .btn-pay-now, .btn-receipt, .btn-notice-action {
   background: linear-gradient(180deg, #091326 0%, #0b1a36 100%);
   border: 1px solid #1a2a44;
   border-radius: 28px;
-  padding: 22px;
+  padding: 22px 18px 18px 22px;
   box-shadow: 0 14px 35px rgba(2, 6, 23, 0.4);
   position: sticky;
   top: 24px;
+  height: calc(100vh - 48px);
   max-height: calc(100vh - 48px);
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-}
-
-.campus-os-sidebar::-webkit-scrollbar {
-  width: 5px;
-}
-.campus-os-sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  overflow: hidden;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+  z-index: 30;
 }
 
 .campus-os-brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding-bottom: 20px;
+  padding-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.campus-brand-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: #2563eb;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
   flex-shrink: 0;
 }
 
-.campus-brand-kicker {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.24em;
-  color: #60a5fa;
-  margin: 0;
-  text-transform: uppercase;
-}
-
-.campus-brand-title {
-  font-size: 19px;
-  font-weight: 800;
-  color: #ffffff;
-  margin: 2px 0 0;
-}
-
 .campus-os-nav {
-  margin-top: 22px;
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  flex: 1;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
+.campus-os-nav::-webkit-scrollbar {
+  width: 5px;
+}
+
+.campus-os-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.campus-os-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+}
+
+.campus-os-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .campus-os-nav a {
@@ -1398,11 +1388,12 @@ button, .btn-pay-now, .btn-receipt, .btn-notice-action {
 }
 
 .campus-os-role-card {
-  margin-top: 24px;
-  padding: 16px;
+  margin-top: auto;
+  padding: 14px 16px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
 }
 
 .campus-role-kicker {
@@ -1914,11 +1905,30 @@ button, .btn-pay-now, .btn-receipt, .btn-notice-action {
 @media (max-width: 1024px) {
   .campus-os-container {
     flex-direction: column;
+    gap: 16px;
   }
   .campus-os-sidebar {
-    width: 100%;
-    position: static;
-    max-height: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 290px;
+    max-width: 85vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0 24px 24px 0;
+    z-index: 1000;
+    box-shadow: 8px 0 40px rgba(0, 0, 0, 0.6);
+    animation: sidebarDrawerIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes sidebarDrawerIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }
 

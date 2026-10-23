@@ -8,15 +8,72 @@ export class FacultyService {
   /**
    * Official teaching assignments for the faculty member
    */
-  async getAssignments(facultyNameOrId?: string) {
-    // Standard assignments for Apna Campus CSE Faculty
+  /**
+   * Official teaching assignments for the faculty member
+   * Supports multi-semester, multi-section, and multi-subject teaching responsibilities
+   */
+  async getAssignments(facultyNameOrId: string = 'Dr. S. Mohanty') {
+    try {
+      const dbAssignments = await this.prisma.facultyAssignment.findMany({
+        where: {
+          faculty: {
+            OR: [
+              { name: { contains: facultyNameOrId, mode: 'insensitive' } },
+              { employeeId: facultyNameOrId },
+              { email: { contains: facultyNameOrId, mode: 'insensitive' } },
+            ],
+          },
+        },
+        include: {
+          courseOffering: {
+            include: {
+              programme: true,
+            },
+          },
+          faculty: true,
+        },
+      });
+
+      if (dbAssignments && dbAssignments.length > 0) {
+        return dbAssignments.map((a, idx) => ({
+          id: a.id,
+          facultyId: a.faculty.employeeId || 'FAC-042',
+          facultyName: a.faculty.name,
+          academicYear: a.academicYear,
+          subjectCode: a.courseOffering.subjectCode,
+          subjectName: a.courseOffering.subjectName,
+          program: a.courseOffering.programme?.name || 'B.Tech',
+          deptCode: a.courseOffering.department || 'CSE',
+          department: 'Computer Science & Engineering',
+          semester: a.courseOffering.semester,
+          section: a.section,
+          type: a.courseOffering.type,
+          credits: a.courseOffering.credits,
+          room: `Block B - ${301 + (idx % 8)}`,
+          labRoom: a.courseOffering.type.includes('Lab') ? 'Computing Lab 3' : null,
+          sectionEnrollment: 32,
+          courseTotalEnrollment: 64,
+          attendanceCompletion: 88,
+          marksCompletion: 84,
+          approvalStatus: 'In Progress · Draft',
+          componentsCount: 13,
+          upcomingDeadline: '15 Oct 2026 (Modular 2)',
+          lastUpdated: 'Today, 10:30 AM',
+        }));
+      }
+    } catch {
+      // Database offline/unreachable: use deterministic canonical assignment schedule
+    }
+
+    // Comprehensive teaching assignments spanning multiple semesters, sections & subjects
     return [
       {
         id: 'fa-1',
         facultyId: 'FAC-042',
         facultyName: 'Dr. S. Mohanty',
+        academicYear: '2026-27',
         subjectCode: 'CS501',
-        subjectName: 'Data Structures',
+        subjectName: 'Data Structures & Algorithms',
         program: 'B.Tech',
         deptCode: 'CSE',
         department: 'Computer Science & Engineering',
@@ -27,18 +84,44 @@ export class FacultyService {
         room: 'Block B - 302',
         labRoom: 'Computing Lab 3',
         sectionEnrollment: 32,
-        courseTotalEnrollment: 91,
+        courseTotalEnrollment: 62,
         attendanceCompletion: 88,
         marksCompletion: 84,
         approvalStatus: 'In Progress · Draft',
         componentsCount: 13,
         upcomingDeadline: '15 Oct 2026 (Modular 2)',
-        lastUpdated: 'Today, 10:30 AM'
+        lastUpdated: 'Today, 10:30 AM',
+      },
+      {
+        id: 'fa-1b',
+        facultyId: 'FAC-042',
+        facultyName: 'Dr. S. Mohanty',
+        academicYear: '2026-27',
+        subjectCode: 'CS501',
+        subjectName: 'Data Structures & Algorithms',
+        program: 'B.Tech',
+        deptCode: 'CSE',
+        department: 'Computer Science & Engineering',
+        semester: 'Semester 5',
+        section: 'Section B',
+        type: 'Theory + Lab',
+        credits: 4,
+        room: 'Block B - 303',
+        labRoom: 'Computing Lab 3',
+        sectionEnrollment: 30,
+        courseTotalEnrollment: 62,
+        attendanceCompletion: 85,
+        marksCompletion: 78,
+        approvalStatus: 'In Progress · Draft',
+        componentsCount: 13,
+        upcomingDeadline: '16 Oct 2026 (Modular 2)',
+        lastUpdated: 'Yesterday, 04:15 PM',
       },
       {
         id: 'fa-2',
         facultyId: 'FAC-042',
         facultyName: 'Dr. S. Mohanty',
+        academicYear: '2026-27',
         subjectCode: 'CS502',
         subjectName: 'Operating Systems',
         program: 'B.Tech',
@@ -51,39 +134,279 @@ export class FacultyService {
         room: 'Block B - 304',
         labRoom: null,
         sectionEnrollment: 32,
-        courseTotalEnrollment: 91,
+        courseTotalEnrollment: 32,
         attendanceCompletion: 92,
         marksCompletion: 100,
         approvalStatus: 'Submitted · Awaiting HOD',
         componentsCount: 13,
         upcomingDeadline: '20 Oct 2026 (Assignment 2)',
-        lastUpdated: 'Yesterday, 06:10 PM'
+        lastUpdated: 'Yesterday, 06:10 PM',
       },
       {
         id: 'fa-3',
         facultyId: 'FAC-042',
         facultyName: 'Dr. S. Mohanty',
-        subjectCode: 'CS503',
+        academicYear: '2026-27',
+        subjectCode: 'CS301',
+        subjectName: 'Object Oriented Programming with Java',
+        program: 'B.Tech',
+        deptCode: 'CSE',
+        department: 'Computer Science & Engineering',
+        semester: 'Semester 3',
+        section: 'Section A',
+        type: 'Theory + Lab',
+        credits: 4,
+        room: 'Block B - 201',
+        labRoom: 'Computing Lab 1',
+        sectionEnrollment: 34,
+        courseTotalEnrollment: 66,
+        attendanceCompletion: 90,
+        marksCompletion: 80,
+        approvalStatus: 'In Progress · Draft',
+        componentsCount: 13,
+        upcomingDeadline: '18 Oct 2026 (Quiz 3)',
+        lastUpdated: '08 Oct 2026, 02:20 PM',
+      },
+      {
+        id: 'fa-3b',
+        facultyId: 'FAC-042',
+        facultyName: 'Dr. S. Mohanty',
+        academicYear: '2026-27',
+        subjectCode: 'CS301',
+        subjectName: 'Object Oriented Programming with Java',
+        program: 'B.Tech',
+        deptCode: 'CSE',
+        department: 'Computer Science & Engineering',
+        semester: 'Semester 3',
+        section: 'Section B',
+        type: 'Theory + Lab',
+        credits: 4,
+        room: 'Block B - 202',
+        labRoom: 'Computing Lab 1',
+        sectionEnrollment: 32,
+        courseTotalEnrollment: 66,
+        attendanceCompletion: 87,
+        marksCompletion: 75,
+        approvalStatus: 'In Progress · Draft',
+        componentsCount: 13,
+        upcomingDeadline: '19 Oct 2026 (Quiz 3)',
+        lastUpdated: '07 Oct 2026, 11:45 AM',
+      },
+      {
+        id: 'fa-4',
+        facultyId: 'FAC-042',
+        facultyName: 'Dr. S. Mohanty',
+        academicYear: '2026-27',
+        subjectCode: 'CS101',
+        subjectName: 'Problem Solving & C Programming',
+        program: 'B.Tech',
+        deptCode: 'CSE',
+        department: 'Computer Science & Engineering',
+        semester: 'Semester 1',
+        section: 'Section A',
+        type: 'Theory + Lab',
+        credits: 4,
+        room: 'Block B - 101',
+        labRoom: 'Computing Lab 2',
+        sectionEnrollment: 36,
+        courseTotalEnrollment: 36,
+        attendanceCompletion: 94,
+        marksCompletion: 90,
+        approvalStatus: 'In Progress · Draft',
+        componentsCount: 13,
+        upcomingDeadline: '24 Oct 2026 (Assignment 1)',
+        lastUpdated: '09 Oct 2026, 09:30 AM',
+      },
+      {
+        id: 'fa-5',
+        facultyId: 'FAC-042',
+        facultyName: 'Dr. S. Mohanty',
+        academicYear: '2025-26',
+        subjectCode: 'CS402',
         subjectName: 'Design & Analysis of Algorithms',
         program: 'B.Tech',
         deptCode: 'CSE',
         department: 'Computer Science & Engineering',
-        semester: 'Semester 5',
-        section: 'Section B',
+        semester: 'Semester 4',
+        section: 'Section A',
         type: 'Theory + Lab',
         credits: 4,
-        room: 'Block B - 305',
+        room: 'Block B - 205',
         labRoom: 'Computing Lab 2',
         sectionEnrollment: 30,
-        courseTotalEnrollment: 88,
-        attendanceCompletion: 85,
-        marksCompletion: 76,
-        approvalStatus: 'In Progress · Draft',
+        courseTotalEnrollment: 30,
+        attendanceCompletion: 100,
+        marksCompletion: 100,
+        approvalStatus: 'Approved & Archived',
         componentsCount: 13,
-        upcomingDeadline: '22 Oct 2026 (Quiz 4)',
-        lastUpdated: '07 Oct 2026, 03:45 PM'
-      }
+        upcomingDeadline: 'Archived',
+        lastUpdated: '15 May 2026',
+      },
+      {
+        id: 'fa-6',
+        facultyId: 'FAC-042',
+        facultyName: 'Dr. S. Mohanty',
+        academicYear: '2025-26',
+        subjectCode: 'CS601',
+        subjectName: 'Compiler Design & Automata',
+        program: 'B.Tech',
+        deptCode: 'CSE',
+        department: 'Computer Science & Engineering',
+        semester: 'Semester 6',
+        section: 'Section A',
+        type: 'Theory',
+        credits: 4,
+        room: 'Block B - 305',
+        labRoom: null,
+        sectionEnrollment: 28,
+        courseTotalEnrollment: 28,
+        attendanceCompletion: 100,
+        marksCompletion: 100,
+        approvalStatus: 'Approved & Archived',
+        componentsCount: 13,
+        upcomingDeadline: 'Archived',
+        lastUpdated: '18 May 2026',
+      },
     ];
+  }
+
+  /**
+   * Get students authorized for faculty member strictly based on assigned classes
+   */
+  async getScopedStudents(
+    facultyNameOrId: string = 'Dr. S. Mohanty',
+    query?: {
+      academicYear?: string;
+      semester?: string;
+      section?: string;
+      subjectCode?: string;
+      program?: string;
+      search?: string;
+      isConsolidated?: boolean | string;
+    },
+  ) {
+    const assignments = await this.getAssignments(facultyNameOrId);
+
+    const isConsolidated = query?.isConsolidated === true || query?.isConsolidated === 'true';
+
+    // Verify access permission if a specific combination is requested
+    if (!isConsolidated && (query?.semester || query?.section || query?.subjectCode)) {
+      const isAuthorized = assignments.some((a) => {
+        const yrMatch = !query.academicYear || a.academicYear === query.academicYear;
+        const semMatch = !query.semester || a.semester.toLowerCase() === query.semester.toLowerCase();
+        const secMatch = !query.section || a.section.toLowerCase() === query.section.toLowerCase();
+        const subMatch = !query.subjectCode || a.subjectCode.toLowerCase() === query.subjectCode.toLowerCase();
+        return yrMatch && semMatch && secMatch && subMatch;
+      });
+
+      if (!isAuthorized) {
+        throw new BadRequestException(
+          'Access denied. You are not authorized to view students for this unassigned class, section, or subject.',
+        );
+      }
+    }
+
+    // Determine relevant assignments to collect students from
+    let relevantAssignments = assignments;
+    if (!isConsolidated) {
+      if (query?.academicYear) {
+        relevantAssignments = relevantAssignments.filter((a) => a.academicYear === query.academicYear);
+      }
+      if (query?.semester) {
+        relevantAssignments = relevantAssignments.filter(
+          (a) => a.semester.toLowerCase() === query.semester!.toLowerCase(),
+        );
+      }
+      if (query?.section) {
+        relevantAssignments = relevantAssignments.filter(
+          (a) => a.section.toLowerCase() === query.section!.toLowerCase(),
+        );
+      }
+      if (query?.subjectCode) {
+        relevantAssignments = relevantAssignments.filter(
+          (a) => a.subjectCode.toLowerCase() === query.subjectCode!.toLowerCase(),
+        );
+      }
+    }
+
+    // Generate/fetch distinct students for these assignments
+    const allStudentsList: any[] = [];
+    const seenRolls = new Set<string>();
+
+    const firstNames = [
+      'Rakesh', 'Amit', 'Raj', 'Priya', 'Sourav', 'Sneha', 'Deepak', 'Puja', 'Bikash', 'Swati',
+      'Rohit', 'Monika', 'Subham', 'Ipsita', 'Alok', 'Smruti', 'Chandan', 'Tanmay', 'Lipika', 'Manas',
+      'Pragyan', 'Biswajit', 'Archana', 'Gourab', 'Satyajit', 'Sonali', 'Ashish', 'Kiran', 'Pranab', 'Niharika',
+      'Debasis', 'Kavita', 'Manoj', 'Anjali', 'Tapan', 'Rupali', 'Sanjay', 'Geeta', 'Naveen', 'Sarita',
+    ];
+    const lastNames = [
+      'Das', 'Nayak', 'Sahoo', 'Patra', 'Mohanty', 'Barik', 'Rout', 'Behera', 'Pradhan', 'Samal',
+      'Panda', 'Mishra', 'Tripathy', 'Parida', 'Jena', 'Swain', 'Mangaraj', 'Muduli', 'Kar', 'Acharya',
+    ];
+
+    for (const a of relevantAssignments) {
+      const semNum = a.semester.replace(/[^0-9]/g, '') || '5';
+      const secLetter = a.section.replace(/[^A-Za-z]/g, '') || 'A';
+      const yrCode = a.academicYear === '2025-26' ? '22' : '23';
+      const count = a.sectionEnrollment || 32;
+
+      for (let i = 1; i <= count; i++) {
+        const rollStr = `${semNum}${secLetter}-${String(i).padStart(2, '0')}`;
+        const uniqueKey = isConsolidated ? `${a.academicYear}-${a.semester}-${rollStr}` : rollStr;
+
+        if (seenRolls.has(uniqueKey)) continue;
+        seenRolls.add(uniqueKey);
+
+        const fName = firstNames[(i + parseInt(semNum, 10) * 3) % firstNames.length];
+        const lName = lastNames[(i * 2 + (secLetter === 'B' ? 5 : 0)) % lastNames.length];
+        const name = i === 1 && semNum === '5' && secLetter === 'A' ? 'Rakesh Das' : `${fName} ${lName}`;
+        const studentId = `${yrCode}05201${semNum}${secLetter}${String(i).padStart(2, '0')}`;
+
+        const attVal = Math.min(100, Math.max(55, Math.floor(72 + ((i * 11 + parseInt(semNum, 10) * 7) % 27))));
+        const cgpaVal = Number((7.0 + (((i * 13 + parseInt(semNum, 10) * 5) % 280) / 100)).toFixed(2));
+
+        const student = {
+          id: `std-${semNum}-${secLetter}-${i}`,
+          studentId,
+          rollNumber: rollStr,
+          name,
+          email: `${fName.toLowerCase()}.${rollStr.toLowerCase()}@apnacampus.edu.in`,
+          phone: `+91 98610 ${String(10000 + i * 17)}`,
+          department: a.department,
+          deptCode: a.deptCode,
+          program: a.program,
+          semester: a.semester,
+          section: a.section,
+          academicYear: a.academicYear,
+          subjectCode: a.subjectCode,
+          subjectName: a.subjectName,
+          status: i % 28 === 0 ? 'On Leave' : 'Active',
+          attendance: attVal,
+          cgpa: cgpaVal,
+          marks: {
+            modular1: Math.min(20, Math.max(10, Math.round(15 + ((i * 3) % 6)))),
+            modular2: Math.min(20, Math.max(10, Math.round(14 + ((i * 5) % 6)))),
+            quizAvg: Math.min(10, Math.max(4, Math.round(7 + ((i * 2) % 4)))),
+            assignmentAvg: Math.min(10, Math.max(6, Math.round(8 + ((i * 4) % 3)))),
+            lab: Math.min(25, Math.max(15, Math.round(20 + ((i * 7) % 6)))),
+            totalMarks: Math.min(100, Math.round(65 + ((i * 9) % 33))),
+          },
+        };
+
+        if (query?.search && query.search.trim()) {
+          const q = query.search.trim().toLowerCase();
+          const matches =
+            student.name.toLowerCase().includes(q) ||
+            student.rollNumber.toLowerCase().includes(q) ||
+            student.studentId.toLowerCase().includes(q);
+          if (!matches) continue;
+        }
+
+        allStudentsList.push(student);
+      }
+    }
+
+    return allStudentsList;
   }
 
   /**
@@ -92,18 +415,15 @@ export class FacultyService {
   async getDashboard(facultyNameOrId: string = 'Dr. S. Mohanty') {
     const assignments = await this.getAssignments(facultyNameOrId);
     
-    // Count distinct students in database if available
-    let totalScopedStudents = 32;
+    // Total students across all active assigned classes for current academic year
+    let totalScopedStudents = assignments
+      .filter((a) => a.academicYear === '2026-27')
+      .reduce((sum, a) => sum + (a.sectionEnrollment || 32), 0);
     try {
-      const dbStudentsCount = await this.prisma.student.count({
-        where: {
-          semester: 'Semester 5',
-          section: 'Section A'
-        }
-      });
+      const dbStudentsCount = await this.prisma.student.count();
       if (dbStudentsCount > 0) totalScopedStudents = dbStudentsCount;
     } catch {
-      // Fallback to 32
+      // Use aggregated assignments total
     }
 
     // Work queue items prioritized for faculty attention

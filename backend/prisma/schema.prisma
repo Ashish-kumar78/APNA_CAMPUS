@@ -847,202 +847,227 @@ model UserRole {
   @@index([role])
 }
 
-enum RoomType {
-  CLASSROOM
-  SMART_CLASSROOM
-  COMPUTER_LAB
-  HARDWARE_LAB
-  ELECTRONICS_LAB
-  SEMINAR_HALL
-  AUDITORIUM
-  WORKSHOP
+// ==============================================================================
+// 1. ANONYMOUS STUDENT COMPLAINT & GRIEVANCE SYSTEM MODELS
+// ==============================================================================
+
+enum ComplaintCategory {
+  TEACHING_RELATED
+  FACULTY_BEHAVIOR
+  COURSE_MATERIAL
+  MARKS_AND_ASSESSMENTS
+  CLASSROOM_ENVIRONMENT
+  OTHER_ACADEMIC
 }
 
-model Room {
-  id                 String             @id @default(cuid())
-  roomNumber         String             @unique
-  building           String             @default("Main Academic Block")
-  floor              String             @default("3rd Floor")
-  roomType           RoomType           @default(CLASSROOM)
-  capacity           Int                @default(60)
-  department         String             @default("CSE")
-  isLab              Boolean            @default(false)
-  facilities         String[]           @default([])
-  status             String             @default("Active")
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-
-  timetableEntries   TimetableEntry[]
-  roomAvailabilities RoomAvailability[]
-
-  @@index([roomNumber])
-  @@index([roomType])
-  @@index([department])
+enum ComplaintStatus {
+  NEW
+  UNDER_REVIEW
+  RESPONSE_SUBMITTED
+  AWAITING_HOD_REVIEW
+  RESOLVED
+  ESCALATED
 }
 
-model AcademicScheduleConfig {
-  id                     String   @id @default(cuid())
-  academicYear           String   @default("2026-27")
-  department             String   @default("CSE")
-  workingDays            String[] @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
-  periodsPerDay          Int      @default(7)
-  slotTimings            Json     // array of { period: 1, startTime: "09:00 AM", endTime: "10:00 AM", isBreak: false, label: "Period 1" }
-  maxConsecutiveTheory   Int      @default(3)
-  maxDailyFacultyPeriods Int      @default(4)
-  preferredLabDays       String[] @default(["Tuesday", "Thursday", "Friday"])
-  lunchBreakPeriod       Int      @default(4)
-  isDefault              Boolean  @default(true)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-
-  @@unique([academicYear, department])
+model StudentComplaint {
+  id                  String             @id @default(cuid())
+  trackingId          String             @unique // e.g. CMP-2026-8492
+  category            ComplaintCategory  @default(TEACHING_RELATED)
+  subject             String
+  description         String             @db.Text
+  
+  // Academic scope
+  department          String             @default("Computer Science & Engineering")
+  deptCode            String             @default("CSE")
+  academicYear        String             @default("2026-27")
+  semester            String             @default("Semester 5")
+  section             String             @default("Section A")
+  subjectCode         String?
+  subjectName         String?
+  
+  // Faculty assignment relation
+  facultyId           String?
+  facultyName         String             // Concerned faculty member name
+  
+  // Attachment
+  attachmentUrl       String?            @db.Text
+  attachmentName      String?
+  
+  // Anonymity & Privacy Protection
+  isAnonymous         Boolean            @default(true)
+  // Protected student token/secret hash - never exposed to faculty/HOD
+  studentSecretRef    String?            // Cryptographic or hashed reference for student to track their complaint
+  
+  // Current status
+  status              ComplaintStatus    @default(NEW)
+  isOverdue           Boolean            @default(false) // Flagged if unresolved > 7 days
+  submittedAt         DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  
+  // Responses and audit trail
+  responses           ComplaintResponse[]
+  statusHistory       ComplaintStatusHistory[]
+  hodReviews          ComplaintHodReview[]
+  
+  @@index([trackingId])
+  @@index([facultyName])
+  @@index([deptCode])
+  @@index([status])
+  @@index([category])
 }
 
-model FacultyAvailability {
-  id          String   @id @default(cuid())
-  facultyId   String
-  faculty     Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
-  dayOfWeek   String   // Monday, Tuesday, ...
-  periodIndex Int      // 0, 1, 2, ...
-  isAvailable Boolean  @default(true)
-  reason      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([facultyId, dayOfWeek, periodIndex])
-  @@index([facultyId])
+model ComplaintResponse {
+  id                  String             @id @default(cuid())
+  complaintId         String
+  complaint           StudentComplaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  
+  facultyId           String?
+  facultyName         String
+  facultyDesignation  String?            @default("Associate Professor")
+  
+  responseComment     String             @db.Text
+  proposedAction      String?            @db.Text // Proposed corrective actions or resolutions
+  resolutionSummary   String?            @db.Text
+  
+  // Response timing
+  responseTimeHours   Float?             @default(0.0)
+  submittedAt         DateTime           @default(now())
+  
+  @@index([complaintId])
 }
 
-model RoomAvailability {
-  id          String   @id @default(cuid())
-  roomId      String
-  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  dayOfWeek   String
-  periodIndex Int
-  isAvailable Boolean  @default(true)
-  reason      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([roomId, dayOfWeek, periodIndex])
-  @@index([roomId])
+model ComplaintStatusHistory {
+  id                  String             @id @default(cuid())
+  complaintId         String
+  complaint           StudentComplaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  
+  fromStatus          ComplaintStatus
+  toStatus            ComplaintStatus
+  changedBy           String             // e.g. "Dr. S. Mohanty (Faculty)" or "Dr. P. K. Pattnaik (HOD)"
+  changedByRole       String             // FACULTY, HOD, ADMIN
+  remarks             String?            @db.Text
+  timestamp           DateTime           @default(now())
+  
+  @@index([complaintId])
 }
 
-enum TimetableStatus {
+model ComplaintHodReview {
+  id                  String             @id @default(cuid())
+  complaintId         String
+  complaint           StudentComplaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  
+  hodId               String?
+  hodName             String
+  reviewOutcome       String             // "Adequate", "Clarification Requested", "Corrective Action Required", "Escalated"
+  observations        String             @db.Text
+  isResponseAdequate  Boolean            @default(true)
+  requiresClarification Boolean          @default(false)
+  requiresCorrectiveAction Boolean       @default(false)
+  isEscalated         Boolean            @default(false)
+  escalationReason    String?            @db.Text
+  finalReviewStatus   String             @default("Reviewed")
+  reviewedAt          DateTime           @default(now())
+  
+  @@index([complaintId])
+}
+
+// ==============================================================================
+// 2. FACULTY-TO-STUDENT NOTIFICATION SYSTEM MODELS
+// ==============================================================================
+
+enum FacultyNotificationCategory {
+  EXAMINATION
+  EXAM_TIMETABLE
+  ASSIGNMENT_DEADLINE
+  INTERNAL_ASSESSMENT
+  PRACTICAL_EXAM
+  CLASS_CANCELLATION
+  SCHEDULE_CHANGE
+  EXTRA_CLASS
+  PROJECT_SUBMISSION
+  ACADEMIC_REMINDER
+  GENERAL_ANNOUNCEMENT
+}
+
+enum NotificationPriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
+enum NotificationPublishStatus {
   DRAFT
-  VALIDATED
-  PENDING_APPROVAL
-  APPROVED
+  SCHEDULED
   PUBLISHED
-  ARCHIVED
-  REJECTED
+  EXPIRED
+  CANCELLED
 }
 
-model Timetable {
-  id                 String              @id @default(cuid())
-  title              String
-  academicYear       String              @default("2026-27")
-  semester           String              @default("Semester 5")
-  department         String              @default("CSE")
-  programmeId        String?
-  section            String              @default("Section A")
-  status             TimetableStatus     @default(DRAFT)
-  version            Int                 @default(1)
-  isPublished        Boolean             @default(false)
-  qualityScore       Float               @default(100.0)
-  conflictCount      Int                 @default(0)
-  solverDiagnostics  Json?
-  infeasibilityNotes String?
-  generationJobId    String?
-  createdBy          String              @default("System / HOD")
-  approvedBy         String?
-  approvedAt         DateTime?
-  publishedBy        String?
-  publishedAt        DateTime?
-  rejectionReason    String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-
-  entries            TimetableEntry[]
-  conflicts          TimetableConflict[]
-
-  @@index([academicYear, department, semester, section])
+model FacultyNotification {
+  id                  String                      @id @default(cuid())
+  title               String
+  message             String                      @db.Text
+  category            FacultyNotificationCategory @default(GENERAL_ANNOUNCEMENT)
+  priority            NotificationPriority        @default(NORMAL)
+  status              NotificationPublishStatus   @default(PUBLISHED)
+  
+  // Faculty author details
+  facultyId           String?
+  facultyName         String
+  facultyDesignation  String                      @default("Associate Professor")
+  facultyEmail        String?
+  department          String                      @default("Computer Science & Engineering")
+  
+  // Target Academic Scoping
+  academicYear        String                      @default("2026-27")
+  program             String                      @default("B.Tech")
+  semester            String                      @default("Semester 5")
+  section             String                      @default("Section A") // e.g. "Section A", "Section B", or "ALL_ASSIGNED"
+  subjectCode         String?
+  subjectName         String?
+  
+  // Delivery timing
+  scheduledFor        DateTime?
+  publishedAt         DateTime                    @default(now())
+  expiresAt           DateTime?
+  
+  // Optional attachment
+  attachmentUrl       String?                     @db.Text
+  attachmentName      String?
+  
+  // Stats
+  totalRecipients     Int                         @default(0)
+  totalRead           Int                         @default(0)
+  
+  recipients          FacultyNotificationRecipient[]
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  
+  @@index([facultyName])
+  @@index([semester])
+  @@index([section])
+  @@index([subjectCode])
   @@index([status])
 }
 
-model TimetableEntry {
-  id             String    @id @default(cuid())
-  timetableId    String
-  timetable      Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
-  dayOfWeek      String    // Monday, Tuesday, Wednesday, Thursday, Friday, Saturday
-  periodIndex    Int       // 0 to periodsPerDay - 1
-  startTime      String    // e.g. "09:00 AM"
-  endTime        String    // e.g. "10:00 AM"
-  subjectCode    String
-  subjectName    String
-  subjectCredits Int       @default(4)
-  sessionType    String    @default("THEORY") // THEORY, LAB, PRACTICAL, SEMINAR, BREAK
-  facultyId      String?
-  facultyName    String?
-  roomId         String?
-  room           Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  roomNumber     String?
-  section        String    @default("Section A")
-  durationPeriods Int      @default(1)
-  isConsecutive  Boolean   @default(false)
-  notes          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  @@index([timetableId])
-  @@index([dayOfWeek, periodIndex])
-  @@index([facultyId])
-  @@index([roomId])
-}
-
-model TimetableGenerationJob {
-  id                  String   @id @default(cuid())
-  status              String   @default("PENDING") // PENDING, VALIDATING, PREPARING, SOLVING, OPTIMIZING, COMPLETED, INFEASIBLE, FAILED
-  progress            Int      @default(0) // 0 - 100
-  stepName            String   @default("Initiating generation...")
-  department          String
-  academicYear        String
+model FacultyNotificationRecipient {
+  id                  String                      @id @default(cuid())
+  notificationId      String
+  notification        FacultyNotification         @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  
+  studentId           String?
+  studentRollNumber   String
+  studentName         String
+  studentEmail        String?
   semester            String
-  section             String?
-  programmeId         String?
-  scope               String   @default("SECTION") // SECTION, DEPARTMENT
-  constraintsConfig   Json?    // soft weights, max consecutive, preferred days, etc.
-  diagnostics         Json?
-  infeasibilityReport Json?
-  resultTimetableId   String?
-  error               String?
-  initiatedBy         String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  @@index([status])
-  @@index([department, academicYear])
+  section             String
+  
+  isRead              Boolean                     @default(false)
+  readAt              DateTime?
+  
+  @@unique([notificationId, studentRollNumber])
+  @@index([studentRollNumber])
+  @@index([isRead])
 }
-
-model TimetableConflict {
-  id              String    @id @default(cuid())
-  timetableId     String
-  timetable       Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
-  conflictType    String    // FACULTY_DOUBLE_BOOKING, ROOM_DOUBLE_BOOKING, SECTION_DOUBLE_BOOKING, CAPACITY_BREACH, LAB_MISMATCH, WORKLOAD_EXCEEDED, CONSECUTIVE_LIMIT, UNSCHEDULED_REQUIREMENT
-  severity        String    @default("HARD") // HARD, SOFT, WARNING
-  dayOfWeek       String?
-  periodIndex     Int?
-  timeSlot        String?
-  subjectCode     String?
-  facultyName     String?
-  roomNumber      String?
-  section         String?
-  description     String
-  suggestedAction String?
-  createdAt       DateTime  @default(now())
-
-  @@index([timetableId])
-}
-
 
 

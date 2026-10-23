@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FacultyService } from '../faculty/faculty.service';
 import { ReportQueryDto } from './reports.dto';
 import { normalizeRole } from '../rbac/rbac';
 import * as XLSX from 'xlsx';
@@ -15,7 +16,10 @@ export interface ReportSummary {
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly facultyService: FacultyService,
+  ) {}
 
   // 1. Get Dynamic Filter Configurations with Role Scoping
   async getFilterOptions(user: any) {
@@ -54,7 +58,7 @@ export class ReportsService {
       ];
     }
 
-    const semesters = [
+    let semesters = [
       { number: 1, label: 'Semester 1' },
       { number: 2, label: 'Semester 2' },
       { number: 3, label: 'Semester 3' },
@@ -65,13 +69,24 @@ export class ReportsService {
       { number: 8, label: 'Semester 8' },
     ];
 
-    const batches = ['2024–2028', '2023–2027', '2022–2026', '2021–2025'];
-    const sections = ['Section A', 'Section B', 'Section C'];
+    let batches = ['2024–2028', '2023–2027', '2022–2026', '2021–2025'];
+    let sections = ['Section A', 'Section B', 'Section C'];
     const reportTypes = [
       { id: 'attendance', name: 'Attendance Report', description: 'Subject & class attendance percentages with held/present counts' },
       { id: 'cgpa', name: 'CGPA Report', description: 'Cumulative grade point averages & academic standing' },
       { id: 'sgpa', name: 'SGPA Report', description: 'Semester-wise performance & examination results' },
       { id: 'document', name: 'Document Status Report', description: 'Student document submission, verification & compliance registry' },
+    ];
+
+    let academicYears = ['2026-27', '2025-26'];
+    let facultyAssignments: any[] = [];
+    let facultySubjects: any[] = [];
+    let reportScopes: any[] = [
+      { id: 'all_assigned', label: 'All Authorized Classes (Consolidated Whole-Group)', description: 'Consolidated report across all assigned classes without student duplication' },
+      { id: 'section', label: 'Selected Section (Class-Wise)', description: 'All students enrolled in the selected class and section' },
+      { id: 'class', label: 'Whole Semester / Class', description: 'All students in the selected semester across authorized sections' },
+      { id: 'subject', label: 'Specific Subject Across Sections', description: 'Students across all assigned sections taking this subject' },
+      { id: 'individual', label: 'Individual Student Profile', description: 'Single student detailed academic & attendance transcript' },
     ];
 
     // Determine role restrictions
@@ -89,6 +104,35 @@ export class ReportsService {
       const deptCode = this.getDeptCodeFromUser(user);
       allowedBranches = [deptCode];
       defaultBranch = deptCode;
+
+      // Extract dynamic teaching responsibilities
+      try {
+        facultyAssignments = await this.facultyService.getAssignments(user?.name || user?.username || 'Dr. S. Mohanty');
+        if (facultyAssignments && facultyAssignments.length > 0) {
+          academicYears = Array.from(new Set(facultyAssignments.map((a) => a.academicYear))).sort().reverse();
+          const semSet = new Set(facultyAssignments.map((a) => parseInt(a.semester.replace(/[^0-9]/g, ''), 10)));
+          semesters = Array.from(semSet)
+            .sort((a, b) => a - b)
+            .map((num) => ({ number: num, label: `Semester ${num}` }));
+          sections = Array.from(new Set(facultyAssignments.map((a) => a.section))).sort();
+          facultySubjects = Array.from(
+            new Map(
+              facultyAssignments.map((a) => [
+                a.subjectCode,
+                {
+                  code: a.subjectCode,
+                  name: a.subjectName,
+                  semester: a.semester,
+                  section: a.section,
+                  academicYear: a.academicYear,
+                },
+              ]),
+            ).values(),
+          );
+        }
+      } catch {
+        // Fallback to defaults if assignment retrieval fails
+      }
     }
 
     return {
@@ -98,9 +142,13 @@ export class ReportsService {
         name: d.name,
         isAllowed: allowedBranches.includes(d.code),
       })),
+      academicYears,
       semesters,
       batches,
       sections,
+      subjects: facultySubjects,
+      assignedClasses: facultyAssignments,
+      reportScopes,
       reportTypes,
       userScope: {
         role,
@@ -147,8 +195,71 @@ export class ReportsService {
       scopedBranch = userDeptCode;
     }
 
-    // Fetch matching students from database with relations
-    const allStudents = await this.fetchStudentsFromDbOrFallback(scopedBranch, query.semester, query.section, query.search);
+    // Fetch matching students scoped strictly by faculty teaching assignments or department
+    let allStudents: any[] = [];
+    if (role === 'faculty') {
+      const facultyIdent = user?.name || user?.username || 'Dr. S. Mohanty';
+      const scopeMode =
+        query.scopeMode ||
+        (query.rollNumber || query.studentId
+          ? 'individual'
+          : query.subjectCode && !query.section
+          ? 'subject'
+          : query.semester && query.section
+          ? 'section'
+          : 'all_assigned');
+
+      if (scopeMode === 'all_assigned') {
+        allStudents = await this.facultyService.getScopedStudents(facultyIdent, {
+          isConsolidated: true,
+          academicYear: query.academicYear,
+          search: query.search,
+        });
+      } else if (scopeMode === 'subject') {
+        allStudents = await this.facultyService.getScopedStudents(facultyIdent, {
+          subjectCode: query.subjectCode,
+          academicYear: query.academicYear,
+          search: query.search,
+        });
+      } else if (scopeMode === 'class') {
+        allStudents = await this.facultyService.getScopedStudents(facultyIdent, {
+          semester: query.semester,
+          academicYear: query.academicYear,
+          search: query.search,
+        });
+      } else if (scopeMode === 'individual') {
+        const authorized = await this.facultyService.getScopedStudents(facultyIdent, {
+          isConsolidated: true,
+          academicYear: query.academicYear,
+          search: query.search,
+        });
+        const target = query.rollNumber || query.studentId || query.search;
+        if (target) {
+          allStudents = authorized.filter(
+            (s) =>
+              (s.rollNumber && s.rollNumber.toLowerCase() === target.toLowerCase()) ||
+              (s.studentId && s.studentId.toLowerCase() === target.toLowerCase()) ||
+              (s.name && s.name.toLowerCase().includes(target.toLowerCase())),
+          );
+        } else {
+          allStudents = authorized.slice(0, 1);
+        }
+        if (allStudents.length === 0) {
+          throw new BadRequestException('Student not found in your assigned teaching cohorts or unauthorized access.');
+        }
+      } else {
+        // scopeMode === 'section' or default
+        allStudents = await this.facultyService.getScopedStudents(facultyIdent, {
+          academicYear: query.academicYear,
+          semester: query.semester,
+          section: query.section,
+          subjectCode: query.subjectCode,
+          search: query.search,
+        });
+      }
+    } else {
+      allStudents = await this.fetchStudentsFromDbOrFallback(scopedBranch, query.semester, query.section, query.search);
+    }
 
     // Compute student reports based on requested type
     const reportType = (query.reportType || 'attendance').toLowerCase();
@@ -211,9 +322,12 @@ export class ReportsService {
         userRole: role,
         appliedFilters: {
           branch: scopedBranch || 'All Branches',
+          academicYear: query.academicYear || '2026-27',
           semester: query.semester || 'All Semesters',
           batch: query.batch || 'All Batches',
           section: query.section || 'All Sections',
+          subjectCode: query.subjectCode || 'All Assigned Subjects',
+          scopeMode: query.scopeMode || 'All Scopes',
           dateFrom: query.dateFrom || null,
           dateTo: query.dateTo || null,
           search: query.search || null,
@@ -270,8 +384,10 @@ export class ReportsService {
         'Student Name',
         'Registration Number',
         'Branch',
+        'Academic Year',
         'Semester',
         'Section',
+        'Subject',
         'Total Classes Held',
         'Present',
         'Absent',
@@ -282,8 +398,10 @@ export class ReportsService {
         r.studentName,
         r.registrationNumber,
         r.branch,
+        r.academicYear || '2026-27',
         r.semester,
         r.section,
+        r.subjectCode ? `${r.subjectCode} - ${r.subjectName || ''}` : 'N/A',
         r.totalClassesHeld,
         r.present,
         r.absent,
@@ -295,8 +413,10 @@ export class ReportsService {
         'Student Name',
         'Registration Number',
         'Branch',
+        'Academic Year',
         'Semester',
         'Section',
+        'Subject',
         'Batch',
         'CGPA',
         'Academic Status',
@@ -306,8 +426,10 @@ export class ReportsService {
         r.studentName,
         r.registrationNumber,
         r.branch,
+        r.academicYear || '2026-27',
         r.semester,
         r.section,
+        r.subjectCode ? `${r.subjectCode} - ${r.subjectName || ''}` : 'N/A',
         r.batch,
         r.cgpa,
         r.academicStatus,
@@ -318,8 +440,10 @@ export class ReportsService {
         'Student Name',
         'Registration Number',
         'Branch',
+        'Academic Year',
         'Semester',
         'Section',
+        'Subject',
         'Batch',
         'SGPA',
         'Result Status',
@@ -329,8 +453,10 @@ export class ReportsService {
         r.studentName,
         r.registrationNumber,
         r.branch,
+        r.academicYear || '2026-27',
         r.semester,
         r.section,
+        r.subjectCode ? `${r.subjectCode} - ${r.subjectName || ''}` : 'N/A',
         r.batch,
         r.sgpa,
         r.resultStatus,
@@ -341,6 +467,7 @@ export class ReportsService {
         'Student Name',
         'Registration Number',
         'Branch',
+        'Academic Year',
         'Semester',
         'Section',
         'Batch',
@@ -355,6 +482,7 @@ export class ReportsService {
         r.studentName,
         r.registrationNumber,
         r.branch,
+        r.academicYear || '2026-27',
         r.semester,
         r.section,
         r.batch,
@@ -440,6 +568,9 @@ export class ReportsService {
         semester: s.semester || 'Semester 5',
         section: s.section || 'Section A',
         batch: this.deriveBatch(s.semester),
+        subjectCode: s.subjectCode || query.subjectCode || 'CS501',
+        subjectName: s.subjectName || 'Data Structures & Algorithms',
+        academicYear: s.academicYear || query.academicYear || '2026-27',
         totalClassesHeld: held,
         present,
         absent,
@@ -494,6 +625,9 @@ export class ReportsService {
         semester: s.semester || 'Semester 5',
         section: s.section || 'Section A',
         batch: this.deriveBatch(s.semester),
+        subjectCode: s.subjectCode || query.subjectCode || 'CS501',
+        subjectName: s.subjectName || 'Data Structures & Algorithms',
+        academicYear: s.academicYear || query.academicYear || '2026-27',
         cgpa,
         academicStatus,
       };
@@ -548,6 +682,9 @@ export class ReportsService {
         semester: s.semester || 'Semester 5',
         section: s.section || 'Section A',
         batch: this.deriveBatch(s.semester),
+        subjectCode: s.subjectCode || query.subjectCode || 'CS501',
+        subjectName: s.subjectName || 'Data Structures & Algorithms',
+        academicYear: s.academicYear || query.academicYear || '2026-27',
         sgpa,
         resultStatus,
       };
@@ -618,6 +755,9 @@ export class ReportsService {
         semester: s.semester || 'Semester 5',
         section: s.section || 'Section A',
         batch: this.deriveBatch(s.semester),
+        subjectCode: s.subjectCode || query.subjectCode || 'CS501',
+        subjectName: s.subjectName || 'Data Structures & Algorithms',
+        academicYear: s.academicYear || query.academicYear || '2026-27',
         totalRequired,
         submitted,
         verified,

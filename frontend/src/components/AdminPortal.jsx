@@ -79,6 +79,8 @@ import {
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import './AdminPortal.css';
+import { MasterSidebarHeader, MasterNavBadge, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import AdminCommunicationControl from './CampusConnect/AdminCommunicationControl.jsx';
 import AdminComplaintsConsole from './AdminComplaintsConsole.jsx';
 import { downloadAdminReportPdf } from '../utils/pdfGenerator';
@@ -255,6 +257,15 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
   });
 
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.admin-main, .role-dash-container, .admin-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [overviewOpen, setOverviewOpen] = useState(true);
   const [academicAdminOpen, setAcademicAdminOpen] = useState(true);
   const [examinationOpen, setExaminationOpen] = useState(true);
@@ -1189,8 +1200,22 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               onClick={() => setSidebarOpen(true)}
               title="Show Navigation"
               aria-label="Show Navigation"
+              style={{
+                background: '#000000',
+                color: '#ffffff',
+                border: '1px solid #000000',
+                borderRadius: '10px',
+                width: '38px',
+                height: '38px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 3px 10px rgba(0, 0, 0, 0.3)',
+                flexShrink: 0
+              }}
             >
-              <Menu size={20} />
+              <Menu size={20} color="#ffffff" stroke="#ffffff" />
             </button>
           )}
           <div className="admin-brand-icon" style={{ background: '#ffffff', padding: '4px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1247,22 +1272,23 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
         </div>
       </header>
 
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="erp-sidebar-backdrop active"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Layout */}
       <div className={`admin-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
         {/* Sidebar */}
         {sidebarOpen && (
           <aside className="admin-sidebar">
-            <div className="admin-sidebar-header">
-              <span className="admin-sidebar-title">Menu</span>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="admin-sidebar-close"
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <MasterSidebarHeader
+              roleTitle="CAMPUS ADMINISTRATION"
+              onToggle={() => setSidebarOpen(false)}
+            />
           {/* ── 1. INSTITUTIONAL OVERVIEW ── */}
           <button
             className="admin-nav-section-dropdown"
@@ -1600,20 +1626,6 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
-            <RoleDashboardLanding
-              account={account}
-              roleKey="admin"
-              onLogout={onLogout}
-              onSwitchRole={onSwitchRole}
-              onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-              onNavigateTab={(tabId) => {
-                if (tabId === 'verify') setActiveTab('documents');
-                else if (tabId === 'certificates') setActiveTab('students');
-                else if (tabId === 'requests') setActiveTab('ai-complaints');
-              }}
-            />
-          )}
-          {false && activeTab === 'dashboard' && (
             <div>
               <div className="admin-view-header">
                 <div>

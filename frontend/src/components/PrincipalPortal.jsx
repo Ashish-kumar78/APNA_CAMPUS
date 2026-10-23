@@ -38,13 +38,24 @@ import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import { MasterSidebarHeader, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import './PrincipalPortal.css';
 import './SuperAdminPortal.css';
 import { api } from '../services/api.js';
 
 export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeTab, setActiveTab] = useState('governance'); // governance, leaves, notices, academic_health, timetable, report-generation
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.erp-main-content, .role-dash-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [toastMessage, setToastMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -337,53 +348,10 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
       {/* Sidebar Navigation */}
       {sidebarOpen && (
         <aside className="erp-sidebar erp-principal-sidebar">
-          <div
-            className="erp-sidebar-brand"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div
-                className="erp-director-badge"
-                style={{
-                  background: '#ffffff',
-                  padding: '3px',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <img
-                  src="/logo.png"
-                  alt="Apna Campus Logo"
-                  style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
-                />
-              </div>
-              <div className="erp-brand-text">
-                <h2>Apna Campus</h2>
-                <span style={{ color: '#38bdf8' }}>Office of Principal</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <MasterSidebarHeader
+            roleTitle="PRINCIPAL OFFICE"
+            onToggle={() => setSidebarOpen(false)}
+          />
 
           <nav className="erp-sidebar-nav">
             <button
@@ -446,6 +414,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
             roleKey="principal"
             onLogout={onLogout}
             onSwitchRole={onSwitchRole}
+            sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
             onNavigateTab={(tabId) => {
               if (tabId === 'academic') setActiveTab('academic_health');

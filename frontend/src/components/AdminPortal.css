@@ -204,6 +204,7 @@
   border-radius: 7px;
   transition: all 0.15s ease;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .admin-nav-section-dropdown:hover {
@@ -245,11 +246,13 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  flex-shrink: 0;
 }
 
 .roster-items.expanded {
-  max-height: 900px;
+  max-height: 2000px;
   opacity: 1;
+  flex-shrink: 0;
 }
 
 /* Indented child items with left accent line */
@@ -296,6 +299,7 @@
   cursor: pointer !important;
   transition: all 0.2s ease;
   text-align: left;
+  flex-shrink: 0;
 }
 
 .admin-nav-btn svg {
@@ -330,7 +334,10 @@
 .admin-main {
   padding: 1.75rem 2rem;
   overflow-y: auto;
-  max-width: 1400px;
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* Top bar of views */

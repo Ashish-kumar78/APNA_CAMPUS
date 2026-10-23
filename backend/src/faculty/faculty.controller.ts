@@ -51,6 +51,75 @@ export class FacultyController {
     return { success: true, count: data.length, data };
   }
 
+  @Get('students')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get class-wise students authorized for logged-in faculty based on assignments' })
+  async getStudents(
+    @CurrentUser() user: any,
+    @Query('academicYear') academicYear?: string,
+    @Query('semester') semester?: string,
+    @Query('section') section?: string,
+    @Query('subjectCode') subjectCode?: string,
+    @Query('program') program?: string,
+    @Query('search') search?: string,
+    @Query('isConsolidated') isConsolidated?: string,
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'principal', 'hod', 'faculty'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException(`Access denied.`);
+    }
+
+    const facultyName = user.name || user.identifier || 'Dr. S. Mohanty';
+    const data = await this.facultyService.getScopedStudents(facultyName, {
+      academicYear,
+      semester,
+      section,
+      subjectCode,
+      program,
+      search,
+      isConsolidated,
+    });
+    return { success: true, count: data.length, data };
+  }
+
+  @Get('classes')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get distinct academic classes, sections, semesters, and subjects assigned to faculty' })
+  async getClasses(@CurrentUser() user: any) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'principal', 'hod', 'faculty'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException(`Access denied.`);
+    }
+
+    const facultyName = user.name || user.identifier || 'Dr. S. Mohanty';
+    const assignments = await this.facultyService.getAssignments(facultyName);
+
+    const academicYears = Array.from(new Set(assignments.map((a) => a.academicYear)));
+    const semesters = Array.from(new Set(assignments.map((a) => a.semester)));
+    const programs = Array.from(new Set(assignments.map((a) => a.program)));
+    const sections = Array.from(new Set(assignments.map((a) => a.section)));
+    const subjects = Array.from(new Set(assignments.map((a) => a.subjectCode))).map((code) => {
+      const match = assignments.find((a) => a.subjectCode === code);
+      return { code, name: match?.subjectName || code };
+    });
+
+    return {
+      success: true,
+      data: {
+        academicYears,
+        semesters,
+        programs,
+        sections,
+        subjects,
+        assignments,
+      },
+    };
+  }
+
   @Get('attendance/sessions')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

@@ -13,6 +13,8 @@ import ReportGenerationModule from './ReportGenerationModule.jsx';
 import api from '../services/api.js';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import { MasterSidebarHeader, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import './ManagementPortal.css';
 
 // ─── Static Fallbacks & Seed Constants ────────────────────────────────────────
@@ -178,8 +180,17 @@ const KPI = ({ label, value, sub, icon, color = '#2563eb', bg = '#eff6ff', topBa
 
 export default function ManagementPortal({ account, onLogout }) {
   // Navigation & UI States
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeTab, setActiveTab] = useState('executive');
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.mgmt-main, .role-dash-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [toast, setToast] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
@@ -407,36 +418,10 @@ export default function ManagementPortal({ account, onLogout }) {
       {/* ─── Sidebar ────────────────────────────────────────────────────────── */}
       {sidebarOpen && (
         <aside className="mgmt-sidebar">
-          <div className="mgmt-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div className="mgmt-brand-icon" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-              </div>
-              <div className="mgmt-brand-text">
-                <h2>Apna Campus</h2>
-                <span>Governing Body Portal</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#cbd5e1',
-                width: '30px',
-                height: '30px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <MasterSidebarHeader
+            roleTitle="GOVERNING BOARD"
+            onToggle={() => setSidebarOpen(false)}
+          />
 
           <div className="mgmt-user-card" style={{ margin: '0.85rem 0.85rem 0' }}>
             <div className="mgmt-user-info">
@@ -454,7 +439,12 @@ export default function ManagementPortal({ account, onLogout }) {
               <button
                 key={item.id}
                 className={`mgmt-nav-item ${activeTab === item.id ? 'active' : ''}`}
-                onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+                    setSidebarOpen(false);
+                  }
+                }}
               >
                 {item.icon}
                 <span style={{ flex: 1 }}>{item.label}</span>
@@ -489,6 +479,7 @@ export default function ManagementPortal({ account, onLogout }) {
             account={account}
             roleKey="management"
             onLogout={onLogout}
+            sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
             onNavigateTab={(tabId) => {
               if (tabId === 'reports') exportExecutiveReport();

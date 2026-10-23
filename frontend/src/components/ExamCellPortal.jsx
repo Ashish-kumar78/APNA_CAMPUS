@@ -107,8 +107,17 @@ function exportToCsv(filename, rows) {
 
 export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
   // Navigation & UI State
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, cycles, timetable, seating, hall_tickets, moderation, grading, scrutiny, circulars
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.erp-main-content, .role-dash-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [toastMessage, setToastMessage] = useState('');
 
   // Store data state
@@ -529,39 +538,21 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="erp-sidebar-backdrop active"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       {sidebarOpen && (
         <aside className="erp-sidebar">
-          <div className="erp-sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div className="erp-exam-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-              </div>
-              <div className="erp-brand-text">
-                <h2>Apna Campus</h2>
-                <span style={{ color: '#a78bfa' }}>Examination Cell</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <MasterSidebarHeader
+            roleTitle="EXAMINATION CELL"
+            onToggle={() => setSidebarOpen(false)}
+          />
 
           <nav className="erp-sidebar-nav">
             <button
@@ -639,14 +630,10 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
             <button
               className={`erp-nav-item ${activeTab === 'digital_evaluation' ? 'active' : ''}`}
               onClick={() => setActiveTab('digital_evaluation')}
-              style={{
-                background: activeTab === 'digital_evaluation' ? undefined : 'linear-gradient(90deg, rgba(124, 58, 237, 0.12), rgba(99, 102, 241, 0.12))',
-                border: '1px solid rgba(139, 92, 246, 0.3)'
-              }}
             >
-              <FileCheck2 size={18} style={{ color: '#a78bfa' }} />
+              <FileCheck2 size={18} />
               <span>Digital Evaluation System</span>
-              <span className="erp-nav-badge" style={{ background: '#7c3aed', color: '#ffffff' }}>Live</span>
+              <span className="erp-nav-badge" style={{ background: '#2563eb', color: '#ffffff' }}>Live</span>
             </button>
             <button
               className={`erp-nav-item ${activeTab === 'report-generation' ? 'active' : ''}`}
@@ -672,16 +659,21 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                 title="Show Navigation"
                 aria-label="Show Navigation"
                 style={{
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '6px',
+                  background: '#000000',
+                  color: '#ffffff',
+                  border: '1px solid #000000',
+                  borderRadius: '10px',
+                  width: '38px',
+                  height: '38px',
                   cursor: 'pointer',
                   display: 'flex',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 3px 10px rgba(0, 0, 0, 0.3)',
+                  flexShrink: 0
                 }}
               >
-                <Menu size={20} />
+                <Menu size={20} color="#ffffff" stroke="#ffffff" />
               </button>
             )}
             <div>
@@ -768,21 +760,6 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               TAB 0: CoE OPERATIONS DASHBOARD
              ========================================================================= */}
           {activeTab === 'dashboard' && (
-            <RoleDashboardLanding
-              roleKey="exam_cell"
-              account={account}
-              onLogout={onLogout}
-              onSwitchRole={onSwitchRole}
-              onNavigate={(target) => {
-                if (target === 'exam-sched') setActiveTab('timetable');
-                else if (target === 'exam-eval') setActiveTab('digital_evaluation');
-                else if (target === 'exam-subs') setActiveTab('moderation');
-                else setActiveTab('timetable');
-              }}
-            />
-          )}
-
-          {false && activeTab === 'dashboard' && (
             <div>
               {/* Top Operational KPI Grid */}
               <div className="erp-stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>

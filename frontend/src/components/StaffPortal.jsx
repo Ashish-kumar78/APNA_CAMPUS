@@ -20,6 +20,8 @@ import {
   ClipboardCheck
 } from 'lucide-react';
 import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
+import { MasterSidebarHeader, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import './StaffPortal.css';
 import './SuperAdminPortal.css';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
@@ -30,8 +32,17 @@ import { api } from '../services/api.js';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 
 export default function StaffPortal({ account, onLogout, onSwitchRole }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, tickets, visitors, inventory
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.erp-main-content, .role-dash-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [staffWorkspaces, setStaffWorkspaces] = useState(() => erpStore.getStaffWorkspaces());
   const [toastMessage, setToastMessage] = useState('');
 
@@ -156,99 +167,77 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="erp-sidebar-backdrop active"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       {sidebarOpen && (
         <aside className="erp-sidebar">
-          <div className="erp-sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div className="erp-staff-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-              </div>
-              <div className="erp-brand-text">
-                <h2>Apna Campus</h2>
-                <span style={{ color: '#2dd4bf' }}>Operations & Staff</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <MasterSidebarHeader
+            roleTitle="STAFF OPERATIONS"
+            onToggle={() => setSidebarOpen(false)}
+          />
 
-          <nav className="erp-sidebar-nav">
-            <button
-              className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Monitor size={18} />
-              <span>Staff &amp; Lab Dashboard</span>
-              <span className="erp-nav-badge" style={{ background: '#14b8a6', color: '#ffffff' }}>Live</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'take-attendance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('take-attendance')}
-            >
-              <ClipboardCheck size={18} />
-              <span>Take Attendance</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'lab-evaluation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('lab-evaluation')}
-              style={{
-                background: activeTab === 'lab-evaluation' ? undefined : 'linear-gradient(90deg, rgba(20, 184, 166, 0.12), rgba(59, 130, 246, 0.12))',
-                border: '1px solid rgba(20, 184, 166, 0.35)'
-              }}
-            >
-              <FileText size={18} style={{ color: '#2dd4bf' }} />
-              <span>Practical &amp; Lab Evaluation</span>
-              <span className="erp-nav-badge" style={{ background: '#14b8a6', color: '#ffffff' }}>New</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'tickets' ? 'active' : ''}`}
-              onClick={() => setActiveTab('tickets')}
-            >
-              <Wrench size={18} />
-              <span>Support & Lab Tickets</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'visitors' ? 'active' : ''}`}
-              onClick={() => setActiveTab('visitors')}
-            >
-              <UserCheck size={18} />
-              <span>Visitor Gate Passes</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'clerical' ? 'active' : ''}`}
-              onClick={() => setActiveTab('clerical')}
-            >
-              <FileText size={18} />
-              <span>Office Inward/Outward</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'report-generation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('report-generation')}
-            >
-              <FileSpreadsheet size={18} />
-              <span>Report Generation</span>
-            </button>
-          </nav>
-        </aside>
-      )}
+            <nav className="erp-sidebar-nav">
+              <button
+                className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                onClick={() => setActiveTab('dashboard')}
+              >
+                <Monitor size={18} />
+                <span>Staff &amp; Lab Dashboard</span>
+                <span className="erp-nav-badge" style={{ background: '#14b8a6', color: '#ffffff' }}>Live</span>
+              </button>
+              <button
+                className={`erp-nav-item ${activeTab === 'take-attendance' ? 'active' : ''}`}
+                onClick={() => setActiveTab('take-attendance')}
+              >
+                <ClipboardCheck size={18} />
+                <span>Take Attendance</span>
+              </button>
+              <button
+                className={`erp-nav-item ${activeTab === 'lab-evaluation' ? 'active' : ''}`}
+                onClick={() => setActiveTab('lab-evaluation')}
+              >
+                <FileText size={18} />
+                <span>Practical &amp; Lab Evaluation</span>
+                <span className="erp-nav-badge" style={{ background: '#14b8a6', color: '#ffffff' }}>New</span>
+              </button>
+              <button
+                className={`erp-nav-item ${activeTab === 'tickets' ? 'active' : ''}`}
+                onClick={() => setActiveTab('tickets')}
+              >
+                <Wrench size={18} />
+                <span>Support & Lab Tickets</span>
+              </button>
+              <button
+                className={`erp-nav-item ${activeTab === 'visitors' ? 'active' : ''}`}
+                onClick={() => setActiveTab('visitors')}
+              >
+                <UserCheck size={18} />
+                <span>Visitor Gate Passes</span>
+              </button>
+              <button
+                className={`erp-nav-item ${activeTab === 'clerical' ? 'active' : ''}`}
+                onClick={() => setActiveTab('clerical')}
+              >
+                <FileText size={18} />
+                <span>Office Inward/Outward</span>
+              </button>
+              <button
+                className={`erp-nav-item ${activeTab === 'report-generation' ? 'active' : ''}`}
+                onClick={() => setActiveTab('report-generation')}
+              >
+                <FileSpreadsheet size={18} />
+                <span>Report Generation</span>
+              </button>
+            </nav>
+          </aside>
+        )}
 
       {/* Main Content */}
       <main className="erp-main-content">
@@ -258,6 +247,7 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
             account={account}
             onLogout={onLogout}
             onSwitchRole={onSwitchRole}
+            sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(o => !o)}
             onNavigate={(target) => {
               if (target === 'equipment') setActiveTab('tickets');

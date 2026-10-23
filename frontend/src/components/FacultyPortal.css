@@ -238,7 +238,9 @@
 .faculty-main {
   padding: 1.75rem 2rem;
   overflow-y: auto;
-  max-width: 1400px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .faculty-subject-card {

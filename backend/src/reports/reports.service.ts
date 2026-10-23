@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FacultyService } from '../faculty/faculty.service';
 import { ReportQueryDto } from './reports.dto';
 import { normalizeRole } from '../rbac/rbac';
 import * as XLSX from 'xlsx';
@@ -15,7 +16,10 @@ export interface ReportSummary {
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly facultyService: FacultyService,
+  ) {}
 
   // 1. Get Dynamic Filter Configurations with Role Scoping
   async getFilterOptions(user: any) {
@@ -47,6 +51,17 @@ export class ReportsService {
       { id: 'document', name: 'Document Status Report', description: 'Student document submission, verification & compliance registry' },
     ];
 
+    let academicYears = ['2026-27', '2025-26'];
+    let facultyAssignments: any[] = [];
+    let facultySubjects: any[] = [];
+    let reportScopes: any[] = [
+      { id: 'all_assigned', label: 'All Authorized Classes (Consolidated Whole-Group)', description: 'Consolidated report across all assigned classes without student duplication' },
+      { id: 'section', label: 'Selected Section (Class-Wise)', description: 'All students enrolled in the selected class and section' },
+      { id: 'class', label: 'Whole Semester / Class', description: 'All students in the selected semester across authorized sections' },
+      { id: 'subject', label: 'Specific Subject Across Sections', description: 'Students across all assigned sections taking this subject' },
+      { id: 'individual', label: 'Individual Student Profile', description: 'Single student detailed academic & attendance transcript' },
+    ];
+
     // Determine role restrictions
     let isBranchRestricted = false;
     let allowedBranches: string[] = departments.map((d) => d.code);
@@ -71,6 +86,7 @@ export class ReportsService {
         name: d.name,
         isAllowed: allowedBranches.includes(d.code),
       })),
+      academicYears,
       semesters,
       batches,
       sections,
@@ -192,9 +208,12 @@ export class ReportsService {
         userRole: role,
         appliedFilters: {
           branch: scopedBranch || 'All Branches',
+          academicYear: query.academicYear || '2026-27',
           semester: query.semester || 'All Semesters',
           batch: query.batch || 'All Batches',
           section: query.section || 'All Sections',
+          subjectCode: query.subjectCode || 'All Assigned Subjects',
+          scopeMode: query.scopeMode || 'All Scopes',
           dateFrom: query.dateFrom || null,
           dateTo: query.dateTo || null,
           search: query.search || null,
@@ -251,8 +270,10 @@ export class ReportsService {
         'Student Name',
         'Registration Number',
         'Branch',
+        'Academic Year',
         'Semester',
         'Section',
+        'Subject',
         'Total Classes Held',
         'Present',
         'Absent',
@@ -263,8 +284,10 @@ export class ReportsService {
         r.studentName,
         r.registrationNumber,
         r.branch,
+        r.academicYear || '2026-27',
         r.semester,
         r.section,
+        r.subjectCode ? `${r.subjectCode} - ${r.subjectName || ''}` : 'N/A',
         r.totalClassesHeld,
         r.present,
         r.absent,
@@ -276,8 +299,10 @@ export class ReportsService {
         'Student Name',
         'Registration Number',
         'Branch',
+        'Academic Year',
         'Semester',
         'Section',
+        'Subject',
         'Batch',
         'CGPA',
         'Academic Status',
@@ -287,8 +312,10 @@ export class ReportsService {
         r.studentName,
         r.registrationNumber,
         r.branch,
+        r.academicYear || '2026-27',
         r.semester,
         r.section,
+        r.subjectCode ? `${r.subjectCode} - ${r.subjectName || ''}` : 'N/A',
         r.batch,
         r.cgpa,
         r.academicStatus,
@@ -299,8 +326,10 @@ export class ReportsService {
         'Student Name',
         'Registration Number',
         'Branch',
+        'Academic Year',
         'Semester',
         'Section',
+        'Subject',
         'Batch',
         'SGPA',
         'Result Status',
@@ -310,8 +339,10 @@ export class ReportsService {
         r.studentName,
         r.registrationNumber,
         r.branch,
+        r.academicYear || '2026-27',
         r.semester,
         r.section,
+        r.subjectCode ? `${r.subjectCode} - ${r.subjectName || ''}` : 'N/A',
         r.batch,
         r.sgpa,
         r.resultStatus,
@@ -322,6 +353,7 @@ export class ReportsService {
         'Student Name',
         'Registration Number',
         'Branch',
+        'Academic Year',
         'Semester',
         'Section',
         'Batch',
@@ -336,6 +368,7 @@ export class ReportsService {
         r.studentName,
         r.registrationNumber,
         r.branch,
+        r.academicYear || '2026-27',
         r.semester,
         r.section,
         r.batch,

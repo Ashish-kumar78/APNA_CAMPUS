@@ -33,14 +33,25 @@ import {
   MessageSquare
 } from 'lucide-react';
 import './PlacementPortal.css';
+import { MasterSidebarHeader, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import { api } from '../services/api.js';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 
 export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, drives, companies, applicants, offers, stats
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.erp-main-content, .role-dash-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
 
   // Core Data States
   const [companies, setCompanies] = useState([]);
@@ -355,39 +366,12 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
       )}
 
       {/* Sidebar Navigation */}
-      <aside className={`erp-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="erp-sidebar-brand">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div className="erp-place-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-            </div>
-            <div className="erp-brand-text">
-              <h2>Apna Campus</h2>
-              <span>Training &amp; Placement Cell</span>
-            </div>
-          </div>
-          {sidebarOpen && (
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
+      {sidebarOpen && (
+        <aside className="erp-sidebar">
+          <MasterSidebarHeader
+            roleTitle="TRAINING & PLACEMENT"
+            onToggle={() => setSidebarOpen(false)}
+          />
 
         <nav className="erp-sidebar-nav">
           <button
@@ -464,6 +448,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
           </button>
         </nav>
       </aside>
+      )}
 
       {/* Main Content */}
       <main className="erp-main-content">
@@ -473,6 +458,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
             account={account}
             onLogout={onLogout}
             onSwitchRole={onSwitchRole}
+            sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(o => !o)}
             onNavigate={(target) => {
               if (target === 'place-drives') setActiveTab('drives');
@@ -493,15 +479,21 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                 title="Show Navigation"
                 aria-label="Show Navigation"
                 style={{
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '6px',
+                  background: '#000000',
+                  color: '#ffffff',
+                  border: '1px solid #000000',
+                  borderRadius: '10px',
+                  width: '38px',
+                  height: '38px',
                   cursor: 'pointer',
                   display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 3px 10px rgba(0, 0, 0, 0.3)',
+                  flexShrink: 0
                 }}
               >
-                <Menu size={20} color="#0f172a" />
+                <Menu size={20} color="#ffffff" stroke="#ffffff" />
               </button>
             )}
             <div>

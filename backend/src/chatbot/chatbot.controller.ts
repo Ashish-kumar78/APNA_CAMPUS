@@ -29,12 +29,12 @@ export class ChatbotController {
       body.context || {},
       user,
     );
-
-    return res;
   }
 
   @Get('suggestions')
-  @ApiOperation({ summary: 'Get role and page-specific suggested questions' })
+  @ApiOperation({
+    summary: 'Get role and page-specific suggested questions',
+  })
   async getSuggestions(
     @Query('role') role?: string,
     @Query('page') page?: string,
@@ -42,4 +42,3 @@ export class ChatbotController {
     return this.chatbotService.getSuggestedPrompts(role, page);
   }
 }
-

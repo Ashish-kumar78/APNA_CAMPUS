@@ -373,21 +373,25 @@ export const ROLE_CONFIGS = {
     quickActions: [
       { id: 'review', label: 'Review Applications', icon: Users },
       { id: 'verify', label: 'Verify Documents', icon: CheckCircle2 },
-      { id: 'deadlines', label: 'Admission Deadlines', icon: Calendar },
+      { id: 'notices', label: 'Create Admission Notice', icon: Megaphone },
+      { id: 'deadlines', label: 'Manage Deadlines', icon: Calendar },
+      { id: 'export', label: 'Export Report', icon: FileSpreadsheet },
+      { id: 'cycle', label: 'Configure Cycle', icon: Layers },
     ],
     overviewTitle: 'Recent Admission Applications & Verification Status',
     overviewItems: [
-      { col1: 'APP-2026-901', col2: 'Tanmayee Rout', col3: 'B.Tech - Computer Science', col4: 'OJEE Rank 1,840 · Enrolled', badge: 'status-green' },
-      { col1: 'APP-2026-902', col2: 'Ashutosh Pradhan', col3: 'B.Tech - AI & Machine Learning', col4: 'JEE Main 88.4% · Document Verified', badge: 'status-blue' },
-      { col1: 'APP-2026-903', col2: 'Snigdha Mohanty', col3: 'Master of Business Admin (MBA)', col4: 'MAT 720 Score · Provisional Offer', badge: 'status-violet' },
-      { col1: 'APP-2026-904', col2: 'Debabrata Sahoo', col3: 'B.Tech - Electronics & Comm', col4: 'Awaiting 12th Board Marksheet', badge: 'status-amber' },
-      { col1: 'APP-2026-905', col2: 'Pooja Priyadarshini', col3: 'Master of Computer App (MCA)', col4: 'OJEE MCA Rank 340 · Enrolled', badge: 'status-green' },
+      { col1: 'APP-2026-001', col2: 'Subhashree Behera', col3: 'B.Tech - Computer Science', col4: 'JEE Main 88.5% · In Review', badge: 'status-blue' },
+      { col1: 'APP-2026-002', col2: 'Manish Kumar Pradhan', col3: 'B.Tech - Computer Science', col4: 'OJEE Rank 1,204 · Docs Verified', badge: 'status-green' },
+      { col1: 'APP-2026-003', col2: 'Aditi Priyadarshini', col3: 'Bachelor of Computer App (BCA)', col4: 'Merit 84.0% · Offer Sent', badge: 'status-violet' },
+      { col1: 'APP-2026-004', col2: 'Debabrata Sahoo', col3: 'B.Tech - Electronics & Comm', col4: 'Awaiting 12th Board Marksheet', badge: 'status-amber' },
+      { col1: 'APP-2026-006', col2: 'Ashutosh Pradhan', col3: 'B.Tech - AI & Machine Learning', col4: 'Fee Confirmed · Ready to Enroll', badge: 'status-blue' },
+      { col1: 'APP-2026-007', col2: 'Pooja Priyadarshini', col3: 'Bachelor of Computer App (BCA)', col4: 'Enrolled · STU-26-0004', badge: 'status-green' },
     ],
     overviewColumns: ['Application ID', 'Candidate Name', 'Program Applied', 'Admission Status'],
     announcements: [
       { day: '24', month: 'OCT', tag: 'DEADLINE', tagTone: 'tag-amber', title: 'OJEE Final Spot Round Verification Closes', desc: 'Candidates allotted in the institutional mop-up round must report with original documents.' },
-      { day: '20', month: 'OCT', tag: 'COUNSELING', tagTone: 'tag-blue', title: 'Direct Institutional Quota Counseling Session', desc: 'Open house counseling for vacant lateral entry B.Tech seats at Seminar Hall 1.' },
-      { day: '16', month: 'OCT', tag: 'ENROLLMENT', tagTone: 'tag-green', title: 'Orientation Program for 2026-27 Admitted Batch', desc: 'Academic induction, LMS credential distribution, and mentor allocation scheduled.' },
+      { day: '26', month: 'OCT', tag: 'COUNSELING', tagTone: 'tag-blue', title: 'Direct Institutional Quota Counseling Session', desc: 'Open house counseling for vacant lateral entry B.Tech seats at Seminar Hall 1.' },
+      { day: '02', month: 'NOV', tag: 'ENROLLMENT', tagTone: 'tag-green', title: 'Orientation Program for 2026-27 Admitted Batch', desc: 'Academic induction, LMS credential distribution, and mentor allocation scheduled.' },
     ],
   },
 
@@ -943,6 +947,7 @@ export default function RoleDashboardLanding({
   onNavigateTab,
   onSwitchRole,
   onToggleSidebar,
+  sidebarOpen,
 }) {
   // Resolve configuration from prop or account
   const resolvedKey = String(roleKey || account?.role || 'super_admin').toLowerCase();
@@ -1218,13 +1223,13 @@ export default function RoleDashboardLanding({
             ========================================================== */}
         <header className="role-dash-header">
           <div className="role-header-left">
-            {onToggleSidebar && (
+            {onToggleSidebar && !sidebarOpen && (
               <button
                 className="role-nav-toggle-btn"
                 type="button"
                 onClick={onToggleSidebar}
-                title="Toggle Navigation Menu"
-                aria-label="Toggle Navigation Menu"
+                title="Open Navigation Menu"
+                aria-label="Open Navigation Menu"
               >
                 <Menu size={20} />
               </button>

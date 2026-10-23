@@ -548,6 +548,7 @@ function AttendanceDetails() {
       label: '1ST Semester', held: 406, present: 391,
       subjects: [
         ['Mathematics-I (TT) [ALL]', 41, 39],
+        
         ['Basic Civil Engineering (T) [ALL]', 38, 37],
         ['Workshop Practice Lab [ALL]', 15, 15],
         ['Constitution of India (T) [ALL]', 22, 22],

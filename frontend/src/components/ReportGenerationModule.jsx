@@ -24,22 +24,19 @@ import {
 import './ReportGenerationModule.css';
 import { api } from '../services/api.js';
 import * as XLSX from 'xlsx';
-import { erpStore } from '../services/erpStore.js';
-import { initialFacultyAssignments, generateAllStudents } from '../data/collegeData.js';
 
 export default function ReportGenerationModule({ account, role }) {
   const userRole = (role || account?.role || '').toLowerCase();
   const isFaculty = userRole === 'faculty';
-  const minAttendanceThreshold = erpStore.getSettings()?.minimumAttendancePercentage || 75;
 
 
   // Filter States
-  const [branch, setBranch] = useState('CSE');
-  const [academicYear, setAcademicYear] = useState('2026-27');
-  const [semester, setSemester] = useState('Semester 5');
-  const [batch, setBatch] = useState('2023–2027');
-  const [section, setSection] = useState('Section A');
-  const [subjectCode, setSubjectCode] = useState('CS501');
+  const [branch, setBranch] = useState('All');
+  const [academicYear, setAcademicYear] = useState('All');
+  const [semester, setSemester] = useState('All');
+  const [batch, setBatch] = useState('All');
+  const [section, setSection] = useState('All');
+  const [subjectCode, setSubjectCode] = useState('');
   const [scopeMode, setScopeMode] = useState(isFaculty ? 'all_assigned' : 'section');
   const [individualStudentRoll, setIndividualStudentRoll] = useState('');
   const [reportType, setReportType] = useState('attendance'); // attendance | cgpa | sgpa | document
@@ -70,22 +67,17 @@ export default function ReportGenerationModule({ account, role }) {
 
   // Extract official teaching assignments for faculty
   const facultyAssignments = useMemo(() => {
-    if (filterConfig?.assignedClasses && filterConfig.assignedClasses.length > 0) {
-      return filterConfig.assignedClasses;
-    }
-    return initialFacultyAssignments.filter(
-      (fa) => fa.facultyName.includes('Mohanty') || fa.facultyId === 'FAC-042',
-    );
+    return filterConfig?.assignedClasses || [];
   }, [filterConfig]);
 
   // Dependent options for faculty based on teaching responsibilities
   const availableYears = useMemo(() => {
-    return Array.from(new Set(facultyAssignments.map((a) => a.academicYear || '2026-27'))).sort().reverse();
+    return Array.from(new Set(facultyAssignments.map((a) => a.academicYear).filter(Boolean))).sort().reverse();
   }, [facultyAssignments]);
 
   const availableSemesters = useMemo(() => {
     const sems = facultyAssignments
-      .filter((a) => (a.academicYear || '2026-27') === academicYear)
+      .filter((a) => academicYear === 'All' || a.academicYear === academicYear)
       .map((a) => a.semester);
     return Array.from(new Set(sems)).sort((a, b) => {
       const numA = parseInt(a.replace(/[^0-9]/g, ''), 10) || 0;
@@ -96,7 +88,7 @@ export default function ReportGenerationModule({ account, role }) {
 
   const availableSections = useMemo(() => {
     const secs = facultyAssignments
-      .filter((a) => (a.academicYear || '2026-27') === academicYear && a.semester === semester)
+      .filter((a) => (academicYear === 'All' || a.academicYear === academicYear) && (semester === 'All' || a.semester === semester))
       .map((a) => a.section);
     return Array.from(new Set(secs)).sort();
   }, [facultyAssignments, academicYear, semester]);
@@ -104,8 +96,8 @@ export default function ReportGenerationModule({ account, role }) {
   const availableSubjects = useMemo(() => {
     const list = facultyAssignments.filter(
       (a) =>
-        (a.academicYear || '2026-27') === academicYear &&
-        (scopeMode === 'subject' || scopeMode === 'all_assigned' || a.semester === semester),
+        (academicYear === 'All' || a.academicYear === academicYear) &&
+        (scopeMode === 'subject' || scopeMode === 'all_assigned' || semester === 'All' || a.semester === semester),
     );
     const seen = new Set();
     return list.filter((a) => {
@@ -129,44 +121,18 @@ export default function ReportGenerationModule({ account, role }) {
         const res = await api.getReportFilters();
         if (res && res.success) {
           setFilterConfig(res);
-          if (res.userScope?.defaultBranch) {
-            setBranch(res.userScope.defaultBranch);
-          }
+          setBranch(res.userScope?.defaultBranch || 'All');
+          const firstAssignment = res.assignedClasses?.[0];
+          setAcademicYear(firstAssignment?.academicYear || 'All');
+          setSemester(firstAssignment?.semester || 'All');
+          setSection(firstAssignment?.section || 'All');
+          setSubjectCode(firstAssignment?.subjectCode || '');
+          setBatch('All');
         }
       } catch (err) {
-        console.warn('Using client fallback for report filters:', err.message);
-        // Fallback filter config
-        const isDeptLocked = userRole === 'hod' || userRole === 'faculty';
-        setFilterConfig({
-          branches: [
-            { code: 'CSE', name: 'Computer Science & Engineering', isAllowed: true },
-            { code: 'AIML', name: 'Artificial Intelligence & Machine Learning', isAllowed: !isDeptLocked },
-            { code: 'ECE', name: 'Electronics & Communication', isAllowed: !isDeptLocked },
-            { code: 'EEE', name: 'Electrical & Electronics', isAllowed: !isDeptLocked },
-            { code: 'MECH', name: 'Mechanical Engineering', isAllowed: !isDeptLocked },
-            { code: 'CIVIL', name: 'Civil Engineering', isAllowed: !isDeptLocked },
-            { code: 'MBA', name: 'Master of Business Administration', isAllowed: !isDeptLocked },
-            { code: 'MCA', name: 'Master of Computer Applications', isAllowed: !isDeptLocked },
-          ],
-          semesters: [
-            { number: 1, label: 'Semester 1' },
-            { number: 2, label: 'Semester 2' },
-            { number: 3, label: 'Semester 3' },
-            { number: 4, label: 'Semester 4' },
-            { number: 5, label: 'Semester 5' },
-            { number: 6, label: 'Semester 6' },
-            { number: 7, label: 'Semester 7' },
-            { number: 8, label: 'Semester 8' },
-          ],
-          batches: ['2024–2028', '2023–2027', '2022–2026', '2021–2025'],
-          sections: ['Section A', 'Section B', 'Section C'],
-          userScope: {
-            role: userRole,
-            department: account?.department || 'Computer Science & Engineering',
-            isBranchRestricted: isDeptLocked,
-            defaultBranch: 'CSE',
-          },
-        });
+        console.error('Could not load report filters:', err);
+        setFilterConfig({ branches: [], semesters: [], batches: [], sections: [], assignedClasses: [], reportTypes: [], userScope: {} });
+        triggerToast('Live report filters are unavailable. Check the backend connection.', 'error');
       }
     }
     loadFilters();
@@ -188,10 +154,9 @@ export default function ReportGenerationModule({ account, role }) {
     try {
       const params = {
         branch,
-        semester,
-        batch,
-        section,
-        academicYear: isFaculty ? academicYear : undefined,
+        semester: isFaculty && scopeMode === 'all_assigned' ? 'All' : semester,
+        batch: isFaculty ? academicYear : batch,
+        section: isFaculty && ['all_assigned', 'class'].includes(scopeMode) ? 'All' : section,
         subjectCode: isFaculty ? subjectCode : undefined,
         scopeMode: isFaculty ? scopeMode : undefined,
         rollNumber: isFaculty && scopeMode === 'individual' ? (individualStudentRoll || search) : undefined,
@@ -240,9 +205,12 @@ export default function ReportGenerationModule({ account, role }) {
         throw new Error(res?.message || 'Failed to load report data');
       }
     } catch (err) {
-      console.warn('Falling back to local calculation engine:', err.message);
-      // Deterministic Client Fallback Calculation Engine
-      generateLocalReport();
+      console.error('Could not load report data:', err);
+      setReportData([]);
+      setAllMatchingRecords([]);
+      setSummary(null);
+      setMeta(null);
+      triggerToast(err?.message || 'Report data could not be loaded from the backend.', 'error');
     } finally {
       setLoading(false);
     }
@@ -273,462 +241,6 @@ export default function ReportGenerationModule({ account, role }) {
     fetchReport();
   }, [fetchReport]);
 
-  // Client Fallback Report Generator (Ensures zero UI downtime)
-  const generateLocalReport = () => {
-    let items = [];
-
-    if (isFaculty) {
-      const allGenStudents = generateAllStudents();
-
-      if (scopeMode === 'all_assigned') {
-        // Consolidated Whole-Group across all assigned classes without student duplication
-        const seen = new Set();
-        items = allGenStudents
-          .filter((st) => {
-            if (seen.has(st.studentId)) return false;
-            seen.add(st.studentId);
-            return true;
-          })
-          .map((st, i) => {
-            const fa = facultyAssignments.find(
-              (a) => (a.academicYear || '2026-27') === st.academicYear && a.semester === st.semester && a.section === st.section,
-            ) || facultyAssignments[0];
-            return {
-              slNo: i + 1,
-              studentName: st.name,
-              registrationNumber: st.studentId,
-              rollNumber: st.rollNumber,
-              branch: st.deptCode || 'CSE',
-              academicYear: st.academicYear,
-              semester: st.semester,
-              section: st.section,
-              batch: st.academicYear === '2025-26' ? '2022–2026' : '2023–2027',
-              subjectCode: fa?.subjectCode || subjectCode || 'CS501',
-              subjectName: fa?.subjectName || 'Data Structures & Algorithms',
-              attendance: st.attendance,
-              cgpa: st.cgpa,
-              sgpa: Math.min(10.0, Math.max(5.0, Number((st.cgpa + ((((i + 1) * 11) % 30) - 15) / 100).toFixed(2)))),
-            };
-          });
-      } else if (scopeMode === 'subject') {
-        // Specific subject taught across assigned sections
-        const matchedClasses = facultyAssignments.filter(
-          (a) => a.subjectCode === subjectCode && (a.academicYear || '2026-27') === academicYear,
-        );
-        const matchKeys = new Set(
-          matchedClasses.map((c) => `${c.academicYear || '2026-27'}-${c.semester}-${c.section}`),
-        );
-        const subjName = matchedClasses[0]?.subjectName || 'Assigned Course';
-
-        items = allGenStudents
-          .filter((st) => matchKeys.has(`${st.academicYear}-${st.semester}-${st.section}`))
-          .map((st, i) => ({
-            slNo: i + 1,
-            studentName: st.name,
-            registrationNumber: st.studentId,
-            rollNumber: st.rollNumber,
-            branch: st.deptCode || 'CSE',
-            academicYear: st.academicYear,
-            semester: st.semester,
-            section: st.section,
-            batch: st.academicYear === '2025-26' ? '2022–2026' : '2023–2027',
-            subjectCode,
-            subjectName: subjName,
-            attendance: st.attendance,
-            cgpa: st.cgpa,
-            sgpa: Math.min(10.0, Math.max(5.0, Number((st.cgpa + ((((i + 1) * 11) % 30) - 15) / 100).toFixed(2)))),
-          }));
-      } else if (scopeMode === 'class') {
-        // Selected class or semester cohort across assigned sections
-        const matchedClasses = facultyAssignments.filter(
-          (a) => a.semester === semester && (a.academicYear || '2026-27') === academicYear,
-        );
-        const matchSections = new Set(matchedClasses.map((c) => c.section));
-        const subj = matchedClasses.find((c) => c.subjectCode === subjectCode) || matchedClasses[0];
-
-        items = allGenStudents
-          .filter((st) => st.academicYear === academicYear && st.semester === semester && matchSections.has(st.section))
-          .map((st, i) => ({
-            slNo: i + 1,
-            studentName: st.name,
-            registrationNumber: st.studentId,
-            rollNumber: st.rollNumber,
-            branch: st.deptCode || 'CSE',
-            academicYear: st.academicYear,
-            semester: st.semester,
-            section: st.section,
-            batch: st.academicYear === '2025-26' ? '2022–2026' : '2023–2027',
-            subjectCode: subj?.subjectCode || subjectCode,
-            subjectName: subj?.subjectName || 'Assigned Subject',
-            attendance: st.attendance,
-            cgpa: st.cgpa,
-            sgpa: Math.min(10.0, Math.max(5.0, Number((st.cgpa + ((((i + 1) * 11) % 30) - 15) / 100).toFixed(2)))),
-          }));
-      } else if (scopeMode === 'individual') {
-        // Individual student
-        const qRoll = (individualStudentRoll || search || '').trim().toLowerCase();
-        const subj = facultyAssignments.find((a) => a.subjectCode === subjectCode) || facultyAssignments[0];
-
-        items = allGenStudents
-          .filter((st) => {
-            if (!qRoll) return true;
-            return (
-              st.rollNumber.toLowerCase().includes(qRoll) ||
-              st.studentId.toLowerCase().includes(qRoll) ||
-              st.name.toLowerCase().includes(qRoll)
-            );
-          })
-          .map((st, i) => ({
-            slNo: i + 1,
-            studentName: st.name,
-            registrationNumber: st.studentId,
-            rollNumber: st.rollNumber,
-            branch: st.deptCode || 'CSE',
-            academicYear: st.academicYear,
-            semester: st.semester,
-            section: st.section,
-            batch: st.academicYear === '2025-26' ? '2022–2026' : '2023–2027',
-            subjectCode: subj?.subjectCode || subjectCode,
-            subjectName: subj?.subjectName || 'Assigned Subject',
-            attendance: st.attendance,
-            cgpa: st.cgpa,
-            sgpa: Math.min(10.0, Math.max(5.0, Number((st.cgpa + ((((i + 1) * 11) % 30) - 15) / 100).toFixed(2)))),
-          }));
-      } else {
-        // Selected section cohort
-        const subj =
-          facultyAssignments.find(
-            (a) =>
-              (a.academicYear || '2026-27') === academicYear &&
-              a.semester === semester &&
-              a.section === section,
-          ) || facultyAssignments[0];
-
-        items = allGenStudents
-          .filter((st) => st.academicYear === academicYear && st.semester === semester && st.section === section)
-          .map((st, i) => ({
-            slNo: i + 1,
-            studentName: st.name,
-            registrationNumber: st.studentId,
-            rollNumber: st.rollNumber,
-            branch: st.deptCode || 'CSE',
-            academicYear: st.academicYear,
-            semester: st.semester,
-            section: st.section,
-            batch: st.academicYear === '2025-26' ? '2022–2026' : '2023–2027',
-            subjectCode: subj?.subjectCode || subjectCode,
-            subjectName: subj?.subjectName || 'Assigned Subject',
-            attendance: st.attendance,
-            cgpa: st.cgpa,
-            sgpa: Math.min(10.0, Math.max(5.0, Number((st.cgpa + ((((i + 1) * 11) % 30) - 15) / 100).toFixed(2)))),
-          }));
-      }
-    } else {
-      const studentCount = 91;
-      const names = [
-        'Rakesh Das', 'Amit Nayak', 'Raj Sahoo', 'Priya Patra', 'Sourav Mohanty',
-        'Sneha Barik', 'Deepak Rout', 'Puja Behera', 'Bikash Pradhan', 'Swati Samal',
-        'Rohit Panda', 'Monika Mishra', 'Subham Tripathy', 'Ipsita Parida', 'Alok Jena',
-        'Smruti Swain', 'Chandan Mangaraj', 'Tanmay Muduli', 'Lipika Kar', 'Manas Acharya',
-        'Pragyan Das', 'Biswajit Nayak', 'Archana Sahoo', 'Gourab Patra', 'Satyajit Mohanty',
-        'Sonali Barik', 'Ashish Rout', 'Kiran Behera', 'Pranab Pradhan', 'Niharika Samal',
-      ];
-
-      for (let i = 1; i <= studentCount; i++) {
-        const roll = String(i).padStart(2, '0');
-        const name = names[(i - 1) % names.length];
-        const regNo = `23052010${roll}`;
-        const attRate = 65 + ((i * 13) % 34);
-        const cgpaVal = Number((7.0 + ((i * 17) % 280) / 100).toFixed(2));
-        const variation = (((i * 17) % 30) - 15) / 100;
-        const sgpaVal = Math.min(10.0, Math.max(4.5, Number((cgpaVal + variation).toFixed(2))));
-
-        items.push({
-          slNo: i,
-          studentName: name,
-          registrationNumber: regNo,
-          rollNumber: roll,
-          branch: branch || 'CSE',
-          academicYear: '2026-27',
-          semester: semester || 'Semester 5',
-          section: section || 'Section A',
-          batch: batch || '2023–2027',
-          subjectCode: 'CS501',
-          subjectName: 'Data Structures & Algorithms',
-          attendance: attRate,
-          cgpa: cgpaVal,
-          sgpa: sgpaVal,
-        });
-      }
-    }
-
-    // Apply search filter
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      items = items.filter(
-        (item) =>
-          item.studentName.toLowerCase().includes(q) ||
-          item.registrationNumber.toLowerCase().includes(q) ||
-          (item.rollNumber && item.rollNumber.toLowerCase().includes(q)),
-      );
-    }
-
-    let finalRecords = [];
-    let sumData = null;
-
-    if (reportType === 'attendance') {
-      let daysInRange = 10;
-      if (dateFrom && dateTo) {
-        const d1 = new Date(dateFrom);
-        const d2 = new Date(dateTo);
-        const diff = Math.abs(d2.getTime() - d1.getTime());
-        daysInRange = Math.max(1, Math.round(Math.ceil(diff / (1000 * 60 * 60 * 24)) * (6 / 7)));
-      }
-      const classesHeld = daysInRange * 6;
-      let totalPresent = 0;
-      let totalHeld = 0;
-      let shortage = 0;
-
-      let mappedRecords = items.map((it, idx) => {
-        const present = Math.min(classesHeld, Math.round((classesHeld * it.attendance) / 100));
-        const absent = classesHeld - present;
-        const pct = classesHeld > 0 ? (present / classesHeld) * 100 : 0;
-        if (pct < minAttendanceThreshold) shortage++;
-        totalPresent += present;
-        totalHeld += classesHeld;
-        return {
-          slNo: idx + 1,
-          studentName: it.studentName,
-          registrationNumber: it.registrationNumber,
-          rollNumber: it.rollNumber,
-          branch: it.branch,
-          academicYear: it.academicYear || academicYear,
-          semester: it.semester,
-          section: it.section,
-          subjectCode: it.subjectCode || subjectCode,
-          subjectName: it.subjectName,
-          totalClassesHeld: classesHeld,
-          present,
-          absent,
-          attendancePercentage: pct.toFixed(2) + '%',
-          rawPct: Number(pct.toFixed(2)),
-        };
-      });
-
-      // Apply manual attendance percentage filter if specified
-      if (attendanceFilterMode !== 'all' && manualAttendancePct !== '') {
-        const target = Number(manualAttendancePct);
-        mappedRecords = mappedRecords.filter((r) => {
-          if (attendanceFilterMode === 'lte') return r.rawPct <= target;
-          if (attendanceFilterMode === 'gte') return r.rawPct >= target;
-          if (attendanceFilterMode === 'eq') return Math.abs(r.rawPct - target) <= 2.5;
-          return true;
-        });
-      }
-
-      mappedRecords.forEach((r) => {
-        if (r.rawPct < 75) shortage++;
-        totalPresent += r.present;
-        totalHeld += r.totalClassesHeld;
-      });
-
-      finalRecords = mappedRecords;
-
-      sumData = {
-        totalStudents: finalRecords.length,
-        averageMetric: totalHeld > 0 ? Number(((totalPresent / totalHeld) * 100).toFixed(2)) : 0,
-        metricLabel: 'Average Attendance Rate (%)',
-        recordsRequiringAttention: shortage,
-        attentionLabel: `Students with Shortage (<${minAttendanceThreshold}%)`,
-        totalMatchingRecords: finalRecords.length,
-      };
-    } else if (reportType === 'cgpa') {
-      let totalCgpa = 0;
-      let warning = 0;
-
-      finalRecords = items.map((it, idx) => {
-        let status = 'Good Standing';
-        if (it.cgpa >= 9.0) status = "Dean's Honors List";
-        else if (it.cgpa >= 8.0) status = 'Good Standing (Distinction)';
-        else if (it.cgpa >= 6.5) status = 'Good Standing (First Class)';
-        else if (it.cgpa < 5.0) {
-          status = 'Academic Warning / Review';
-          warning++;
-        }
-        totalCgpa += it.cgpa;
-
-        return {
-          slNo: idx + 1,
-          studentName: it.studentName,
-          registrationNumber: it.registrationNumber,
-          rollNumber: it.rollNumber,
-          branch: it.branch,
-          academicYear: it.academicYear || academicYear,
-          semester: it.semester,
-          section: it.section,
-          subjectCode: it.subjectCode || subjectCode,
-          subjectName: it.subjectName,
-          batch: it.batch,
-          cgpa: it.cgpa,
-          academicStatus: status,
-        };
-      });
-
-      sumData = {
-        totalStudents: finalRecords.length,
-        averageMetric: finalRecords.length > 0 ? Number((totalCgpa / finalRecords.length).toFixed(2)) : 0,
-        metricLabel: 'Average Institutional CGPA',
-        recordsRequiringAttention: warning,
-        attentionLabel: 'Students on Academic Warning (<6.0)',
-        totalMatchingRecords: finalRecords.length,
-      };
-    } else if (reportType === 'sgpa') {
-      let totalSgpa = 0;
-      let backlogs = 0;
-
-      finalRecords = items.map((it, idx) => {
-        let status = 'Pass';
-        if (it.sgpa >= 9.0) status = 'Pass (First Class Distinction)';
-        else if (it.sgpa >= 6.5) status = 'Pass (First Class)';
-        else if (it.sgpa < 5.0) {
-          status = 'Fail (Backlog in 1 Paper)';
-          backlogs++;
-        }
-        totalSgpa += it.sgpa;
-
-        return {
-          slNo: idx + 1,
-          studentName: it.studentName,
-          registrationNumber: it.registrationNumber,
-          rollNumber: it.rollNumber,
-          branch: it.branch,
-          academicYear: it.academicYear || academicYear,
-          semester: it.semester,
-          section: it.section,
-          subjectCode: it.subjectCode || subjectCode,
-          subjectName: it.subjectName,
-          batch: it.batch,
-          sgpa: it.sgpa,
-          resultStatus: status,
-        };
-      });
-
-      sumData = {
-        totalStudents: finalRecords.length,
-        averageMetric: finalRecords.length > 0 ? Number((totalSgpa / finalRecords.length).toFixed(2)) : 0,
-        metricLabel: 'Average Semester SGPA',
-        recordsRequiringAttention: backlogs,
-        attentionLabel: 'Students with Backlogs / Arrears',
-        totalMatchingRecords: finalRecords.length,
-      };
-    } else if (reportType === 'document') {
-      let pendingCount = 0;
-      let verifiedSum = 0;
-
-      finalRecords = items.map((it, idx) => {
-        let submitted = 5;
-        let verified = 5;
-        let status = 'Verified & Complete';
-
-        if (idx % 11 === 0) {
-          submitted = 4;
-          verified = 3;
-          status = 'Action Required (Deficient)';
-          pendingCount++;
-        } else if (idx % 7 === 0) {
-          submitted = 5;
-          verified = 4;
-          status = 'Pending Office Verification';
-          pendingCount++;
-        }
-
-        verifiedSum += verified;
-
-        return {
-          slNo: idx + 1,
-          studentName: it.studentName,
-          registrationNumber: it.registrationNumber,
-          rollNumber: it.rollNumber,
-          branch: it.branch,
-          academicYear: it.academicYear || academicYear,
-          semester: it.semester,
-          section: it.section,
-          subjectCode: it.subjectCode || subjectCode,
-          subjectName: it.subjectName,
-          batch: it.batch,
-          totalRequired: 5,
-          submitted,
-          verified,
-          pending: 5 - verified,
-          verificationStatus: status,
-        };
-      });
-
-      sumData = {
-        totalStudents: finalRecords.length,
-        averageMetric: finalRecords.length > 0 ? Number(((verifiedSum / (finalRecords.length * 5)) * 100).toFixed(1)) : 100,
-        metricLabel: 'Document Compliance Rate (%)',
-        recordsRequiringAttention: pendingCount,
-        attentionLabel: 'Students with Incomplete Documents',
-        totalMatchingRecords: finalRecords.length,
-      };
-    }
-
-    // Apply sorting
-    if (sortBy) {
-      finalRecords.sort((a, b) => {
-        if (sortBy === 'attendancePercentage' || sortBy === 'rawPct') {
-          const valA = a.rawPct ?? parseFloat(a.attendancePercentage ?? 0);
-          const valB = b.rawPct ?? parseFloat(b.attendancePercentage ?? 0);
-          return sortOrder === 'asc' ? valA - valB : valB - valA;
-        }
-        let vA = a[sortBy];
-        let vB = b[sortBy];
-        if (typeof vA === 'number' && typeof vB === 'number') {
-          return sortOrder === 'asc' ? vA - vB : vB - vA;
-        }
-        if (typeof vA === 'string' && vA.endsWith('%') && typeof vB === 'string' && vB.endsWith('%')) {
-          return sortOrder === 'asc' ? parseFloat(vA) - parseFloat(vB) : parseFloat(vB) - parseFloat(vA);
-        }
-        const sA = String(vA || '').toLowerCase();
-        const sB = String(vB || '').toLowerCase();
-        return sortOrder === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA);
-      });
-      finalRecords.forEach((r, i) => {
-        r.slNo = i + 1;
-      });
-    }
-
-    setAllMatchingRecords(finalRecords);
-    const startIdx = (page - 1) * pageSize;
-    setReportData(finalRecords.slice(startIdx, startIdx + pageSize));
-    setSummary(sumData);
-    setMeta({
-      title: reportType.toUpperCase() + ' REPORT' + (isFaculty ? ` — ${scopeMode.toUpperCase().replace('_', ' ')}` : ''),
-      appliedFilters: {
-        branch,
-        semester,
-        batch,
-        section,
-        academicYear,
-        subjectCode,
-        scopeMode,
-        dateFrom,
-        dateTo,
-      },
-      dateBasis:
-        dateFrom && dateTo
-          ? `Instructional sessions between ${dateFrom} and ${dateTo}`
-          : 'Current Autonomous Academic Term',
-      pagination: {
-        page,
-        limit: pageSize,
-        total: finalRecords.length,
-        totalPages: Math.ceil(finalRecords.length / pageSize) || 1,
-      },
-    });
-  };
-
   // 3. Sorting Handler
   const handleSort = (columnKey) => {
     if (sortBy === columnKey) {
@@ -744,13 +256,13 @@ export default function ReportGenerationModule({ account, role }) {
   const handleResetFilters = () => {
     const isDeptLocked = filterConfig?.userScope?.isBranchRestricted;
     if (!isDeptLocked) {
-      setBranch('CSE');
+      setBranch('All');
     }
-    setAcademicYear('2026-27');
-    setSemester('Semester 5');
-    setBatch('2023–2027');
-    setSection('Section A');
-    setSubjectCode('CS501');
+    setAcademicYear('All');
+    setSemester('All');
+    setBatch('All');
+    setSection('All');
+    setSubjectCode('');
     setScopeMode(isFaculty ? 'all_assigned' : 'section');
     setIndividualStudentRoll('');
     setReportType('attendance');
@@ -762,7 +274,7 @@ export default function ReportGenerationModule({ account, role }) {
     setSortBy('slNo');
     setSortOrder('asc');
     setPage(1);
-    triggerToast('All report filters reset to default parameters.');
+    triggerToast('Report filters reset. Results use live backend data.');
   };
 
   // 5. Excel Download Handler
@@ -772,10 +284,9 @@ export default function ReportGenerationModule({ account, role }) {
     try {
       const params = {
         branch,
-        semester,
-        batch,
-        section,
-        academicYear: isFaculty ? academicYear : undefined,
+        semester: isFaculty && scopeMode === 'all_assigned' ? 'All' : semester,
+        batch: isFaculty ? academicYear : batch,
+        section: isFaculty && ['all_assigned', 'class'].includes(scopeMode) ? 'All' : section,
         subjectCode: isFaculty ? subjectCode : undefined,
         scopeMode: isFaculty ? scopeMode : undefined,
         rollNumber: isFaculty && scopeMode === 'individual' ? (individualStudentRoll || search) : undefined,
@@ -1074,6 +585,7 @@ export default function ReportGenerationModule({ account, role }) {
                       {yr}
                     </option>
                   ))}
+                  {availableYears.length === 0 && <option value="All">No assigned academic years</option>}
                 </select>
               </div>
 
@@ -1090,6 +602,7 @@ export default function ReportGenerationModule({ account, role }) {
                     setPage(1);
                   }}
                 >
+                  <option value="All">All assigned semesters</option>
                   {availableSemesters.map((sem) => (
                     <option key={sem} value={sem}>
                       {sem}
@@ -1111,6 +624,7 @@ export default function ReportGenerationModule({ account, role }) {
                     setPage(1);
                   }}
                 >
+                  <option value="All">All assigned sections</option>
                   {availableSections.map((sec) => (
                     <option key={sec} value={sec}>
                       {sec}
@@ -1132,6 +646,7 @@ export default function ReportGenerationModule({ account, role }) {
                     setPage(1);
                   }}
                 >
+                  <option value="">No subject selected</option>
                   {availableSubjects.map((sub) => (
                     <option key={sub.subjectCode} value={sub.subjectCode}>
                       {sub.subjectCode} — {sub.subjectName}
@@ -1173,18 +688,13 @@ export default function ReportGenerationModule({ account, role }) {
                     setPage(1);
                   }}
                 >
-                  {(filterConfig?.branches || [
-                    { code: 'CSE', name: 'Computer Science & Engineering' },
-                    { code: 'AIML', name: 'AI & Machine Learning' },
-                    { code: 'ECE', name: 'Electronics & Communication' },
-                    { code: 'EEE', name: 'Electrical & Electronics' },
-                    { code: 'MECH', name: 'Mechanical Engineering' },
-                    { code: 'CIVIL', name: 'Civil Engineering' },
-                  ]).map((b) => (
+                  {!isLockedScope && <option value="All">All departments</option>}
+                  {(filterConfig?.branches || []).map((b) => (
                     <option key={b.code} value={b.code} disabled={b.isAllowed === false}>
                       {b.code} — {b.name}
                     </option>
                   ))}
+                  {(filterConfig?.branches || []).length === 0 && <option value="">No departments configured</option>}
                 </select>
               </div>
 
@@ -1200,17 +710,16 @@ export default function ReportGenerationModule({ account, role }) {
                     setPage(1);
                   }}
                 >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                    <option key={num} value={`Semester ${num}`}>
-                      Semester {num}
-                    </option>
+                  <option value="All">All semesters</option>
+                  {(filterConfig?.semesters || []).map((item) => (
+                    <option key={item.label} value={item.label}>{item.label}</option>
                   ))}
                 </select>
               </div>
 
               {/* 3. Batch Filter */}
               <div className="rg-field">
-                <label htmlFor="filter-batch">Admission Batch</label>
+                <label htmlFor="filter-batch">Academic Year</label>
                 <select
                   id="filter-batch"
                   className="rg-select"
@@ -1220,10 +729,8 @@ export default function ReportGenerationModule({ account, role }) {
                     setPage(1);
                   }}
                 >
-                  <option value="2024–2028">2024–2028 (1st/2nd Year)</option>
-                  <option value="2023–2027">2023–2027 (3rd Year)</option>
-                  <option value="2022–2026">2022–2026 (4th Year)</option>
-                  <option value="2021–2025">2021–2025 (Graduating)</option>
+                  <option value="All">All academic years</option>
+                  {(filterConfig?.batches || []).map((year) => <option key={year} value={year}>{year}</option>)}
                 </select>
               </div>
 
@@ -1239,9 +746,8 @@ export default function ReportGenerationModule({ account, role }) {
                     setPage(1);
                   }}
                 >
-                  <option value="Section A">Section A</option>
-                  <option value="Section B">Section B</option>
-                  <option value="Section C">Section C</option>
+                  <option value="All">All sections</option>
+                  {(filterConfig?.sections || []).map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
               </div>
             </>

@@ -38,13 +38,24 @@ import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import { MasterSidebarHeader, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import './PrincipalPortal.css';
 import './SuperAdminPortal.css';
 import { api } from '../services/api.js';
 
 export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeTab, setActiveTab] = useState('governance'); // governance, leaves, notices, academic_health, timetable, report-generation
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.erp-main-content, .role-dash-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [toastMessage, setToastMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -52,8 +63,8 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
   // Live Data States
   const [overviewData, setOverviewData] = useState(null);
   const [academicData, setAcademicData] = useState(null);
-  const [leaveRequests, setLeaveRequests] = useState([]);
-  const [circulars, setCirculars] = useState([]);
+  const [leaveRequests, setLeaveRequests] = useState(null);
+  const [circulars, setCirculars] = useState(null);
 
   // Leave Approvals Filter & Modal States
   const [leaveSearch, setLeaveSearch] = useState('');
@@ -115,9 +126,16 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
       } else if (circularsRes.status === 'fulfilled' && circularsRes.value?.data) {
         setCirculars(circularsRes.value.data);
       }
+      const unavailable = [
+        overviewRes.status === 'rejected' ? 'overview' : null,
+        academicRes.status === 'rejected' ? 'academic analytics' : null,
+        leavesRes.status === 'rejected' ? 'leave approvals' : null,
+        circularsRes.status === 'rejected' ? 'notices' : null,
+      ].filter(Boolean);
+      if (unavailable.length) setError(`Unavailable until the related backend workflow is configured: ${unavailable.join(', ')}.`);
     } catch (err) {
       console.error('Failed to load Principal portal data:', err);
-      setError('Some live metrics could not be loaded. Displaying cached dashboard data.');
+      setError('Live portal data could not be loaded. Retry the request.');
     } finally {
       setLoading(false);
     }
@@ -150,17 +168,15 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
     if (!approvalModal.leave) return;
     const leaveId = approvalModal.leave.id;
     try {
-      await api.decidePrincipalLeave(leaveId, 'APPROVE', 'Officially approved by Principal / Director');
+      const result = await api.decidePrincipalLeave(leaveId, 'APPROVE', 'Officially approved by Principal / Director');
+      if (!result?.success) throw new Error('The backend did not confirm the leave decision.');
       setLeaveRequests((prev) =>
-        prev.map((l) => (l.id === leaveId ? { ...l, principalStatus: 'Approved' } : l))
+        (prev || []).map((l) => (l.id === leaveId ? { ...l, principalStatus: 'Approved' } : l))
       );
       triggerToast(`Leave request #${leaveId} officially approved!`);
     } catch (err) {
       console.error('Error approving leave:', err);
-      triggerToast('Leave approved (local state updated).');
-      setLeaveRequests((prev) =>
-        prev.map((l) => (l.id === leaveId ? { ...l, principalStatus: 'Approved' } : l))
-      );
+      setError(err?.message || 'Leave approval could not be saved.');
     } finally {
       setApprovalModal({ open: false, leave: null });
     }
@@ -174,17 +190,15 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
     }
     const leaveId = rejectionModal.leave.id;
     try {
-      await api.decidePrincipalLeave(leaveId, 'REJECT', rejectionModal.reason);
+      const result = await api.decidePrincipalLeave(leaveId, 'REJECT', rejectionModal.reason);
+      if (!result?.success) throw new Error('The backend did not confirm the leave decision.');
       setLeaveRequests((prev) =>
-        prev.map((l) => (l.id === leaveId ? { ...l, principalStatus: 'Rejected' } : l))
+        (prev || []).map((l) => (l.id === leaveId ? { ...l, principalStatus: 'Rejected' } : l))
       );
       triggerToast(`Leave request #${leaveId} rejected.`);
     } catch (err) {
       console.error('Error rejecting leave:', err);
-      triggerToast('Leave rejected (local state updated).');
-      setLeaveRequests((prev) =>
-        prev.map((l) => (l.id === leaveId ? { ...l, principalStatus: 'Rejected' } : l))
-      );
+      setError(err?.message || 'Leave rejection could not be saved.');
     } finally {
       setRejectionModal({ open: false, leave: null, reason: '' });
     }
@@ -204,21 +218,8 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
         expiryDate: newNotice.expiryDate,
       };
       const res = await api.createPrincipalCircular(payload);
-      if (res?.data) {
-        setCirculars([res.data, ...circulars]);
-      } else {
-        const fallbackItem = {
-          id: `NOTIF-${Math.floor(200 + Math.random() * 800)}`,
-          title: newNotice.title,
-          scope: newNotice.scope,
-          category: newNotice.category,
-          priority: newNotice.priority,
-          status: 'Published & Broadcasted',
-          author: 'Office of the Principal / Director',
-          date: new Date().toLocaleDateString('en-GB'),
-        };
-        setCirculars([fallbackItem, ...circulars]);
-      }
+      if (!res?.success || !res?.data) throw new Error('The backend did not confirm notice creation.');
+      setCirculars((prev) => [res.data, ...(prev || [])]);
       setNewNotice({
         title: '',
         scope: 'College-wide',
@@ -230,28 +231,26 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
       triggerToast('Official circular broadcasted across Apna Campus!');
     } catch (err) {
       console.error('Error issuing circular:', err);
-      triggerToast('Circular published locally.');
+      setError(err?.message || 'Notice was not published.');
     }
   };
 
   const handleApproveNotice = async (id) => {
     try {
-      await api.decidePrincipalCircular(id, 'APPROVE', 'Cleared by Principal Secretariat');
+      const result = await api.decidePrincipalCircular(id, 'APPROVE', 'Cleared by Principal Secretariat');
+      if (!result?.success) throw new Error('The backend did not confirm notice moderation.');
       setCirculars((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, status: 'Approved & Broadcasted' } : n))
+        (prev || []).map((n) => (n.id === id ? { ...n, status: 'Approved & Broadcasted' } : n))
       );
       triggerToast(`Notice #${id} approved and published to all students & faculty!`);
     } catch (err) {
       console.error('Error approving circular:', err);
-      setCirculars((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, status: 'Approved & Broadcasted' } : n))
-      );
-      triggerToast(`Notice #${id} cleared and broadcasted!`);
+      setError(err?.message || 'Notice moderation is unavailable until a persisted approval workflow is configured.');
     }
   };
 
   // Filtered Leave List
-  const filteredLeaves = leaveRequests.filter((leave) => {
+  const filteredLeaves = (leaveRequests || []).filter((leave) => {
     const matchesSearch =
       !leaveSearch ||
       leave.applicantName?.toLowerCase().includes(leaveSearch.toLowerCase()) ||
@@ -275,7 +274,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
   });
 
   // Filtered Circulars List
-  const filteredCirculars = circulars.filter((c) => {
+  const filteredCirculars = (circulars || []).filter((c) => {
     const matchesSearch =
       !circularSearch ||
       c.title?.toLowerCase().includes(circularSearch.toLowerCase()) ||
@@ -286,12 +285,8 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
   });
 
   // Calculate unread / pending badge counts
-  const pendingLeavesCount = leaveRequests.filter((l) =>
-    l.principalStatus?.includes('Pending')
-  ).length;
-  const pendingNoticesCount = circulars.filter((c) =>
-    c.status?.includes('Pending')
-  ).length;
+  const pendingLeavesCount = leaveRequests == null ? null : leaveRequests.filter((l) => l.principalStatus?.includes('Pending')).length;
+  const pendingNoticesCount = circulars == null ? null : circulars.filter((c) => c.status?.includes('Pending')).length;
 
   // Export Academic Analytics summary as CSV
   const handleExportAcademicCsv = () => {
@@ -320,6 +315,12 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
 
   return (
     <div className="erp-principal-layout">
+      {error && (
+        <div role="alert" className="erp-alert-box is-error" style={{ position: 'fixed', top: 20, right: 20, zIndex: 100000, maxWidth: 520 }}>
+          <span>{error}</span>
+          <button type="button" className="erp-alert-close" onClick={() => setError(null)} aria-label="Dismiss error">×</button>
+        </div>
+      )}
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -347,53 +348,10 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
       {/* Sidebar Navigation */}
       {sidebarOpen && (
         <aside className="erp-sidebar erp-principal-sidebar">
-          <div
-            className="erp-sidebar-brand"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div
-                className="erp-director-badge"
-                style={{
-                  background: '#ffffff',
-                  padding: '3px',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <img
-                  src="/logo.png"
-                  alt="Apna Campus Logo"
-                  style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
-                />
-              </div>
-              <div className="erp-brand-text">
-                <h2>Apna Campus</h2>
-                <span style={{ color: '#38bdf8' }}>Office of Principal</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <MasterSidebarHeader
+            roleTitle="PRINCIPAL OFFICE"
+            onToggle={() => setSidebarOpen(false)}
+          />
 
           <nav className="erp-sidebar-nav">
             <button
@@ -456,6 +414,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
             roleKey="principal"
             onLogout={onLogout}
             onSwitchRole={onSwitchRole}
+            sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
             onNavigateTab={(tabId) => {
               if (tabId === 'academic') setActiveTab('academic_health');
@@ -532,7 +491,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
               className={`principal-quick-btn ${activeTab === 'leaves' ? 'active' : ''}`}
               onClick={() => setActiveTab('leaves')}
             >
-              <CalendarCheck size={15} /> Leave Queue ({pendingLeavesCount} Pending)
+              <CalendarCheck size={15} /> Leave Queue ({pendingLeavesCount ?? '—'} Pending)
             </button>
             <button
               className={`principal-quick-btn ${activeTab === 'notices' ? 'active' : ''}`}
@@ -578,10 +537,10 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     <Users size={18} color="#38bdf8" />
                   </div>
                   <div className="erp-stat-val">
-                    {overviewData?.kpis?.totalStudents?.toLocaleString() || '2,480'}
+                    {overviewData?.kpis?.totalStudents?.toLocaleString() ?? '—'}
                   </div>
                   <div className="erp-stat-note">
-                    {overviewData?.kpis?.activeDepartments || 8} Active Departments · {overviewData?.kpis?.academicPrograms || 18} Programs
+                    {overviewData?.kpis?.activeDepartments ?? '—'} Active Departments · {overviewData?.kpis?.academicPrograms ?? '—'} Programs
                   </div>
                 </div>
 
@@ -596,10 +555,10 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     <GraduationCap size={18} color="#10b981" />
                   </div>
                   <div className="erp-stat-val">
-                    {overviewData?.kpis?.teachingFaculty || 148}
+                    {overviewData?.kpis?.teachingFaculty ?? '—'}
                   </div>
                   <div className="erp-stat-note">
-                    {overviewData?.kpis?.nonTeachingStaff || 74} Non-Teaching Staff On Duty
+                    {overviewData?.kpis?.nonTeachingStaff ?? '—'} Non-Teaching Staff On Duty
                   </div>
                 </div>
 
@@ -613,9 +572,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     <span className="erp-stat-card-title">Pending Leave Requests</span>
                     <CalendarCheck size={18} color="#f59e0b" />
                   </div>
-                  <div className="erp-stat-val" style={{ color: '#d97706' }}>
-                    {pendingLeavesCount}
-                  </div>
+                  <div className="erp-stat-val" style={{ color: '#d97706' }}>{pendingLeavesCount ?? '—'}</div>
                   <div className="erp-stat-note">
                     Awaiting Principal Final Executive Stamp
                   </div>
@@ -632,10 +589,10 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     <Award size={18} color="#a855f7" />
                   </div>
                   <div className="erp-stat-val" style={{ color: '#7c3aed' }}>
-                    {overviewData?.kpis?.overallPassRate || 94.2}%
+                    {overviewData?.kpis?.overallPassRate == null ? '—' : `${overviewData.kpis.overallPassRate}%`}
                   </div>
                   <div className="erp-stat-note">
-                    Autumn 2026 Autonomous Session
+                    Official result data unavailable
                   </div>
                 </div>
               </div>
@@ -645,21 +602,21 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                 <div className="principal-kpi-mini">
                   <div className="principal-kpi-mini-title">Student Attendance Rate</div>
                   <div className="principal-kpi-mini-val">
-                    {overviewData?.kpis?.studentAttendanceRate || 88.7}%
+                    {overviewData?.kpis?.studentAttendanceRate == null ? '—' : `${overviewData.kpis.studentAttendanceRate}%`}
                   </div>
-                  <div className="principal-kpi-mini-note">↑ 2.1% higher than minimum UGC threshold</div>
+                  <div className="principal-kpi-mini-note">Attendance trend is not available</div>
                 </div>
                 <div className="principal-kpi-mini">
                   <div className="principal-kpi-mini-title">Faculty Presence Today</div>
                   <div className="principal-kpi-mini-val">
-                    {overviewData?.kpis?.facultyAttendanceRate || 96.8}%
+                    {overviewData?.kpis?.facultyAttendanceRate == null ? '—' : `${overviewData.kpis.facultyAttendanceRate}%`}
                   </div>
-                  <div className="principal-kpi-mini-note">142 of 148 professors active on campus</div>
+                  <div className="principal-kpi-mini-note">Live attendance totals are not configured</div>
                 </div>
                 <div className="principal-kpi-mini">
                   <div className="principal-kpi-mini-title">Institutional Clearances</div>
                   <div className="principal-kpi-mini-val">
-                    {overviewData?.kpis?.pendingApprovalsCount || 1}
+                    {overviewData?.kpis?.pendingApprovalsCount ?? '—'}
                   </div>
                   <div className="principal-kpi-mini-note" style={{ color: '#0284c7' }}>
                     Academic &amp; exam moderation items
@@ -668,7 +625,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                 <div className="principal-kpi-mini">
                   <div className="principal-kpi-mini-title">Notices Awaiting Clearance</div>
                   <div className="principal-kpi-mini-val">
-                    {pendingNoticesCount}
+                    {pendingNoticesCount ?? '—'}
                   </div>
                   <div className="principal-kpi-mini-note" style={{ color: '#d97706' }}>
                     Ready for Principal sign-off
@@ -700,14 +657,9 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {(overviewData?.departments || [
-                        { code: 'CSE', name: 'Computer Science & Engineering', hod: 'Dr. P. K. Pattnaik', students: 540, faculty: 32, facultyOnDuty: 31, syllabusPace: 74, status: 'On Schedule', avgCgpa: 8.42 },
-                        { code: 'AIML', name: 'AI & Machine Learning', hod: 'Dr. S. K. Swain', students: 360, faculty: 22, facultyOnDuty: 21, syllabusPace: 72, status: 'On Schedule', avgCgpa: 8.28 },
-                        { code: 'ECE', name: 'Electronics & Communication', hod: 'Dr. M. R. Senapati', students: 380, faculty: 24, facultyOnDuty: 24, syllabusPace: 71, status: 'On Schedule', avgCgpa: 8.10 },
-                        { code: 'EEE', name: 'Electrical & Electronics', hod: 'Dr. S. K. Das', students: 290, faculty: 18, facultyOnDuty: 18, syllabusPace: 69, status: 'On Schedule', avgCgpa: 7.85 },
-                        { code: 'MECH', name: 'Mechanical Engineering', hod: 'Dr. B. K. Rout', students: 320, faculty: 22, facultyOnDuty: 20, syllabusPace: 68, status: 'Review Needed', avgCgpa: 7.68 },
-                        { code: 'CIVIL', name: 'Civil Engineering', hod: 'Dr. A. K. Nayak', students: 240, faculty: 16, facultyOnDuty: 15, syllabusPace: 67, status: 'Review Needed', avgCgpa: 7.72 },
-                      ]).map((dept) => (
+                      {(overviewData?.departments || []).length === 0 ? (
+                        <tr><td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No persisted department records are available.</td></tr>
+                      ) : overviewData.departments.map((dept) => (
                         <tr key={dept.code}>
                           <td>
                             <strong style={{ color: '#0f172a' }}>{dept.name}</strong>
@@ -716,7 +668,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                           <td style={{ color: '#1e293b', fontWeight: 500 }}>{dept.hod}</td>
                           <td style={{ color: '#1e293b', fontWeight: 700 }}>{dept.students}</td>
                           <td style={{ color: '#1e293b' }}>
-                            {dept.facultyOnDuty} / {dept.faculty} On Duty
+                            {dept.facultyOnDuty == null ? '—' : `${dept.facultyOnDuty} / ${dept.faculty} On Duty`}
                           </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -724,18 +676,18 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                                 <div
                                   style={{
                                     height: '100%',
-                                    width: `${dept.syllabusPace}%`,
+                                    width: `${dept.syllabusPace ?? 0}%`,
                                     background: dept.syllabusPace >= 70 ? '#16a34a' : '#d97706',
                                   }}
                                 />
                               </div>
                               <span style={{ fontWeight: 700, fontSize: '0.8rem', color: dept.syllabusPace >= 70 ? '#15803d' : '#b45309' }}>
-                                {dept.syllabusPace}%
+                                {dept.syllabusPace == null ? '—' : `${dept.syllabusPace}%`}
                               </span>
                             </div>
                           </td>
                           <td>
-                            <span style={{ fontWeight: 700, color: '#0284c7' }}>{dept.avgCgpa}</span>
+                            <span style={{ fontWeight: 700, color: '#0284c7' }}>{dept.avgCgpa ?? '—'}</span>
                           </td>
                           <td>
                             <span
@@ -748,7 +700,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                                 color: dept.status === 'On Schedule' ? '#15803d' : '#b45309',
                               }}
                             >
-                              {dept.status}
+                              {dept.status || '—'}
                             </span>
                           </td>
                           <td>
@@ -778,13 +730,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     </div>
                   </div>
                   <div className="principal-activity-list">
-                    {(overviewData?.recentActivities || [
-                      { time: '10 mins ago', user: 'Dr. P. K. Pattnaik (HOD CSE)', action: 'Recommended Faculty Duty Leave', detail: 'Dr. S. Mohanty for IEEE Conference' },
-                      { time: '45 mins ago', user: 'Controller of Examinations', action: 'Submitted Result Moderation Roster', detail: 'Autumn 2026 Continuous Evaluation' },
-                      { time: '2 hours ago', user: 'Training & Placement Office', action: 'Requested Placement Circular Clearance', detail: 'Cisco Systems Placement Drive' },
-                      { time: '4 hours ago', user: 'Chief Estate Officer', action: 'Submitted Green Campus Audit Certificate', detail: 'Solar Phase II Commissioning' },
-                      { time: 'Yesterday', user: 'Registrar Office', action: 'Verified AICTE Mandatory Disclosure', detail: 'Annual Academic Compliance 2026-27' },
-                    ]).map((act, idx) => (
+                    {(overviewData?.recentActivities || []).length === 0 ? <p style={{ padding: '1rem', color: '#64748b' }}>No persisted activity records are available.</p> : overviewData.recentActivities.map((act, idx) => (
                       <div className="principal-activity-item" key={idx}>
                         <div className="principal-activity-dot" />
                         <div className="principal-activity-content">
@@ -807,12 +753,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     </div>
                   </div>
                   <div className="principal-activity-list">
-                    {(overviewData?.upcomingDeadlines || [
-                      { date: '25 Oct 2026', title: 'Mid-Semester Marks Clearance', type: 'Academic', priority: 'High' },
-                      { date: '28 Oct 2026', title: 'IQAC Quarterly Review Meeting', type: 'Governance', priority: 'High' },
-                      { date: '02 Nov 2026', title: 'Autonomous End-Sem Exam Seating', type: 'Exam Cell', priority: 'Critical' },
-                      { date: '10 Nov 2026', title: 'NAAC Cycle IV Peer Team Mock Verification', type: 'Accreditation', priority: 'Critical' },
-                    ]).map((dl, idx) => (
+                    {(overviewData?.upcomingDeadlines || []).length === 0 ? <p style={{ padding: '1rem', color: '#64748b' }}>No persisted deadline records are available.</p> : overviewData.upcomingDeadlines.map((dl, idx) => (
                       <div className="principal-activity-item" key={idx}>
                         <div className="principal-activity-dot" style={{ background: dl.priority === 'Critical' ? '#e11d48' : '#f59e0b' }} />
                         <div className="principal-activity-content">
@@ -897,7 +838,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                 </div>
 
                 <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
-                  Showing {filteredLeaves.length} of {leaveRequests.length} applications
+                  Showing {filteredLeaves.length} of {leaveRequests?.length ?? '—'} applications
                 </div>
               </div>
 
@@ -928,7 +869,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                         <tr>
                           <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
                             <CalendarCheck size={32} style={{ margin: '0 auto 0.5rem', opacity: 0.5 }} />
-                            <div>No leave applications match the selected filters.</div>
+                            <div>{leaveRequests == null ? 'Leave approvals are unavailable until the backend workflow is configured.' : 'No leave applications match the selected filters.'}</div>
                           </td>
                         </tr>
                       ) : (
@@ -1180,7 +1121,9 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredCirculars.map((n) => (
+                      {filteredCirculars.length === 0 ? (
+                        <tr><td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>{circulars == null ? 'Notices could not be loaded. Check the message above and retry.' : 'No persisted notices are available.'}</td></tr>
+                      ) : filteredCirculars.map((n) => (
                         <tr key={n.id}>
                           <td>
                             <strong style={{ color: '#0f172a' }}>{n.title}</strong>
@@ -1256,6 +1199,11 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
           {/* ======================================================== */}
           {activeTab === 'academic_health' && (
             <div>
+              {academicData?.dataAvailable === false && (
+                <div role="status" className="erp-alert-box is-success" style={{ marginBottom: '1rem' }}>
+                  Official examination results and certified grade records are not configured yet. The figures below remain blank until persisted results are available.
+                </div>
+              )}
               {/* Analytics Filter & Export Bar */}
               <div className="principal-filter-bar">
                 <div className="principal-filter-group">
@@ -1319,10 +1267,10 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     <Award size={18} color="#10b981" />
                   </div>
                   <div className="erp-stat-val" style={{ color: '#059669' }}>
-                    {academicData?.overallStats?.overallPassPct || 94.2}%
+                    {academicData?.overallStats?.overallPassPct == null ? '—' : `${academicData.overallStats.overallPassPct}%`}
                   </div>
                   <div className="erp-stat-note">
-                    {academicData?.overallStats?.yoyImprovement || '+1.4%'} vs Previous Academic Session
+                    {academicData?.overallStats?.yoyImprovement ?? '—'} vs Previous Academic Session
                   </div>
                 </div>
 
@@ -1332,10 +1280,10 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     <TrendingUp size={18} color="#0284c7" />
                   </div>
                   <div className="erp-stat-val" style={{ color: '#0284c7' }}>
-                    {academicData?.overallStats?.avgCampusCgpa || 8.04}
+                    {academicData?.overallStats?.avgCampusCgpa ?? '—'}
                   </div>
                   <div className="erp-stat-note">
-                    Out of 10.0 scale across {academicData?.overallStats?.totalStudentsEvaluated || 2490} students
+                    Out of 10.0 scale across {academicData?.overallStats?.totalStudentsEvaluated ?? '—'} students
                   </div>
                 </div>
 
@@ -1345,7 +1293,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     <Sparkles size={18} color="#a855f7" />
                   </div>
                   <div className="erp-stat-val" style={{ color: '#7c3aed' }}>
-                    {academicData?.overallStats?.firstClassDistinctionRate || 78.6}%
+                    {academicData?.overallStats?.firstClassDistinctionRate == null ? '—' : `${academicData.overallStats.firstClassDistinctionRate}%`}
                   </div>
                   <div className="erp-stat-note">Students scoring CGPA &gt;= 7.50</div>
                 </div>
@@ -1356,10 +1304,10 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     <AlertTriangle size={18} color="#f59e0b" />
                   </div>
                   <div className="erp-stat-val" style={{ color: '#d97706' }}>
-                    {academicData?.overallStats?.supplementaryBacklogRate || 5.8}%
+                    {academicData?.overallStats?.supplementaryBacklogRate == null ? '—' : `${academicData.overallStats.supplementaryBacklogRate}%`}
                   </div>
                   <div className="erp-stat-note">
-                    {academicData?.overallStats?.totalBacklogCases || 144} students undergoing remedial support
+                    {academicData?.overallStats?.totalBacklogCases ?? '—'} students undergoing remedial support
                   </div>
                 </div>
               </div>
@@ -1374,16 +1322,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                 </div>
 
                 <div className="semester-trend-grid">
-                  {(academicData?.semesterWiseResults || [
-                    { semester: 'Sem 1', passPct: 91.5, avgSgpa: 7.82 },
-                    { semester: 'Sem 2', passPct: 93.2, avgSgpa: 7.95 },
-                    { semester: 'Sem 3', passPct: 89.8, avgSgpa: 7.68 },
-                    { semester: 'Sem 4', passPct: 92.4, avgSgpa: 7.88 },
-                    { semester: 'Sem 5', passPct: 94.6, avgSgpa: 8.12 },
-                    { semester: 'Sem 6', passPct: 95.8, avgSgpa: 8.24 },
-                    { semester: 'Sem 7', passPct: 96.5, avgSgpa: 8.35 },
-                    { semester: 'Sem 8', passPct: 98.2, avgSgpa: 8.52 },
-                  ]).map((sem, idx) => (
+                  {(academicData?.semesterWiseResults || []).length === 0 ? <p style={{ padding: '1rem', color: '#64748b' }}>No persisted semester results are available.</p> : academicData.semesterWiseResults.map((sem, idx) => (
                     <div className="semester-bar-card" key={idx}>
                       <div className="semester-bar-wrapper">
                         <div
@@ -1429,16 +1368,9 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {(academicData?.departmentResults || [
-                        { code: 'CSE', name: 'Computer Science & Engineering', appeared: 540, passed: 524, passPct: 97.1, avgCgpa: 8.42, backlogs: 16, distinctionPct: 84.2, honorStudents: 48 },
-                        { code: 'AIML', name: 'AI & Machine Learning', appeared: 360, passed: 346, passPct: 96.0, avgCgpa: 8.28, backlogs: 14, distinctionPct: 81.5, honorStudents: 32 },
-                        { code: 'ECE', name: 'Electronics & Communication', appeared: 380, passed: 360, passPct: 94.8, avgCgpa: 8.10, backlogs: 20, distinctionPct: 76.8, honorStudents: 28 },
-                        { code: 'MCA', name: 'Computer Applications', appeared: 180, passed: 172, passPct: 95.6, avgCgpa: 8.02, backlogs: 8, distinctionPct: 78.0, honorStudents: 16 },
-                        { code: 'MBA', name: 'Business Administration', appeared: 180, passed: 171, passPct: 95.0, avgCgpa: 7.90, backlogs: 9, distinctionPct: 75.0, honorStudents: 14 },
-                        { code: 'EEE', name: 'Electrical & Electronics', appeared: 290, passed: 268, passPct: 92.4, avgCgpa: 7.85, backlogs: 22, distinctionPct: 72.4, honorStudents: 18 },
-                        { code: 'MECH', name: 'Mechanical Engineering', appeared: 320, passed: 290, passPct: 90.6, avgCgpa: 7.68, backlogs: 30, distinctionPct: 68.2, honorStudents: 15 },
-                        { code: 'CIVIL', name: 'Civil Engineering', appeared: 240, passed: 214, passPct: 89.2, avgCgpa: 7.72, backlogs: 26, distinctionPct: 66.5, honorStudents: 12 },
-                      ]).map((d) => (
+                      {(academicData?.departmentResults || []).length === 0 ? (
+                        <tr><td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No certified department result records are available.</td></tr>
+                      ) : academicData.departmentResults.map((d) => (
                         <tr key={d.code}>
                           <td>
                             <strong style={{ color: '#0f172a' }}>{d.name}</strong>
@@ -1498,13 +1430,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     </div>
                   </div>
                   <div>
-                    {(academicData?.deansHonorList || [
-                      { rank: 1, name: 'Ananya Sharma', rollNo: '2305201001', dept: 'CSE', semester: 'Sem 5', cgpa: 9.85, achievements: 'Autonomous Gold Medalist Contender' },
-                      { rank: 2, name: 'Rohan Senapati', rollNo: '2305201004', dept: 'AIML', semester: 'Sem 5', cgpa: 9.72, achievements: 'SIH 2026 Finalist Team Lead' },
-                      { rank: 3, name: 'Priyanka Mohapatra', rollNo: '2305201012', dept: 'ECE', semester: 'Sem 5', cgpa: 9.64, achievements: 'IEEE Student Branch President' },
-                      { rank: 4, name: 'Sourav Panigrahi', rollNo: '2305201019', dept: 'CSE', semester: 'Sem 5', cgpa: 9.58, achievements: 'Published Q1 Scopus Research Paper' },
-                      { rank: 5, name: 'Debashis Rout', rollNo: '2305201027', dept: 'EEE', semester: 'Sem 5', cgpa: 9.46, achievements: 'Solar Innovation Fellowship Award' },
-                    ]).map((s) => (
+                    {(academicData?.deansHonorList || []).length === 0 ? <p style={{ padding: '1rem', color: '#64748b' }}>No certified honor roll records are available.</p> : academicData.deansHonorList.map((s) => (
                       <div className="honor-student-badge" key={s.rank}>
                         <div className="honor-rank">#{s.rank}</div>
                         <div style={{ flex: 1 }}>
@@ -1536,12 +1462,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     </div>
                   </div>
                   <div>
-                    {(academicData?.atRiskSubjects || [
-                      { code: 'CS502', name: 'Design and Analysis of Algorithms', dept: 'CSE / AIML', semester: 'Sem 5', faculty: 'Dr. Priya Ranjan', passPct: 84.5, failureCount: 22, action: 'Remedial Tutorial Sessions Assigned' },
-                      { code: 'EC401', name: 'Signals, Systems & DSP', dept: 'ECE / EEE', semester: 'Sem 4', faculty: 'Dr. M. R. Senapati', passPct: 81.2, failureCount: 28, action: 'Peer Mentoring and Doubt-clearing Classes' },
-                      { code: 'ME303', name: 'Applied Thermodynamics & Heat Transfer', dept: 'MECH', semester: 'Sem 3', faculty: 'Dr. B. K. Rout', passPct: 79.4, failureCount: 31, action: 'Laboratory Experiment Correlation Review' },
-                      { code: 'CE504', name: 'Structural Analysis & RCC Design', dept: 'CIVIL', semester: 'Sem 5', faculty: 'Dr. A. K. Nayak', passPct: 78.8, failureCount: 24, action: 'HOD Academic Consultation Scheduled' },
-                    ]).map((subj) => (
+                    {(academicData?.atRiskSubjects || []).length === 0 ? <p style={{ padding: '1rem', color: '#64748b' }}>At-risk analysis is unavailable until official results are configured.</p> : academicData.atRiskSubjects.map((subj) => (
                       <div className="at-risk-item" key={subj.code}>
                         <AlertCircle size={18} className="at-risk-icon" />
                         <div style={{ flex: 1 }}>

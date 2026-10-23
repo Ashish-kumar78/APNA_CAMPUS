@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { StudentsService } from './students.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { normalizeRole } from '../rbac/rbac';
+import { CreateStudentDto, TransferPreferenceDto, UpdateStudentDto } from './students.dto';
 
 @ApiTags('Students')
 @Controller('students')
@@ -38,7 +39,10 @@ export class StudentsController {
     let scopedDept = department;
     // Rule 2: HOD and Faculty are strictly scoped to their own department
     if (role === 'hod' || role === 'faculty') {
-      scopedDept = user.department || 'Computer Science & Engineering';
+      scopedDept = user.department || user.hod?.department || user.faculty?.department;
+      if (!scopedDept) {
+        throw new ForbiddenException('A verified department assignment is required to view student records.');
+      }
     }
 
     const data = await this.studentsService.getAllStudents({ search, department: scopedDept, semester, section, status });
@@ -50,8 +54,14 @@ export class StudentsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get logged-in student full profile' })
   async getProfile(@CurrentUser() user: any) {
-    const identifier = user.student?.id || user.student?.rollNumber || user.identifier || user.id;
-    const student = await this.studentsService.getProfile(identifier);
+    if (normalizeRole(user.role) !== 'student') {
+      throw new ForbiddenException('Student profile access is limited to the authenticated student account.');
+    }
+    const studentId = user.student?.id;
+    if (!studentId) {
+      throw new NotFoundException('Student profile is not linked to this account.');
+    }
+    const student = await this.studentsService.getProfile(studentId);
     return { success: true, data: student };
   }
 
@@ -61,10 +71,13 @@ export class StudentsController {
   @ApiOperation({ summary: 'Save temporary campus preference declaration from student dashboard' })
   async saveTransfer(
     @CurrentUser() user: any,
-    @Body() body: { campus: string; city: string; confirmed: boolean },
+    @Body() body: TransferPreferenceDto,
   ) {
+    if (normalizeRole(user.role) !== 'student' || !user.student?.id) {
+      throw new ForbiddenException('Only a linked student account can save its transfer preference.');
+    }
     const student = await this.studentsService.saveTransferPreference(
-      user.student?.id || user.identifier || '01',
+      user.student.id,
       body.campus,
       body.city,
     );
@@ -75,7 +88,7 @@ export class StudentsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create new student (Admin portal only)' })
-  async createStudent(@CurrentUser() user: any, @Body() body: any) {
+  async createStudent(@CurrentUser() user: any, @Body() body: CreateStudentDto) {
     const role = normalizeRole(user.role);
     if (role !== 'admin' && role !== 'super_admin') {
       throw new ForbiddenException('Access denied. Only Campus Admin or Super Admin can register student records.');
@@ -88,7 +101,7 @@ export class StudentsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update student by ID (Admin portal only)' })
-  async updateStudent(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+  async updateStudent(@CurrentUser() user: any, @Param('id') id: string, @Body() body: UpdateStudentDto) {
     const role = normalizeRole(user.role);
     if (role !== 'admin' && role !== 'super_admin') {
       throw new ForbiddenException('Access denied. Only Campus Admin or Super Admin can modify student records.');

@@ -111,15 +111,13 @@ export default function SmartComplaintModal({
   isOpen,
   onClose,
   onComplaintSubmitted,
-  defaultLocation = 'Room 204 Attached Bathroom',
-  hostelName = 'Sarojini Girls Residence (Block A)',
-  roomNumber = '204',
-  studentName = 'Rakesh Das',
-  rollNumber = '01',
+  defaultLocation = '',
+  hostelName = '',
+  roomNumber = '',
 }) {
   // Form State
   const [building, setBuilding] = useState(hostelName);
-  const [floor, setFloor] = useState('2nd Floor');
+  const [floor, setFloor] = useState('');
   const [area, setArea] = useState('Room Attached Bathroom');
   const [locationDetails, setLocationDetails] = useState('');
 
@@ -180,7 +178,7 @@ export default function SmartComplaintModal({
 
   if (!isOpen) return null;
 
-  const constructedLocation = `${building} · ${floor} · ${area}${locationDetails.trim() ? ` (${locationDetails.trim()})` : ''}`;
+  const constructedLocation = [building, floor, area, locationDetails.trim() || null].filter(Boolean).join(' · ');
 
   // Image Processing & Validation
   const processImageFile = (file) => {
@@ -361,28 +359,13 @@ export default function SmartComplaintModal({
         category: category.charAt(0).toUpperCase() + category.slice(1).toLowerCase(),
         location: constructedLocation,
         priority: priority,
-        hostel: building,
-        roomNumber: roomNumber,
-        rollNumber: rollNumber,
-        studentName: studentName,
         attachmentUrl: imagePreview || null,
         filename: imageFile?.name || 'complaint_photo.jpg',
       };
 
       const res = await api.lodgeComplaint(payload);
-      const ticket = res?.data || {
-        id: `CMP-${Date.now().toString().slice(-4)}`,
-        title: finalTitle,
-        description: finalDesc,
-        category: payload.category,
-        location: constructedLocation,
-        priority: priority,
-        status: aiResult?.needsReview ? 'Needs Review' : 'Assigned',
-        assignedStaffName: category === 'PLUMBING' ? 'Suresh Mohapatra' : category === 'ELECTRICAL' ? 'Pramod Panda' : 'Campus Maintenance Team',
-        assignedStaffRole: category === 'PLUMBING' ? 'Plumber & Water Works' : 'Maintenance Specialist',
-        filedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        imageUrl: imagePreview || null,
-      };
+      if (!res?.data) throw new Error('The server did not confirm complaint registration.');
+      const ticket = res.data;
 
       // Clear draft on successful submission
       localStorage.removeItem('apna_complaint_draft');
@@ -542,13 +525,14 @@ export default function SmartComplaintModal({
 
                 <div className="scm-grid-3">
                   <div className="scm-form-field">
-                    <label className="scm-label" htmlFor="scm-building">Hostel / Building</label>
+                    <label className="scm-label" htmlFor="scm-building">Building / Area</label>
                     <select
                       id="scm-building"
                       className="scm-select"
                       value={building}
                       onChange={(e) => setBuilding(e.target.value)}
                     >
+                      <option value="">Select a building / area</option>
                       {BUILDINGS.map((b) => (
                         <option key={b} value={b}>{b}</option>
                       ))}
@@ -556,13 +540,14 @@ export default function SmartComplaintModal({
                   </div>
 
                   <div className="scm-form-field">
-                    <label className="scm-label" htmlFor="scm-floor">Floor</label>
+                    <label className="scm-label" htmlFor="scm-floor">Floor / Level</label>
                     <select
                       id="scm-floor"
                       className="scm-select"
                       value={floor}
                       onChange={(e) => setFloor(e.target.value)}
                     >
+                      <option value="">Select a floor / level</option>
                       {FLOORS.map((f) => (
                         <option key={f} value={f}>{f}</option>
                       ))}

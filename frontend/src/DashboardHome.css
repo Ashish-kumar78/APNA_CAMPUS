@@ -375,9 +375,18 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
   gap: 16px;
   align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
-@media (max-width: 1080px) {
+.dash-hero-split {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1140px) {
   .dash-hero-split {
     grid-template-columns: 1fr;
   }

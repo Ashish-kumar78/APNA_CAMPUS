@@ -15,11 +15,20 @@ import { ExamsService } from './exams.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { normalizeRole } from '../rbac/rbac';
+import { CreateExamCycleDto, TransitionExamCycleDto } from './exams.dto';
 
 @ApiTags('Autonomous Examination Management (CoE)')
 @Controller('exams')
 export class ExamsController {
   constructor(private readonly examsService: ExamsService) {}
+
+  private readonly operationalRoles = ['super_admin', 'principal', 'management', 'exam_cell'];
+
+  private assertOperationalAccess(user: any, message: string) {
+    if (!this.operationalRoles.includes(normalizeRole(user?.role))) {
+      throw new ForbiddenException(message);
+    }
+  }
 
   // 1. Dashboard Metrics & KPIs
   @Get('dashboard-stats')
@@ -42,6 +51,7 @@ export class ExamsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List all autonomous examination cycles' })
   async getExamCycles(@CurrentUser() user: any) {
+    this.assertOperationalAccess(user, 'Access denied to examination cycle records.');
     const data = await this.examsService.getExamCycles();
     return { success: true, count: data.length, data };
   }
@@ -50,10 +60,10 @@ export class ExamsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create new examination cycle (CoE only)' })
-  async createExamCycle(@CurrentUser() user: any, @Body() body: any) {
+  async createExamCycle(@CurrentUser() user: any, @Body() body: CreateExamCycleDto) {
     const role = normalizeRole(user?.role);
     if (role !== 'exam_cell' && role !== 'super_admin') {
-      throw new ForbiddenException('Access denied. Only Controller of Examinations can create examination cycles.');
+      throw new ForbiddenException('Access denied. Only Examination Cell can create examination cycles.');
     }
     const data = await this.examsService.createExamCycle(body, user);
     return { success: true, message: 'Examination cycle created successfully.', data };
@@ -66,13 +76,13 @@ export class ExamsController {
   async transitionCycle(
     @CurrentUser() user: any,
     @Param('id') id: string,
-    @Body('status') status: string,
+    @Body() body: TransitionExamCycleDto,
   ) {
     const role = normalizeRole(user?.role);
     if (role !== 'exam_cell' && role !== 'super_admin' && role !== 'principal') {
       throw new ForbiddenException('Access denied to transition examination cycle state.');
     }
-    const res = await this.examsService.transitionCycleStatus(id, status, user);
+    const res = await this.examsService.transitionCycleStatus(id, body.status, user);
     return res;
   }
 
@@ -82,8 +92,7 @@ export class ExamsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get exam timetable slots' })
   async getExamTimetable(@CurrentUser() user: any) {
-    const data = await this.examsService.getExamTimetable();
-    return { success: true, count: data.length, data };
+    return this.examsService.getExamTimetable();
   }
 
   @Post('timetable')
@@ -95,8 +104,7 @@ export class ExamsController {
     if (role !== 'exam_cell' && role !== 'super_admin') {
       throw new ForbiddenException('Access denied. Only Examination Cell can schedule papers.');
     }
-    const data = await this.examsService.createTimetableEntry(body);
-    return { success: true, message: 'Examination paper scheduled successfully.', data };
+    return this.examsService.createTimetableEntry(body);
   }
 
   // 4. Seating & Door Charts
@@ -105,8 +113,8 @@ export class ExamsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get hall seating arrangements & door charts' })
   async getSeatingArrangements(@CurrentUser() user: any) {
-    const data = await this.examsService.getSeatingArrangements();
-    return { success: true, count: data.length, data };
+    this.assertOperationalAccess(user, 'Access denied to examination hall and seating records.');
+    return this.examsService.getSeatingArrangements();
   }
 
   @Post('seating/auto-optimize')
@@ -118,8 +126,7 @@ export class ExamsController {
     if (role !== 'exam_cell' && role !== 'super_admin') {
       throw new ForbiddenException('Access denied to execute seating optimization engine.');
     }
-    const res = await this.examsService.autoOptimizeSeating();
-    return res;
+    return this.examsService.autoOptimizeSeating();
   }
 
   // 5. Hall Tickets / Admit Cards
@@ -128,8 +135,8 @@ export class ExamsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get hall ticket eligibility roster' })
   async getHallTickets(@CurrentUser() user: any) {
-    const data = await this.examsService.getHallTickets();
-    return { success: true, count: data.length, data };
+    this.assertOperationalAccess(user, 'Access denied to the hall ticket eligibility roster.');
+    return this.examsService.getHallTickets();
   }
 
   // 6. Marks Moderation (CIE)
@@ -141,6 +148,7 @@ export class ExamsController {
     @CurrentUser() user: any,
     @Param('subjectCode') subjectCode: string,
   ) {
+    this.assertOperationalAccess(user, 'Access denied to examination moderation records.');
     const data = await this.examsService.getModerationMarks(subjectCode);
     return { success: true, data };
   }
@@ -151,8 +159,8 @@ export class ExamsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get autonomous student SGPA/CGPA grade roster' })
   async getGradeRoster(@CurrentUser() user: any) {
-    const data = await this.examsService.getGradeRoster();
-    return { success: true, count: data.length, data };
+    this.assertOperationalAccess(user, 'Access denied to certified examination results.');
+    return this.examsService.getGradeRoster();
   }
 
   // 8. Re-evaluation & Scrutiny
@@ -161,8 +169,8 @@ export class ExamsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List paper re-evaluation and scrutiny applications' })
   async getReevaluationRequests(@CurrentUser() user: any) {
-    const data = await this.examsService.getReevaluationRequests();
-    return { success: true, count: data.length, data };
+    this.assertOperationalAccess(user, 'Access denied to re-evaluation requests.');
+    return this.examsService.getReevaluationRequests();
   }
 
   // 9. CoE Circulars

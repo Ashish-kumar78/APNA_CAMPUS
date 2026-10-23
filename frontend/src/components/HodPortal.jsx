@@ -66,7 +66,8 @@ import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
-import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import { MasterSidebarHeader, MasterNavBadge, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import HodGrievanceMonitoringModule from './HodGrievanceMonitoringModule.jsx';
 import { complaintsApi } from '../services/complaintsApi.js';
 import { notificationsApi } from '../services/notificationsApi.js';
@@ -183,9 +184,18 @@ function exportToCsv(filename, rows) {
 
 
 export default function HodPortal({ account, onLogout }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.hod-main, .role-dash-container, .admin-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [approvalQueue, setApprovalQueue] = useState(initialApprovalQueue);
   const [students, setStudents] = useState(() => getAllStudents());
   const [faculty, setFaculty] = useState(initialFaculty);
@@ -845,22 +855,23 @@ export default function HodPortal({ account, onLogout }) {
         </div>
       </header>
 
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="erp-sidebar-backdrop active"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Layout */}
       <div className={`hod-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
         {/* Sidebar */}
         {sidebarOpen && (
           <aside className="hod-sidebar">
-            <div className="hod-sidebar-header">
-              <span className="hod-sidebar-title">HOD Governance</span>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="hod-sidebar-close"
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <MasterSidebarHeader
+              roleTitle="HOD MANAGEMENT"
+              onToggle={() => setSidebarOpen(false)}
+            />
             <button
               className={`hod-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
               onClick={() => setActiveTab('dashboard')}

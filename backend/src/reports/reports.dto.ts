@@ -60,5 +60,25 @@ export class ReportQueryDto {
 
   @IsOptional()
   @IsString()
+  academicYear?: string;
+
+  @IsOptional()
+  @IsString()
+  program?: string;
+
+  @IsOptional()
+  @IsString()
+  scopeMode?: string; // 'individual' | 'section' | 'class' | 'subject' | 'all_assigned'
+
+  @IsOptional()
+  @IsString()
+  rollNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  studentId?: string;
+
+  @IsOptional()
+  @IsString()
   documentCategory?: string;
 }

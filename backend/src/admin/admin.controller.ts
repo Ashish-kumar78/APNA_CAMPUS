@@ -4,6 +4,7 @@ import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { normalizeRole } from '../rbac/rbac';
+import { CreateAdminUserDto } from './admin.dto';
 
 @ApiTags('Campus Administration')
 @Controller('admin')
@@ -22,6 +23,19 @@ export class AdminController {
     }
 
     const data = await this.adminService.getMetrics();
+    return { success: true, data };
+  }
+
+  @Get('ai-metrics')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Fetch evaluation metadata from the configured AI service' })
+  async getAiModelMetrics(@CurrentUser() user: any) {
+    const role = normalizeRole(user.role);
+    if (!['super_admin', 'management', 'principal', 'admin'].includes(role)) {
+      throw new ForbiddenException('Access denied. AI model metrics require administrative clearance.');
+    }
+    const data = await this.adminService.getAiModelMetrics();
     return { success: true, data };
   }
 
@@ -72,7 +86,7 @@ export class AdminController {
     }
 
     const data = await this.adminService.getIncidents(severity, status, search);
-    return { success: true, count: data.length, data };
+    return data;
   }
 
   @Patch('incidents/:id')
@@ -125,7 +139,7 @@ export class AdminController {
     }
 
     const data = await this.adminService.getSessions();
-    return { success: true, count: data.length, data };
+    return data;
   }
 
   @Post('sessions/:id/revoke')
@@ -202,7 +216,7 @@ export class AdminController {
   ) {
     const role = normalizeRole(user.role);
     if (role !== 'super_admin' && role !== 'admin') {
-      throw new ForbiddenException('Access denied. Only Super Administrator or Campus Administrator can alter user active lifecycle.');
+      throw new ForbiddenException('Access denied. Only a permitted administrative role can alter lower-role account status.');
     }
 
     const updated = await this.adminService.updateUserStatus(id, body.isActive, user);
@@ -212,11 +226,11 @@ export class AdminController {
   @Post('users/:id/reset-password')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Issue one-time cryptographic password reset token' })
+  @ApiOperation({ summary: 'Request a secure password reset email' })
   async resetUserPassword(@CurrentUser() user: any, @Param('id') id: string) {
     const role = normalizeRole(user.role);
-    if (role !== 'super_admin' && role !== 'admin') {
-      throw new ForbiddenException('Access denied. Password reset token issuance requires administrative clearance.');
+    if (role !== 'super_admin') {
+      throw new ForbiddenException('Access denied. Only Super Administrator can request an administrative password reset.');
     }
 
     const result = await this.adminService.resetUserPassword(id, user);
@@ -234,8 +248,7 @@ export class AdminController {
       throw new ForbiddenException('Access denied to backup vault.');
     }
 
-    const data = await this.adminService.getBackups();
-    return { success: true, count: data.length, data };
+    return this.adminService.getBackups();
   }
 
   @Post('backups/create')
@@ -357,6 +370,15 @@ export class AdminController {
     return { success: true, count: data.length, data };
   }
 
+  @Post('approvals')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Submit a governance request for executive review' })
+  async createApproval(@CurrentUser() user: any, @Body() body: any) {
+    const data = await this.adminService.createApproval(body, user);
+    return { success: true, message: 'Approval request submitted.', data };
+  }
+
   @Post('approvals/:id/decide')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -415,6 +437,31 @@ export class AdminController {
     return result;
   }
 
+  @Get('rbac/permissions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Read persisted administrative permission matrix settings' })
+  async getRbacPermissions(@CurrentUser() user: any) {
+    if (normalizeRole(user.role) !== 'super_admin') {
+      throw new ForbiddenException('Access denied. Only Super Administrator can view the RBAC matrix.');
+    }
+    const data = await this.adminService.getRbacPermissions();
+    return { success: true, data };
+  }
+
+  @Get('settings')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Read persisted institutional system settings' })
+  async getSettings(@CurrentUser() user: any) {
+    const role = normalizeRole(user.role);
+    if (role !== 'super_admin' && role !== 'admin') {
+      throw new ForbiddenException('Access denied. Institutional settings require administrative clearance.');
+    }
+    const data = await this.adminService.getSettings();
+    return { success: true, data };
+  }
+
   @Post('settings')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -433,10 +480,13 @@ export class AdminController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Provision new institutional user account' })
-  async createUserAccount(@CurrentUser() user: any, @Body() body: any) {
+  async createUserAccount(@CurrentUser() user: any, @Body() body: CreateAdminUserDto) {
     const role = normalizeRole(user.role);
     if (role !== 'super_admin' && role !== 'admin') {
       throw new ForbiddenException('Access denied. Provisioning accounts requires administrative clearance.');
+    }
+    if (role === 'admin' && body.role === 'SUPER_ADMIN') {
+      throw new ForbiddenException('Only a Super Administrator can provision another Super Administrator.');
     }
 
     const result = await this.adminService.createUserAccount(body, user);

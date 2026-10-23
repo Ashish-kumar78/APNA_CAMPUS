@@ -9,22 +9,13 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { StudentLibraryPage } from './pages/StudentLibraryPage';
 import { StudentAcademicsPage, StudentAttendancePage, StudentProfilePage, StudentResultsPage } from './pages/StudentModulePages';
 
-const defaultStudent: UserSession = {
-  id: 's-1001',
-  firstName: 'Aarav',
-  lastName: 'Sharma',
-  email: 'student@collegeflow.edu',
-  role: 'student',
-  token: 'demo-jwt-token',
-};
-
 function App() {
   const [session, setSession] = useState<UserSession | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const current = readSession();
-    setSession(current?.user ?? defaultStudent);
+    setSession(current?.user ?? null);
     setIsReady(true);
   }, []);
 

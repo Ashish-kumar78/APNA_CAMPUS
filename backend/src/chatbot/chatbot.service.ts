@@ -101,7 +101,7 @@ export class ChatbotService {
       return {
         success: true,
         source: 'campus-live-data',
-        reply: `📊 **Live Department Census — ${deptName} (${targetDeptCode})**:\n\n• **Total Enrolled Students:** **${studentCount || 540}** students across 4 active academic years (CBCS Autonomous).\n• **Head of Department (HOD):** ${hodName}\n• **Status:** Active & Accredited (NAAC Cycle IV / NBA Outcome Based).`,
+        reply: `📊 **Live Department Census — ${deptName} (${targetDeptCode})**:\n\n• **Total Enrolled Students:** **${studentCount}** students across 4 active academic years (CBCS Autonomous).\n• **Head of Department (HOD):** ${hodName}\n• **Status:** Active & Accredited (NAAC Cycle IV / NBA Outcome Based).`,
         suggestions: [
           'Which students have attendance below 75%?',
           'Generate attendance report for my department',

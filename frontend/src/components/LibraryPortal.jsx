@@ -35,14 +35,25 @@ import {
 } from 'lucide-react';
 import './LibraryPortal.css';
 import './SuperAdminPortal.css';
+import { MasterSidebarHeader, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import { erpStore } from '../services/erpStore.js';
 import api from '../services/api.js';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 
 export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, circulation, catalog, inventory, reservations, fines, acquisitions, digital, reports
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.erp-main-content, .role-dash-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [toastMessage, setToastMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -596,36 +607,10 @@ export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
       {/* Sidebar Navigation */}
       {sidebarOpen && (
         <aside className="erp-sidebar">
-          <div className="erp-sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div className="erp-lib-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-              </div>
-              <div className="erp-brand-text">
-                <h2>Apna Campus</h2>
-                <span style={{ color: '#34d399' }}>Central Library</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <MasterSidebarHeader
+            roleTitle="CENTRAL LIBRARY"
+            onToggle={() => setSidebarOpen(false)}
+          />
 
           <nav className="erp-sidebar-nav">
             <button
@@ -712,6 +697,7 @@ export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
             account={account}
             onLogout={onLogout}
             onSwitchRole={onSwitchRole}
+            sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(o => !o)}
             onNavigate={(target) => {
               if (target === 'lib-search') setActiveTab('catalog');

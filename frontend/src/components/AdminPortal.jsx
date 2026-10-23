@@ -79,16 +79,14 @@ import {
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import './AdminPortal.css';
+import { MasterSidebarHeader, MasterNavBadge, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import AdminCommunicationControl from './CampusConnect/AdminCommunicationControl.jsx';
 import AdminComplaintsConsole from './AdminComplaintsConsole.jsx';
 import { downloadAdminReportPdf } from '../utils/pdfGenerator';
 import {
-  initialDepartments,
   initialHods,
   initialFaculty,
-  initialSemesters,
-  initialSections,
-  initialSubjects,
   initialMarkingScheme,
   initialAuditLogs,
   generateAllStudents,
@@ -98,233 +96,137 @@ import {
   initialOtherStaff,
   initialPrograms,
   initialBatches,
-  initialFacultyAssignments,
 } from '../data/collegeData.js';
 import { erpStore } from '../services/erpStore.js';
 import MarksManagementModule from '../marks/MarksManagementModule.jsx';
 import { api } from '../services/api.js';
-import { getAllStudents, saveStudent, setActiveStudent, getAllDocuments, saveDocument, deleteDocument, getStudentDocuments, addStudentDocument } from '../services/studentStore.js';
+import { getAllDocuments, saveDocument, deleteDocument, getStudentDocuments, setActiveStudent } from '../services/studentStore.js';
 import { useTimeGreeting, getTimeWish } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 
+const ACCOUNT_ROLE_RANK = {
+  super_admin: 100, management: 90, principal: 80, admin: 70, hod: 60,
+  faculty: 50, exam_cell: 40, accounts: 40, library: 40, placement: 40,
+  transport: 40, hostel: 40, warden: 40, staff: 40, canteen: 40,
+  admissions: 40, maintenance: 40, non_teaching: 40, student: 10,
+};
+
 const defaultStudentFormState = {
+  studentId: '',
   // Step 1: Personal Details
-  admissionCategory: 'General',
-  title: 'Ms.',
+  admissionCategory: '',
+  title: '',
   firstName: '',
   lastName: '',
-  middleName: 'Not provided',
-  gender: 'Female',
-  dob: '2005-03-15',
-  nationality: 'Indian',
-  caste: 'General',
-  religion: 'Hindu',
-  bloodGroup: 'O+',
-  birthplace: 'Bhubaneswar, Odisha',
-  identificationMark: 'Not provided',
+  middleName: '',
+  gender: '',
+  dob: '',
+  nationality: '',
+  caste: '',
+  religion: '',
+  bloodGroup: '',
+  birthplace: '',
+  identificationMark: '',
   thumbId: '',
-  hostel: 'No',
-  transport: 'No',
-  lunch: 'No',
-  nss: 'No',
-  languagesKnown: 'Odia, English, Hindi',
-  hobbies: 'Not provided',
+  hostel: '',
+  transport: '',
+  lunch: '',
+  nss: '',
+  languagesKnown: '',
+  hobbies: '',
 
   // Step 2: Academic Details
   rollNumber: '',
   email: '',
-  phone: '+91 98610 23010',
-  course: 'Bachelor of Technology',
-  batch: 'BTECH 2023–2027',
-  department: 'Computer Science & Engineering',
-  deptCode: 'CSE',
-  semester: 'Semester 5',
-  section: 'Section A',
-  house: 'Not assigned',
-  labGroup: '1',
+  phone: '',
+  course: '',
+  batch: '',
+  department: '',
+  deptCode: '',
+  semester: '',
+  section: '',
+  house: '',
+  labGroup: '',
   honors: 'No',
   minor: 'No',
-  valueAdded1: 'Not selected',
-  valueAdded2: 'Not selected',
-  valueAdded3: 'Not selected',
-  admissionDate: '2023-08-05',
-  entranceExam: 'JEE (Main)',
-  rank: 'Not provided',
-  studentStatus: 'Active',
-  activeStatus: 'Active',
-  academicYear: '2026-27',
-  status: 'Active',
-  qual10thInstitute: 'Demo Secondary School',
-  qual10thYear: '2021',
-  qual10thMarks: '82.00%',
-  qual12thInstitute: 'Demo Senior Secondary School',
-  qual12thYear: '2023',
-  qual12thMarks: '86.00%',
-  qualItiInstitute: 'Not applicable',
-  qualItiYear: '—',
-  qualItiMarks: '—',
-  qualDiplomaInstitute: 'Not applicable',
-  qualDiplomaYear: '—',
-  qualDiplomaMarks: '—',
-  qualPlus3Institute: 'Not applicable',
-  qualPlus3Year: '—',
-  qualPlus3Marks: '—',
-  qualBcaInstitute: 'Not applicable',
-  qualBcaYear: '—',
-  qualBcaMarks: '—',
-  qualBbaInstitute: 'Not applicable',
-  qualBbaYear: '—',
-  qualBbaMarks: '—',
-  qualBtechInstitute: 'Apna Campus',
-  qualBtechYear: '2027',
-  qualBtechMarks: 'In progress',
+  valueAdded1: '',
+  valueAdded2: '',
+  valueAdded3: '',
+  admissionDate: '',
+  entranceExam: '',
+  rank: '',
+  studentStatus: '',
+  activeStatus: '',
+  academicYear: '',
+  status: '',
+  qual10thInstitute: '',
+  qual10thYear: '',
+  qual10thMarks: '',
+  qual12thInstitute: '',
+  qual12thYear: '',
+  qual12thMarks: '',
+  qualItiInstitute: '',
+  qualItiYear: '',
+  qualItiMarks: '',
+  qualDiplomaInstitute: '',
+  qualDiplomaYear: '',
+  qualDiplomaMarks: '',
+  qualPlus3Institute: '',
+  qualPlus3Year: '',
+  qualPlus3Marks: '',
+  qualBcaInstitute: '',
+  qualBcaYear: '',
+  qualBcaMarks: '',
+  qualBbaInstitute: '',
+  qualBbaYear: '',
+  qualBbaMarks: '',
+  qualBtechInstitute: '',
+  qualBtechYear: '',
+  qualBtechMarks: '',
 
   // Step 3: Guardians Details
-  fatherName: 'Sanjay Das',
-  fatherRelationship: 'Father',
-  fatherPhone: '+91 94370 10001',
-  fatherEmail: 'sanjay.das@example.com',
-  motherName: 'Madhuri Das',
-  motherRelationship: 'Mother',
-  motherPhone: '+91 94370 10002',
-  motherEmail: 'madhuri.das@example.com',
+  fatherName: '',
+  fatherRelationship: '',
+  fatherPhone: '',
+  fatherEmail: '',
+  motherName: '',
+  motherRelationship: '',
+  motherPhone: '',
+  motherEmail: '',
 
   // Step 4: Address Details
-  permAddress: 'Plot 18, Unit 4',
-  permCity: 'Bhubaneswar',
-  permState: 'Odisha',
-  permCountry: 'India',
-  permPin: '751001',
-  currAddress: 'GIFT Campus Residence',
-  currCity: 'Bhubaneswar',
-  currState: 'Odisha',
-  currCountry: 'India',
-  currPin: '751054',
+  permAddress: '',
+  permCity: '',
+  permState: '',
+  permCountry: '',
+  permPin: '',
+  currAddress: '',
+  currCity: '',
+  currState: '',
+  currCountry: '',
+  currPin: '',
 
   // Step 5: Documents Details
   passportPhotoUrl: '',
   passportPhotoName: '',
   govtIdFileUrl: '',
   govtIdFileName: '',
-  govtIdType: 'Aadhaar Card',
+  govtIdType: '',
   class10FileUrl: '',
   class10FileName: '',
-  class10Board: 'CBSE / BSE Odisha',
+  class10Board: '',
   class12FileUrl: '',
   class12FileName: '',
-  class12Board: 'CBSE / CHSE Odisha',
-};
-
-const sampleAutofillStudent = {
-  // Step 1: Personal Details
-  admissionCategory: 'General',
-  title: 'Mr.',
-  firstName: 'Priyanshu',
-  lastName: 'Mohapatra',
-  middleName: 'Kumar',
-  gender: 'Male',
-  dob: '2005-06-18',
-  nationality: 'Indian',
-  caste: 'General',
-  religion: 'Hindu',
-  bloodGroup: 'B+',
-  birthplace: 'Cuttack, Odisha',
-  identificationMark: 'Small mole on left forearm',
-  thumbId: 'GFT2305201092',
-  hostel: 'Yes',
-  transport: 'No',
-  lunch: 'Yes',
-  nss: 'Yes',
-  languagesKnown: 'Odia, English, Hindi',
-  hobbies: 'Coding, Badminton, Tech Blogging',
-
-  // Step 2: Academic Details
-  rollNumber: '92',
-  email: 'priyanshu.mohapatra92@apnacampus.edu.in',
-  phone: '+91 94371 88920',
-  course: 'Bachelor of Technology',
-  batch: 'BTECH 2023–2027',
-  department: 'Computer Science & Engineering',
-  deptCode: 'CSE',
-  semester: 'Semester 5',
-  section: 'Section A',
-  house: 'Orion House',
-  labGroup: '2',
-  honors: 'Yes',
-  minor: 'No',
-  valueAdded1: 'Cloud Computing & AWS',
-  valueAdded2: 'Full Stack Web Dev',
-  valueAdded3: 'AI & Machine Learning',
-  admissionDate: '2023-08-05',
-  entranceExam: 'JEE (Main)',
-  rank: '12,450',
-  studentStatus: 'Active',
-  activeStatus: 'Active',
-  academicYear: '2026-27',
-  status: 'Active',
-  qual10thInstitute: 'DAV Public School, CDA Cuttack',
-  qual10thYear: '2021',
-  qual10thMarks: '89.40%',
-  qual12thInstitute: 'BJB Junior College, Bhubaneswar',
-  qual12thYear: '2023',
-  qual12thMarks: '91.20%',
-  qualItiInstitute: 'Not applicable',
-  qualItiYear: '—',
-  qualItiMarks: '—',
-  qualDiplomaInstitute: 'Not applicable',
-  qualDiplomaYear: '—',
-  qualDiplomaMarks: '—',
-  qualPlus3Institute: 'Not applicable',
-  qualPlus3Year: '—',
-  qualPlus3Marks: '—',
-  qualBcaInstitute: 'Not applicable',
-  qualBcaYear: '—',
-  qualBcaMarks: '—',
-  qualBbaInstitute: 'Not applicable',
-  qualBbaYear: '—',
-  qualBbaMarks: '—',
-  qualBtechInstitute: 'Apna Campus',
-  qualBtechYear: '2027',
-  qualBtechMarks: 'In progress',
-
-  // Step 3: Guardians Details
-  fatherName: 'Pradeep Mohapatra',
-  fatherRelationship: 'Father',
-  fatherPhone: '+91 94370 55120',
-  fatherEmail: 'pradeep.mohapatra@example.com',
-  motherName: 'Rashmita Mohapatra',
-  motherRelationship: 'Mother',
-  motherPhone: '+91 94370 55121',
-  motherEmail: 'rashmita.mohapatra@example.com',
-
-  // Step 4: Address Details
-  permAddress: 'Plot 42/B, Sector 9, CDA',
-  permCity: 'Cuttack',
-  permState: 'Odisha',
-  permCountry: 'India',
-  permPin: '753014',
-  currAddress: 'GIFT Campus Hostel (Block B, Room 204)',
-  currCity: 'Bhubaneswar',
-  currState: 'Odisha',
-  currCountry: 'India',
-  currPin: '751054',
-
-  // Step 5: Documents Details
-  passportPhotoUrl: '/passport_photo_male.svg',
-  passportPhotoName: 'passport_photo_priyanshu.jpg',
-  govtIdFileUrl: '/sample_documents/sample_document.pdf',
-  govtIdFileName: 'aadhaar_card_priyanshu.pdf',
-  govtIdType: 'Aadhaar Card (XXXX XXXX 5512)',
-  class10FileUrl: '/sample_documents/sample_document.pdf',
-  class10FileName: 'class_10_marksheet.pdf',
-  class10Board: 'CBSE New Delhi',
-  class12FileUrl: '/sample_documents/sample_document.pdf',
-  class12FileName: 'class_12_marksheet.pdf',
-  class12Board: 'CHSE Odisha',
+  class12Board: '',
 };
 
 export default function AdminPortal({ account, onLogout, onSwitchRole }) {
+  const currentAccountRole = String(account?.roleEnum || account?.role || '').toLowerCase();
+  const canManageAccount = (target) =>
+    ['super_admin', 'admin'].includes(currentAccountRole) &&
+    (ACCOUNT_ROLE_RANK[currentAccountRole] ?? -1) > (ACCOUNT_ROLE_RANK[String(target.role).toLowerCase()] ?? Infinity) &&
+    target.id !== account?.id;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const greeting = useTimeGreeting();
   const [currentLiveTime, setCurrentLiveTime] = useState(() => new Date());
@@ -355,6 +257,15 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
   });
 
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.admin-main, .role-dash-container, .admin-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [overviewOpen, setOverviewOpen] = useState(true);
   const [academicAdminOpen, setAcademicAdminOpen] = useState(true);
   const [examinationOpen, setExaminationOpen] = useState(true);
@@ -377,18 +288,20 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
     email: '',
     identifier: '',
     role: 'FACULTY',
-    password: 'password123',
+    password: '',
     department: 'Computer Science & Engineering',
   });
 
   useEffect(() => {
     const fetchAdminBackendData = async () => {
       try {
-        const [metricsRes, diagRes, usersRes, auditRes] = await Promise.allSettled([
+        const [metricsRes, diagRes, usersRes, auditRes, studentsRes, departmentsRes] = await Promise.allSettled([
           api.getAdminMetrics(),
           api.getAdminDiagnostics(),
           api.getAdminUsers(),
           api.getAdminAuditLogs(),
+          api.getStudents(),
+          api.getDepartments(),
         ]);
         if (metricsRes.status === 'fulfilled' && metricsRes.value?.data) {
           setAdminMetrics(metricsRes.value.data);
@@ -402,23 +315,88 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
         if (auditRes.status === 'fulfilled' && Array.isArray(auditRes.value?.data)) {
           setAuditLogs(auditRes.value.data);
         }
+        if (studentsRes.status === 'fulfilled' && Array.isArray(studentsRes.value?.data)) {
+          setStudents(studentsRes.value.data);
+          setStudentDirectoryError('');
+        } else {
+          setStudentDirectoryError('Student roster could not be loaded from the server.');
+        }
+        if (departmentsRes.status === 'fulfilled' && departmentsRes.value?.success && Array.isArray(departmentsRes.value.data)) {
+          setDepartments(departmentsRes.value.data);
+          setDepartmentsError('');
+        } else {
+          setDepartments([]);
+          setDepartmentsError(departmentsRes.status === 'rejected'
+            ? (departmentsRes.reason?.message || 'Departments could not be loaded from the backend.')
+            : 'The backend did not return department records.');
+        }
       } catch (err) {
         console.error('Error fetching admin live data:', err);
+        setDepartments([]);
+        setDepartmentsError('Departments could not be loaded from the backend.');
+      } finally {
+        setDepartmentsLoading(false);
       }
     };
     fetchAdminBackendData();
   }, []);
   
   // State for all managed entities
-  const [students, setStudents] = useState(() => getAllStudents());
+  const [students, setStudents] = useState([]);
+  const [studentDirectoryError, setStudentDirectoryError] = useState('');
   const [facultyList, setFacultyList] = useState(initialFaculty);
   const [hodList, setHodList] = useState(initialHods);
-  const [departments, setDepartments] = useState(initialDepartments);
-  const [semesters, setSemesters] = useState(initialSemesters);
-  const [sections, setSections] = useState(initialSections);
-  const [subjects, setSubjects] = useState(initialSubjects);
+  const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(true);
+  const [departmentsError, setDepartmentsError] = useState('');
+  const [semesters, setSemesters] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [courseOfferings, setCourseOfferings] = useState([]);
+  const [academicFaculty, setAcademicFaculty] = useState([]);
+  const [academicLoading, setAcademicLoading] = useState(true);
+  const [academicError, setAcademicError] = useState('');
+  const [isDepartmentModalOpen, setIsDepartmentModalOpen] = useState(false);
+  const [departmentFormData, setDepartmentFormData] = useState({ code: '', name: '', hod: '', hodEmail: '' });
+  const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
+  const [sectionFormData, setSectionFormData] = useState({ semester: '', section: '', department: '', room: '', classRepresentative: '', facultyCoordinator: '' });
+  const [isSemesterModalOpen, setIsSemesterModalOpen] = useState(false);
+  const [semesterFormData, setSemesterFormData] = useState({ number: '', label: '', year: '', academicYear: '' });
+  const [isAllocationModalOpen, setIsAllocationModalOpen] = useState(false);
+  const [allocationFormData, setAllocationFormData] = useState({ courseOfferingId: '', facultyId: '', section: '', allocatedHours: '' });
   const [markingScheme, setMarkingScheme] = useState(initialMarkingScheme);
   const [auditLogs, setAuditLogs] = useState(initialAuditLogs);
+
+  useEffect(() => {
+    let active = true;
+    const loadAcademicRecords = async () => {
+      const results = await Promise.allSettled([
+        api.getSemesters(), api.getSections(), api.getSubjects('', ''),
+        api.getCourseOfferings(), api.getAcademicFaculty(),
+      ]);
+      if (!active) return;
+      const setters = [setSemesters, setSections, setSubjects, setCourseOfferings, setAcademicFaculty];
+      const labels = ['semesters', 'sections', 'subjects', 'course offerings', 'faculty'];
+      const failures = [];
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled' && result.value?.success && Array.isArray(result.value.data)) {
+          setters[index](result.value.data);
+        } else {
+          setters[index]([]);
+          failures.push(labels[index]);
+        }
+      });
+      setAcademicError(failures.length ? `Could not load ${failures.join(', ')} from the academic backend.` : '');
+      setAcademicLoading(false);
+    };
+    loadAcademicRecords().catch(() => {
+      if (!active) return;
+      setSemesters([]); setSections([]); setSubjects([]); setCourseOfferings([]); setAcademicFaculty([]);
+      setAcademicError('Academic records could not be loaded from the backend.');
+      setAcademicLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
 
   // Campus & Operations Rosters (Wardens, Security, Canteen, Other Support)
   const [wardenList, setWardenList] = useState(initialWardens);
@@ -508,7 +486,6 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
   const [studentDocPreview, setStudentDocPreview] = useState(null);
 
   // Admission Credential Card (shown after new student creation)
-  const [admissionCredential, setAdmissionCredential] = useState(null); // { name, regNo, password, department, semester }
 
   const [isFacultyModalOpen, setIsFacultyModalOpen] = useState(false);
   const [editingFaculty, setEditingFaculty] = useState(null);
@@ -539,11 +516,11 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
   const [subjectFormData, setSubjectFormData] = useState({
     code: '',
     name: '',
-    department: 'CSE',
-    semester: 'Semester 5',
-    credits: 4,
-    type: 'Theory + Lab',
-    assignedFaculty: 'Dr. S. Mohanty'
+    department: '',
+    semester: '',
+    academicYear: '',
+    credits: '',
+    type: '',
   });
 
   const [viewDetailsItem, setViewDetailsItem] = useState(null);
@@ -641,12 +618,12 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
     setStudentFormStep(1);
     setCanSubmitStep5(false);
     setFormValidationError('');
-    const nextRoll = String(students.length + 1).padStart(2, '0');
     setStudentFormData({
       ...defaultStudentFormState,
-      rollNumber: nextRoll,
-      thumbId: `GFT230520${nextRoll.padStart(4, '0')}`,
-      email: `student.${nextRoll}@apnacampus.edu.in`,
+      rollNumber: '',
+      studentId: '',
+      thumbId: '',
+      email: '',
     });
     setIsStudentModalOpen(true);
   };
@@ -665,105 +642,19 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
     setIsStudentModalOpen(true);
   };
 
-  const handleAutofillSample = () => {
-    const nextRoll = String(students.length + 1).padStart(2, '0');
-    setStudentFormData({
-      ...sampleAutofillStudent,
-      rollNumber: nextRoll,
-      thumbId: `GFT230520${nextRoll.padStart(4, '0')}`,
-      email: `priyanshu.mohapatra${nextRoll}@apnacampus.edu.in`,
-    });
-    setFormValidationError('');
-    showToast('✨ All 5 compulsory sections populated with verified sample student details!');
-  };
-
-  const handleAttachDemoDocs = () => {
-    setStudentFormData(prev => ({
-      ...prev,
-      passportPhotoUrl: prev.passportPhotoUrl || '/passport_photo_male.svg',
-      passportPhotoName: prev.passportPhotoName || 'passport_photo_sample.jpg',
-      govtIdFileUrl: prev.govtIdFileUrl || '/sample_documents/sample_document.pdf',
-      govtIdFileName: prev.govtIdFileName || 'aadhaar_card_verified.pdf',
-      govtIdType: prev.govtIdType || 'Aadhaar Card (UIDAI Verified)',
-      class10FileUrl: prev.class10FileUrl || '/sample_documents/sample_document.pdf',
-      class10FileName: prev.class10FileName || 'matriculation_10th_certificate.pdf',
-      class10Board: prev.class10Board || 'CBSE New Delhi',
-      class12FileUrl: prev.class12FileUrl || '/sample_documents/sample_document.pdf',
-      class12FileName: prev.class12FileName || 'higher_secondary_12th_certificate.pdf',
-      class12Board: prev.class12Board || 'CHSE Odisha',
-    }));
-    setFormValidationError('');
-    showToast('✓ Verified demo documents attached. You can review or replace them anytime.');
-  };
-
   const validateStep = (step) => {
     if (step === 1) {
-      if (
-        !studentFormData.firstName?.trim() ||
-        !studentFormData.lastName?.trim() ||
-        !studentFormData.dob ||
-        !studentFormData.bloodGroup ||
-        !studentFormData.birthplace?.trim() ||
-        !studentFormData.identificationMark?.trim() ||
-        !studentFormData.languagesKnown?.trim()
-      ) {
-        return 'Please fill all compulsory Personal Details marked with * (First & Last Name, DOB, Blood Group, Birthplace, Identification Mark, Languages).';
+      if (!studentFormData.firstName?.trim() || !studentFormData.lastName?.trim()) {
+        return 'Enter the student name to continue.';
       }
     } else if (step === 2) {
       if (
+        !studentFormData.studentId?.trim() ||
         !studentFormData.rollNumber?.trim() ||
         !studentFormData.email?.trim() ||
-        !studentFormData.phone?.trim() ||
-        !studentFormData.admissionDate ||
-        !studentFormData.qual10thInstitute?.trim() ||
-        !studentFormData.qual10thMarks?.trim() ||
-        !studentFormData.qual12thInstitute?.trim() ||
-        !studentFormData.qual12thMarks?.trim()
+        !studentFormData.department?.trim()
       ) {
-        return 'Please fill all compulsory Academic Details marked with * (Roll, Email, Phone, Admission Date, 10th & 12th Qualifications).';
-      }
-    } else if (step === 3) {
-      if (
-        !studentFormData.fatherName?.trim() ||
-        !studentFormData.fatherPhone?.trim() ||
-        !studentFormData.fatherEmail?.trim() ||
-        !studentFormData.motherName?.trim() ||
-        !studentFormData.motherPhone?.trim() ||
-        !studentFormData.motherEmail?.trim()
-      ) {
-        return 'Please fill all compulsory Father and Mother Guardian details marked with *.';
-      }
-    } else if (step === 4) {
-      if (
-        !studentFormData.permAddress?.trim() ||
-        !studentFormData.permCity?.trim() ||
-        !studentFormData.permState?.trim() ||
-        !studentFormData.permPin?.trim() ||
-        !studentFormData.currAddress?.trim() ||
-        !studentFormData.currCity?.trim() ||
-        !studentFormData.currState?.trim() ||
-        !studentFormData.currPin?.trim()
-      ) {
-        return 'Please fill all compulsory Permanent and Current Address details marked with *.';
-      }
-    } else if (step === 5) {
-      if (!editingStudent) {
-        const missing = [];
-        if (!studentFormData.passportPhotoUrl && !studentFormData.passportPhotoName) {
-          missing.push('1. Passport Photograph');
-        }
-        if (!studentFormData.govtIdFileUrl && !studentFormData.govtIdFileName) {
-          missing.push('2. Government ID Proof');
-        }
-        if (!studentFormData.class10FileUrl && !studentFormData.class10FileName) {
-          missing.push('3. Class 10 Certificate');
-        }
-        if (!studentFormData.class12FileUrl && !studentFormData.class12FileName) {
-          missing.push('4. Class 12 Certificate');
-        }
-        if (missing.length > 0) {
-          return `Please upload all compulsory documents before creating the student: ${missing.join(', ')}. (Or click "⚡ Auto-Attach Demo Documents" for testing).`;
-        }
+        return 'Student ID, roll number, email, and department are required by the student record API.';
       }
     }
     return '';
@@ -776,40 +667,9 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
       return;
     }
 
-    // If on Step 4 (Address), auto-sync Permanent Address to Current Address if Current Address is empty
-    if (studentFormStep === 4) {
-      setStudentFormData(prev => {
-        const hasCurr = prev.currAddress && prev.currAddress.trim();
-        const perm = prev.permAddress && prev.permAddress.trim() ? prev.permAddress : 'Plot 18, Unit 4';
-        const city = prev.permCity && prev.permCity.trim() ? prev.permCity : 'Bhubaneswar';
-        const state = prev.permState && prev.permState.trim() ? prev.permState : 'Odisha';
-        const country = prev.permCountry && prev.permCountry.trim() ? prev.permCountry : 'India';
-        const pin = prev.permPin && prev.permPin.trim() ? prev.permPin : '751001';
-
-        return {
-          ...prev,
-          permAddress: prev.permAddress?.trim() ? prev.permAddress : perm,
-          permCity: prev.permCity?.trim() ? prev.permCity : city,
-          permState: prev.permState?.trim() ? prev.permState : state,
-          permCountry: prev.permCountry?.trim() ? prev.permCountry : country,
-          permPin: prev.permPin?.trim() ? prev.permPin : pin,
-          currAddress: hasCurr ? prev.currAddress : (prev.permAddress?.trim() || perm),
-          currCity: prev.currCity?.trim() ? prev.currCity : city,
-          currState: prev.currState?.trim() ? prev.currState : state,
-          currCountry: prev.currCountry?.trim() ? prev.currCountry : country,
-          currPin: prev.currPin?.trim() ? prev.currPin : pin,
-        };
-      });
-      setFormValidationError('');
-      setStudentFormStep(5);
-      setCanSubmitStep5(false);
-      setTimeout(() => setCanSubmitStep5(true), 600);
-      return;
-    }
-
     setFormValidationError('');
     setStudentFormStep(prev => {
-      const next = Math.min(5, prev + 1);
+      const next = prev === 1 ? 2 : 5;
       if (next === 5) {
         setCanSubmitStep5(false);
         setTimeout(() => setCanSubmitStep5(true), 600);
@@ -820,118 +680,68 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
 
   const handlePrevStep = () => {
     setFormValidationError('');
-    setStudentFormStep(prev => Math.max(1, prev - 1));
+    setStudentFormStep((current) => current === 5 ? 2 : 1);
   };
 
-  /**
-   * Auto-generate a structured Registration Number.
-   * Format: YY + DEPT_CODE(3) + ROLL(4 digits)
-   * Example: 2305CSE0092  →  Year 2023, Dept CSE, Roll 92
-   */
-  function generateRegistrationNumber(admissionYear, deptCode, rollNumber) {
-    const yy = String(admissionYear || new Date().getFullYear()).slice(2); // '23'
-    const dept = String(deptCode || 'CSE').toUpperCase().slice(0, 3);       // 'CSE'
-    const roll = String(rollNumber || students.length + 1).padStart(4, '0'); // '0092'
-    return `${yy}05${dept}${roll}`;
-  }
-
-  /**
-   * Auto-generate a default password for the student.
-   * Format: Gift@YYYY  (e.g., Gift@2023)
-   */
-  function generateDefaultPassword(admissionYear) {
-    return `Gift@${admissionYear || new Date().getFullYear()}`;
-  }
-
-  const handleSaveStudent = (e) => {
-    if (e) e.preventDefault();
-
-    // Guard: Prevent any submission if user has not reached Step 5
+  const handleSaveStudent = async (e) => {
+    e?.preventDefault();
     if (studentFormStep < 5) {
       handleNextStep();
       return;
     }
+    if (!canSubmitStep5) return;
 
-    // Guard: Cooldown prevents accidental double-click from Step 4 Next button
-    if (!canSubmitStep5) {
-      return;
-    }
-
-    for (let s = 1; s <= 5; s++) {
-      const err = validateStep(s);
-      if (err) {
-        setFormValidationError(err);
-        setStudentFormStep(s);
-        showToast(`⚠️ Please complete Step ${s}: ${err}`);
+    for (let step = 1; step <= 5; step += 1) {
+      const validationError = validateStep(step);
+      if (validationError) {
+        setFormValidationError(validationError);
+        setStudentFormStep(step);
+        showToast(`Please complete Step ${step}: ${validationError}`);
         return;
       }
     }
 
-    const fullName = `${studentFormData.firstName || ''} ${studentFormData.lastName || ''}`.trim() || studentFormData.name || 'New Student';
-    const isNew = !editingStudent;
-
-    // Auto-generate Registration Number for new students
-    const admissionYear = studentFormData.admissionDate
-      ? new Date(studentFormData.admissionDate).getFullYear()
-      : new Date().getFullYear();
-    const autoRegNo = isNew
-      ? generateRegistrationNumber(admissionYear, studentFormData.deptCode, studentFormData.rollNumber)
-      : (editingStudent.registrationNumber || studentFormData.registrationNumber);
-    const defaultPassword = isNew ? generateDefaultPassword(admissionYear) : null;
-
+    const fullName = `${studentFormData.firstName || ''} ${studentFormData.lastName || ''}`.trim() || studentFormData.name || '';
     const payload = {
-      ...studentFormData,
+      studentId: String(studentFormData.studentId || studentFormData.registrationNumber || '').trim(),
+      rollNumber: String(studentFormData.rollNumber || '').trim(),
       name: fullName,
-      id: editingStudent ? editingStudent.id : undefined,
-      registrationNumber: autoRegNo,
-      defaultPassword: defaultPassword, // stored so it can be shown in credential card
+      email: String(studentFormData.email || '').trim(),
+      department: String(studentFormData.department || '').trim(),
+      deptCode: studentFormData.deptCode || undefined,
+      semester: studentFormData.semester || undefined,
+      section: studentFormData.section || undefined,
+      academicYear: studentFormData.academicYear || undefined,
+      phone: studentFormData.phone || undefined,
     };
 
-    const saved = saveStudent(payload);
-    setStudents(getAllStudents());
-    setActiveStudent(saved.id);
-
-    setIsStudentModalOpen(false);
-
-    if (isNew) {
-      erpStore.logAuditEvent({
-        user: account?.name || 'Academic Administrator',
-        role: 'ADMIN',
-        action: 'Admitted New Student',
-        target: `${saved.name} (${saved.registrationNumber || autoRegNo})`,
-        oldValue: 'Application Verified',
-        newValue: `Admitted: ${saved.course || saved.program || 'B.Tech'} · ${saved.department} · ${saved.semester} ${saved.section}`,
-      });
-      // Show Admission Credential Card
-      setAdmissionCredential({
-        name: saved.name,
-        regNo: saved.registrationNumber || autoRegNo,
-        password: defaultPassword,
-        rollNumber: saved.rollNumber,
-        department: saved.department,
-        semester: saved.semester,
-        section: saved.section,
-        email: saved.email,
-        admissionDate: studentFormData.admissionDate,
-      });
-    } else {
-      erpStore.logAuditEvent({
-        user: account?.name || 'Academic Administrator',
-        role: 'ADMIN',
-        action: 'Updated Student Profile',
-        target: `${saved.name} (${saved.registrationNumber})`,
-        oldValue: 'Existing Profile',
-        newValue: 'Updated Details & Status',
-      });
-      showToast(`Student ${saved.name} updated successfully!`);
+    try {
+      const response = editingStudent
+        ? await api.updateStudent(editingStudent.id, payload)
+        : await api.createStudent(payload);
+      if (!response?.success || !response.data) throw new Error('The server did not confirm the student record change.');
+      const saved = response.data;
+      setStudents((current) => editingStudent
+        ? current.map((student) => student.id === saved.id ? saved : student)
+        : [...current, saved]);
+      setIsStudentModalOpen(false);
+      showToast(editingStudent
+        ? 'Student profile updated on the server.'
+        : 'Student profile saved. A student login account still needs to be provisioned separately.');
+    } catch (error) {
+      showToast(error.message || 'Student record could not be saved.');
     }
   };
 
-  const handleDeleteStudent = (id, name) => {
-    if (window.confirm(`Are you sure you want to deactivate student ${name}?`)) {
-      saveStudent({ id, status: 'Inactive', studentStatus: 'Inactive', activeStatus: 'Inactive' });
-      setStudents(getAllStudents());
-      showToast(`Student ${name} status set to Inactive.`);
+  const handleDeleteStudent = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to deactivate student ${name}?`)) return;
+    try {
+      const response = await api.updateStudent(id, { status: 'Inactive' });
+      if (!response?.success || !response.data) throw new Error('The server did not confirm deactivation.');
+      setStudents((current) => current.map((student) => student.id === id ? response.data : student));
+      showToast(`Student ${name} was deactivated on the server.`);
+    } catch (error) {
+      showToast(error.message || `Student ${name} could not be deactivated.`);
     }
   };
 
@@ -1009,28 +819,104 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
   };
 
   // Subject CRUD
-  const handleSaveSubject = (e) => {
+  const refreshAcademicData = async () => {
+    const results = await Promise.allSettled([
+      api.getSemesters(), api.getSections(), api.getSubjects('', ''),
+      api.getCourseOfferings(), api.getAcademicFaculty(),
+    ]);
+    const setters = [setSemesters, setSections, setSubjects, setCourseOfferings, setAcademicFaculty];
+    const labels = ['semesters', 'sections', 'subjects', 'course offerings', 'faculty'];
+    const failures = [];
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value?.success && Array.isArray(result.value.data)) setters[index](result.value.data);
+      else { setters[index]([]); failures.push(labels[index]); }
+    });
+    setAcademicError(failures.length ? `Saved changes, but could not refresh ${failures.join(', ')} from the academic backend.` : '');
+    return failures.length === 0;
+  };
+
+  const handleSaveSubject = async (e) => {
     e.preventDefault();
-    const newSub = {
-      ...subjectFormData,
-      id: `sub-${Date.now()}`,
-      status: 'Active'
-    };
-    setSubjects(prev => [...prev, newSub]);
-    setIsSubjectModalOpen(false);
-    showToast(`Subject ${newSub.code} - ${newSub.name} created!`);
+    try {
+      const result = await api.createCurriculumItem(subjectFormData);
+      const refreshed = await refreshAcademicData();
+      setIsSubjectModalOpen(false);
+      setSubjectFormData({ code: '', name: '', department: '', semester: '', academicYear: '', credits: '', type: '' });
+      showToast(refreshed ? (result?.message || `Subject ${subjectFormData.code} saved to the academic backend.`) : 'Subject saved, but the list could not be refreshed. Reload the page.');
+    } catch (error) {
+      showToast(error.message || 'Subject could not be saved to the academic backend.');
+    }
   };
 
   // Semester activation/closing
-  const toggleSemesterStatus = (id) => {
-    setSemesters(prev => prev.map(sem => {
-      if (sem.id === id) {
-        const nextStatus = sem.status === 'Active' ? 'Closed' : 'Active';
-        showToast(`${sem.label} is now ${nextStatus}`);
-        return { ...sem, status: nextStatus };
+  const toggleSemesterStatus = async (semester) => {
+    const nextStatus = semester.status === 'Active' ? 'Closed' : 'Active';
+    try {
+      await api.updateSemester(semester.id, { status: nextStatus });
+      const refreshed = await refreshAcademicData();
+      showToast(refreshed ? `${semester.label} updated to ${nextStatus}.` : 'Semester updated, but the list could not be refreshed. Reload the page.');
+    } catch (error) {
+      showToast(error.message || 'Semester status could not be updated.');
+    }
+  };
+
+  const handleCreateSemester = async (event) => {
+    event.preventDefault();
+    try {
+      await api.createSemester({ ...semesterFormData, number: Number(semesterFormData.number) });
+      const refreshed = await refreshAcademicData();
+      setIsSemesterModalOpen(false);
+      setSemesterFormData({ number: '', label: '', year: '', academicYear: '' });
+      showToast(refreshed ? 'Semester saved to the academic backend.' : 'Semester saved, but the list could not be refreshed. Reload the page.');
+    } catch (error) {
+      showToast(error.message || 'Semester could not be saved.');
+    }
+  };
+
+  const handleCreateDepartment = async (event) => {
+    event.preventDefault();
+    try {
+      await api.createDepartment(departmentFormData);
+      const result = await api.getDepartments();
+      if (result?.success && Array.isArray(result.data)) {
+        setDepartments(result.data);
+        setDepartmentsError('');
+      } else {
+        setDepartments([]);
+        setDepartmentsError('Department saved, but the list could not be refreshed. Reload the page.');
       }
-      return sem;
-    }));
+      setIsDepartmentModalOpen(false);
+      setDepartmentFormData({ code: '', name: '', hod: '', hodEmail: '' });
+      showToast('Department saved to the academic backend.');
+    } catch (error) {
+      showToast(error.message || 'Department could not be saved.');
+    }
+  };
+
+  const handleCreateSection = async (event) => {
+    event.preventDefault();
+    try {
+      await api.createSection(sectionFormData);
+      const refreshed = await refreshAcademicData();
+      setIsSectionModalOpen(false);
+      setSectionFormData({ semester: '', section: '', department: '', room: '', classRepresentative: '', facultyCoordinator: '' });
+      showToast(refreshed ? 'Section saved to the academic backend.' : 'Section saved, but the list could not be refreshed. Reload the page.');
+    } catch (error) {
+      showToast(error.message || 'Section could not be saved.');
+    }
+  };
+
+  const handleAssignFaculty = async (event) => {
+    event.preventDefault();
+    try {
+      await api.assignFacultyToCourse({ ...allocationFormData, allocatedHours: Number(allocationFormData.allocatedHours) });
+      const refreshed = await refreshAcademicData();
+      setIsAllocationModalOpen(false);
+      setAllocationFormData({ courseOfferingId: '', facultyId: '', section: '', allocatedHours: '' });
+      showToast(refreshed ? 'Faculty allocation saved and the workload view was refreshed.' : 'Faculty allocation saved, but the list could not be refreshed. Reload the page.');
+    } catch (error) {
+      showToast(error.message || 'Faculty allocation could not be saved.');
+    }
   };
 
   // Marking Scheme modification
@@ -1220,40 +1106,35 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
   const handleToggleUserStatus = async (userId, currentActive) => {
     try {
       const res = await api.updateAdminUserStatus(userId, !currentActive);
-      if (res?.data?.success || res?.status === 200) {
+      if (res?.success && res?.data) {
         setAdminUsers(prev => prev.map(u => u.id === userId ? { ...u, isActive: !currentActive } : u));
+        api.getAdminMetrics().then((metricRes) => {
+          if (metricRes?.success && metricRes?.data) setAdminMetrics(metricRes.data);
+        }).catch(() => {});
         showToast(`User status updated to ${!currentActive ? 'Active' : 'Suspended'}.`);
       } else {
-        setAdminUsers(prev => prev.map(u => u.id === userId ? { ...u, isActive: !currentActive } : u));
-        showToast(`User status updated to ${!currentActive ? 'Active' : 'Suspended'}.`);
+        showToast('The server did not confirm the account status change.');
       }
     } catch (err) {
       console.error('Failed to update user status:', err);
-      setAdminUsers(prev => prev.map(u => u.id === userId ? { ...u, isActive: !currentActive } : u));
-      showToast(`User status updated to ${!currentActive ? 'Active' : 'Suspended'}.`);
-    }
-  };
-
-  const handleResetUserPassword = async (userId, userName) => {
-    try {
-      const res = await api.resetAdminUserPassword(userId);
-      const tempPass = res?.data?.tempPassword || 'pass1234';
-      alert(`Temporary password generated for ${userName}:\n\n${tempPass}\n\nPlease share this securely with the user.`);
-      showToast(`Password reset for ${userName}.`);
-    } catch (err) {
-      console.error('Failed to reset password:', err);
-      alert(`Temporary password generated for ${userName}:\n\npass1234\n\nPlease share this securely with the user.`);
-      showToast(`Password reset for ${userName}.`);
+      showToast(err?.message || 'Account status could not be changed.');
     }
   };
 
   const handleCreateUserAccount = async (e) => {
     e.preventDefault();
+    if ((ACCOUNT_ROLE_RANK[currentAccountRole] ?? -1) <=
+      (ACCOUNT_ROLE_RANK[String(provisionUserForm.role).toLowerCase()] ?? Infinity)) {
+      showToast('You can provision only accounts with a lower role than your own.');
+      return;
+    }
     try {
       const res = await api.createAdminUserAccount(provisionUserForm);
-      if (res?.data?.user) {
-        setAdminUsers(prev => [res.data.user, ...prev]);
-      }
+      if (!res?.success || !res?.data) throw new Error('The API did not confirm account creation.');
+      setAdminUsers(prev => [res.data, ...prev]);
+      api.getAdminMetrics().then((metricRes) => {
+        if (metricRes?.success && metricRes?.data) setAdminMetrics(metricRes.data);
+      }).catch(() => {});
       showToast(`Account provisioned successfully for ${provisionUserForm.name}!`);
       setIsProvisionUserModalOpen(false);
       setProvisionUserForm({
@@ -1261,13 +1142,12 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
         email: '',
         identifier: '',
         role: 'FACULTY',
-        password: 'password123',
+        password: '',
         department: 'Computer Science & Engineering',
       });
     } catch (err) {
       console.error('Failed to create account:', err);
-      showToast(`Account provisioned for ${provisionUserForm.name}.`);
-      setIsProvisionUserModalOpen(false);
+      showToast(err?.message || 'Account could not be created. Check the details and try again.');
     }
   };
 
@@ -1286,161 +1166,6 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
 
   return (
     <div className="admin-portal-root">
-
-      {/* ══════════════════════════════════════════════════════════
-           ADMISSION CREDENTIAL CARD MODAL
-           Shown immediately after a new student is admitted.
-           Displays auto-generated Registration No. + default password.
-          ══════════════════════════════════════════════════════════ */}
-      {admissionCredential && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 10000,
-          background: 'rgba(2, 6, 23, 0.88)', backdropFilter: 'blur(8px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '20px',
-        }}>
-          <div style={{
-            background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
-            border: '1px solid rgba(59,130,246,0.35)',
-            borderRadius: '20px',
-            padding: '40px 44px',
-            maxWidth: '520px',
-            width: '100%',
-            boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,130,246,0.1)',
-            position: 'relative',
-          }}>
-            {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: '60px', height: '60px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, #2563eb, #0ea5e9)',
-                marginBottom: '16px',
-              }}>
-                <GraduationCap size={28} color="#fff" />
-              </div>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)',
-                borderRadius: '20px', padding: '4px 14px', marginBottom: '12px',
-                fontSize: '11px', fontWeight: 700, color: '#4ade80',
-                letterSpacing: '0.06em', textTransform: 'uppercase',
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                Admission Successful
-              </div>
-              <h2 style={{ color: '#f8fafc', fontSize: '22px', fontWeight: 800, margin: '0 0 6px', fontFamily: "'Outfit', sans-serif" }}>
-                Welcome to Apna Campus
-              </h2>
-              <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
-                Student admission confirmed. Share these login credentials with the student.
-              </p>
-            </div>
-
-            {/* Student Info */}
-            <div style={{
-              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: '12px', padding: '16px 20px', marginBottom: '20px',
-            }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[
-                  { label: 'Student Name', value: admissionCredential.name },
-                  { label: 'Department', value: admissionCredential.department },
-                  { label: 'Semester / Section', value: `${admissionCredential.semester} · ${admissionCredential.section}` },
-                  { label: 'Roll Number', value: admissionCredential.rollNumber },
-                ].map(row => (
-                  <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 600 }}>{row.label}</span>
-                    <span style={{ color: '#f8fafc', fontSize: '13px', fontWeight: 600 }}>{row.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Credential Box */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(37,99,235,0.15), rgba(14,165,233,0.1))',
-              border: '1.5px solid rgba(59,130,246,0.4)',
-              borderRadius: '14px', padding: '20px 24px', marginBottom: '24px',
-            }}>
-              <p style={{ color: '#93c5fd', fontSize: '11px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', margin: '0 0 14px' }}>
-                🔐 Login Credentials (First-Time Login)
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div>
-                  <p style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Registration Number (Login ID)</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <code style={{
-                      flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '8px', padding: '10px 14px', color: '#7dd3fc',
-                      fontSize: '18px', fontWeight: 800, fontFamily: "'Outfit', monospace", letterSpacing: '0.06em',
-                    }}>
-                      {admissionCredential.regNo}
-                    </code>
-                    <button
-                      onClick={() => { navigator.clipboard.writeText(admissionCredential.regNo); showToast('Registration number copied!'); }}
-                      style={{ background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px', padding: '10px 12px', color: '#93c5fd', cursor: 'pointer', fontSize: '11px', fontWeight: 600, whiteSpace: 'nowrap' }}
-                    >Copy</button>
-                  </div>
-                </div>
-                <div>
-                  <p style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Default Password (must be changed on first login)</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <code style={{
-                      flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '8px', padding: '10px 14px', color: '#86efac',
-                      fontSize: '18px', fontWeight: 800, fontFamily: "'Outfit', monospace", letterSpacing: '0.06em',
-                    }}>
-                      {admissionCredential.password}
-                    </code>
-                    <button
-                      onClick={() => { navigator.clipboard.writeText(admissionCredential.password); showToast('Password copied!'); }}
-                      style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', padding: '10px 12px', color: '#4ade80', cursor: 'pointer', fontSize: '11px', fontWeight: 600, whiteSpace: 'nowrap' }}
-                    >Copy</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Info note */}
-            <p style={{ color: '#475569', fontSize: '12px', lineHeight: 1.6, marginBottom: '20px', textAlign: 'center' }}>
-              The student can log in to <strong style={{ color: '#7dd3fc' }}>Apna Campus Portal</strong> using their Registration Number as their ID.<br/>
-              The system automatically detects their role and redirects to the Student Dashboard.
-            </p>
-
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => {
-                  const text = `Apna Campus — Student Login Credentials\n\nName: ${admissionCredential.name}\nRegistration No: ${admissionCredential.regNo}\nDefault Password: ${admissionCredential.password}\nDepartment: ${admissionCredential.department}\n\nLogin at: Apna Campus Portal\nPlease change your password after first login.`;
-                  navigator.clipboard.writeText(text);
-                  showToast('Full credential slip copied to clipboard!');
-                }}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '10px',
-                  background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
-                  color: '#93c5fd', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
-                }}
-              >
-                📋 Copy Full Credential Slip
-              </button>
-              <button
-                onClick={() => {
-                  setAdmissionCredential(null);
-                  showToast(`✅ ${admissionCredential.name} successfully admitted! They can now login with Reg No: ${admissionCredential.regNo}`);
-                }}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #2563eb, #0ea5e9)',
-                  border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
-                }}
-              >
-                ✓ Done — Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Toast Alert */}
       {toastMessage && (
@@ -1475,8 +1200,22 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               onClick={() => setSidebarOpen(true)}
               title="Show Navigation"
               aria-label="Show Navigation"
+              style={{
+                background: '#000000',
+                color: '#ffffff',
+                border: '1px solid #000000',
+                borderRadius: '10px',
+                width: '38px',
+                height: '38px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 3px 10px rgba(0, 0, 0, 0.3)',
+                flexShrink: 0
+              }}
             >
-              <Menu size={20} />
+              <Menu size={20} color="#ffffff" stroke="#ffffff" />
             </button>
           )}
           <div className="admin-brand-icon" style={{ background: '#ffffff', padding: '4px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1533,22 +1272,23 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
         </div>
       </header>
 
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="erp-sidebar-backdrop active"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Layout */}
       <div className={`admin-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
         {/* Sidebar */}
         {sidebarOpen && (
           <aside className="admin-sidebar">
-            <div className="admin-sidebar-header">
-              <span className="admin-sidebar-title">Menu</span>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="admin-sidebar-close"
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <MasterSidebarHeader
+              roleTitle="CAMPUS ADMINISTRATION"
+              onToggle={() => setSidebarOpen(false)}
+            />
           {/* ── 1. INSTITUTIONAL OVERVIEW ── */}
           <button
             className="admin-nav-section-dropdown"
@@ -1886,20 +1626,6 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
-            <RoleDashboardLanding
-              account={account}
-              roleKey="admin"
-              onLogout={onLogout}
-              onSwitchRole={onSwitchRole}
-              onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-              onNavigateTab={(tabId) => {
-                if (tabId === 'verify') setActiveTab('documents');
-                else if (tabId === 'certificates') setActiveTab('students');
-                else if (tabId === 'requests') setActiveTab('ai-complaints');
-              }}
-            />
-          )}
-          {false && activeTab === 'dashboard' && (
             <div>
               <div className="admin-view-header">
                 <div>
@@ -1965,7 +1691,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                     <span className="admin-kpi-label">Active Enrolled Students</span>
                     <div className="admin-kpi-card-icon blue"><GraduationCap size={18} /></div>
                   </div>
-                  <div className="admin-kpi-val">{adminMetrics?.totalStudents || students.length || 2480}</div>
+                  <div className="admin-kpi-val">{adminMetrics?.totalStudents ?? students.length}</div>
                   <small style={{ color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
                     <TrendingUp size={13} /> Synchronized with Autonomous DB
                   </small>
@@ -2138,7 +1864,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               <div className="admin-view-header">
                 <div>
                   <h2>Student Roster Management</h2>
-                  <p>Comprehensive roster of students enrolled in autonomous B.Tech programs. Total: {students.length} students.</p>
+                  <p>Student records loaded from the backend. Total: {students.length}.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <button className="admin-action-btn-primary" onClick={handleOpenAddStudent}>
@@ -2146,6 +1872,8 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                   </button>
                 </div>
               </div>
+
+              {studentDirectoryError && <div className="erp-alert-box" role="alert">{studentDirectoryError}</div>}
 
               {/* Filters toolbar */}
               <div className="admin-card" style={{ padding: '1rem', marginBottom: '1.25rem' }}>
@@ -2227,7 +1955,8 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                   </thead>
                   <tbody>
                     {filteredStudents.slice(0, 25).map(s => {
-                      const risk = erpStore.calculateStudentRisk(s);
+                      const hasAttendance = s.attendance !== null && s.attendance !== undefined && Number.isFinite(Number(s.attendance));
+                      const risk = hasAttendance ? erpStore.calculateStudentRisk(s) : null;
                       return (
                         <tr key={s.id}>
                           <td><strong>{s.rollNumber}</strong></td>
@@ -2238,21 +1967,21 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                           <td><code style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '2px 4px', borderRadius: '4px' }}>{s.studentId}</code></td>
                           <td>
                             <span className="admin-badge active" style={{ fontSize: '0.74rem' }}>
-                              {s.program || s.course?.split(' ')[0] || 'B.Tech'} · {s.deptCode || 'CSE'}
+                              {s.program || s.course?.split(' ')[0] || '—'} · {s.deptCode || '—'}
                             </span>
                           </td>
-                          <td>{s.semester} · {s.section}</td>
+                          <td>{s.semester || '—'} · {s.section || '—'}</td>
                           <td>
-                            <span style={{ fontWeight: 700, color: (s.attendance || 85) < 75 ? '#dc2626' : '#059669' }}>
-                              {s.attendance || 85}%
+                            <span style={{ fontWeight: 700, color: hasAttendance && Number(s.attendance) < 75 ? '#dc2626' : '#64748b' }}>
+                              {hasAttendance ? `${s.attendance}%` : '—'}
                             </span>
                           </td>
                           <td>
                             <span
                               style={{
-                                background: `${risk.badgeColor}15`,
-                                color: risk.badgeColor,
-                                border: `1px solid ${risk.badgeColor}35`,
+                                background: risk ? `${risk.badgeColor}15` : '#f1f5f9',
+                                color: risk?.badgeColor || '#64748b',
+                                border: `1px solid ${risk ? `${risk.badgeColor}35` : '#cbd5e1'}`,
                                 padding: '2px 8px',
                                 borderRadius: '12px',
                                 fontSize: '0.72rem',
@@ -2261,10 +1990,10 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                                 alignItems: 'center',
                                 gap: '4px'
                               }}
-                              title={risk.reasons.length > 0 ? risk.reasons.join(' | ') : 'Academic performance in good standing'}
+                              title={risk ? (risk.reasons.length > 0 ? risk.reasons.join(' | ') : 'Academic performance in good standing') : 'Attendance data is unavailable'}
                             >
-                              {risk.isAtRisk && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: risk.badgeColor }} />}
-                              {risk.category}
+                              {risk?.isAtRisk && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: risk.badgeColor }} />}
+                              {risk?.category || 'Not available'}
                             </span>
                           </td>
                           <td>
@@ -3271,8 +3000,11 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               <div className="admin-view-header">
                 <div>
                   <h2>Faculty Academic Allocations &amp; Workload Matrix</h2>
-                  <p>Relational mapping connecting: Faculty → Department → Program → Semester → Section → Subject → Room.</p>
+                  <p>Assignments and weekly hours are read from persisted course offerings and faculty records.</p>
                 </div>
+                {['super_admin', 'admin', 'hod'].includes(currentAccountRole) && <button className="admin-action-btn-primary" onClick={() => setIsAllocationModalOpen(true)} disabled={!courseOfferings.length || !academicFaculty.length} title={!courseOfferings.length ? 'Create a subject and course offering first.' : !academicFaculty.length ? 'Add faculty records first.' : ''}>
+                  <Plus size={15} /> Assign Faculty
+                </button>}
               </div>
 
               <div className="admin-table-container">
@@ -3289,26 +3021,29 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {initialFacultyAssignments.map(fa => (
-                      <tr key={fa.id}>
-                        <td><strong>{fa.id}</strong></td>
-                        <td style={{ fontWeight: 600, color: '#0f172a' }}>{fa.facultyName}</td>
+                    {courseOfferings.flatMap(offering => (offering.facultyAssignments || []).map(assignment => ({ offering, assignment }))).map(({ offering, assignment }) => (
+                      <tr key={assignment.id}>
+                        <td><strong>{assignment.id}</strong></td>
+                        <td style={{ fontWeight: 600, color: '#0f172a' }}>{assignment.faculty?.name || 'Faculty record unavailable'}</td>
                         <td>
                           <span className="admin-badge active" style={{ fontSize: '0.75rem' }}>
-                            {fa.program} ({fa.deptCode})
+                            {(offering.programme?.name || offering.programmeId || 'Programme not linked')} ({offering.department})
                           </span>
                         </td>
-                        <td>{fa.semester} · {fa.section}</td>
+                        <td>{offering.semester} · {assignment.section}</td>
                         <td>
-                          <div><strong>{fa.subjectName}</strong></div>
-                          <code style={{ fontSize: '0.72rem', color: '#64748b' }}>{fa.subjectCode}</code>
+                          <div><strong>{offering.subjectName}</strong></div>
+                          <code style={{ fontSize: '0.72rem', color: '#64748b' }}>{offering.subjectCode}</code>
                         </td>
-                        <td><span style={{ color: '#475569', fontSize: '0.8rem' }}>{fa.room}</span></td>
+                        <td><span style={{ color: '#475569', fontSize: '0.8rem' }}>—</span></td>
                         <td>
-                          <span style={{ fontWeight: 700, color: '#2563eb' }}>{fa.periodsPerWeek} Hrs/Week</span>
+                          <span style={{ fontWeight: 700, color: '#2563eb' }}>{assignment.allocatedHours} Hrs/Week</span>
                         </td>
                       </tr>
                     ))}
+                    {!academicLoading && courseOfferings.every(offering => !(offering.facultyAssignments || []).length) && (
+                      <tr><td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No faculty allocations are recorded yet.</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -3321,20 +3056,28 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               <div className="admin-view-header">
                 <div>
                   <h2>Department Management</h2>
-                  <p>Academic branches under Apna Campus Engineering &amp; Technology faculties.</p>
+                  <p>Departments and roster counts loaded from the academic backend.</p>
                 </div>
+                {['super_admin', 'admin'].includes(currentAccountRole) && <button className="admin-action-btn-primary" onClick={() => setIsDepartmentModalOpen(true)}><Plus size={15} /> Add Department</button>}
               </div>
 
+              {departmentsLoading ? (
+                <div className="admin-card" role="status">Loading departments from backend…</div>
+              ) : departmentsError ? (
+                <div className="admin-card" role="alert" style={{ color: '#b91c1c' }}>{departmentsError}</div>
+              ) : departments.length === 0 ? (
+                <div className="admin-card" role="status">No departments are configured yet.</div>
+              ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
                 {departments.map(dept => (
                   <div key={dept.id} className="admin-card" style={{ marginBottom: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                       <span className="admin-badge active" style={{ fontSize: '0.85rem' }}>{dept.code}</span>
-                      <span className="admin-badge active">Active Dept</span>
+                      <span className={`admin-badge ${String(dept.status).toLowerCase() === 'active' ? 'active' : ''}`}>{dept.status || 'Status unavailable'}</span>
                     </div>
                     <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#0f172a' }}>{dept.name}</h3>
                     <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
-                      Head: <strong>{dept.hod}</strong> ({dept.hodEmail})
+                      Head: <strong>{dept.hod || 'Unassigned'}</strong>{dept.hodEmail ? ` (${dept.hodEmail})` : ''}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
                       <div>
@@ -3347,12 +3090,13 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                       </div>
                       <div>
                         <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#9333ea' }}>{dept.subjectsCount}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Subjects</div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Courses</div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+              )}
             </div>
           )}
 
@@ -3362,9 +3106,13 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               <div className="admin-view-header">
                 <div>
                   <h2>Semester Management</h2>
-                  <p>Activate, close, or configure continuous evaluation academic semesters (1 to 8).</p>
+                  <p>Semester details and counts come from the academic database.</p>
                 </div>
+                {['super_admin', 'admin'].includes(currentAccountRole) && <button className="admin-action-btn-primary" onClick={() => setIsSemesterModalOpen(true)}><Plus size={15} /> Add Semester</button>}
               </div>
+
+              {academicLoading && <div className="admin-card" role="status">Loading semesters…</div>}
+              {academicError && <div className="admin-card" role="alert" style={{ color: '#b91c1c' }}>{academicError}</div>}
 
               <div className="admin-table-container">
                 <table className="admin-table">
@@ -3396,13 +3144,14 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                           <button
                             className="admin-action-btn-secondary"
                             style={{ padding: '0.3rem 0.6rem', fontSize: '0.775rem' }}
-                            onClick={() => toggleSemesterStatus(sem.id)}
+                            onClick={() => toggleSemesterStatus(sem)}
                           >
                             {sem.status === 'Active' ? 'Close Term' : 'Activate Term'}
                           </button>
                         </td>
                       </tr>
                     ))}
+                    {!academicLoading && !semesters.length && <tr><td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No semesters are configured yet.</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -3415,10 +3164,13 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               <div className="admin-view-header">
                 <div>
                   <h2>Section Management</h2>
-                  <p>Manage classroom cohorts, student capacity distributions, and section mentors.</p>
+                  <p>Section details are stored in the academic database; student counts are calculated from the current roster.</p>
                 </div>
+                {['super_admin', 'admin', 'hod'].includes(currentAccountRole) && <button className="admin-action-btn-primary" onClick={() => setIsSectionModalOpen(true)}><Plus size={15} /> Add Section</button>}
               </div>
 
+              {academicLoading && <div className="admin-card" role="status">Loading sections…</div>}
+              {academicError && <div className="admin-card" role="alert" style={{ color: '#b91c1c' }}>{academicError}</div>}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
                 {sections.map(sec => (
                   <div key={sec.id} className="admin-card" style={{ marginBottom: 0 }}>
@@ -3431,12 +3183,13 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                     </div>
                     <div style={{ fontSize: '0.825rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <div>Department: <strong>{sec.department}</strong></div>
-                      <div>Room: <strong>{sec.room}</strong></div>
-                      <div>Coordinator: <strong>{sec.facultyCoordinator}</strong></div>
-                      <div>Class Rep: <strong>{sec.classRepresentative}</strong></div>
+                      <div>Room: <strong>{sec.room || 'Unassigned'}</strong></div>
+                      <div>Coordinator: <strong>{sec.facultyCoordinator || 'Unassigned'}</strong></div>
+                      <div>Class Rep: <strong>{sec.classRepresentative || 'Unassigned'}</strong></div>
                     </div>
                   </div>
                 ))}
+                {!academicLoading && !sections.length && <div className="admin-card" role="status">No sections are configured yet.</div>}
               </div>
             </div>
           )}
@@ -3447,12 +3200,15 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               <div className="admin-view-header">
                 <div>
                   <h2>Autonomous Subject Management</h2>
-                  <p>Configure course codes, credit schemes, theory/practical classification, and assigned faculty.</p>
+                  <p>Subjects, course offerings, and assigned faculty are loaded from the academic backend.</p>
                 </div>
-                <button className="admin-action-btn-primary" onClick={() => setIsSubjectModalOpen(true)}>
+                {['super_admin', 'admin', 'hod'].includes(currentAccountRole) && <button className="admin-action-btn-primary" onClick={() => setIsSubjectModalOpen(true)}>
                   <Plus size={15} /> Add Subject
-                </button>
+                </button>}
               </div>
+
+              {academicLoading && <div className="admin-card" role="status">Loading subjects…</div>}
+              {academicError && <div className="admin-card" role="alert" style={{ color: '#b91c1c' }}>{academicError}</div>}
 
               <div className="admin-table-container">
                 <table className="admin-table">
@@ -3477,10 +3233,11 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                         <td>{s.semester}</td>
                         <td>{s.credits} Credits</td>
                         <td><span className="admin-badge active">{s.type}</span></td>
-                        <td style={{ color: '#2563eb', fontWeight: 500 }}>{s.assignedFaculty}</td>
+                        <td style={{ color: '#2563eb', fontWeight: 500 }}>{s.assignedFaculty || 'Unassigned'}</td>
                         <td><span className="admin-badge active">{s.status}</span></td>
                       </tr>
                     ))}
+                    {!academicLoading && !subjects.length && <tr><td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No subjects or course offerings are configured yet.</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -3724,7 +3481,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                     <label>Affiliating University</label>
                     <input type="text" className="admin-form-input" defaultValue="Biju Patnaik University of Technology (BPUT)" />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div className="admin-form-group">
                       <label>Academic Year</label>
                       <input type="text" className="admin-form-input" defaultValue="2026-27" />
@@ -4918,20 +4675,13 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                             </td>
                             <td>
                               <div style={{ display: 'flex', gap: '6px' }}>
-                                <button
+                                {canManageAccount(u) ? <button
                                   className="admin-action-btn-secondary"
                                   style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                                   onClick={() => handleToggleUserStatus(u.id, u.isActive !== false)}
                                 >
                                   {u.isActive !== false ? 'Suspend' : 'Activate'}
-                                </button>
-                                <button
-                                  className="admin-action-btn-secondary"
-                                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', color: '#2563eb' }}
-                                  onClick={() => handleResetUserPassword(u.id, u.name)}
-                                >
-                                  Reset Pass
-                                </button>
+                                </button> : <span title="Only a higher role may manage this account" style={{ color: '#64748b', fontSize: '0.75rem' }}>Protected</span>}
                               </div>
                             </td>
                           </tr>
@@ -5086,20 +4836,11 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                     {editingStudent ? 'Edit Student Profile' : 'Register New Student (Compulsory Enrollment)'}
                   </h3>
                   <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-                    All details are compulsory. Data auto-synchronizes to the Student Portal upon submission.
+                    The review step saves only fields supported by the student API. Login accounts and invitations are separate.
                   </p>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  className="admin-action-btn-secondary"
-                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', background: '#f0fdf4', borderColor: '#86efac', color: '#166534' }}
-                  onClick={handleAutofillSample}
-                  title="Autofill all compulsory sections with realistic test student data"
-                >
-                  ✨ Autofill Sample Demo Data
-                </button>
                 <button className="admin-table-action-btn" type="button" onClick={() => setIsStudentModalOpen(false)}>
                   <X size={18} />
                 </button>
@@ -5109,11 +4850,9 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
             {/* Stepper Navigation */}
             <div className="admin-student-stepper">
               {[
-                { num: 1, label: '1. Personal Details' },
-                { num: 2, label: '2. Academic Details' },
-                { num: 3, label: '3. Guardians Details' },
-                { num: 4, label: '4. Address Details' },
-                { num: 5, label: '5. Documents' },
+                { num: 1, label: '1. Student Name' },
+                { num: 2, label: '2. Core Record' },
+                { num: 5, label: '3. Review' },
               ].map(st => (
                 <button
                   key={st.num}
@@ -5154,642 +4893,63 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
             >
               <div className="admin-modal-body" style={{ overflowY: 'auto', flex: 1, padding: '1.25rem 1.5rem', gap: '1.25rem' }}>
 
-                {/* ── STEP 1: PERSONAL DETAILS ── */}
                 {studentFormStep === 1 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                      <UserRound size={16} color="#2563eb" />
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a' }}>Personal Details (Compulsory)</h4>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Admission Category <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.admissionCategory}
-                          onChange={e => setStudentFormData({ ...studentFormData, admissionCategory: e.target.value })}
-                          required
-                        >
-                          <option value="General">General</option>
-                          <option value="OBC">OBC</option>
-                          <option value="SC">SC</option>
-                          <option value="ST">ST</option>
-                          <option value="TFWS">TFWS</option>
-                          <option value="Lateral Entry">Lateral Entry</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Title <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.title}
-                          onChange={e => setStudentFormData({ ...studentFormData, title: e.target.value })}
-                          required
-                        >
-                          <option value="Mr.">Mr.</option>
-                          <option value="Ms.">Ms.</option>
-                          <option value="Mrs.">Mrs.</option>
-                          <option value="Mx.">Mx.</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Gender <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.gender}
-                          onChange={e => setStudentFormData({ ...studentFormData, gender: e.target.value })}
-                          required
-                        >
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>First Name <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Rakesh"
-                          value={studentFormData.firstName}
-                          onChange={e => setStudentFormData({ ...studentFormData, firstName: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Middle Name</label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Kumar or Not provided"
-                          value={studentFormData.middleName}
-                          onChange={e => setStudentFormData({ ...studentFormData, middleName: e.target.value })}
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Last Name <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Das"
-                          value={studentFormData.lastName}
-                          onChange={e => setStudentFormData({ ...studentFormData, lastName: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Date of Birth <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="date"
-                          className="admin-form-input"
-                          value={studentFormData.dob}
-                          onChange={e => setStudentFormData({ ...studentFormData, dob: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Nationality <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.nationality}
-                          onChange={e => setStudentFormData({ ...studentFormData, nationality: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Caste <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.caste}
-                          onChange={e => setStudentFormData({ ...studentFormData, caste: e.target.value })}
-                          required
-                        >
-                          <option value="General">General</option>
-                          <option value="OBC">OBC</option>
-                          <option value="SC">SC</option>
-                          <option value="ST">ST</option>
-                          <option value="SEBC">SEBC</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Religion <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.religion}
-                          onChange={e => setStudentFormData({ ...studentFormData, religion: e.target.value })}
-                          required
-                        >
-                          <option value="Hindu">Hindu</option>
-                          <option value="Muslim">Muslim</option>
-                          <option value="Christian">Christian</option>
-                          <option value="Sikh">Sikh</option>
-                          <option value="Jain">Jain</option>
-                          <option value="Buddhist">Buddhist</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Blood Group <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.bloodGroup}
-                          onChange={e => setStudentFormData({ ...studentFormData, bloodGroup: e.target.value })}
-                          required
-                        >
-                          <option value="O+">O+</option>
-                          <option value="A+">A+</option>
-                          <option value="B+">B+</option>
-                          <option value="AB+">AB+</option>
-                          <option value="O-">O-</option>
-                          <option value="A-">A-</option>
-                          <option value="B-">B-</option>
-                          <option value="AB-">AB-</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Birthplace <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Bhubaneswar, Odisha"
-                          value={studentFormData.birthplace}
-                          onChange={e => setStudentFormData({ ...studentFormData, birthplace: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Identification Mark <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Small mole on right forearm / Not provided"
-                          value={studentFormData.identificationMark}
-                          onChange={e => setStudentFormData({ ...studentFormData, identificationMark: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Thumb ID / Biometric ID <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.thumbId || `GFT230520${studentFormData.rollNumber || '01'}`}
-                          onChange={e => setStudentFormData({ ...studentFormData, thumbId: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-                      <div className="admin-form-group">
-                        <label>Hostel <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.hostel}
-                          onChange={e => setStudentFormData({ ...studentFormData, hostel: e.target.value })}
-                          required
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Transport <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.transport}
-                          onChange={e => setStudentFormData({ ...studentFormData, transport: e.target.value })}
-                          required
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Lunch Facility <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.lunch}
-                          onChange={e => setStudentFormData({ ...studentFormData, lunch: e.target.value })}
-                          required
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>NSS Member <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.nss}
-                          onChange={e => setStudentFormData({ ...studentFormData, nss: e.target.value })}
-                          required
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
-                      </div>
-                    </div>
-
+                  <div className="admin-modal-body" style={{ padding: '1rem' }}>
+                    <h3>Student identity</h3>
+                    <p>Only the student name is collected in this step.</p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                       <div className="admin-form-group">
-                        <label>Languages Known <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Odia, English, Hindi"
-                          value={studentFormData.languagesKnown}
-                          onChange={e => setStudentFormData({ ...studentFormData, languagesKnown: e.target.value })}
-                          required
-                        />
+                        <label>First name *</label>
+                        <input className="admin-form-input" value={studentFormData.firstName || ''} onChange={e => setStudentFormData({ ...studentFormData, firstName: e.target.value })} required />
                       </div>
                       <div className="admin-form-group">
-                        <label>Hobbies</label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Robotics, Badminton or Not provided"
-                          value={studentFormData.hobbies}
-                          onChange={e => setStudentFormData({ ...studentFormData, hobbies: e.target.value })}
-                        />
+                        <label>Last name *</label>
+                        <input className="admin-form-input" value={studentFormData.lastName || ''} onChange={e => setStudentFormData({ ...studentFormData, lastName: e.target.value })} required />
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* ── STEP 2: ACADEMIC DETAILS ── */}
                 {studentFormStep === 2 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                      <GraduationCap size={16} color="#2563eb" />
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a' }}>Academic Details & Qualifications (Compulsory)</h4>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                  <div className="admin-modal-body" style={{ padding: '1rem' }}>
+                    <h3>Student record details</h3>
+                    <p>These fields are saved to the backend student record.</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
                       <div className="admin-form-group">
-                        <label>Program / Degree Course <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.course}
-                          onChange={e => setStudentFormData({ ...studentFormData, course: e.target.value, program: e.target.value })}
-                          required
-                        >
-                          <option value="Bachelor of Technology">Bachelor of Technology (B.Tech)</option>
-                          <option value="Bachelor of Computer Applications">Bachelor of Computer Applications (BCA)</option>
-                          <option value="Master of Computer Applications">Master of Computer Applications (MCA)</option>
-                          <option value="Master of Business Administration">Master of Business Administration (MBA)</option>
-                          <option value="Diploma in Engineering">Diploma in Engineering (Polytechnic)</option>
-                          <option value="Master of Technology">Master of Technology (M.Tech)</option>
-                        </select>
+                        <label>Student ID *</label>
+                        <input className="admin-form-input" value={studentFormData.studentId || ''} onChange={e => setStudentFormData({ ...studentFormData, studentId: e.target.value })} required />
                       </div>
                       <div className="admin-form-group">
-                        <label>Academic Batch <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.batch}
-                          onChange={e => setStudentFormData({ ...studentFormData, batch: e.target.value })}
-                          required
-                        >
-                          <option value="BTECH 2026–2030">B.Tech Batch 2026–2030 (Fresh Admissions)</option>
-                          <option value="BTECH 2025–2029">B.Tech Batch 2025–2029 (Sem 1-2)</option>
-                          <option value="BTECH 2024–2028">B.Tech Batch 2024–2028 (Sem 3-4)</option>
-                          <option value="BTECH 2023–2027">B.Tech Batch 2023–2027 (Sem 5-6)</option>
-                          <option value="BCA 2024–2027">BCA Batch 2024–2027</option>
-                          <option value="MCA 2025–2027">MCA Batch 2025–2027</option>
-                          <option value="MBA 2025–2027">MBA Batch 2025–2027</option>
-                          <option value="DIPLOMA 2024–2027">Diploma Batch 2024–2027</option>
-                        </select>
+                        <label>Roll number *</label>
+                        <input className="admin-form-input" value={studentFormData.rollNumber || ''} onChange={e => setStudentFormData({ ...studentFormData, rollNumber: e.target.value })} required />
                       </div>
                       <div className="admin-form-group">
-                        <label>Branch / Department <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.deptCode}
-                          onChange={e => {
-                            const map = {
-                              CSE: 'Computer Science & Engineering',
-                              'AI&ML': 'CSE - Artificial Intelligence & Machine Learning',
-                              ECE: 'Electronics & Communication',
-                              EEE: 'Electrical & Electronics',
-                              MECH: 'Mechanical Engineering',
-                              CIVIL: 'Civil Engineering',
-                              IT: 'Information Technology',
-                              CA: 'Computer Applications (BCA & MCA)',
-                              MGMT: 'Management Studies (MBA)',
-                              DIPLOMA: 'Diploma Engineering Wing'
-                            };
-                            setStudentFormData({
-                              ...studentFormData,
-                              deptCode: e.target.value,
-                              department: map[e.target.value] || e.target.value
-                            });
-                          }}
-                          required
-                        >
-                          <option value="CSE">CSE - Computer Science & Engineering</option>
-                          <option value="AI&ML">AI&ML - Artificial Intelligence & ML</option>
-                          <option value="ECE">ECE - Electronics & Communication</option>
-                          <option value="EEE">EEE - Electrical & Electronics</option>
-                          <option value="MECH">MECH - Mechanical Engineering</option>
-                          <option value="CIVIL">CIVIL - Civil Engineering</option>
-                          <option value="IT">IT - Information Technology</option>
-                          <option value="CA">CA - Computer Applications</option>
-                          <option value="MGMT">MGMT - Management Studies</option>
-                          <option value="DIPLOMA">DIPLOMA - Polytechnic Wing</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-                      <div className="admin-form-group">
-                        <label>Roll Number <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.rollNumber}
-                          onChange={e => setStudentFormData({ ...studentFormData, rollNumber: e.target.value })}
-                          required
-                        />
+                        <label>Email *</label>
+                        <input type="email" className="admin-form-input" value={studentFormData.email || ''} onChange={e => setStudentFormData({ ...studentFormData, email: e.target.value })} required />
                       </div>
                       <div className="admin-form-group">
-                        <label>Section <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.section}
-                          onChange={e => setStudentFormData({ ...studentFormData, section: e.target.value })}
-                          required
-                        >
-                          <option value="Section A">CSE · Section A</option>
-                          <option value="Section B">CSE · Section B</option>
-                          <option value="Section C">CSE · Section C</option>
-                        </select>
+                        <label>Phone</label>
+                        <input type="tel" className="admin-form-input" value={studentFormData.phone || ''} onChange={e => setStudentFormData({ ...studentFormData, phone: e.target.value })} />
                       </div>
                       <div className="admin-form-group">
-                        <label>House Assigned</label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.house}
-                          onChange={e => setStudentFormData({ ...studentFormData, house: e.target.value })}
-                        >
-                          <option value="Not assigned">Not assigned</option>
-                          <option value="Orion House">Orion House</option>
-                          <option value="Phoenix House">Phoenix House</option>
-                          <option value="Pegasus House">Pegasus House</option>
-                        </select>
+                        <label>Department *</label>
+                        <input className="admin-form-input" value={studentFormData.department || ''} onChange={e => setStudentFormData({ ...studentFormData, department: e.target.value, deptCode: '' })} required />
                       </div>
                       <div className="admin-form-group">
-                        <label>Lab Group <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.labGroup}
-                          onChange={e => setStudentFormData({ ...studentFormData, labGroup: e.target.value })}
-                          required
-                        >
-                          <option value="1">1</option>
-                          <option value="2">2</option>
-                          <option value="3">3</option>
-                          <option value="4">4</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Official Email Address <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="email"
-                          className="admin-form-input"
-                          placeholder="student.01@apnacampus.edu.in"
-                          value={studentFormData.email}
-                          onChange={e => setStudentFormData({ ...studentFormData, email: e.target.value })}
-                          required
-                        />
+                        <label>Department code</label>
+                        <input className="admin-form-input" value={studentFormData.deptCode || ''} onChange={e => setStudentFormData({ ...studentFormData, deptCode: e.target.value })} />
                       </div>
                       <div className="admin-form-group">
-                        <label>Phone Number <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="+91 98610 23010"
-                          value={studentFormData.phone}
-                          onChange={e => setStudentFormData({ ...studentFormData, phone: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-                      <div className="admin-form-group">
-                        <label>Honors</label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.honors}
-                          onChange={e => setStudentFormData({ ...studentFormData, honors: e.target.value })}
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
+                        <label>Semester</label>
+                        <input className="admin-form-input" value={studentFormData.semester || ''} onChange={e => setStudentFormData({ ...studentFormData, semester: e.target.value })} />
                       </div>
                       <div className="admin-form-group">
-                        <label>Minor</label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.minor}
-                          onChange={e => setStudentFormData({ ...studentFormData, minor: e.target.value })}
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
+                        <label>Section</label>
+                        <input className="admin-form-input" value={studentFormData.section || ''} onChange={e => setStudentFormData({ ...studentFormData, section: e.target.value })} />
                       </div>
                       <div className="admin-form-group">
-                        <label>Admission Date <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="date"
-                          className="admin-form-input"
-                          value={studentFormData.admissionDate}
-                          onChange={e => setStudentFormData({ ...studentFormData, admissionDate: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Entrance Exam <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.entranceExam}
-                          onChange={e => setStudentFormData({ ...studentFormData, entranceExam: e.target.value })}
-                          required
-                        >
-                          <option value="JEE (Main)">JEE (Main)</option>
-                          <option value="OJEE">OJEE</option>
-                          <option value="Management Quota">Management Quota</option>
-                          <option value="Lateral Entry">Lateral Entry</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Value Added Course-1</label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.valueAdded1}
-                          onChange={e => setStudentFormData({ ...studentFormData, valueAdded1: e.target.value })}
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Value Added Course-2</label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.valueAdded2}
-                          onChange={e => setStudentFormData({ ...studentFormData, valueAdded2: e.target.value })}
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Value Added Course-3</label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.valueAdded3}
-                          onChange={e => setStudentFormData({ ...studentFormData, valueAdded3: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Qualifications Table matching Screenshot 2 */}
-                    <div className="admin-form-group">
-                      <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>Prior Academic Qualification Records <span className="admin-compulsory-tag">* (10th & 12th Compulsory)</span></span>
-                        <small style={{ color: '#64748b' }}>Displayed in Student Section Qualification Ledger</small>
-                      </label>
-                      <table className="admin-qual-table">
-                        <thead>
-                          <tr>
-                            <th style={{ width: '15%' }}>Qualification</th>
-                            <th style={{ width: '45%' }}>Institute Name <span className="admin-compulsory-tag">*</span></th>
-                            <th style={{ width: '20%' }}>Passout Year <span className="admin-compulsory-tag">*</span></th>
-                            <th style={{ width: '20%' }}>Marks / CGPA <span className="admin-compulsory-tag">*</span></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td><strong>10th</strong></td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="Secondary School Name"
-                                value={studentFormData.qual10thInstitute}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual10thInstitute: e.target.value })}
-                                required
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="2021"
-                                value={studentFormData.qual10thYear}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual10thYear: e.target.value })}
-                                required
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="82.00%"
-                                value={studentFormData.qual10thMarks}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual10thMarks: e.target.value })}
-                                required
-                              />
-                            </td>
-                          </tr>
-                          <tr>
-                            <td><strong>12th</strong></td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="Senior Secondary School / Junior College"
-                                value={studentFormData.qual12thInstitute}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual12thInstitute: e.target.value })}
-                                required
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="2023"
-                                value={studentFormData.qual12thYear}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual12thYear: e.target.value })}
-                                required
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="86.00%"
-                                value={studentFormData.qual12thMarks}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual12thMarks: e.target.value })}
-                                required
-                              />
-                            </td>
-                          </tr>
-                          <tr>
-                            <td>ITI</td>
-                            <td><input type="text" value={studentFormData.qualItiInstitute} onChange={e => setStudentFormData({ ...studentFormData, qualItiInstitute: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualItiYear} onChange={e => setStudentFormData({ ...studentFormData, qualItiYear: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualItiMarks} onChange={e => setStudentFormData({ ...studentFormData, qualItiMarks: e.target.value })} /></td>
-                          </tr>
-                          <tr>
-                            <td>Diploma</td>
-                            <td><input type="text" value={studentFormData.qualDiplomaInstitute} onChange={e => setStudentFormData({ ...studentFormData, qualDiplomaInstitute: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualDiplomaYear} onChange={e => setStudentFormData({ ...studentFormData, qualDiplomaYear: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualDiplomaMarks} onChange={e => setStudentFormData({ ...studentFormData, qualDiplomaMarks: e.target.value })} /></td>
-                          </tr>
-                          <tr>
-                            <td>BTECH</td>
-                            <td><input type="text" value={studentFormData.qualBtechInstitute} onChange={e => setStudentFormData({ ...studentFormData, qualBtechInstitute: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualBtechYear} onChange={e => setStudentFormData({ ...studentFormData, qualBtechYear: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualBtechMarks} onChange={e => setStudentFormData({ ...studentFormData, qualBtechMarks: e.target.value })} /></td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Student Status <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.status}
-                          onChange={e => setStudentFormData({ ...studentFormData, status: e.target.value, studentStatus: e.target.value, activeStatus: e.target.value })}
-                          required
-                        >
-                          <option value="Active">Active</option>
-                          <option value="Inactive">Inactive</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Autonomous Entrance Rank</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. 15,240 or Not provided"
-                          value={studentFormData.rank}
-                          onChange={e => setStudentFormData({ ...studentFormData, rank: e.target.value })}
-                        />
+                        <label>Academic year</label>
+                        <input className="admin-form-input" value={studentFormData.academicYear || ''} onChange={e => setStudentFormData({ ...studentFormData, academicYear: e.target.value })} />
                       </div>
                     </div>
                   </div>
@@ -6094,218 +5254,14 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
 
                 {/* -- STEP 5: DOCUMENTS DETAILS -- */}
                 {studentFormStep === 5 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <FileText size={16} color="#2563eb" />
-                        <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a' }}>Documents (Upload &amp; Verify)</h4>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button
-                          type="button"
-                          className="admin-action-btn-secondary"
-                          style={{ fontSize: '0.74rem', padding: '0.3rem 0.65rem', background: '#eff6ff', borderColor: '#93c5fd', color: '#1d4ed8' }}
-                          onClick={handleAttachDemoDocs}
-                          title="Auto-attach verified sample documents for quick testing"
-                        >
-                          ⚡ Auto-Attach Demo Documents
-                        </button>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Upload files for all 4 compulsory documents</span>
-                      </div>
-                    </div>
-
-                    {/* 4 required document upload cards */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-
-                      {/* Doc 1 – Passport Photo */}
-                      <div style={{ background: studentFormData.passportPhotoUrl ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${studentFormData.passportPhotoUrl ? '#86efac' : '#cbd5e1'}`, borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>1. Passport-size Photograph</strong>
-                          <span style={{ fontSize: '0.7rem', background: studentFormData.passportPhotoUrl ? '#dcfce7' : '#fef9c3', color: studentFormData.passportPhotoUrl ? '#15803d' : '#854d0e', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                            {studentFormData.passportPhotoUrl ? '✓ Uploaded' : '⏳ Pending'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>For Student ID Card &amp; Hall Ticket · JPG / PNG</span>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1.5px dashed #93c5fd', borderRadius: '7px', padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
-                          <Download size={14} /> {studentFormData.passportPhotoUrl ? 'Change photo' : 'Upload photo'}
-                          <input type="file" accept="image/*" style={{ display: 'none' }}
-                            onChange={e => {
-                              const file = e.target.files && e.target.files[0];
-                              if (file) {
-                                const fileName = file.name;
-                                const reader = new FileReader();
-                                reader.onload = ev => setStudentFormData(prev => ({ ...prev, passportPhotoUrl: ev.target.result, passportPhotoName: fileName }));
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                        </label>
-                        {studentFormData.passportPhotoUrl && <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>📎 {studentFormData.passportPhotoName}</span>}
-                      </div>
-
-                      {/* Doc 2 – Govt ID */}
-                      <div style={{ background: studentFormData.govtIdFileUrl ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${studentFormData.govtIdFileUrl ? '#86efac' : '#cbd5e1'}`, borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>2. Government ID Proof</strong>
-                          <span style={{ fontSize: '0.7rem', background: studentFormData.govtIdFileUrl ? '#dcfce7' : '#fef9c3', color: studentFormData.govtIdFileUrl ? '#15803d' : '#854d0e', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                            {studentFormData.govtIdFileUrl ? '✓ Uploaded' : '⏳ Pending'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Aadhaar Card / Voter ID / Passport · PDF or JPG</span>
-                        <input type="text" className="admin-form-input" value={studentFormData.govtIdType}
-                          onChange={e => setStudentFormData({ ...studentFormData, govtIdType: e.target.value })}
-                          placeholder="e.g. Aadhaar Card (XXXX XXXX 2341)" style={{ fontSize: '0.8rem' }} required />
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1.5px dashed #93c5fd', borderRadius: '7px', padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
-                          <Download size={14} /> {studentFormData.govtIdFileUrl ? 'Change file' : 'Upload ID file'}
-                          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }}
-                            onChange={e => {
-                              const file = e.target.files && e.target.files[0];
-                              if (file) {
-                                const fileName = file.name;
-                                const reader = new FileReader();
-                                reader.onload = ev => setStudentFormData(prev => ({ ...prev, govtIdFileUrl: ev.target.result, govtIdFileName: fileName }));
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                        </label>
-                        {studentFormData.govtIdFileUrl && <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>📎 {studentFormData.govtIdFileName}</span>}
-                      </div>
-
-                      {/* Doc 3 – Class 10 */}
-                      <div style={{ background: studentFormData.class10FileUrl ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${studentFormData.class10FileUrl ? '#86efac' : '#cbd5e1'}`, borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>3. Class 10 Certificate</strong>
-                          <span style={{ fontSize: '0.7rem', background: studentFormData.class10FileUrl ? '#dcfce7' : '#fef9c3', color: studentFormData.class10FileUrl ? '#15803d' : '#854d0e', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                            {studentFormData.class10FileUrl ? '✓ Uploaded' : '⏳ Pending'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Matriculation / DOB verification · PDF or JPG</span>
-                        <input type="text" className="admin-form-input" value={studentFormData.class10Board}
-                          onChange={e => setStudentFormData({ ...studentFormData, class10Board: e.target.value })}
-                          placeholder="e.g. CBSE / BSE Odisha" style={{ fontSize: '0.8rem' }} required />
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1.5px dashed #93c5fd', borderRadius: '7px', padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
-                          <Download size={14} /> {studentFormData.class10FileUrl ? 'Change file' : 'Upload certificate'}
-                          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }}
-                            onChange={e => {
-                              const file = e.target.files && e.target.files[0];
-                              if (file) {
-                                const fileName = file.name;
-                                const reader = new FileReader();
-                                reader.onload = ev => setStudentFormData(prev => ({ ...prev, class10FileUrl: ev.target.result, class10FileName: fileName }));
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                        </label>
-                        {studentFormData.class10FileUrl && <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>📎 {studentFormData.class10FileName}</span>}
-                      </div>
-
-                      {/* Doc 4 – Class 12 */}
-                      <div style={{ background: studentFormData.class12FileUrl ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${studentFormData.class12FileUrl ? '#86efac' : '#cbd5e1'}`, borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>4. Class 12 Certificate</strong>
-                          <span style={{ fontSize: '0.7rem', background: studentFormData.class12FileUrl ? '#dcfce7' : '#fef9c3', color: studentFormData.class12FileUrl ? '#15803d' : '#854d0e', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                            {studentFormData.class12FileUrl ? '✓ Uploaded' : '⏳ Pending'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Higher Secondary (10+2) Marksheet · PDF or JPG</span>
-                        <input type="text" className="admin-form-input" value={studentFormData.class12Board}
-                          onChange={e => setStudentFormData({ ...studentFormData, class12Board: e.target.value })}
-                          placeholder="e.g. CBSE / CHSE Odisha" style={{ fontSize: '0.8rem' }} required />
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1.5px dashed #93c5fd', borderRadius: '7px', padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
-                          <Download size={14} /> {studentFormData.class12FileUrl ? 'Change file' : 'Upload certificate'}
-                          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }}
-                            onChange={e => {
-                              const file = e.target.files && e.target.files[0];
-                              if (file) {
-                                const fileName = file.name;
-                                const reader = new FileReader();
-                                reader.onload = ev => setStudentFormData(prev => ({ ...prev, class12FileUrl: ev.target.result, class12FileName: fileName }));
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                        </label>
-                        {studentFormData.class12FileUrl && <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>📎 {studentFormData.class12FileName}</span>}
-                      </div>
-                    </div>
-
-                    {/* Add Extra Document */}
-                    <div style={{ background: '#eff6ff', border: '1.5px dashed #93c5fd', borderRadius: '10px', padding: '1rem 1.25rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
-                        <Plus size={15} color="#2563eb" />
-                        <strong style={{ fontSize: '0.88rem', color: '#1e40af' }}>Add Extra Document</strong>
-                        <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 'auto' }}>Optional · e.g. Transfer Cert, Caste Cert, Migration…</span>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '0.75rem', alignItems: 'flex-end' }}>
-                        <div className="admin-form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: '4px', display: 'block' }}>Document Title *</label>
-                          <input type="text" className="admin-form-input"
-                            placeholder="e.g. Caste Certificate, Transfer Cert…"
-                            value={studentFormData._extraDocTitle || ''}
-                            onChange={e => setStudentFormData({ ...studentFormData, _extraDocTitle: e.target.value })}
-                            style={{ fontSize: '0.82rem' }} />
-                        </div>
-                        <div className="admin-form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: '4px', display: 'block' }}>Choose File</label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1.5px dashed #93c5fd', borderRadius: '7px', padding: '0.45rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#2563eb', fontWeight: 600, height: '38px', boxSizing: 'border-box' }}>
-                            <Download size={14} /> {studentFormData._extraDocFileName || 'Select file…'}
-                            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style={{ display: 'none' }}
-                              onChange={e => {
-                                const file = e.target.files && e.target.files[0];
-                                if (file) {
-                                  const fileName = file.name;
-                                  const reader = new FileReader();
-                                  reader.onload = ev => setStudentFormData(prev => ({ ...prev, _extraDocFileUrl: ev.target.result, _extraDocFileName: fileName }));
-                                  reader.readAsDataURL(file);
-                                }
-                              }}
-                            />
-                          </label>
-                        </div>
-                        <button type="button" className="admin-action-btn-primary"
-                          style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', height: '38px', alignSelf: 'flex-end' }}
-                          onClick={() => {
-                            if (!studentFormData._extraDocTitle?.trim() || !studentFormData._extraDocFileUrl) {
-                              showToast('Please enter a document title and select a file.');
-                              return;
-                            }
-                            const extra = studentFormData.extraDocs || [];
-                            setStudentFormData({
-                              ...studentFormData,
-                              extraDocs: [...extra, { title: studentFormData._extraDocTitle, fileUrl: studentFormData._extraDocFileUrl, fileName: studentFormData._extraDocFileName }],
-                              _extraDocTitle: '', _extraDocFileUrl: '', _extraDocFileName: ''
-                            });
-                            showToast('Document "' + studentFormData._extraDocTitle + '" added.');
-                          }}>
-                          <Plus size={13} /> Add
-                        </button>
-                      </div>
-                      {(studentFormData.extraDocs || []).length > 0 && (
-                        <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {(studentFormData.extraDocs || []).map((doc, idx) => (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', fontSize: '0.8rem' }}>
-                              <FileText size={13} color="#2563eb" />
-                              <span style={{ fontWeight: 600, color: '#1e40af', flex: 1 }}>{doc.title}</span>
-                              <span style={{ color: '#64748b', fontSize: '0.72rem' }}>📎 {doc.fileName}</span>
-                              <button type="button" style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '0 4px', fontSize: '1.1rem', lineHeight: 1 }}
-                                onClick={() => setStudentFormData({ ...studentFormData, extraDocs: (studentFormData.extraDocs || []).filter((_, i) => i !== idx) })}
-                                title="Remove">×</button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '0.85rem 1.15rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <CheckCircle2 size={20} color="#2563eb" />
-                      <div style={{ fontSize: '0.8rem', color: '#1e40af' }}>
-                        <strong>Enrollment Ready:</strong> Upload all 4 compulsory documents, then click <em>Create Student</em> to complete enrollment and sync to the Student Portal.
-                      </div>
-                    </div>
+                  <div className="admin-modal-body" role="status" style={{ padding: '1rem', background: '#eff6ff', borderRadius: '8px', color: '#1e3a8a' }}>
+                    <strong>Review the student record</strong>
+                    <p>The current API stores the student ID, roll number, name, email, department, term, section, academic year, and phone. It does not yet persist guardian details, addresses, qualifications, or uploaded documents. Those fields are not collected in this live creation flow.</p>
+                    <p>Creating this profile does not create a login account or send an invitation.</p>
                   </div>
                 )}
+
+
 
               </div>
 
@@ -6329,7 +5285,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                       className="admin-action-btn-primary"
                       onClick={handleNextStep}
                     >
-                      Next: {studentFormStep === 1 ? 'Academic' : studentFormStep === 2 ? 'Guardians' : studentFormStep === 3 ? 'Address' : 'Documents'} →
+                      Next: {studentFormStep === 1 ? 'Academic' : 'Review & Save'} →
                     </button>
                   ) : (
                     <button
@@ -6343,9 +5299,9 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                         cursor: canSubmitStep5 ? 'pointer' : 'not-allowed',
                         transition: 'all 0.2s',
                       }}
-                      title={!canSubmitStep5 ? 'Preparing documents section…' : 'Finalize & Publish Student Profile'}
+                      title={!canSubmitStep5 ? 'Preparing review…' : 'Save the student record to the backend'}
                     >
-                      {editingStudent ? '✓ Save Changes' : '✓ Create Student & Publish to Student Section'}
+                      {editingStudent ? 'Save Student Record' : 'Create Student Record'}
                     </button>
                   )}
                 </div>
@@ -6577,6 +5533,26 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className="admin-form-group">
+                    <label>Department</label>
+                    <select className="admin-form-select" value={subjectFormData.department} onChange={e => setSubjectFormData({ ...subjectFormData, department: e.target.value })} required>
+                      <option value="">Select a configured department</option>
+                      {departments.map(dept => <option key={dept.id} value={dept.code}>{dept.name} ({dept.code})</option>)}
+                    </select>
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Semester</label>
+                    <select className="admin-form-select" value={subjectFormData.semester} onChange={e => setSubjectFormData({ ...subjectFormData, semester: e.target.value })} required>
+                      <option value="">Select a configured semester</option>
+                      {semesters.map(semester => <option key={semester.id} value={semester.label}>{semester.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="admin-form-group">
+                  <label>Academic Year</label>
+                  <input type="text" className="admin-form-input" placeholder="Enter the official academic year" value={subjectFormData.academicYear} onChange={e => setSubjectFormData({ ...subjectFormData, academicYear: e.target.value })} required />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="admin-form-group">
                     <label>Credits</label>
                     <input
                       type="number"
@@ -6593,22 +5569,16 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                       className="admin-form-select"
                       value={subjectFormData.type}
                       onChange={e => setSubjectFormData({ ...subjectFormData, type: e.target.value })}
+                      required
                     >
+                      <option value="">Select subject type</option>
                       <option value="Theory">Theory</option>
                       <option value="Theory + Lab">Theory + Lab</option>
                       <option value="Lab Only">Lab Only</option>
                     </select>
                   </div>
                 </div>
-                <div className="admin-form-group">
-                  <label>Assigned Faculty</label>
-                  <input
-                    type="text"
-                    className="admin-form-input"
-                    value={subjectFormData.assignedFaculty}
-                    onChange={e => setSubjectFormData({ ...subjectFormData, assignedFaculty: e.target.value })}
-                  />
-                </div>
+                <p style={{ color: '#64748b', fontSize: '0.8rem' }}>Faculty assignment is saved separately against a real faculty account and course offering.</p>
               </div>
               <div className="admin-modal-footer">
                 <button type="button" className="admin-action-btn-secondary" onClick={() => setIsSubjectModalOpen(false)}>
@@ -6618,6 +5588,74 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                   Create Subject
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isDepartmentModalOpen && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-card">
+            <div className="admin-modal-header"><h3>Add Institutional Department</h3><button className="admin-table-action-btn" onClick={() => setIsDepartmentModalOpen(false)}><X size={18} /></button></div>
+            <form onSubmit={handleCreateDepartment}>
+              <div className="admin-modal-body">
+                <div className="admin-form-group"><label>Department Code</label><input className="admin-form-input" placeholder="Enter the official department code" value={departmentFormData.code} onChange={e => setDepartmentFormData({ ...departmentFormData, code: e.target.value.toUpperCase() })} required /></div>
+                <div className="admin-form-group"><label>Department Name</label><input className="admin-form-input" placeholder="Enter the official department name" value={departmentFormData.name} onChange={e => setDepartmentFormData({ ...departmentFormData, name: e.target.value })} required /></div>
+                <div className="admin-form-group"><label>Department Head Name</label><input className="admin-form-input" placeholder="Enter the appointed department head" value={departmentFormData.hod} onChange={e => setDepartmentFormData({ ...departmentFormData, hod: e.target.value })} required /></div>
+                <div className="admin-form-group"><label>Department Head Email</label><input type="email" className="admin-form-input" placeholder="Official campus email" value={departmentFormData.hodEmail} onChange={e => setDepartmentFormData({ ...departmentFormData, hodEmail: e.target.value })} required /></div>
+              </div>
+              <div className="admin-modal-footer"><button type="button" className="admin-action-btn-secondary" onClick={() => setIsDepartmentModalOpen(false)}>Cancel</button><button type="submit" className="admin-action-btn-primary">Save Department</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isSemesterModalOpen && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-card">
+            <div className="admin-modal-header"><h3>Add Academic Semester</h3><button className="admin-table-action-btn" onClick={() => setIsSemesterModalOpen(false)}><X size={18} /></button></div>
+            <form onSubmit={handleCreateSemester}>
+              <div className="admin-modal-body">
+                <div className="admin-form-group"><label>Semester Number</label><input type="number" min="1" max="12" className="admin-form-input" value={semesterFormData.number} onChange={e => setSemesterFormData({ ...semesterFormData, number: e.target.value })} required /></div>
+                <div className="admin-form-group"><label>Label</label><input className="admin-form-input" placeholder="e.g. Semester 1" value={semesterFormData.label} onChange={e => setSemesterFormData({ ...semesterFormData, label: e.target.value })} required /></div>
+                <div className="admin-form-group"><label>Year Level</label><input className="admin-form-input" placeholder="e.g. 1st Year" value={semesterFormData.year} onChange={e => setSemesterFormData({ ...semesterFormData, year: e.target.value })} required /></div>
+                <div className="admin-form-group"><label>Academic Year</label><input className="admin-form-input" placeholder="Enter the official academic year" value={semesterFormData.academicYear} onChange={e => setSemesterFormData({ ...semesterFormData, academicYear: e.target.value })} required /></div>
+              </div>
+              <div className="admin-modal-footer"><button type="button" className="admin-action-btn-secondary" onClick={() => setIsSemesterModalOpen(false)}>Cancel</button><button type="submit" className="admin-action-btn-primary">Save Semester</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isSectionModalOpen && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-card">
+            <div className="admin-modal-header"><h3>Add Academic Section</h3><button className="admin-table-action-btn" onClick={() => setIsSectionModalOpen(false)}><X size={18} /></button></div>
+            <form onSubmit={handleCreateSection}>
+              <div className="admin-modal-body">
+                <div className="admin-form-group"><label>Department</label><select className="admin-form-select" value={sectionFormData.department} onChange={e => setSectionFormData({ ...sectionFormData, department: e.target.value })} required><option value="">Select department</option>{departments.map(dept => <option key={dept.id} value={dept.code}>{dept.name} ({dept.code})</option>)}</select></div>
+                <div className="admin-form-group"><label>Semester</label><select className="admin-form-select" value={sectionFormData.semester} onChange={e => setSectionFormData({ ...sectionFormData, semester: e.target.value })} required><option value="">Select semester</option>{semesters.map(semester => <option key={semester.id} value={semester.label}>{semester.label}</option>)}</select></div>
+                <div className="admin-form-group"><label>Section label</label><input className="admin-form-input" placeholder="e.g. A" value={sectionFormData.section} onChange={e => setSectionFormData({ ...sectionFormData, section: e.target.value })} required /></div>
+                <div className="admin-form-group"><label>Room (optional)</label><input className="admin-form-input" value={sectionFormData.room} onChange={e => setSectionFormData({ ...sectionFormData, room: e.target.value })} /></div>
+              </div>
+              <div className="admin-modal-footer"><button type="button" className="admin-action-btn-secondary" onClick={() => setIsSectionModalOpen(false)}>Cancel</button><button type="submit" className="admin-action-btn-primary">Save Section</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isAllocationModalOpen && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-card">
+            <div className="admin-modal-header"><h3>Assign Faculty to Course</h3><button className="admin-table-action-btn" onClick={() => setIsAllocationModalOpen(false)}><X size={18} /></button></div>
+            <form onSubmit={handleAssignFaculty}>
+              <div className="admin-modal-body">
+                <div className="admin-form-group"><label>Course offering</label><select className="admin-form-select" value={allocationFormData.courseOfferingId} onChange={e => setAllocationFormData({ ...allocationFormData, courseOfferingId: e.target.value })} required><option value="">Select a persisted course offering</option>{courseOfferings.map(offering => <option key={offering.id} value={offering.id}>{offering.subjectCode} · {offering.subjectName} · {offering.department} · {offering.semester} · {offering.academicYear}</option>)}</select></div>
+                <div className="admin-form-group"><label>Faculty member</label><select className="admin-form-select" value={allocationFormData.facultyId} onChange={e => setAllocationFormData({ ...allocationFormData, facultyId: e.target.value })} required><option value="">Select an active faculty record</option>{academicFaculty.map(faculty => <option key={faculty.id} value={faculty.id}>{faculty.name} · {faculty.employeeId} · {faculty.department}</option>)}</select></div>
+                <div className="admin-form-group"><label>Section</label><input className="admin-form-input" placeholder="Use the same section label as the roster, e.g. A" value={allocationFormData.section} onChange={e => setAllocationFormData({ ...allocationFormData, section: e.target.value })} required /></div>
+                <div className="admin-form-group"><label>Allocated hours per week</label><input type="number" min="1" max="60" className="admin-form-input" value={allocationFormData.allocatedHours} onChange={e => setAllocationFormData({ ...allocationFormData, allocatedHours: e.target.value })} required /></div>
+              </div>
+              <div className="admin-modal-footer"><button type="button" className="admin-action-btn-secondary" onClick={() => setIsAllocationModalOpen(false)}>Cancel</button><button type="submit" className="admin-action-btn-primary">Save Allocation</button></div>
             </form>
           </div>
         </div>
@@ -7261,7 +6299,6 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                     >
                       <option value="FACULTY">Faculty</option>
                       <option value="HOD">Head of Department (HOD)</option>
-                      <option value="ADMIN">Institutional Admin</option>
                       <option value="STUDENT">Student</option>
                       <option value="STAFF">Operational Staff</option>
                     </select>
@@ -7290,12 +6327,14 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                     type="password"
                     className="admin-form-input"
                     required
+                    minLength={12}
+                    maxLength={72}
                     value={provisionUserForm.password}
                     onChange={e => setProvisionUserForm(prev => ({ ...prev, password: e.target.value }))}
                   />
-                  <small style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                    User will be forced to change this password upon first successful login.
-                  </small>
+                    <small style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                      Set a unique initial password and share it securely with the account owner.
+                    </small>
                 </div>
               </div>
               <div className="admin-modal-footer">
@@ -7352,10 +6391,10 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
                   {/* Summary Bar */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div><dt style={{ color: '#64748b', fontSize: '0.72rem' }}>Department</dt><dd style={{ margin: 0, fontWeight: 700 }}>{viewDetailsItem.data.deptCode || 'CSE'}</dd></div>
-                    <div><dt style={{ color: '#64748b', fontSize: '0.72rem' }}>Section</dt><dd style={{ margin: 0, fontWeight: 700 }}>{viewDetailsItem.data.semester} · {viewDetailsItem.data.section}</dd></div>
-                    <div><dt style={{ color: '#64748b', fontSize: '0.72rem' }}>Blood Group</dt><dd style={{ margin: 0, fontWeight: 700, color: '#dc2626' }}>{viewDetailsItem.data.bloodGroup || 'O+'}</dd></div>
-                    <div><dt style={{ color: '#64748b', fontSize: '0.72rem' }}>Attendance / CGPA</dt><dd style={{ margin: 0, fontWeight: 700, color: '#16a34a' }}>{viewDetailsItem.data.attendance || 90}% · {viewDetailsItem.data.cgpa || '8.20'}</dd></div>
+                    <div><dt style={{ color: '#64748b', fontSize: '0.72rem' }}>Department</dt><dd style={{ margin: 0, fontWeight: 700 }}>{viewDetailsItem.data.deptCode || '—'}</dd></div>
+                    <div><dt style={{ color: '#64748b', fontSize: '0.72rem' }}>Section</dt><dd style={{ margin: 0, fontWeight: 700 }}>{viewDetailsItem.data.semester || '—'} · {viewDetailsItem.data.section || '—'}</dd></div>
+                    <div><dt style={{ color: '#64748b', fontSize: '0.72rem' }}>Blood Group</dt><dd style={{ margin: 0, fontWeight: 700 }}>{viewDetailsItem.data.bloodGroup || '—'}</dd></div>
+                    <div><dt style={{ color: '#64748b', fontSize: '0.72rem' }}>Attendance / CGPA</dt><dd style={{ margin: 0, fontWeight: 700 }}>{viewDetailsItem.data.attendance == null ? '—' : `${viewDetailsItem.data.attendance}%`} · {viewDetailsItem.data.cgpa ?? '—'}</dd></div>
                   </div>
 
                   {/* 1. Personal Details Breakdown */}
@@ -7364,12 +6403,12 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                       1. Personal Details
                     </h5>
                     <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', margin: 0 }}>
-                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Admission Category</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.admissionCategory || 'General'}</dd></div>
-                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Gender / DOB</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.gender || 'Female'} · {viewDetailsItem.data.dobFormatted || viewDetailsItem.data.dob || '15-03-2005'}</dd></div>
-                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Nationality / Caste</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.nationality || 'Indian'} · {viewDetailsItem.data.caste || 'General'}</dd></div>
-                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Birthplace</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.birthplace || 'Bhubaneswar, Odisha'}</dd></div>
-                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Hostel / Transport</dt><dd style={{ margin: 0 }}>Hostel: {viewDetailsItem.data.hostel || 'No'} · Transport: {viewDetailsItem.data.transport || 'No'}</dd></div>
-                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Languages Known</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.languagesKnown || 'Odia, English, Hindi'}</dd></div>
+                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Admission Category</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.admissionCategory || '—'}</dd></div>
+                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Gender / DOB</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.gender || '—'} · {viewDetailsItem.data.dobFormatted || viewDetailsItem.data.dob || '—'}</dd></div>
+                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Nationality / Caste</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.nationality || '—'} · {viewDetailsItem.data.caste || '—'}</dd></div>
+                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Birthplace</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.birthplace || '—'}</dd></div>
+                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Hostel / Transport</dt><dd style={{ margin: 0 }}>Hostel: {viewDetailsItem.data.hostelName || viewDetailsItem.data.hostel || '—'} · Transport: {viewDetailsItem.data.transport || '—'}</dd></div>
+                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Languages Known</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.languagesKnown || '—'}</dd></div>
                     </dl>
                   </div>
 
@@ -7379,8 +6418,8 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                       2. Guardians Details
                     </h5>
                     <dl style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', margin: 0 }}>
-                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Father / Guardian</dt><dd style={{ margin: 0, fontWeight: 600 }}>{viewDetailsItem.data.fatherName || 'Sanjay Das'} ({viewDetailsItem.data.fatherPhone || '+91 94370 10001'})</dd></div>
-                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Mother / Guardian</dt><dd style={{ margin: 0, fontWeight: 600 }}>{viewDetailsItem.data.motherName || 'Madhuri Das'} ({viewDetailsItem.data.motherPhone || '+91 94370 10002'})</dd></div>
+                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Father / Guardian</dt><dd style={{ margin: 0, fontWeight: 600 }}>{viewDetailsItem.data.guardians?.find(g => /father/i.test(g.relationship))?.name || viewDetailsItem.data.fatherName || '—'} ({viewDetailsItem.data.fatherPhone || viewDetailsItem.data.guardians?.find(g => /father/i.test(g.relationship))?.contactNumber || '—'})</dd></div>
+                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Mother / Guardian</dt><dd style={{ margin: 0, fontWeight: 600 }}>{viewDetailsItem.data.guardians?.find(g => /mother/i.test(g.relationship))?.name || viewDetailsItem.data.motherName || '—'} ({viewDetailsItem.data.motherPhone || viewDetailsItem.data.guardians?.find(g => /mother/i.test(g.relationship))?.contactNumber || '—'})</dd></div>
                     </dl>
                   </div>
 
@@ -7391,8 +6430,8 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                       3. Residence Address
                     </h5>
                     <dl style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', margin: 0 }}>
-                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Permanent Address</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.permAddress || 'Plot 18, Unit 4'}, {viewDetailsItem.data.permCity || 'Bhubaneswar'} - {viewDetailsItem.data.permPin || '751001'}</dd></div>
-                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Current Address</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.currAddress || 'GIFT Campus Residence'}, {viewDetailsItem.data.currCity || 'Bhubaneswar'}</dd></div>
+                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Permanent Address</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.permAddress || viewDetailsItem.data.addresses?.find(a => a.type === 'Permanent')?.addressLine || '—'}, {viewDetailsItem.data.permCity || viewDetailsItem.data.addresses?.find(a => a.type === 'Permanent')?.city || '—'} - {viewDetailsItem.data.permPin || viewDetailsItem.data.addresses?.find(a => a.type === 'Permanent')?.pincode || '—'}</dd></div>
+                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Current Address</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.currAddress || viewDetailsItem.data.addresses?.find(a => a.type === 'Current')?.addressLine || '—'}, {viewDetailsItem.data.currCity || viewDetailsItem.data.addresses?.find(a => a.type === 'Current')?.city || '—'}</dd></div>
                     </dl>
                   </div>
 
@@ -7543,7 +6582,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
                     </div>
                     <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{studentDocPreview.document}</strong>
                     <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                      Verified Official Student Document ({studentDocPreview.docObj?.fileName || 'official_document.pdf'})
+                      Student document ({studentDocPreview.docObj?.fileName || 'File name unavailable'})
                     </span>
                   </div>
                 )}
@@ -7551,8 +6590,8 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               <div style={{ textAlign: 'left', background: '#f1f5f9', padding: '0.85rem', borderRadius: '8px', fontSize: '0.85rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Student Name</span><div><strong>{studentDocPreview.student?.name}</strong></div></div>
                 <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Registration No.</span><div><strong>{studentDocPreview.student?.registrationNumber}</strong></div></div>
-                <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Verification Seal</span><div><strong style={{ color: '#059669' }}>Autonomous Cell Verified ✓</strong></div></div>
-                <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Department / Batch</span><div><strong>{studentDocPreview.student?.deptCode || 'CSE'} · {studentDocPreview.student?.batch || '2023-2027'}</strong></div></div>
+                <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Record status</span><div><strong>{studentDocPreview.docObj?.status || 'Unknown'}</strong></div></div>
+                <div><span style={{ color: '#64748b', fontSize: '0.75rem' }}>Department / Batch</span><div><strong>{studentDocPreview.student?.deptCode || '—'} · {studentDocPreview.student?.batch || '—'}</strong></div></div>
               </div>
             </div>
             <div className="admin-modal-footer" style={{ justifyContent: 'flex-end' }}>

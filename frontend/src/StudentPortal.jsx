@@ -22,7 +22,6 @@ import {
   Search,
   ShieldCheck,
   MessageSquare,
-  Rss,
   TrendingUp,
   UserRound,
   UsersRound,
@@ -41,12 +40,13 @@ import {
   Award,
   Maximize2,
 } from 'lucide-react'
+import { MasterSidebarHeader, useMasterSidebarState } from './components/Navigation/MasterSidebar.jsx'
+import './components/Navigation/MasterNavigation.css'
 import './StudentPortal.css'
 import './DashboardHome.css'
 import { getGreetingDisplayName } from './utils/timeGreeting.js'
 import StudentProfile from './StudentProfile.jsx'
 import AcademicsPage from './pages/AcademicsPage.jsx'
-import BloggingPage from './pages/BloggingPage.jsx'
 import ExaminationPage from './pages/ExaminationPage.jsx'
 import FeedbackPage from './pages/FeedbackPage.jsx'
 import InternshipPage from './pages/InternshipPage.jsx'
@@ -68,7 +68,6 @@ import CampusConnect from './components/CampusConnect/CampusConnect.jsx'
 import AcademicResourcesSection from './components/CampusConnect/AcademicResourcesSection.jsx'
 import LeadershipScoreboardSection from './components/CampusConnect/LeadershipScoreboardSection.jsx'
 import AnonymousComplaintsSection from './components/CampusConnect/AnonymousComplaintsSection.jsx'
-import { campusConnectStore } from './services/campusConnectStore.js'
 import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, getAllStudents, findStudentByQuery } from './services/studentStore.js'
 import { notificationsApi } from './services/notificationsApi.js'
@@ -126,9 +125,7 @@ const navSections = [
     title: 'ACADEMICS',
     items: [
       { label: 'Academics', icon: BookOpen, page: 'academics' },
-      { label: 'Timetable', icon: CalendarDays, page: 'timetable' },
       { label: 'Online Examination', icon: ClipboardList, page: 'online-exam' },
-      { label: 'Class Notes & Sharing', icon: FileText, page: 'class-notes' },
     ]
   },
   {
@@ -145,7 +142,6 @@ const navSections = [
     items: [
       { label: 'Anonymous Complaints', icon: ShieldCheck, page: 'anonymous-complaints' },
       { label: 'Feedback/Appraisal/Survey', icon: ChatBubbleIcon, page: 'feedback' },
-      { label: 'Blogging & Stories', icon: Rss, page: 'blogging' },
     ]
   }
 ];
@@ -237,6 +233,16 @@ const holidays = [
 ]
 
 function StudentPortal({ account, onLogout }) {
+  const student = useMemo(() => {
+    const query = account?.registrationNumber || account?.rollNumber || account?.identifier || account?.name;
+    const matched = query ? findStudentByQuery(query) : null;
+    return matched || getActiveStudent() || account || {};
+  }, [account]);
+
+  const identifier = account?.identifier || account?.registrationNumber || account?.rollNumber;
+  const pct = student?.attendance ?? 92;
+  const roll = student?.rollNumber || identifier || '2305201001';
+
   const [profileTab, setProfileTab] = useState('')
   const [profileQuickView, setProfileQuickView] = useState('')
 
@@ -264,33 +270,16 @@ function StudentPortal({ account, onLogout }) {
     return { page: 'dashboard', link: 'Dashboard', tab: '', quickView: '' };
   };
   const init = getInitial();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeLink, setActiveLink] = useState(init.link);
   const [activePage, setActivePage] = useState(init.page);
-  const [initialConvId, setInitialConvId] = useState('conv-ds');
   const [whatsappDrawerOpen, setWhatsappDrawerOpen] = useState(false);
   const [campusSubView, setCampusSubView] = useState(() => {
     const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '';
     return campusSubViewMap[hash] || 'chats';
   });
-  const [chatUnreadCount, setChatUnreadCount] = useState(() => {
-    return campusConnectStore.getTotalUnreadCount ? campusConnectStore.getTotalUnreadCount() : 12;
-  });
-
-  useEffect(() => {
-    const updateUnread = () => {
-      if (campusConnectStore.getTotalUnreadCount) {
-        setChatUnreadCount(campusConnectStore.getTotalUnreadCount());
-      }
-    };
-    window.addEventListener('campus_connect_updated', updateUnread);
-    return () => window.removeEventListener('campus_connect_updated', updateUnread);
-  }, []);
-
   useEffect(() => {
     const handleChatNav = (e) => {
-      const targetConvId = e.detail?.convId || 'conv-ds';
-      setInitialConvId(targetConvId);
       setCampusSubView('chats');
       setActivePage('campus-connect');
       setActiveLink('Campus Connect');
@@ -371,7 +360,7 @@ function StudentPortal({ account, onLogout }) {
     if (shell) shell.scrollTop = 0;
     const main = document.querySelector('.campus-os-main');
     if (main) main.scrollTop = 0;
-  }, [activePage]);
+  }, [activePage, activeLink]);
   const [noticeTab, setNoticeTab] = useState('Latest')
   const [noticeQuery, setNoticeQuery] = useState('')
   const [expandedNotice, setExpandedNotice] = useState('')
@@ -390,7 +379,6 @@ function StudentPortal({ account, onLogout }) {
     let isMounted = true;
     const loadNotifications = async () => {
       try {
-        const roll = account?.rollNumber || account?.registrationNumber || '01';
         const facultyList = await notificationsApi.getStudentNotifications(roll);
         if (!isMounted) return;
 
@@ -604,7 +592,6 @@ function StudentPortal({ account, onLogout }) {
               <CampusConnect
                 account={account}
                 isDrawerMode={true}
-                initialConversationId={initialConvId}
                 initialView={campusSubView}
                 onNavigateToModule={(mod) => {
                   setWhatsappDrawerOpen(false);
@@ -622,36 +609,10 @@ function StudentPortal({ account, onLogout }) {
         {/* Floating Sidebar identical to Campus OS Dashboard */}
         {sidebarOpen && (
           <aside className="campus-os-sidebar">
-            <div className="campus-os-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div className="campus-brand-icon" style={{ background: '#ffffff', padding: '4px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-                </div>
-                <div>
-                  <p className="campus-brand-kicker">APNA CAMPUS</p>
-                  <h2 className="campus-brand-title">Student Portal</h2>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  color: '#ffffff',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <MasterSidebarHeader
+              roleTitle="STUDENT PORTAL"
+              onToggle={() => setSidebarOpen(false)}
+            />
 
             <nav className="campus-os-nav">
               {navSections.map((sec) => (
@@ -659,7 +620,7 @@ function StudentPortal({ account, onLogout }) {
                   <p className="campus-os-nav-section-title">{sec.title}</p>
                   {sec.items.map(({ label, icon: Icon, page, badge }) => (
                     <a
-                      className={activeLink === label ? 'active' : ''}
+                      className={`campus-nav-item ${activeLink === label ? 'active' : ''}`}
                       href={`#${page}`}
                       aria-current={activeLink === label ? 'page' : undefined}
                       key={label}
@@ -668,7 +629,9 @@ function StudentPortal({ account, onLogout }) {
                         setActiveLink(label)
                         setActivePage(page)
                         window.location.hash = page
-                        setSidebarOpen(false)
+                        if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+                          setSidebarOpen(false)
+                        }
                       }}
                     >
                       <Icon size={18} />
@@ -691,7 +654,9 @@ function StudentPortal({ account, onLogout }) {
                 setProfileTab('Personal');
                 setProfileQuickView('');
                 window.location.hash = 'profile';
-                setSidebarOpen(false);
+                if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+                  setSidebarOpen(false);
+                }
               }}
               style={{ cursor: 'pointer' }}
               title="View student profile"
@@ -898,7 +863,6 @@ function StudentPortal({ account, onLogout }) {
                 activePage === 'anonymous-complaints') && (
                 <CampusConnect
                   account={account}
-                  initialConversationId={initialConvId}
                   initialCategory={activePage === 'class-groups' ? 'Classes' : 'All'}
                   initialView={campusSubView}
                   onBack={() => {
@@ -924,7 +888,7 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'timetable' && <TimetablePage />}
               {activePage === 'notices' && <NoticesPage />}
               {activePage === 'idcard' && <IDCardPage />}
-              {activePage === 'library' && <LibraryPage />}
+              {activePage === 'library' && <LibraryPage account={account} />}
               {activePage === 'internship' && <InternshipPage account={account} />}
               {activePage === 'online-exam' && <OnlineExamPage />}
               {activePage === 'placement' && <PlacementPage />}
@@ -1053,26 +1017,28 @@ function StudentPortal({ account, onLogout }) {
               </article>
 
               {/* Card 2: Attendance */}
-              <article className="dash-stat tone-green">
+              <article className={`dash-stat ${pct >= 75 ? 'tone-green' : 'tone-red'}`}>
                 <div className="dash-stat-head">
                   <div className="dash-stat-head-left">
                     <span className="dash-stat-icon"><CheckCircle2 size={18} /></span>
                     <span className="dash-stat-label">Attendance</span>
                   </div>
-                  <span className="dash-stat-badge tone-green-badge">Eligible</span>
+                  <span className={`dash-stat-badge ${pct >= 75 ? 'tone-green-badge' : 'tone-red-badge'}`}>
+                    {pct >= 75 ? 'Eligible' : 'Shortage'}
+                  </span>
                 </div>
                 <div className="dash-stat-body">
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <strong className="dash-stat-value">92%</strong>
-                    <span className="dash-stat-ratio">138 / 150 Lectures</span>
+                    <strong className="dash-stat-value">{pct}%</strong>
+                    <span className="dash-stat-ratio">Roll: {roll}</span>
                   </div>
                   <div className="dash-progress" aria-hidden="true">
-                    <i style={{ width: '92%' }} />
+                    <i style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: pct < 75 ? '#ef4444' : undefined }} />
                   </div>
                 </div>
                 <div className="dash-stat-foot">
-                  <small className="dash-stat-sub text-green">
-                    <Check size={13} /> 17% above required 75% examination threshold
+                  <small className={`dash-stat-sub ${pct >= 75 ? 'text-green' : 'text-red'}`}>
+                    <Check size={13} /> {pct >= 75 ? `${pct - 75}% above required 75% examination threshold` : `${75 - pct}% below minimum 75% examination threshold`}
                   </small>
                 </div>
               </article>

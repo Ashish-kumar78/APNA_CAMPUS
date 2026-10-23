@@ -9,6 +9,11 @@ export function readSession() {
     return null;
   }
 
+  if (rawToken === 'demo-jwt-token') {
+    clearSession();
+    return null;
+  }
+
   try {
     return {
       user: JSON.parse(rawUser),

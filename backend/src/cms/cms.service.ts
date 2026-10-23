@@ -25,12 +25,16 @@ export class CmsService {
     });
   }
 
-  async createNotice(data: { title: string; tag: string; publisher?: string; pinned?: boolean; summary: string; content: string }) {
+  async createNotice(data: { title: string; tag: string; pinned?: boolean; summary: string; content: string }, publisher: string) {
     return this.prisma.notice.create({
       data: {
-        ...data,
+        title: data.title.trim(),
+        tag: data.tag.trim().toUpperCase(),
+        pinned: Boolean(data.pinned),
+        summary: data.summary.trim(),
+        content: data.content.trim(),
         date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        publisher: data.publisher || 'Dean Office',
+        publisher,
       },
     });
   }
@@ -52,25 +56,17 @@ export class CmsService {
     });
   }
 
-  async createBlog(data: { author: string; dept: string; tag: string; title: string; body: string }) {
-    const initials = data.author.split(' ').map((p) => p[0]).slice(0, 2).join('');
+  async createBlog(data: { tag: string; title: string; body: string }, author: string, department: string) {
+    const initials = author.split(' ').map((p) => p[0]).slice(0, 2).join('');
     return this.prisma.blogPost.create({
       data: {
-        ...data,
+        tag: data.tag.trim(),
+        title: data.title.trim(),
+        body: data.body.trim(),
+        author,
+        dept: department,
         initials,
         date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      },
-    });
-  }
-
-  async toggleLikeBlog(id: string) {
-    const post = await this.prisma.blogPost.findUnique({ where: { id } });
-    if (!post) return null;
-    return this.prisma.blogPost.update({
-      where: { id },
-      data: {
-        liked: !post.liked,
-        likes: post.liked ? Math.max(0, post.likes - 1) : post.likes + 1,
       },
     });
   }
@@ -79,23 +75,20 @@ export class CmsService {
   async submitFeedback(data: { formType: string; targetId?: string; targetName?: string; rating: number; comments?: string; studentId?: string }) {
     return this.prisma.feedbackSurvey.create({
       data: {
-        ...data,
+        formType: data.formType.trim(),
+        targetId: data.targetId,
+        targetName: data.targetName,
         rating: Number(data.rating),
+        comments: data.comments,
       },
     });
   }
 
   // Biometrics Turnstile
-  async getBiometricLogs(direction?: string) {
-    return [
-      { id: 1, date: '02 Oct 2026', time: '08:42 AM', point: 'Campus Main Gate (Turnstile 02)', mode: 'RFID Tap', direction: 'IN', status: 'Authorized' },
-      { id: 2, date: '02 Oct 2026', time: '09:05 AM', point: 'Academic Block 3 - CSE Wing', mode: 'Fingerprint', direction: 'IN', status: 'Authorized' },
-      { id: 3, date: '02 Oct 2026', time: '01:15 PM', point: 'Central Canteen Turnstile', mode: 'Facial Rec.', direction: 'IN', status: 'Authorized' },
-      { id: 4, date: '02 Oct 2026', time: '01:50 PM', point: 'Central Library Turnstile', mode: 'RFID Tap', direction: 'IN', status: 'Authorized' },
-      { id: 5, date: '02 Oct 2026', time: '05:20 PM', point: 'Campus Main Gate (Turnstile 01)', mode: 'RFID Tap', direction: 'OUT', status: 'Authorized' },
-      { id: 6, date: '02 Oct 2026', time: '07:45 PM', point: 'Hostel Block C Entry Turnstile', mode: 'Fingerprint', direction: 'IN', status: 'In before curfew' },
-      { id: 7, date: '01 Oct 2026', time: '08:50 AM', point: 'Campus Main Gate', mode: 'RFID Tap', direction: 'IN', status: 'Authorized' },
-      { id: 8, date: '01 Oct 2026', time: '05:10 PM', point: 'Campus Main Gate', mode: 'RFID Tap', direction: 'OUT', status: 'Authorized' },
-    ].filter((log) => !direction || direction === 'ALL' || log.direction === direction);
+  async getBiometricLogs(direction?: string, studentId?: string) {
+    const where: any = {};
+    if (direction && direction !== 'ALL') where.direction = direction;
+    if (studentId) where.studentId = studentId;
+    return this.prisma.biometricLog.findMany({ where, orderBy: [{ date: 'desc' }, { time: 'desc' }] });
   }
 }

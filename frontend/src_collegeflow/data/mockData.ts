@@ -1,14 +1,3 @@
-export type Role = 'super_admin' | 'college_admin' | 'faculty' | 'mentor' | 'student' | 'accounts_staff' | 'exam_staff' | 'placement_officer' | 'librarian' | 'hostel_staff' | 'transport_staff';
-
-export type UserSession = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: Role;
-  token: string;
-};
-
 export const demoUsers: Array<{
   id: string;
   email: string;
@@ -16,11 +5,7 @@ export const demoUsers: Array<{
   firstName: string;
   lastName: string;
   role: Role;
-}> = [
-  { id: 's-1001', email: 'student@collegeflow.edu', password: 'password123', firstName: 'Aarav', lastName: 'Sharma', role: 'student' },
-  { id: 'a-1001', email: 'admin@collegeflow.edu', password: 'password123', firstName: 'Nisha', lastName: 'Patel', role: 'college_admin' },
-  { id: 'f-1001', email: 'faculty@collegeflow.edu', password: 'password123', firstName: 'Rohit', lastName: 'Verma', role: 'faculty' },
-];
+}> = [];
 
 export const studentSummary = {
   name: 'Aarav Sharma',

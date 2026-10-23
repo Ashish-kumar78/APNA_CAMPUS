@@ -19,92 +19,11 @@ import {
 import { api } from '../services/api.js';
 
 export default function AdminComplaintsConsole() {
-  const [complaints, setComplaints] = useState([
-    {
-      id: 'CMP-2026-101',
-      studentName: 'Rakesh Das',
-      rollNumber: '01',
-      location: 'Room 204 Attached Bathroom',
-      category: 'Plumbing',
-      predictedCategory: 'plumbing',
-      confidence: 0.88,
-      needsReview: false,
-      title: 'Water tap leaking continuously in bathroom',
-      description: 'The bathroom wash basin tap is broken at the valve and dripping water constantly.',
-      priority: 'High',
-      status: 'In Progress',
-      assignedStaffId: 'STF-PLUMB-01',
-      assignedStaffName: 'Suresh Mohapatra',
-      assignedStaffPhone: '+91 94379 11231',
-      assignedStaffRole: 'Plumber & Water Works',
-      filedDate: '18 Oct 2026',
-      resolutionNotes: 'Assigned to Suresh Mohapatra. Ceramic washer replacement scheduled for 11:30 AM.',
-    },
-    {
-      id: 'CMP-2026-102',
-      studentName: 'Rakesh Das',
-      rollNumber: '01',
-      location: 'Study Area Desk #02',
-      category: 'Electrical',
-      predictedCategory: 'electrical',
-      confidence: 0.82,
-      needsReview: false,
-      title: 'Ceiling fan making screeching noise',
-      description: 'The ceiling fan bearing has deteriorated and makes a loud squeaking sound on speed 4 and 5.',
-      priority: 'Medium',
-      status: 'Assigned',
-      assignedStaffId: 'STF-ELEC-01',
-      assignedStaffName: 'Pramod Panda',
-      assignedStaffPhone: '+91 94378 99120',
-      assignedStaffRole: 'Electrician & Power Maintenance',
-      filedDate: '18 Oct 2026',
-      resolutionNotes: 'Allocated to Pramod Panda based on lowest pending electrical workload.',
-    },
-    {
-      id: 'CMP-2026-103',
-      studentName: 'Amit Nayak',
-      rollNumber: '02',
-      location: 'Corridor 2nd Floor West Wing',
-      category: 'Cleaning',
-      predictedCategory: 'cleaning',
-      confidence: 0.91,
-      needsReview: false,
-      title: 'Overflowing dustbin outside room 102',
-      description: 'Trash can has not been cleared since Saturday morning and is attracting insects.',
-      priority: 'Medium',
-      status: 'Resolved',
-      assignedStaffId: 'STF-CLEAN-02',
-      assignedStaffName: 'Gopal Charan Das',
-      assignedStaffPhone: '+91 94381 33453',
-      assignedStaffRole: 'Housekeeping Supervisor',
-      filedDate: '17 Oct 2026',
-      resolutionNotes: 'Sanitized corridor and emptied industrial bins. Inspected by floor warden.',
-    },
-    {
-      id: 'CMP-2026-104',
-      studentName: 'Raj Sahoo',
-      rollNumber: '03',
-      location: 'Hostel 1 Common Hall',
-      category: 'Other',
-      predictedCategory: 'other',
-      confidence: 0.42,
-      needsReview: true,
-      reviewReason: 'Uncertain classification (conf=0.42 < 0.65). Requires supervisor category tagging.',
-      title: 'Some disturbance happening in common area',
-      description: 'There is general noise and issues near the entrance hallway after dinner hours.',
-      priority: 'Low',
-      status: 'Needs Review',
-      assignedStaffId: null,
-      assignedStaffName: null,
-      assignedStaffPhone: null,
-      assignedStaffRole: null,
-      filedDate: '18 Oct 2026',
-      resolutionNotes: 'Pending administrator review in triage queue.',
-    },
-  ]);
+  const [complaints, setComplaints] = useState([]);
 
   const [staffRoster, setStaffRoster] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -119,11 +38,29 @@ export default function AdminComplaintsConsole() {
   // AI Metrics Modal
   const [showMetricsModal, setShowMetricsModal] = useState(false);
   const [aiMetrics, setAiMetrics] = useState(null);
+  const [aiMetricsLoading, setAiMetricsLoading] = useState(false);
+  const [aiMetricsError, setAiMetricsError] = useState('');
   const [toastMessage, setToastMessage] = useState('');
 
   const triggerToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  const openAiMetrics = async () => {
+    setShowMetricsModal(true);
+    setAiMetrics(null);
+    setAiMetricsError('');
+    setAiMetricsLoading(true);
+    try {
+      const response = await api.getAiModelMetrics();
+      if (!response?.success) throw new Error('AI metrics request failed.');
+      setAiMetrics(response.data);
+    } catch {
+      setAiMetricsError('AI model metrics are unavailable. Check the backend and configured AI service.');
+    } finally {
+      setAiMetricsLoading(false);
+    }
   };
 
   const loadData = async () => {
@@ -133,14 +70,12 @@ export default function AdminComplaintsConsole() {
         api.getComplaints(),
         api.getStaffRosterWithWorkload().catch(() => ({ data: [] })),
       ]);
-      if (compRes && compRes.data && compRes.data.length > 0) {
-        setComplaints(compRes.data);
-      }
-      if (staffRes && staffRes.data && staffRes.data.length > 0) {
-        setStaffRoster(staffRes.data);
-      }
+      setComplaints(Array.isArray(compRes?.data) ? compRes.data : []);
+      setStaffRoster(Array.isArray(staffRes?.data) ? staffRes.data : []);
+      setLoadError('');
     } catch (err) {
       console.warn('Failed to refresh complaints console:', err);
+      setLoadError('Complaint data could not be loaded. Check the connection and retry.');
     } finally {
       setLoading(false);
     }
@@ -148,11 +83,6 @@ export default function AdminComplaintsConsole() {
 
   useEffect(() => {
     loadData();
-    // Load AI metrics from microservice
-    fetch('http://localhost:8000/metrics')
-      .then(r => r.json())
-      .then(d => setAiMetrics(d))
-      .catch(() => {});
   }, []);
 
   // Filtered complaints
@@ -197,23 +127,10 @@ export default function AdminComplaintsConsole() {
       triggerToast(`Ticket #${reassignModalTicket.id} updated! Assigned to: ${assignedName}`);
       loadData();
     } catch {
-      setComplaints(prev => prev.map(c => {
-        if (c.id === reassignModalTicket.id) {
-          return {
-            ...c,
-            assignedStaffId: selectedStaffId,
-            assignedStaffName: assignedName,
-            status: staff ? 'Assigned' : 'Needs Review',
-            needsReview: false,
-            resolutionNotes: reassignNotes || `Reassigned to ${assignedName} by administrator.`,
-          };
-        }
-        return c;
-      }));
-      triggerToast(`Ticket #${reassignModalTicket.id} reassigned to ${assignedName}!`);
-    } finally {
-      setReassignModalTicket(null);
+      triggerToast('Assignment was not saved. Check the connection and try again.');
+      return;
     }
+    setReassignModalTicket(null);
   };
 
   const totalComplaints = complaints.length;
@@ -273,7 +190,7 @@ export default function AdminComplaintsConsole() {
 
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            onClick={() => setShowMetricsModal(true)}
+            onClick={openAiMetrics}
             style={{
               background: 'rgba(255,255,255,0.15)',
               border: '1px solid rgba(255,255,255,0.3)',
@@ -538,9 +455,19 @@ export default function AdminComplaintsConsole() {
           </tbody>
         </table>
 
-        {filteredComplaints.length === 0 && (
+        {loading && (
           <div style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b', fontWeight: 500 }}>
-            No complaint records match the selected filters.
+            Loading complaint records…
+          </div>
+        )}
+        {!loading && loadError && (
+          <div role="alert" style={{ textAlign: 'center', padding: '2.5rem', color: '#b91c1c', fontWeight: 500 }}>
+            {loadError}
+          </div>
+        )}
+        {!loading && !loadError && filteredComplaints.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b', fontWeight: 500 }}>
+            No persisted complaint records match the selected filters.
           </div>
         )}
       </div>
@@ -595,19 +522,7 @@ export default function AdminComplaintsConsole() {
                       {s.name} ({s.roleOrCategory || s.speciality}) — {s.activeWorkload !== undefined ? `${s.activeWorkload} active tasks` : 'Available'}
                     </option>
                   ))}
-                  {/* Fallback default options if roster not yet fetched */}
-                  {staffRoster.length === 0 && (
-                    <>
-                      <option value="STF-PLUMB-01">Suresh Mohapatra (Plumber &amp; Water Works) — 1 active task</option>
-                      <option value="STF-PLUMB-02">Bikram Keshari Jena (Plumber &amp; Water Works) — 0 active tasks (Recommended)</option>
-                      <option value="STF-ELEC-01">Pramod Panda (Electrician &amp; Power) — 1 active task</option>
-                      <option value="STF-ELEC-02">Manas Ranjan Sahu (Electrician) — 0 active tasks (Recommended)</option>
-                      <option value="STF-CLEAN-01">Laxmi Parida (Housekeeping Supervisor) — 0 active tasks</option>
-                      <option value="STF-CLEAN-02">Gopal Charan Das (Housekeeping Staff) — 1 active task</option>
-                      <option value="STF-MAINT-01">Santosh Kumar Swain (Carpentry &amp; Civil) — 0 active tasks</option>
-                      <option value="STF-IT-01">Tapan Barik (Senior Lab &amp; Network) — 0 active tasks</option>
-                    </>
-                  )}
+
                 </select>
               </div>
 
@@ -644,75 +559,44 @@ export default function AdminComplaintsConsole() {
         </div>
       )}
 
-      {/* AI EVALUATION & METRICS MODAL */}
+      {/* Metrics are fetched through the authenticated backend proxy. */}
       {showMetricsModal && (
         <div className="admin-modal-backdrop" onClick={() => setShowMetricsModal(false)}>
-          <div className="admin-modal-card" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+          <div className="admin-modal-card" style={{ maxWidth: '520px' }} onClick={e => e.stopPropagation()}>
             <div className="admin-modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Brain size={20} color="#4f46e5" />
-                <h3 style={{ margin: 0 }}>AI Text Classification Model Diagnostics</h3>
-              </div>
-              <button className="admin-table-action-btn" onClick={() => setShowMetricsModal(false)}>
+              <h3 style={{ margin: 0 }}>AI Model Metrics</h3>
+              <button className="admin-table-action-btn" onClick={() => setShowMetricsModal(false)} aria-label="Close metrics">
                 <X size={18} />
               </button>
             </div>
-            <div className="admin-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
-                <div><strong>Algorithm:</strong> TF-IDF Feature Extraction + Logistic Regression (C=5.0)</div>
-                <div><strong>Evaluation Split:</strong> 80% Stratified Training (144 samples) / 20% Held-Out Testing (36 samples)</div>
-                <div><strong>Classes:</strong> Plumbing, Electrical, Cleaning, Maintenance, Internet/IT, Other</div>
-                <div><strong>Accuracy:</strong> 75.00% on held-out test data</div>
-                <div><strong>Macro F1-Score:</strong> 0.7503</div>
-              </div>
-
-              <div>
-                <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>Per-Category Performance (Precision / Recall / F1):</strong>
-                <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '0.8rem' }}>
-                  <div style={{ background: '#ecfeff', padding: '8px', borderRadius: '8px', border: '1px solid #a5f3fc' }}>
-                    <strong>Plumbing:</strong><br/>
-                    P: 71% · R: 83% · F1: 0.77
+            <div className="admin-modal-body">
+              {aiMetricsLoading && <p>Loading model evaluation metadata…</p>}
+              {!aiMetricsLoading && aiMetricsError && <p role="alert">{aiMetricsError}</p>}
+              {!aiMetricsLoading && !aiMetricsError && aiMetrics && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div>
+                    <strong>Model:</strong> {aiMetrics.model_type || 'Unspecified'}<br />
+                    <strong>Training samples:</strong> {aiMetrics.num_training_samples ?? 'Unavailable'} ·{' '}
+                    <strong>Test samples:</strong> {aiMetrics.num_test_samples ?? 'Unavailable'}<br />
+                    <strong>Accuracy:</strong> {aiMetrics.evaluation_metrics?.accuracy == null
+                      ? 'Unavailable'
+                      : `${(aiMetrics.evaluation_metrics.accuracy * 100).toFixed(2)}%`} ·{' '}
+                    <strong>Macro F1:</strong> {aiMetrics.evaluation_metrics?.macro_f1 == null
+                      ? 'Unavailable'
+                      : aiMetrics.evaluation_metrics.macro_f1.toFixed(4)}
                   </div>
-                  <div style={{ background: '#fef3c7', padding: '8px', borderRadius: '8px', border: '1px solid #fde68a' }}>
-                    <strong>Electrical:</strong><br/>
-                    P: 100% · R: 67% · F1: 0.80
-                  </div>
-                  <div style={{ background: '#f0fdf4', padding: '8px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                    <strong>Cleaning:</strong><br/>
-                    P: 67% · R: 67% · F1: 0.67
-                  </div>
-                  <div style={{ background: '#fdf4ff', padding: '8px', borderRadius: '8px', border: '1px solid #f5d0fe' }}>
-                    <strong>Maintenance:</strong><br/>
-                    P: 71% · R: 83% · F1: 0.77
-                  </div>
-                  <div style={{ background: '#eff6ff', padding: '8px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-                    <strong>Internet/IT:</strong><br/>
-                    P: 71% · R: 83% · F1: 0.77
-                  </div>
-                  <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <strong>Other:</strong><br/>
-                    P: 80% · R: 67% · F1: 0.73
-                  </div>
+                  {aiMetrics.synthetic_notice && (
+                    <div role="note" style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', fontSize: '0.82rem', color: '#92400e' }}>
+                      {aiMetrics.synthetic_notice}
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', fontSize: '0.78rem', color: '#92400e' }}>
-                ⚠️ <strong>Transparency Notice:</strong> Development model was trained on a synthetic campus dataset for hackathon demonstration. Real-world accuracy will calibrate dynamically as real institutional tickets are logged.
-              </div>
-            </div>
-
-            <div className="admin-modal-footer">
-              <button
-                type="button"
-                className="admin-action-btn-primary"
-                onClick={() => setShowMetricsModal(false)}
-              >
-                Close Diagnostics
-              </button>
+              )}
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

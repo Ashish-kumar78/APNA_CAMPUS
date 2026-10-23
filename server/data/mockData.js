@@ -1,41 +1,11 @@
-import bcrypt from 'bcryptjs';
-
-const users = [
-  {
-    id: 'u-1001',
-    email: 'student@collegeflow.edu',
-    firstName: 'Aarav',
-    lastName: 'Sharma',
-    role: 'student',
-    passwordHash: bcrypt.hashSync('password123', 10),
-    isActive: true,
-  },
-  {
-    id: 'u-1002',
-    email: 'admin@collegeflow.edu',
-    firstName: 'Nisha',
-    lastName: 'Patel',
-    role: 'college_admin',
-    passwordHash: bcrypt.hashSync('password123', 10),
-    isActive: true,
-  },
-  {
-    id: 'u-1003',
-    email: 'faculty@collegeflow.edu',
-    firstName: 'Rohit',
-    lastName: 'Verma',
-    role: 'faculty',
-    passwordHash: bcrypt.hashSync('password123', 10),
-    isActive: true,
-  },
-];
-
-export function findUserByEmail(email) {
-  return users.find((user) => user.email.toLowerCase() === String(email).toLowerCase());
+// This legacy Express example has no user accounts. The canonical authentication
+// and user store are provided by the NestJS backend and MongoDB Atlas.
+export function findUserByEmail(_email) {
+  return undefined;
 }
 
 export function listUsers() {
-  return users;
+  return [];
 }
 
 export const dashboardData = {

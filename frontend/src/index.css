@@ -493,29 +493,36 @@ button {
   color: #ffffff !important;
 }
 
-/* ─── Global Hamburger Menu Toggle Button (3-Line Icon) ─── */
+/* ─── Global Hamburger Menu Toggle Button (Solid Black with White Icon) ─── */
 .campus-nav-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: #0f172a;
-  color: #ffffff;
-  border: 1px solid #1e293b;
-  border-radius: 12px;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  border: 1px solid #000000 !important;
+  border-radius: 10px !important;
   cursor: pointer !important;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
-  flex-shrink: 0;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3) !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+}
+
+.campus-nav-toggle-btn svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
 }
 
 .campus-nav-toggle-btn:hover {
-  background: #2563eb;
-  border-color: #3b82f6;
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-  transform: translateY(-1px);
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+  transform: translateY(-1px) !important;
 }
 
 .hod-layout.sidebar-closed,

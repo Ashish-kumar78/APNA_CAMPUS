@@ -33,114 +33,34 @@ import {
   MessageSquare
 } from 'lucide-react';
 import './PlacementPortal.css';
+import { MasterSidebarHeader, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
-import { erpStore } from '../services/erpStore.js';
-import { getAllStudents } from '../services/studentStore.js';
 import { api } from '../services/api.js';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 
 export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, drives, companies, applicants, offers, stats
 
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.erp-main-content, .role-dash-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
+
   // Core Data States
-  const [companies, setCompanies] = useState(() => erpStore.getPlacementCompanies());
-  const [drives, setDrives] = useState(() => erpStore.getPlacementDrives());
-  const [applicantPipeline, setApplicantPipeline] = useState(() => [
-    {
-      id: 'APP-101',
-      studentName: 'Rakesh Das',
-      regNo: '2305201001',
-      branch: 'CSE',
-      cgpa: 8.72,
-      company: 'Cisco Systems India',
-      role: 'Associate Network & Software Engineer',
-      stage: 'Technical Round 2 Cleared',
-      status: 'In Interview Pipeline',
-      interviewerNotes: 'Demonstrated strong networking socket & data structure fundamentals.',
-      roundScore: '8.5 / 10',
-      ctcOffered: '₹18.5 LPA',
-    },
-    {
-      id: 'APP-102',
-      studentName: 'Priya Patra',
-      regNo: '2305201004',
-      branch: 'CSE',
-      cgpa: 9.08,
-      company: 'Cisco Systems India',
-      role: 'Associate Network & Software Engineer',
-      stage: 'Selected',
-      status: 'Offer Letter Released',
-      interviewerNotes: 'Exceptional system design and problem solving capabilities. Recommended for Dream package.',
-      roundScore: '9.4 / 10',
-      ctcOffered: '₹18.5 LPA',
-    },
-    {
-      id: 'APP-103',
-      studentName: 'Amit Nayak',
-      regNo: '2305201002',
-      branch: 'CSE',
-      cgpa: 8.04,
-      company: 'Tata Consultancy Services',
-      role: 'Digital Systems Engineer & Innovator',
-      stage: 'Selected',
-      status: 'Offer Letter Released',
-      interviewerNotes: 'Qualified TCS National Qualifier Test (NQT) with 94 percentile.',
-      roundScore: '8.8 / 10',
-      ctcOffered: '₹7.2 LPA',
-    },
-    {
-      id: 'APP-104',
-      studentName: 'Raj Sahoo',
-      regNo: '2305201003',
-      branch: 'MECH',
-      cgpa: 8.12,
-      company: 'L&T Technology Services (LTTS)',
-      role: 'Graduate Engineer Trainee (R&D)',
-      stage: 'Technical Round 1 Cleared',
-      status: 'In Interview Pipeline',
-      interviewerNotes: 'Strong CAD modeling and thermodynamics aptitude.',
-      roundScore: '8.0 / 10',
-      ctcOffered: '₹6.5 LPA',
-    },
-  ]);
-
-  const [offersList, setOffersList] = useState([
-    {
-      id: 'OFFER-01',
-      offerToken: 'GIFT-OFFER-2026-01-2305201004',
-      studentName: 'Priya Patra',
-      regNo: '2305201004',
-      department: 'Computer Science & Engineering',
-      company: 'Cisco Systems India',
-      role: 'Associate Network & Software Engineer',
-      packageOffered: '₹18.5 LPA',
-      ctcOffered: '₹18.5 LPA (Dream Recruiter Tier)',
-      joiningDate: '2027-07-01',
-      validityDeadline: '2026-12-15',
-      status: 'Offer Accepted',
-      issuedDate: '2026-10-02',
-    },
-    {
-      id: 'OFFER-02',
-      offerToken: 'GIFT-OFFER-2026-02-2305201002',
-      studentName: 'Amit Nayak',
-      regNo: '2305201002',
-      department: 'Computer Science & Engineering',
-      company: 'Tata Consultancy Services',
-      role: 'Digital Systems Engineer & Innovator',
-      packageOffered: '₹7.2 LPA',
-      ctcOffered: '₹7.2 LPA (TCS Digital Tier)',
-      joiningDate: '2027-06-15',
-      validityDeadline: '2026-12-20',
-      status: 'Offer Letter Released',
-      issuedDate: '2026-10-04',
-    },
-  ]);
-
-  const [dashboardStats, setDashboardStats] = useState(() => erpStore.getPlacementDashboardStats());
-  const allStudents = getAllStudents();
+  const [companies, setCompanies] = useState([]);
+  const [drives, setDrives] = useState([]);
+  const [applicantPipeline, setApplicantPipeline] = useState([]);
+  const [offersList, setOffersList] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [loadError, setLoadError] = useState('');
+  const [eligibilityResult, setEligibilityResult] = useState(null);
 
   // Search & Filter
   const [driveSearch, setDriveSearch] = useState('');
@@ -166,25 +86,25 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
   const [newDriveForm, setNewDriveForm] = useState({
     company: '',
     role: '',
-    packageLPA: 7.5,
-    minCgpa: 7.0,
+    packageLPA: '',
+    minCgpa: '',
     maxBacklogs: 0,
-    allowedBranches: 'CSE, ECE',
-    driveDate: '2026-11-20',
-    venue: 'Campus Auditorium & Virtual Arena',
+    allowedBranches: '',
+    driveDate: '',
+    venue: '',
     employmentType: 'Full-time',
   });
 
   const [newCompanyForm, setNewCompanyForm] = useState({
     name: '',
-    category: 'Information Technology',
+    category: '',
     hrContact: '',
     email: '',
     phone: '',
-    packageRange: '₹5.0 LPA - ₹10.0 LPA',
+    packageRange: '',
     tier: 'Active Partner',
-    mouStatus: 'Signed & Valid',
-    officeLocation: 'Bhubaneswar / Bangalore',
+    mouStatus: 'Under Review',
+    officeLocation: '',
   });
 
   const [advanceStageForm, setAdvanceStageForm] = useState({
@@ -205,24 +125,29 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  // Sync from backend on mount
+  // Placement records are sourced from the API; failed requests remain visible as errors.
   useEffect(() => {
     async function loadData() {
-      try {
-        const [statsRes, companiesRes, drivesRes, appsRes] = await Promise.all([
-          api.getPlacementDashboardStats().catch(() => null),
-          api.getPlacementCompanies().catch(() => null),
-          api.getPlacementDrives().catch(() => null),
-          api.getPlacementApplications().catch(() => null),
-        ]);
-
-        if (statsRes?.data) setDashboardStats(statsRes.data);
-        if (companiesRes?.data) setCompanies(companiesRes.data);
-        if (drivesRes?.data) setDrives(drivesRes.data);
-        if (appsRes?.data) setApplicantPipeline(appsRes.data);
-      } catch (err) {
-        console.warn('Placement API sync error, falling back to local store:', err);
-      }
+      const results = await Promise.allSettled([
+        api.getPlacementDashboardStats(),
+        api.getPlacementCompanies(),
+        api.getPlacementDrives(),
+        api.getPlacementApplications(),
+        api.getPlacementOffers(),
+      ]);
+      const errors = [];
+      const [statsRes, companiesRes, drivesRes, appsRes, offersRes] = results;
+      if (statsRes.status === 'fulfilled' && statsRes.value?.success) setDashboardStats(statsRes.value.data);
+      else errors.push('placement metrics');
+      if (companiesRes.status === 'fulfilled' && companiesRes.value?.success) setCompanies(companiesRes.value.data || []);
+      else errors.push('companies');
+      if (drivesRes.status === 'fulfilled' && drivesRes.value?.success) setDrives(drivesRes.value.data || []);
+      else errors.push('drives');
+      if (appsRes.status === 'fulfilled' && appsRes.value?.success) setApplicantPipeline(appsRes.value.data || []);
+      else errors.push('applications');
+      if (offersRes.status === 'fulfilled' && offersRes.value?.success) setOffersList(offersRes.value.data || []);
+      else errors.push('offers');
+      setLoadError(errors.length ? `Some placement data could not be loaded: ${errors.join(', ')}.` : '');
     }
     loadData();
   }, []);
@@ -230,8 +155,8 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
   // Handlers
   const handleCreateDrive = async (e) => {
     e.preventDefault();
-    if (!newDriveForm.company || !newDriveForm.role) {
-      alert('Please fill company name and role title.');
+    if (!newDriveForm.company || !newDriveForm.role || !newDriveForm.packageLPA || !newDriveForm.minCgpa || !newDriveForm.driveDate || !newDriveForm.venue || !newDriveForm.allowedBranches.trim()) {
+      alert('Fill the company, role, package, CGPA cutoff, branches, drive date, and venue.');
       return;
     }
     try {
@@ -239,19 +164,20 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
         ...newDriveForm,
         allowedBranches: newDriveForm.allowedBranches.split(',').map(b => b.trim()),
       };
-      await api.createPlacementDrive(payload).catch(() => null);
-      const added = erpStore.addPlacementDrive(payload, { name: account?.name || 'T&P Officer', role: 'PLACEMENT' });
-      setDrives(erpStore.getPlacementDrives());
+      const response = await api.createPlacementDrive(payload);
+      if (!response?.success || !response.data) throw new Error(response?.message || 'The drive was not saved.');
+      const added = response.data;
+      setDrives((current) => [added, ...current]);
       setShowAddDriveModal(false);
       setNewDriveForm({
         company: '',
         role: '',
-        packageLPA: 7.5,
-        minCgpa: 7.0,
+        packageLPA: '',
+        minCgpa: '',
         maxBacklogs: 0,
-        allowedBranches: 'CSE, ECE',
-        driveDate: '2026-11-20',
-        venue: 'Campus Auditorium & Virtual Arena',
+        allowedBranches: '',
+        driveDate: '',
+        venue: '',
         employmentType: 'Full-time',
       });
       triggerToast(`Recruitment drive for ${added.company} registered successfully.`);
@@ -267,20 +193,21 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
       return;
     }
     try {
-      await api.createPlacementCompany(newCompanyForm).catch(() => null);
-      const added = erpStore.addPlacementCompany(newCompanyForm, { name: account?.name || 'T&P Officer', role: 'PLACEMENT' });
-      setCompanies(erpStore.getPlacementCompanies());
+      const response = await api.createPlacementCompany(newCompanyForm);
+      if (!response?.success || !response.data) throw new Error(response?.message || 'The company was not saved.');
+      const added = response.data;
+      setCompanies((current) => [added, ...current]);
       setShowAddCompanyModal(false);
       setNewCompanyForm({
         name: '',
-        category: 'Information Technology',
+        category: '',
         hrContact: '',
         email: '',
         phone: '',
-        packageRange: '₹5.0 LPA - ₹10.0 LPA',
+        packageRange: '',
         tier: 'Active Partner',
-        mouStatus: 'Signed & Valid',
-        officeLocation: 'Bhubaneswar / Bangalore',
+        mouStatus: 'Under Review',
+        officeLocation: '',
       });
       triggerToast(`Partner ${added.name} enrolled in recruiting directory.`);
     } catch (err) {
@@ -289,62 +216,31 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
   };
 
   const handleShortlistCandidate = (student, drive) => {
-    const existing = applicantPipeline.find(a => a.regNo === (student.rollNumber || student.rollNo) && a.company === drive.company);
-    if (existing) {
-      triggerToast(`${student.name} is already registered in ${drive.company} pipeline.`);
-      return;
+    void student;
+    void drive;
+    triggerToast('Eligibility can be calculated, but shortlisting is not saved because a persistent shortlist endpoint is not implemented.');
+  };
+
+  const handleEvaluateDrive = async (drive) => {
+    setSelectedDriveForEligibility(drive);
+    setEligibilityResult(null);
+    try {
+      const response = await api.evaluateDriveEligibility(drive.id);
+      if (!response?.success || !response.data) throw new Error(response?.message || 'Eligibility could not be calculated.');
+      setEligibilityResult(response.data);
+    } catch (error) {
+      triggerToast(error?.message || 'Eligibility could not be calculated from persisted records.');
     }
-    const newApp = {
-      id: `APP-${Date.now().toString().slice(-4)}`,
-      studentName: student.name,
-      regNo: student.rollNumber || student.rollNo,
-      branch: student.deptCode || (student.department?.includes('Computer') ? 'CSE' : student.department?.includes('Electronics') ? 'ECE' : 'MECH'),
-      cgpa: Number(student.cgpa) || 8.0,
-      company: drive.company,
-      role: drive.role,
-      stage: 'Shortlisted for Assessment',
-      status: 'In Screening Pipeline',
-      interviewerNotes: 'Qualified via automated deterministic eligibility criteria.',
-      roundScore: 'Passed Eligibility',
-      ctcOffered: drive.packageOffered,
-    };
-    setApplicantPipeline(prev => [newApp, ...prev]);
-    erpStore.logAuditEvent({
-      user: account?.name || 'T&P Officer',
-      role: 'PLACEMENT',
-      action: 'Shortlisted Candidate via Eligibility Engine',
-      target: `${student.name} for ${drive.company}`,
-      oldValue: 'Evaluated',
-      newValue: 'Shortlisted',
-    });
-    triggerToast(`Shortlisted ${student.name} for ${drive.company}! Added to ATS pipeline.`);
   };
 
   const handleAdvanceStageSubmit = async (e) => {
     e.preventDefault();
     if (!selectedAppForAdvance) return;
     try {
-      await api.advancePlacementApplicationStage(selectedAppForAdvance.id, advanceStageForm).catch(() => null);
-      setApplicantPipeline(prev => prev.map(app => {
-        if (app.id === selectedAppForAdvance.id) {
-          return {
-            ...app,
-            stage: advanceStageForm.nextStage,
-            status: advanceStageForm.nextStatus,
-            interviewerNotes: advanceStageForm.notes || app.interviewerNotes,
-            roundScore: advanceStageForm.score || app.roundScore,
-          };
-        }
-        return app;
-      }));
-      erpStore.logAuditEvent({
-        user: account?.name || 'T&P Officer',
-        role: 'PLACEMENT',
-        action: 'Advanced Candidate Stage',
-        target: `${selectedAppForAdvance.studentName} (${selectedAppForAdvance.company})`,
-        oldValue: selectedAppForAdvance.stage,
-        newValue: advanceStageForm.nextStage,
-      });
+      const response = await api.advancePlacementApplicationStage(selectedAppForAdvance.id, advanceStageForm);
+      if (!response?.success) throw new Error(response?.message || 'Application stage was not saved.');
+      const refreshed = await api.getPlacementApplications();
+      setApplicantPipeline(refreshed?.data || []);
       setShowAdvanceStageModal(false);
       setSelectedAppForAdvance(null);
       triggerToast(`Candidate advanced to "${advanceStageForm.nextStage}".`);
@@ -358,67 +254,29 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
     if (!selectedAppForOffer) return;
     try {
       const payload = {
-        studentName: selectedAppForOffer.studentName,
-        regNo: selectedAppForOffer.regNo,
-        company: selectedAppForOffer.company,
-        role: selectedAppForOffer.role,
+        applicationId: selectedAppForOffer.id,
         packageOffered: releaseOfferForm.packageOffered,
         joiningDate: releaseOfferForm.joiningDate,
         validityDeadline: releaseOfferForm.validityDeadline,
       };
-      await api.releasePlacementOffer(payload).catch(() => null);
-      const newOffer = {
-        id: `OFFER-${Date.now().toString().slice(-4)}`,
-        offerToken: `GIFT-OFFER-2026-${selectedAppForOffer.regNo}`,
-        studentName: selectedAppForOffer.studentName,
-        regNo: selectedAppForOffer.regNo,
-        department: selectedAppForOffer.branch || 'B.Tech Engineering',
-        company: selectedAppForOffer.company,
-        role: selectedAppForOffer.role,
-        packageOffered: releaseOfferForm.packageOffered,
-        ctcOffered: releaseOfferForm.packageOffered,
-        joiningDate: releaseOfferForm.joiningDate,
-        validityDeadline: releaseOfferForm.validityDeadline,
-        status: 'Offer Letter Released',
-        issuedDate: new Date().toISOString().split('T')[0],
-      };
-      setOffersList(prev => [newOffer, ...prev]);
-      setApplicantPipeline(prev => prev.map(app => {
-        if (app.id === selectedAppForOffer.id) {
-          return { ...app, stage: 'Selected', status: 'Offer Letter Released' };
-        }
-        return app;
-      }));
+      const response = await api.releasePlacementOffer(payload);
+      if (!response?.success || !response.data) throw new Error(response?.message || 'The offer was not saved.');
+      const newOffer = response.data;
+      setOffersList((current) => [newOffer, ...current]);
+      const refreshed = await api.getPlacementApplications();
+      setApplicantPipeline(refreshed?.data || []);
       setShowReleaseOfferModal(false);
       setSelectedAppForOffer(null);
-      triggerToast(`Official offer letter issued to ${newOffer.studentName} for ${newOffer.company}!`);
+      triggerToast(`Offer record saved for ${newOffer.studentName}; delivery is not configured.`);
     } catch (err) {
       alert('Error releasing offer: ' + err.message);
-    }
-  };
-
-  const handleOfferAction = async (offerId, action) => {
-    try {
-      await api.actionPlacementOffer(offerId, action, 'Updated from placement desk').catch(() => null);
-      setOffersList(prev => prev.map(o => {
-        if (o.id === offerId) {
-          return {
-            ...o,
-            status: action === 'ACCEPT_OFFER' ? 'Offer Accepted' : 'Offer Declined',
-          };
-        }
-        return o;
-      }));
-      triggerToast(`Offer marked as "${action === 'ACCEPT_OFFER' ? 'Accepted' : 'Declined'}".`);
-    } catch (err) {
-      alert('Error updating offer: ' + err.message);
     }
   };
 
   // CSV Exports
   const exportCensusCSV = () => {
     const headers = ['Branch Code,Branch Name,Eligible Students,Placed Students,Offers Count,Placement Rate (%),Average CTC,Highest CTC\n'];
-    const rows = (dashboardStats.branchStats || []).map(b =>
+    const rows = (dashboardStats?.branchStats || []).map(b =>
       `"${b.code}","${b.branch}","${b.eligible}","${b.placed}","${b.offers}","${b.placementRate}%","${b.avgCTC}","${b.highestCTC}"`
     );
     const blob = new Blob([headers.concat(rows).join('\n')], { type: 'text/csv' });
@@ -508,39 +366,12 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
       )}
 
       {/* Sidebar Navigation */}
-      <aside className={`erp-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="erp-sidebar-brand">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div className="erp-place-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-            </div>
-            <div className="erp-brand-text">
-              <h2>Apna Campus</h2>
-              <span>Training &amp; Placement Cell</span>
-            </div>
-          </div>
-          {sidebarOpen && (
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
+      {sidebarOpen && (
+        <aside className="erp-sidebar">
+          <MasterSidebarHeader
+            roleTitle="TRAINING & PLACEMENT"
+            onToggle={() => setSidebarOpen(false)}
+          />
 
         <nav className="erp-sidebar-nav">
           <button
@@ -617,6 +448,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
           </button>
         </nav>
       </aside>
+      )}
 
       {/* Main Content */}
       <main className="erp-main-content">
@@ -626,6 +458,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
             account={account}
             onLogout={onLogout}
             onSwitchRole={onSwitchRole}
+            sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(o => !o)}
             onNavigate={(target) => {
               if (target === 'place-drives') setActiveTab('drives');
@@ -646,15 +479,21 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                 title="Show Navigation"
                 aria-label="Show Navigation"
                 style={{
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '6px',
+                  background: '#000000',
+                  color: '#ffffff',
+                  border: '1px solid #000000',
+                  borderRadius: '10px',
+                  width: '38px',
+                  height: '38px',
                   cursor: 'pointer',
                   display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 3px 10px rgba(0, 0, 0, 0.3)',
+                  flexShrink: 0
                 }}
               >
-                <Menu size={20} color="#0f172a" />
+                <Menu size={20} color="#ffffff" stroke="#ffffff" />
               </button>
             )}
             <div>
@@ -687,6 +526,8 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
           </div>
         </header>
 
+        {loadError && <div role="status" style={{ margin: '0 1.5rem 1rem', padding: '12px 16px', borderRadius: 8, background: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa' }}>{loadError}</div>}
+
         <div className="erp-content-body">
           {/* STATS ROW (CLICKABLE TO OPEN FILTERED VIEWS) */}
           <div className="erp-stats-grid">
@@ -699,9 +540,9 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                 <span className="erp-stat-card-title">Placement Rate</span>
                 <TrendingUp size={18} color="#db2777" />
               </div>
-              <div className="erp-stat-val">{dashboardStats.placementRate || '82.4'}%</div>
+              <div className="erp-stat-val">{dashboardStats?.placementRate == null ? '—' : `${dashboardStats.placementRate}%`}</div>
               <div className="erp-stat-sub" style={{ color: '#10b981' }}>
-                {dashboardStats.placedStudents || 346} / {dashboardStats.eligibleCohort || 420} eligible placed
+                {dashboardStats?.placedStudents ?? '—'} / {dashboardStats?.eligibleCohort ?? '—'} eligible placed
               </div>
             </div>
 
@@ -714,8 +555,8 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                 <span className="erp-stat-card-title">Highest CTC</span>
                 <DollarSign size={18} color="#f59e0b" />
               </div>
-              <div className="erp-stat-val">{dashboardStats.highestCTC || '₹24.0 LPA'}</div>
-              <div className="erp-stat-note">Cisco Systems India (Dream Tier)</div>
+              <div className="erp-stat-val">{dashboardStats?.highestCTC == null ? '—' : `₹${dashboardStats.highestCTC} LPA`}</div>
+              <div className="erp-stat-note">Based on persisted placement records</div>
             </div>
 
             <div
@@ -727,8 +568,8 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                 <span className="erp-stat-card-title">Average Package</span>
                 <Award size={18} color="#3b82f6" />
               </div>
-              <div className="erp-stat-val">{dashboardStats.averageCTC || '₹6.8 LPA'}</div>
-              <div className="erp-stat-note">Median: {dashboardStats.medianCTC || '₹6.2 LPA'}</div>
+              <div className="erp-stat-val">{dashboardStats?.averageCTC == null ? '—' : `₹${dashboardStats.averageCTC} LPA`}</div>
+              <div className="erp-stat-note">Median: {dashboardStats?.medianCTC == null ? '—' : `₹${dashboardStats.medianCTC} LPA`}</div>
             </div>
 
             <div
@@ -766,8 +607,8 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                 <span className="erp-stat-card-title">Total Job Offers</span>
                 <Sparkles size={18} color="#ec4899" />
               </div>
-              <div className="erp-stat-val">{dashboardStats.totalOffers || 412} Offers</div>
-              <div className="erp-stat-note">{offersList.length} verified in portal</div>
+              <div className="erp-stat-val">{dashboardStats?.totalOffers ?? '—'} Offers</div>
+              <div className="erp-stat-note">{offersList.length} persisted in portal</div>
             </div>
           </div>
 
@@ -874,7 +715,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                           <button
                             type="button"
                             className="erp-btn-primary erp-btn-sm"
-                            onClick={() => setSelectedDriveForEligibility(d)}
+                            onClick={() => handleEvaluateDrive(d)}
                             style={{ background: 'linear-gradient(135deg, #db2777, #be185d)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                             title="Run deterministic criteria engine across student cohort"
                           >
@@ -1186,17 +1027,8 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                                 setShowPrintOfferModal(true);
                               }}
                             >
-                              View Offer Letter
+                              View Offer Details
                             </button>
-                            {o.status !== 'Offer Accepted' && (
-                              <button
-                                className="erp-btn-primary erp-btn-sm"
-                                onClick={() => handleOfferAction(o.id, 'ACCEPT_OFFER')}
-                                style={{ background: '#10b981' }}
-                              >
-                                Accept
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -1241,11 +1073,11 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                   <div>
                     <strong style={{ color: '#be185d', fontSize: '0.9rem' }}>Institutional Metric Calculation Standard:</strong>
                     <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '3px' }}>
-                      Placement Rate = (Unique Students Placed: <strong>346</strong>) ÷ (Total Eligible Cohort: <strong>420</strong>) × 100 = <strong style={{ color: '#be185d' }}>82.4%</strong>
+                      Placement Rate = unique placed students ÷ eligible cohort × 100. Current result: <strong>{dashboardStats?.placementRate == null ? 'Unavailable' : `${dashboardStats.placementRate}%`}</strong> ({dashboardStats?.placedStudents ?? '—'} ÷ {dashboardStats?.eligibleCohort ?? '—'}).
                     </div>
                   </div>
                   <div style={{ fontSize: '0.74rem', background: '#ffffff', padding: '6px 12px', borderRadius: '8px', border: '1px solid #fbcfe8', fontWeight: 600, color: '#be185d' }}>
-                    Total Offers Generated: 412 (Single student multi-offer deduplicated)
+                    Total Offers Generated: {dashboardStats?.totalOffers ?? 'Unavailable'}
                   </div>
                 </div>
 
@@ -1268,7 +1100,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {(dashboardStats.branchStats || []).map(b => (
+                        {(dashboardStats?.branchStats || []).map(b => (
                           <tr key={b.code}>
                             <td>
                               <strong>{b.branch}</strong>
@@ -1294,7 +1126,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
 
                 {/* Package Tier Distribution */}
                 <div style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                  {(dashboardStats.tierStats || []).map(t => (
+                  {(dashboardStats?.tierStats || []).map(t => (
                     <div
                       key={t.tier}
                       style={{
@@ -1528,7 +1360,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
 
       {/* MODAL 3: DETERMINISTIC ELIGIBILITY ENGINE PREVIEW */}
       {selectedDriveForEligibility && (() => {
-        const evaluatedCandidates = erpStore.getPlacementEligibleStudents(selectedDriveForEligibility.id, allStudents);
+        const evaluatedCandidates = eligibilityResult?.evaluated || [];
         const eligibleList = evaluatedCandidates.filter(c => c.isEligible);
         const ineligibleList = evaluatedCandidates.filter(c => !c.isEligible);
 
@@ -1610,7 +1442,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                           <div>
                             <strong>{student.name}</strong> <span style={{ fontSize: '0.76rem', color: '#64748b' }}>({student.rollNumber || student.rollNo})</span>
                             <div style={{ fontSize: '0.72rem', color: '#475569' }}>
-                              Dept: {student.department} · CGPA: <strong style={{ color: '#10b981' }}>{student.cgpa || 8.0}</strong> · Attendance: {student.attendance || 85}%
+                              Dept: {student.department} · CGPA: <strong style={{ color: '#10b981' }}>{student.cgpa}</strong> · Attendance: {student.attendance}%
                             </div>
                           </div>
                           <button
@@ -1787,7 +1619,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                   Cancel
                 </button>
                 <button type="submit" className="erp-btn-primary" style={{ background: '#10b981' }}>
-                  Release Official Offer
+                  Create Offer Record
                 </button>
               </div>
             </form>
@@ -1800,7 +1632,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
         <div className="erp-modal-overlay">
           <div className="erp-modal-card" style={{ maxWidth: '580px' }}>
             <div className="erp-modal-header">
-              <h3>Official Campus Placement Offer Letter</h3>
+              <h3>Campus Placement Offer Record</h3>
               <button
                 type="button"
                 onClick={() => setShowPrintOfferModal(false)}
@@ -1816,12 +1648,12 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                     <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
                     <div>
                       <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>APNA CAMPUS</h3>
-                      <span style={{ fontSize: '0.76rem', color: '#db2777', fontWeight: 600 }}>Training &amp; Placement Cell Official Letter of Intent</span>
+                      <span style={{ fontSize: '0.76rem', color: '#db2777', fontWeight: 600 }}>Placement Offer Record</span>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <strong style={{ fontSize: '0.8rem', color: '#db2777' }}>{selectedOfferForPrint.id}</strong>
-                    <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Issued: {selectedOfferForPrint.issuedDate || '2026-10-04'}</div>
+                    <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Recorded: {selectedOfferForPrint.issuedAt || selectedOfferForPrint.issuedDate || '—'}</div>
                   </div>
                 </div>
 
@@ -1853,7 +1685,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                 </div>
 
                 <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.78rem', color: '#475569', lineHeight: '1.4' }}>
-                  This certifies that <strong>{selectedOfferForPrint.studentName}</strong> has been successfully evaluated and extended an official employment offer through autonomous on-campus placement drives for the 2026-27 graduating batch.
+                  This is a placement offer record stored in Apna Campus. It is not a signed employer letter, and no delivery to the student or employer is recorded.
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px dashed #cbd5e1', fontSize: '0.7rem', color: '#64748b' }}>

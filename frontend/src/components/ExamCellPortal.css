@@ -6,11 +6,13 @@
 
 .erp-exam-layout {
   display: flex;
-  min-height: 100vh;
+  width: 100%;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   background-color: #f8fafc;
   color: #0f172a;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  overflow-x: hidden;
 }
 
 .erp-exam-badge {
@@ -27,7 +29,9 @@
 
 /* Sidebar Styling */
 .erp-exam-layout .erp-sidebar {
-  width: 270px;
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
   background: #091326;
   background: linear-gradient(180deg, #091326 0%, #0b1a36 100%);
   border-right: 1px solid #1a2a44;
@@ -37,8 +41,9 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  max-height: 100vh;
   z-index: 40;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
   box-shadow: 0 14px 35px rgba(2, 6, 23, 0.4);
 }
 
@@ -111,6 +116,12 @@
 .erp-exam-layout .erp-main-content {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   background: #f8fafc;

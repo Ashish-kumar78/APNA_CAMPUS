@@ -58,6 +58,7 @@ import {
 import '../DashboardHome.css';
 import './RoleDashboardLanding.css';
 import { getGreetingDisplayName } from '../utils/timeGreeting.js';
+import { api } from '../services/api';
 
 // DetailRow matching StudentPortal
 function DetailRow({ label, value }) {
@@ -130,55 +131,29 @@ export const ROLE_CONFIGS = {
     dashboardTitle: 'Super Admin dashboard',
     kicker: 'ENTERPRISE SECURITY & GOVERNANCE · FULL SYSTEM CLEARANCE',
     caption: 'Monitor institutional infrastructure, RBAC policies, security audit trails, and global system health.',
-    motd: 'All 14 micro-services operational. Automated zero-trust security audit passed at 18:00 hrs.',
+    motd: 'Account and system information is loaded from the authenticated backend.',
     officer: {
-      name: 'Dr. Rajesh Kumar Mohanty',
-      id: 'SYS-SUPER-01',
-      employeeCode: 'EMP-ADM-001',
-      designation: 'Chief Systems Architect & IT Director',
-      department: 'Enterprise IT & Cyber Governance',
-      specialization: 'Distributed Systems & Cyber Architecture',
-      office: 'Data Center Annex · Tech Tower 4',
-      qualification: 'Ph.D in Distributed Computing, M.Tech',
-      experience: '18+ Years Enterprise Architecture',
-      email: 'sysadmin@apnacampus.edu.in',
-      phone: '+91 94370 00001',
-      employmentType: 'Full-Time Regular (Permanent)',
-      dateOfJoining: '12 Aug 2012',
-      employmentStatus: 'Active · On Duty',
-      reportingAuthority: 'Governing Board / Board of Trustees',
-      photo: '/passport_photo_male.svg',
-      scope: 'Tier-0 Root Administrator',
-      academicYear: '2026–2027',
-      assignedResponsibilities: 'Campus ERP, Cloud Database Cluster, RBAC Governance',
-      biometricId: 'BIO-SYS-001',
-      identityVerification: 'Verified Official (Aadhaar: •••• •••• 1024 · PAN: •••••981A)',
+      name: 'Signed-in account',
+      id: '—',
+      designation: 'Super Admin',
+      department: 'Not set',
+      email: 'Not provided',
     },
     stats: {
-      c1: { icon: Users, label: 'Total Users & Accounts', badge: 'Active Directory', val: '2,698', desc: '2,480 Students · 146 Faculty · 72 Staff', pills: ['2,480 Students', '146 Faculty', '72 Staff'] },
-      c2: { icon: Server, label: 'System Uptime & Health', badge: 'Optimal 99.98%', val: '99.98%', ratio: '14 / 14 Services Up', pct: '99.98%', foot: 'Zero critical latency faults across all gateways' },
-      c3: { icon: ShieldCheck, label: 'RBAC Managed Roles', badge: '15 Roles Active', val: '15 Roles', desc: '22 Granular Policy Gateways Enforced', foot: 'End-to-end token signature rotation active' },
-      c4: { icon: AlertTriangle, label: 'Pending Admin Approvals', badge: 'Action Required', val: '07 Requests', desc: '3 Privilege escalations · 4 Schema syncs', foot: 'Oldest request logged 2h ago' },
+      c1: { icon: Users, label: 'Registered Accounts', badge: 'Backend data', val: '—', desc: 'Waiting for account metrics', pills: [] },
+      c2: { icon: Server, label: 'Backend & Database', badge: 'Checking', val: '—', ratio: '', foot: 'Health is checked from the backend' },
+      c3: { icon: ShieldCheck, label: 'Roles With Active Accounts', badge: 'Backend data', val: '—', desc: 'No role counts loaded', foot: 'Counts come from persisted user records' },
+      c4: { icon: AlertTriangle, label: 'Disabled Accounts', badge: 'Backend data', val: '—', desc: 'Waiting for account metrics', foot: 'Count comes from persisted user records' },
     },
     quickActions: [
       { id: 'users', label: 'View Users', icon: Users },
       { id: 'approvals', label: 'Review Approvals', icon: ShieldCheck },
       { id: 'activity', label: 'View System Activity', icon: Server },
     ],
-    overviewTitle: 'Enterprise Architecture Health & Service Status',
-    overviewItems: [
-      { col1: 'PostgreSQL Primary DB Cluster', col2: 'v16.2 Enterprise', col3: '24ms Query Latency', col4: 'Healthy', badge: 'status-green' },
-      { col1: 'JWT & RBAC Security Gateway', col2: 'HMAC SHA-256', col3: '2,698 Active Sessions', col4: 'Enforced', badge: 'status-green' },
-      { col1: 'Redis In-Memory State Cache', col2: 'Cluster Mode', col3: '99.99% Hit Ratio', col4: 'Optimal', badge: 'status-green' },
-      { col1: 'Automated Snapshot Vault', col2: 'Cloud Object Store', col3: '14.2 MB Encrypted Daily', col4: 'Synchronized', badge: 'status-blue' },
-      { col1: 'Campus WebSocket Push Gateway', col2: 'Socket.IO Secure', col3: '1,420 Concurrent Clients', col4: 'Connected', badge: 'status-green' },
-    ],
-    overviewColumns: ['Infrastructure Component', 'Specification', 'Runtime Metric', 'Operational Status'],
-    announcements: [
-      { day: '19', month: 'OCT', tag: 'SECURITY', tagTone: 'tag-violet', title: 'Zero-Trust RBAC Policy Update Completed', desc: 'Strict permission gates applied across all REST controllers. IDOR security verified.' },
-      { day: '15', month: 'OCT', tag: 'INFRA', tagTone: 'tag-blue', title: 'PostgreSQL Database Re-indexing & Optimization', desc: 'Query response times optimized by 34% across student marks and fee tables.' },
-      { day: '10', month: 'OCT', tag: 'BACKUP', tagTone: 'tag-green', title: 'Automated Offsite Disaster Recovery Test Passed', desc: 'Full encrypted PostgreSQL system snapshot successfully verified in standby cluster.' },
-    ],
+    overviewTitle: 'Backend & Runtime Diagnostics',
+    overviewItems: [],
+    overviewColumns: ['Subsystem', 'Status', 'Observed detail', 'Latency / uptime'],
+    announcements: [],
   },
 
   // 2. MANAGEMENT
@@ -186,7 +161,7 @@ export const ROLE_CONFIGS = {
     roleKey: 'management',
     roleTitle: 'Management',
     dashboardTitle: 'Management dashboard',
-    kicker: 'EXECUTIVE WORKSPACE · GOVERNING BOARD & TRUSTEES',
+    kicker: 'MANAGEMENT WORKSPACE',
     caption: 'Review institutional performance, fiscal realization, admissions growth, and placement milestones.',
     motd: 'Q2 Board of Trustees review scheduled for Oct 28. NAAC peer team accreditation dossier synchronized.',
     officer: {
@@ -194,7 +169,7 @@ export const ROLE_CONFIGS = {
       id: 'GOV-CHAIR-01',
       employeeCode: 'EMP-TRUST-001',
       designation: 'Chairman & Governing Body Trustee',
-      department: 'Governing Board / Board of Trustees',
+      department: 'Management',
       specialization: 'Institutional Governance & Fiscal Strategy',
       office: 'Boardroom Annex · Executive Tower',
       qualification: 'M.Tech, Ph.D, FIE',
@@ -399,21 +374,25 @@ export const ROLE_CONFIGS = {
     quickActions: [
       { id: 'review', label: 'Review Applications', icon: Users },
       { id: 'verify', label: 'Verify Documents', icon: CheckCircle2 },
-      { id: 'deadlines', label: 'Admission Deadlines', icon: Calendar },
+      { id: 'notices', label: 'Create Admission Notice', icon: Megaphone },
+      { id: 'deadlines', label: 'Manage Deadlines', icon: Calendar },
+      { id: 'export', label: 'Export Report', icon: FileSpreadsheet },
+      { id: 'cycle', label: 'Configure Cycle', icon: Layers },
     ],
     overviewTitle: 'Recent Admission Applications & Verification Status',
     overviewItems: [
-      { col1: 'APP-2026-901', col2: 'Tanmayee Rout', col3: 'B.Tech - Computer Science', col4: 'OJEE Rank 1,840 · Enrolled', badge: 'status-green' },
-      { col1: 'APP-2026-902', col2: 'Ashutosh Pradhan', col3: 'B.Tech - AI & Machine Learning', col4: 'JEE Main 88.4% · Document Verified', badge: 'status-blue' },
-      { col1: 'APP-2026-903', col2: 'Snigdha Mohanty', col3: 'Master of Business Admin (MBA)', col4: 'MAT 720 Score · Provisional Offer', badge: 'status-violet' },
-      { col1: 'APP-2026-904', col2: 'Debabrata Sahoo', col3: 'B.Tech - Electronics & Comm', col4: 'Awaiting 12th Board Marksheet', badge: 'status-amber' },
-      { col1: 'APP-2026-905', col2: 'Pooja Priyadarshini', col3: 'Master of Computer App (MCA)', col4: 'OJEE MCA Rank 340 · Enrolled', badge: 'status-green' },
+      { col1: 'APP-2026-001', col2: 'Subhashree Behera', col3: 'B.Tech - Computer Science', col4: 'JEE Main 88.5% · In Review', badge: 'status-blue' },
+      { col1: 'APP-2026-002', col2: 'Manish Kumar Pradhan', col3: 'B.Tech - Computer Science', col4: 'OJEE Rank 1,204 · Docs Verified', badge: 'status-green' },
+      { col1: 'APP-2026-003', col2: 'Aditi Priyadarshini', col3: 'Bachelor of Computer App (BCA)', col4: 'Merit 84.0% · Offer Sent', badge: 'status-violet' },
+      { col1: 'APP-2026-004', col2: 'Debabrata Sahoo', col3: 'B.Tech - Electronics & Comm', col4: 'Awaiting 12th Board Marksheet', badge: 'status-amber' },
+      { col1: 'APP-2026-006', col2: 'Ashutosh Pradhan', col3: 'B.Tech - AI & Machine Learning', col4: 'Fee Confirmed · Ready to Enroll', badge: 'status-blue' },
+      { col1: 'APP-2026-007', col2: 'Pooja Priyadarshini', col3: 'Bachelor of Computer App (BCA)', col4: 'Enrolled · STU-26-0004', badge: 'status-green' },
     ],
     overviewColumns: ['Application ID', 'Candidate Name', 'Program Applied', 'Admission Status'],
     announcements: [
       { day: '24', month: 'OCT', tag: 'DEADLINE', tagTone: 'tag-amber', title: 'OJEE Final Spot Round Verification Closes', desc: 'Candidates allotted in the institutional mop-up round must report with original documents.' },
-      { day: '20', month: 'OCT', tag: 'COUNSELING', tagTone: 'tag-blue', title: 'Direct Institutional Quota Counseling Session', desc: 'Open house counseling for vacant lateral entry B.Tech seats at Seminar Hall 1.' },
-      { day: '16', month: 'OCT', tag: 'ENROLLMENT', tagTone: 'tag-green', title: 'Orientation Program for 2026-27 Admitted Batch', desc: 'Academic induction, LMS credential distribution, and mentor allocation scheduled.' },
+      { day: '26', month: 'OCT', tag: 'COUNSELING', tagTone: 'tag-blue', title: 'Direct Institutional Quota Counseling Session', desc: 'Open house counseling for vacant lateral entry B.Tech seats at Seminar Hall 1.' },
+      { day: '02', month: 'NOV', tag: 'ENROLLMENT', tagTone: 'tag-green', title: 'Orientation Program for 2026-27 Admitted Batch', desc: 'Academic induction, LMS credential distribution, and mentor allocation scheduled.' },
     ],
   },
 
@@ -627,7 +606,7 @@ export const ROLE_CONFIGS = {
       employmentType: 'Full-Time Regular (Permanent)',
       dateOfJoining: '05 Sep 2017',
       employmentStatus: 'Active · On Duty',
-      reportingAuthority: 'Prof. (Dr.) S. P. Panda (Governing Board)',
+      reportingAuthority: 'Institutional Management',
       photo: '/passport_photo_male.svg',
       scope: 'Senior Accounts Officer & Bursar',
       biometricId: 'BIO-ACC-023',
@@ -1029,10 +1008,36 @@ export default function RoleDashboardLanding({
   onNavigateTab,
   onSwitchRole,
   onToggleSidebar,
+  sidebarOpen,
 }) {
   // Resolve configuration from prop or account
-  const resolvedKey = roleKey || account?.role || 'super_admin';
+  const resolvedKey = String(roleKey || account?.role || 'super_admin').toLowerCase();
   const config = ROLE_CONFIGS[resolvedKey] || ROLE_CONFIGS['super_admin'];
+  const isSuperAdminDashboard = resolvedKey === 'super_admin';
+  const [authenticatedAccount, setAuthenticatedAccount] = useState(null);
+  const [adminMetrics, setAdminMetrics] = useState(null);
+  const [adminDiagnostics, setAdminDiagnostics] = useState(null);
+  const [dashboardLoadError, setDashboardLoadError] = useState('');
+
+  useEffect(() => {
+    if (!isSuperAdminDashboard) return undefined;
+    let active = true;
+    Promise.allSettled([api.getMe(), api.getAdminMetrics(), api.getAdminDiagnostics()]).then(([profileResult, metricsResult, diagnosticsResult]) => {
+      if (!active) return;
+      if (profileResult.status === 'fulfilled') setAuthenticatedAccount(profileResult.value?.user || null);
+      if (metricsResult.status === 'fulfilled') {
+        setAdminMetrics(metricsResult.value?.data || null);
+        setDashboardLoadError('');
+      } else {
+        setDashboardLoadError('Could not load account metrics from the backend.');
+      }
+      if (diagnosticsResult.status === 'fulfilled') {
+        setAdminDiagnostics(diagnosticsResult.value?.data || null);
+      }
+    });
+    return () => { active = false; };
+  }, [isSuperAdminDashboard]);
+  const dashboardAccount = isSuperAdminDashboard ? authenticatedAccount : account;
 
   // Current live time & date matching Student Dashboard
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -1191,11 +1196,68 @@ export default function RoleDashboardLanding({
   const [isDossierModalOpen, setIsDossierModalOpen] = useState(false);
 
   // Officer Profile
-  const officer = config.officer;
-  const officerDisplayName = account?.name || officer.name;
+  const officer = isSuperAdminDashboard
+    ? {
+        name: dashboardAccount?.name || 'Signed-in account',
+        id: dashboardAccount?.identifier || '—',
+        designation: 'Super Admin',
+        department: dashboardAccount?.department || 'Not set',
+        email: dashboardAccount?.email || 'Not provided',
+        photo: null,
+      }
+    : config.officer;
+  const officerDisplayName = dashboardAccount?.name || account?.name || (isSuperAdminDashboard ? 'Signed-in account' : officer.name);
   const greetingName = getGreetingDisplayName(officerDisplayName);
 
-  const { c1, c2, c3, c4 } = config.stats;
+  const activeRoleCount = adminMetrics?.userRoleCounts
+    ? Object.values(adminMetrics.userRoleCounts).filter((counts) => counts.active > 0).length
+    : null;
+  const adminDashboardStats = isSuperAdminDashboard ? {
+    c1: {
+      ...config.stats.c1,
+      badge: adminMetrics ? 'Live from backend' : 'Backend connection',
+      val: adminMetrics ? Number(adminMetrics.totalAccounts || 0).toLocaleString('en-IN') : '—',
+      desc: dashboardLoadError || (adminMetrics ? `${Number(adminMetrics.activeAccounts || 0).toLocaleString('en-IN')} active · ${Number(adminMetrics.inactiveAccounts || 0).toLocaleString('en-IN')} disabled` : 'Loading persisted user accounts'),
+      pills: adminMetrics ? [
+        `${Number(adminMetrics.totalStudents || 0).toLocaleString('en-IN')} students`,
+        `${Number(adminMetrics.totalFaculty || 0).toLocaleString('en-IN')} faculty`,
+      ] : [],
+    },
+    c2: {
+      ...config.stats.c2,
+      badge: adminDiagnostics?.overallStatus || adminMetrics?.systemStatus || 'Checking backend',
+      val: adminDiagnostics?.overallStatus || adminMetrics?.systemStatus || '—',
+      ratio: adminMetrics?.dbLatencyMs == null ? '' : `Database ping ${adminMetrics.dbLatencyMs} ms`,
+      pct: '',
+      foot: adminMetrics ? `Backend process uptime: ${Math.floor((adminMetrics.uptimeSeconds || 0) / 3600)}h ${Math.floor(((adminMetrics.uptimeSeconds || 0) % 3600) / 60)}m` : 'Health status is supplied by the backend',
+    },
+    c3: {
+      ...config.stats.c3,
+      label: 'Roles With Active Accounts',
+      badge: adminMetrics ? 'Persisted role counts' : 'Backend data',
+      val: activeRoleCount == null ? '—' : String(activeRoleCount),
+      desc: adminMetrics ? `${Number(adminMetrics.activeAccounts || 0).toLocaleString('en-IN')} active accounts across assigned roles` : 'Loading role counts',
+      foot: 'Based on active user records in the database',
+    },
+    c4: {
+      ...config.stats.c4,
+      label: 'Disabled Accounts',
+      badge: adminMetrics ? 'Persisted account status' : 'Backend data',
+      val: adminMetrics ? Number(adminMetrics.inactiveAccounts || 0).toLocaleString('en-IN') : '—',
+      desc: adminMetrics ? 'Accounts marked inactive in the database' : 'Loading account status counts',
+      foot: 'This count does not include pending approvals',
+    },
+  } : config.stats;
+  const { c1, c2, c3, c4 } = adminDashboardStats;
+  const dashboardOverviewItems = isSuperAdminDashboard
+    ? (adminDiagnostics?.subsystems || []).map((item) => ({
+        col1: item.name,
+        col2: item.status,
+        col3: item.details,
+        col4: item.latency,
+        badge: item.status === 'Healthy' ? 'status-green' : 'status-blue',
+      }))
+    : config.overviewItems;
   const C1Icon = c1.icon;
   const C2Icon = c2.icon;
   const C3Icon = c3.icon;
@@ -1209,13 +1271,13 @@ export default function RoleDashboardLanding({
             ========================================================== */}
         <header className="role-dash-header">
           <div className="role-header-left">
-            {onToggleSidebar && (
+            {onToggleSidebar && !sidebarOpen && (
               <button
                 className="role-nav-toggle-btn"
                 type="button"
                 onClick={onToggleSidebar}
-                title="Toggle Navigation Menu"
-                aria-label="Toggle Navigation Menu"
+                title="Open Navigation Menu"
+                aria-label="Open Navigation Menu"
               >
                 <Menu size={20} />
               </button>
@@ -1224,7 +1286,7 @@ export default function RoleDashboardLanding({
               <p className="role-header-kicker">OVERVIEW</p>
               <h1 className="role-header-title">{config.dashboardTitle}</h1>
               <p className="role-header-subtitle">
-                {timeGreeting.wish}, {officerDisplayName}
+                {timeGreeting.wish}, {greetingName || officerDisplayName}
               </p>
             </div>
           </div>
@@ -1317,7 +1379,7 @@ export default function RoleDashboardLanding({
               </div>
               <div className="role-user-details">
                 <strong>{officerDisplayName}</strong>
-                <small>{config.roleTitle} • {account?.identity || officer.id}</small>
+                <small>{config.roleTitle} • {dashboardAccount?.identifier || dashboardAccount?.identity || officer.id}</small>
               </div>
               <button
                 className="role-logout-btn"
@@ -1355,9 +1417,9 @@ export default function RoleDashboardLanding({
           </div>
 
           <div className="dash-hero-meta">
-            <span className="dash-chip">
-              Academic year <strong>2026–27</strong>
-            </span>
+              <span className="dash-chip">
+                {isSuperAdminDashboard ? 'Account' : 'Academic year'} <strong>{isSuperAdminDashboard ? (dashboardAccount?.identifier || '—') : '2026–27'}</strong>
+              </span>
             <time className="dash-date">
               <CalendarDays size={14} /> {todayLabel}
             </time>
@@ -1401,7 +1463,7 @@ export default function RoleDashboardLanding({
                 </div>
               </div>
               <span className="dash-status">
-                <i /> Active
+                <i /> {isSuperAdminDashboard ? (authenticatedAccount ? 'Authenticated' : 'Loading account') : 'Active'}
               </span>
             </div>
 
@@ -1438,7 +1500,14 @@ export default function RoleDashboardLanding({
 
             <dl className="dash-info-list">
               {profileTab === 'profile' && (
-                <>
+                isSuperAdminDashboard ? <>
+                  <DetailRow label="Account identifier" value={officer.id} />
+                  <DetailRow label="Full name" value={officerDisplayName} />
+                  <DetailRow label="Role" value={dashboardAccount?.role || 'SUPER_ADMIN'} />
+                  <DetailRow label="Department" value={officer.department} />
+                  <DetailRow label="Email" value={officer.email} />
+                  <DetailRow label="Session status" value={authenticatedAccount ? 'Authenticated by backend' : 'Loading authenticated account'} />
+                </> : <>
                   <DetailRow label={roleKey === 'faculty' ? 'Faculty ID' : 'Officer ID'} value={officer.id} />
                   <DetailRow label="Employee Code" value={officer.employeeCode || officer.id} />
                   <DetailRow label="Full Name" value={officerDisplayName} />
@@ -1455,7 +1524,7 @@ export default function RoleDashboardLanding({
               )}
 
               {profileTab === 'academic' && (
-                <>
+                isSuperAdminDashboard ? <DetailRow label="Profile details" value="No employment or academic profile is recorded for this account." /> : <>
                   <DetailRow label="Highest Qualification" value={officer.qualification || 'Ph.D, M.Tech'} />
                   <DetailRow label="Teaching Experience" value={officer.experience || '12+ Years'} />
                   <DetailRow label="Academic Year" value={officer.academicYear || '2026–2027'} />
@@ -1479,7 +1548,12 @@ export default function RoleDashboardLanding({
               )}
 
               {profileTab === 'identity' && (
-                <>
+                isSuperAdminDashboard ? <>
+                  <DetailRow label="Account identifier" value={officer.id} />
+                  <DetailRow label="Role" value={dashboardAccount?.role || 'SUPER_ADMIN'} />
+                  <DetailRow label="Session status" value={authenticatedAccount ? 'Authenticated by backend' : 'Loading authenticated account'} />
+                  <DetailRow label="Email" value={officer.email} />
+                </> : <>
                   <DetailRow
                     label="Employment Status"
                     value={<span style={{ color: '#059669', fontWeight: 700 }}>● Active · On Duty</span>}
@@ -1498,14 +1572,14 @@ export default function RoleDashboardLanding({
               )}
             </dl>
 
-            <button
+            {!isSuperAdminDashboard && <button
               className="dash-btn dash-btn-primary dash-info-btn"
               type="button"
               onClick={() => setIsDossierModalOpen(true)}
             >
               <span>View Institutional Dossier</span>
               <ChevronRight size={15} />
-            </button>
+            </button>}
           </aside>
 
           {/* RIGHT: 2x2 Stats Grid (Matching Student 2x2 Stats Grid) */}
@@ -1637,7 +1711,7 @@ export default function RoleDashboardLanding({
                   </tr>
                 </thead>
                 <tbody>
-                  {config.overviewItems.map((item, idx) => (
+                  {dashboardOverviewItems.map((item, idx) => (
                     <tr key={idx}>
                       <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.col1}</td>
                       <td>{item.col2}</td>
@@ -1647,6 +1721,11 @@ export default function RoleDashboardLanding({
                       </td>
                     </tr>
                   ))}
+                  {dashboardOverviewItems.length === 0 && (
+                    <tr><td colSpan={config.overviewColumns.length} style={{ padding: 20, textAlign: 'center', color: '#64748b' }}>
+                      {isSuperAdminDashboard ? 'No backend diagnostics are currently available.' : 'No overview records are available.'}
+                    </td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1661,7 +1740,7 @@ export default function RoleDashboardLanding({
                 </span>
                 {config.roleTitle} Circulars &amp; Notices
               </h3>
-              <span className="dash-stat-badge tone-amber-badge">Academic 2026</span>
+              <span className="dash-stat-badge tone-amber-badge">{isSuperAdminDashboard ? 'Backend notices' : 'Academic 2026'}</span>
             </header>
 
             <ul className="role-announcement-list">
@@ -1680,6 +1759,11 @@ export default function RoleDashboardLanding({
                   </div>
                 </li>
               ))}
+              {config.announcements.length === 0 && (
+                <li className="role-announcement-item" style={{ padding: 20, color: '#64748b' }}>
+                  {isSuperAdminDashboard ? 'No announcement feed is connected for this dashboard.' : 'No announcements are available.'}
+                </li>
+              )}
             </ul>
           </section>
         </div>

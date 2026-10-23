@@ -41,6 +41,8 @@ import {
   Settings
 } from 'lucide-react';
 import './TransportPortal.css';
+import { MasterSidebarHeader, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import { erpStore } from '../services/erpStore.js';
 import { api } from '../services/api.js';
@@ -63,8 +65,17 @@ import TransportInventorySection from './transport/TransportInventorySection.jsx
 import TransportSettingsSection from './transport/TransportSettingsSection.jsx';
 
 export default function TransportPortal({ account, onLogout, onSwitchRole }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, fleet, routes, passes, drivers, trips, telemetry, reports
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.erp-main-content, .role-dash-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
 
   // Core Data States
   const [fleetVehicles, setFleetVehicles] = useState(() => erpStore.getFleetVehicles());
@@ -489,40 +500,21 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="erp-sidebar-backdrop active"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar Navigation */}
-      <aside className={`erp-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="erp-sidebar-brand">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div className="erp-trans-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-            </div>
-            <div className="erp-brand-text">
-              <h2>Apna Campus</h2>
-              <span>Transit &amp; Logistics Fleet</span>
-            </div>
-          </div>
-          {sidebarOpen && (
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
+      {sidebarOpen && (
+        <aside className="erp-sidebar">
+          <MasterSidebarHeader
+            roleTitle="TRANSPORT & LOGISTICS"
+            onToggle={() => setSidebarOpen(false)}
+          />
 
         <nav className="erp-sidebar-nav">
           <div style={{ fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', padding: '6px 14px 2px' }}>
@@ -757,6 +749,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
           </button>
         </nav>
       </aside>
+    )}
 
       {/* Main Content */}
       <main className="erp-main-content">
@@ -766,6 +759,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
             account={account}
             onLogout={onLogout}
             onSwitchRole={onSwitchRole}
+            sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(o => !o)}
             onNavigate={(target) => {
               if (target === 'trans-fleet') setActiveTab('fleet');
@@ -805,15 +799,21 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                 title="Show Navigation"
                 aria-label="Show Navigation"
                 style={{
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '6px',
+                  background: '#000000',
+                  color: '#ffffff',
+                  border: '1px solid #000000',
+                  borderRadius: '10px',
+                  width: '38px',
+                  height: '38px',
                   cursor: 'pointer',
                   display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 3px 10px rgba(0, 0, 0, 0.3)',
+                  flexShrink: 0
                 }}
               >
-                <Menu size={20} color="#0f172a" />
+                <Menu size={20} color="#ffffff" stroke="#ffffff" />
               </button>
             )}
             <div>

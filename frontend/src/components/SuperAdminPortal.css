@@ -9,7 +9,9 @@
 .erp-library-layout,
 .library-layout,
 .erp-placement-layout,
-.placement-layout {
+.placement-layout,
+.erp-admissions-layout,
+.erp-admission-layout {
   display: flex;
   min-height: 100vh;
   background-color: #f8fafc;

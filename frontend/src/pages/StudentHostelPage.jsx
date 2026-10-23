@@ -18,14 +18,13 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import './StudentHostelPage.css';
-import { initialStudentHostelDetail, initialHostelComplaints } from '../data/collegeData.js';
 import StudentGatePassSection from '../components/StudentGatePassSection.jsx';
 import SmartComplaintModal from '../components/SmartComplaintModal.jsx';
-import { getStudentGatePasses } from '../services/gatePassStore.js';
 
 import { api } from '../services/api.js';
 
 export default function StudentHostelPage({ defaultTab = 'overview' }) {
+  const emptyResidence = { hostelName: null, roomNumber: null, bedNumber: null, floor: null, wardenName: null, wardenContact: null, roommates: [], rules: [] };
   const [activeSubTab, setActiveSubTab] = useState(defaultTab);
   const [pendingGatePassCount, setPendingGatePassCount] = useState(0);
 
@@ -34,79 +33,53 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
   }, [defaultTab]);
 
   useEffect(() => {
-    const updateCount = () => {
-      const passes = getStudentGatePasses();
-      const p = passes.filter(x => x.status === 'Pending Warden Approval').length;
-      setPendingGatePassCount(p);
-    };
-    updateCount();
-    window.addEventListener('bput_gate_passes_changed', updateCount);
-    return () => window.removeEventListener('bput_gate_passes_changed', updateCount);
+    let active = true;
+    api.getHostelGatePasses()
+      .then((res) => {
+        if (active) setPendingGatePassCount((res?.data || []).filter((pass) => pass.status === 'Pending Warden Approval').length);
+      })
+      .catch(() => { if (active) setPendingGatePassCount(0); });
+    return () => { active = false; };
   }, []);
 
-  const [hostelDetail] = useState(initialStudentHostelDetail);
-  const [complaints, setComplaints] = useState([
-    {
-      id: 'CMP-2026-101',
-      studentName: 'Rakesh Das',
-      rollNumber: '01',
-      hostel: 'Sarojini Girls Residence (Block A)',
-      roomNumber: '204',
-      location: 'Room 204 Attached Bathroom',
-      category: 'Plumbing',
-      predictedCategory: 'plumbing',
-      confidence: 0.88,
-      needsReview: false,
-      title: 'Water tap leaking continuously in bathroom',
-      description: 'The bathroom wash basin tap is broken at the valve and dripping water constantly.',
-      priority: 'High',
-      status: 'In Progress',
-      assignedStaffId: 'STF-PLUMB-01',
-      assignedStaffName: 'Suresh Mohapatra',
-      assignedStaffPhone: '+91 94379 11231',
-      assignedStaffRole: 'Plumber & Water Works',
-      filedDate: '18 Oct 2026',
-      resolutionNotes: 'Assigned to Suresh Mohapatra. Ceramic washer replacement scheduled for 11:30 AM.',
-    },
-    {
-      id: 'CMP-2026-102',
-      studentName: 'Rakesh Das',
-      rollNumber: '01',
-      hostel: 'Sarojini Girls Residence (Block A)',
-      roomNumber: '204',
-      location: 'Study Area Desk #02',
-      category: 'Electrical',
-      predictedCategory: 'electrical',
-      confidence: 0.82,
-      needsReview: false,
-      title: 'Ceiling fan making screeching noise',
-      description: 'The ceiling fan bearing has deteriorated and makes a loud squeaking sound on speed 4 and 5.',
-      priority: 'Medium',
-      status: 'Assigned',
-      assignedStaffId: 'STF-ELEC-01',
-      assignedStaffName: 'Pramod Panda',
-      assignedStaffPhone: '+91 94378 99120',
-      assignedStaffRole: 'Electrician & Power Maintenance',
-      filedDate: '18 Oct 2026',
-      resolutionNotes: 'Allocated to Pramod Panda based on lowest pending electrical workload.',
-    }
-  ]);
+  const [hostelDetail, setHostelDetail] = useState(emptyResidence);
+  const [residenceStatus, setResidenceStatus] = useState('loading');
+  const [residenceError, setResidenceError] = useState('');
+  const [complaints, setComplaints] = useState([]);
+  const [complaintsStatus, setComplaintsStatus] = useState('loading');
+  const [complaintsError, setComplaintsError] = useState('');
 
-  // Load complaints from API if server is up
   useEffect(() => {
-    api.getComplaints('01')
-      .then(res => {
-        if (res && res.data && res.data.length > 0) {
-          setComplaints(res.data);
-        }
+    let active = true;
+    api.getMyResidence()
+      .then((res) => {
+        if (!active) return;
+        setHostelDetail(res?.data || emptyResidence);
+        setResidenceStatus('loaded');
       })
-      .catch(() => {});
+      .catch((error) => {
+        if (!active) return;
+        setResidenceError(error.message || 'Residence information could not be loaded.');
+        setResidenceStatus('error');
+      });
+    api.getComplaints()
+      .then((res) => {
+        if (!active) return;
+        setComplaints(Array.isArray(res?.data) ? res.data : []);
+        setComplaintsStatus('loaded');
+      })
+      .catch((error) => {
+        if (!active) return;
+        setComplaintsError(error.message || 'Maintenance complaints could not be loaded.');
+        setComplaintsStatus('error');
+      });
+    return () => { active = false; };
   }, []);
 
   const [isLodgeModalOpen, setIsLodgeModalOpen] = useState(false);
   const [complaintForm, setComplaintForm] = useState({
     category: 'Electrical',
-    location: 'Room 204 Attached Bathroom',
+    location: '',
     title: '',
     description: '',
     priority: 'Medium',
@@ -279,37 +252,13 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
         category: complaintForm.category,
         location: complaintForm.location,
         priority: complaintForm.priority,
-        hostel: hostelDetail.hostelName,
-        roomNumber: hostelDetail.roomNumber,
-        rollNumber: '01',
-        studentName: 'Rakesh Das',
         attachmentUrl: complaintForm.imagePreview || null,
         filename: complaintForm.imageFile?.name || 'complaint_photo.jpg',
       };
 
       const res = await api.lodgeComplaint(payload);
-      const newTicket = (res && res.data) ? res.data : {
-        id: `CMP-${Math.floor(250 + Math.random() * 250)}`,
-        studentName: 'Rakesh Das',
-        rollNumber: '01',
-        hostel: hostelDetail.hostelName,
-        roomNumber: hostelDetail.roomNumber,
-        location: complaintForm.location,
-        category: aiPreview.category ? aiPreview.category.charAt(0).toUpperCase() + aiPreview.category.slice(1) : complaintForm.category,
-        predictedCategory: aiPreview.category || complaintForm.category.toLowerCase(),
-        confidence: aiPreview.confidence || 0.84,
-        needsReview: aiPreview.needsReview,
-        title: finalTitle,
-        description: finalDesc,
-        priority: complaintForm.priority,
-        status: aiPreview.needsReview ? 'Needs Review' : 'Assigned',
-        assignedStaffName: aiPreview.category === 'plumbing' ? 'Suresh Mohapatra' : aiPreview.category === 'electrical' ? 'Pramod Panda' : 'Campus Maintenance Desk',
-        assignedStaffPhone: '+91 94379 11231',
-        assignedStaffRole: aiPreview.category === 'plumbing' ? 'Plumber & Water Works' : 'Maintenance Specialist',
-        filedDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        resolutionNotes: aiPreview.needsReview ? 'Flagged for supervisor triage.' : 'Assigned to qualified staff based on lowest pending workload.',
-        imageUrl: complaintForm.imagePreview || null,
-      };
+      if (!res?.data) throw new Error('The server did not confirm complaint registration.');
+      const newTicket = res.data;
 
       setComplaints(prev => [newTicket, ...prev]);
       setSubmitFeedback({
@@ -331,7 +280,7 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
       setVisionResult(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
-      console.warn('Complaint submission fallback triggered:', err);
+      setSubmitFeedback({ type: 'error', message: err.message || 'Complaint could not be submitted.' });
     } finally {
       setSubmitLoading(false);
     }
@@ -404,7 +353,7 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
       </div>
 
       {activeSubTab === 'gate-pass' ? (
-        <StudentGatePassSection />
+        <StudentGatePassSection residence={hostelDetail} />
       ) : (
         <>
           {/* Header */}
@@ -416,7 +365,9 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
             <button
               className="admin-action-btn-primary"
               style={{ background: '#7c3aed' }}
+              disabled={residenceStatus !== 'loaded' || !hostelDetail.hostelName || !hostelDetail.roomNumber}
               onClick={() => setIsLodgeModalOpen(true)}
+              title={!hostelDetail.roomNumber ? 'A current hostel allocation is required to lodge a residence complaint.' : undefined}
             >
               <Plus size={15} /> Lodge Maintenance Request
             </button>
@@ -429,14 +380,12 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
             Allocated Room
           </span>
           <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a' }}>
-            Room {hostelDetail.roomNumber}
+              {hostelDetail.roomNumber ? `Room ${hostelDetail.roomNumber}` : 'No room assigned'}
           </div>
           <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-            {hostelDetail.bedNumber} · {hostelDetail.floor}
+            {[hostelDetail.bedNumber, hostelDetail.floor].filter(Boolean).join(' · ') || 'Residence information unavailable'}
           </div>
-          <div style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600, marginTop: '0.25rem' }}>
-            ✓ AC Triple Deluxe Accommodation
-          </div>
+          {residenceError && <div role="alert" style={{ fontSize: '0.8rem', color: '#be123c' }}>{residenceError}</div>}
         </div>
 
         <div className="hostel-info-card">
@@ -444,39 +393,41 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
             Residence Complex
           </span>
           <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>
-            {hostelDetail.hostelName}
+            {hostelDetail.hostelName || 'No hostel assigned'}
           </div>
           <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-            Resident Warden: <strong>{hostelDetail.wardenName}</strong>
+            Resident Warden: <strong>{hostelDetail.wardenName || 'Not recorded'}</strong>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#2563eb', marginTop: '0.25rem' }}>
-            <Phone size={13} /> {hostelDetail.wardenContact}
+            <Phone size={13} /> {hostelDetail.wardenContact || 'Not recorded'}
           </div>
         </div>
 
         <div className="hostel-info-card">
           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Hostel Fee Status
+            Allocation Status
           </span>
           <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#059669' }}>
-            Partially Paid
+            {residenceStatus === 'loading' ? 'Loading' : hostelDetail.roomNumber ? 'Allocated' : 'Not allocated'}
           </div>
           <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-            ₹20,000 Paid · ₹12,000 Balance Due
+            {residenceStatus === 'error' ? residenceError : hostelDetail.roomNumber ? 'Current room and bed are linked to your student record.' : 'Contact the hostel office if you need an allocation.'}
           </div>
           <div style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 600, marginTop: '0.25rem' }}>
-            Mess Clearance: Active
+            {residenceStatus === 'error' ? 'Residence data unavailable' : 'Status from the student record'}
           </div>
         </div>
       </div>
+
+      {residenceStatus === 'loading' && <p role="status">Loading residence information…</p>}
 
       {/* Roommates & Rules */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
         {/* Roommates */}
         <div className="hostel-info-card" style={{ gap: '1rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>Room 204 Roommates</h3>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>Room {hostelDetail.roomNumber || '—'} Roommates</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {hostelDetail.roommates.map((mate, idx) => (
+            {(hostelDetail.roommates || []).map((mate, idx) => (
               <div key={idx} className="roommate-card">
                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#7c3aed', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700 }}>
                   {mate.name.charAt(0)}
@@ -494,7 +445,7 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
         <div className="hostel-info-card" style={{ gap: '1rem' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>Hostel Regulations &amp; Code of Conduct</h3>
           <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', color: '#475569' }}>
-            {hostelDetail.rules.map((rule, idx) => (
+            {(hostelDetail.rules || []).map((rule, idx) => (
               <li key={idx}>{rule}</li>
             ))}
           </ul>
@@ -512,9 +463,9 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
 
         {submitFeedback && (
           <div style={{
-            background: '#ecfdf5',
-            border: '1px solid #10b981',
-            color: '#065f46',
+            background: submitFeedback.type === 'error' ? '#fff1f2' : '#ecfdf5',
+            border: `1px solid ${submitFeedback.type === 'error' ? '#fb7185' : '#10b981'}`,
+            color: submitFeedback.type === 'error' ? '#9f1239' : '#065f46',
             padding: '10px 14px',
             borderRadius: '10px',
             fontSize: '0.85rem',
@@ -522,7 +473,7 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
             alignItems: 'center',
             gap: '8px'
           }}>
-            <CheckCircle2 size={18} color="#10b981" />
+            {submitFeedback.type === 'error' ? <AlertCircle size={18} color="#e11d48" /> : <CheckCircle2 size={18} color="#10b981" />}
             <span>{submitFeedback.message}</span>
             <button
               onClick={() => setSubmitFeedback(null)}
@@ -533,12 +484,15 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
           </div>
         )}
 
+        {complaintsStatus === 'loading' && <p role="status">Loading your maintenance complaints…</p>}
+        {complaintsStatus === 'error' && <p role="alert">{complaintsError}</p>}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {complaints.map(c => {
             const isResolved = c.status === 'Resolved';
             const isInProgress = c.status === 'In Progress';
             const isAssigned = c.status === 'Assigned' || isInProgress || isResolved;
-            const confPercent = Math.round((c.confidence || 0.85) * 100);
+            const confPercent = c.confidence == null ? null : Math.round(c.confidence * 100);
 
             return (
               <div key={c.id} className="complaint-card-enhanced">
@@ -546,9 +500,9 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
                 <div className="complaint-card-top">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <strong style={{ fontSize: '0.98rem', color: '#0f172a' }}>{c.title}</strong>
-                    <span className={`admin-badge ${c.priority === 'High' ? 'rejected' : 'pending'}`}>{c.priority}</span>
+                    {c.priority && <span className={`admin-badge ${c.priority === 'High' ? 'rejected' : 'pending'}`}>{c.priority}</span>}
                     <span className="admin-badge active">{c.category}</span>
-                    {c.predictedCategory && (
+                    {c.predictedCategory && confPercent !== null && (
                       <span className="ai-category-badge" title={`Machine Learning confidence: ${confPercent}%`}>
                         ✨ AI: {c.predictedCategory} ({confPercent}%)
                       </span>
@@ -562,7 +516,7 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
                 {/* Location & Ticket Metadata */}
                 <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <span>Ticket: <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>{c.id}</code></span>
-                  <span>📅 {c.filedDate}</span>
+                  <span>📅 {c.filedDate || 'Date unavailable'}</span>
                   <span>📍 {c.location || (c.roomNumber ? `Room ${c.roomNumber}` : 'Hostel Complex')}</span>
                 </div>
 
@@ -586,7 +540,7 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
                           {c.assignedStaffName}
                         </div>
                         <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                          {c.assignedStaffRole || 'Qualified Maintenance Specialist'} · Auto-assigned by workload
+                          {c.assignedStaffRole || 'Assigned staff'}
                         </div>
                       </div>
                     </div>
@@ -633,10 +587,10 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
                 </div>
 
                 {/* Image thumbnail */}
-                {c.imageUrl && (
+                {(c.attachmentUrl || c.imageUrl) && (
                   <div className="complaint-image-wrap">
                     <img
-                      src={c.imageUrl}
+                      src={c.attachmentUrl || c.imageUrl}
                       alt="Complaint attachment"
                       className="complaint-thumb"
                       onClick={() => setExpandedComplaint(c)}
@@ -657,10 +611,10 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
             );
           })}
 
-          {complaints.length === 0 && (
+          {complaintsStatus === 'loaded' && complaints.length === 0 && (
             <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.85rem' }}>
               <AlertCircle size={28} style={{ opacity: 0.4, marginBottom: '0.5rem', display: 'block', margin: '0 auto 0.5rem' }} />
-              No active maintenance complaints recorded.
+              No maintenance complaints recorded for your account.
             </div>
           )}
         </div>
@@ -672,6 +626,7 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
         onClose={() => setIsLodgeModalOpen(false)}
         onComplaintSubmitted={(newTicket) => {
           setComplaints((prev) => [newTicket, ...prev]);
+          setComplaintsStatus('loaded');
           setSubmitFeedback({
             type: 'success',
             message: newTicket.assignedStaffName
@@ -680,14 +635,12 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
           });
         }}
         defaultLocation={complaintForm.location}
-        hostelName={hostelDetail.hostelName}
-        roomNumber={hostelDetail.roomNumber}
-        studentName="Rakesh Das"
-        rollNumber="01"
+        hostelName={hostelDetail.hostelName || ''}
+        roomNumber={hostelDetail.roomNumber || ''}
       />
 
       {/* Full Image Viewer Modal */}
-      {expandedComplaint && expandedComplaint.imageUrl && (
+      {expandedComplaint && (expandedComplaint.attachmentUrl || expandedComplaint.imageUrl) && (
         <div
           className="admin-modal-backdrop"
           onClick={() => setExpandedComplaint(null)}
@@ -704,7 +657,7 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
               </button>
             </div>
             <img
-              src={expandedComplaint.imageUrl}
+              src={expandedComplaint.attachmentUrl || expandedComplaint.imageUrl}
               alt="Complaint full view"
               style={{ maxWidth: '80vw', maxHeight: '75vh', objectFit: 'contain', display: 'block', margin: '1rem auto' }}
             />

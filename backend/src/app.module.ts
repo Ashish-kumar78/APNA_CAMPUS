@@ -17,9 +17,8 @@ import { FacultyModule } from './faculty/faculty.module';
 import { HodModule } from './hod/hod.module';
 import { ReportsModule } from './reports/reports.module';
 import { AdmissionModule } from './admission/admission.module';
-import { TimetablesModule } from './timetables/timetables.module';
-import { ManagementModule } from './management/management.module';
-import { PrincipalModule } from './principal/principal.module';
+import { ComplaintsModule } from './complaints/complaints.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { AppController } from './app.controller';
 
 import * as path from 'path';
@@ -52,9 +51,8 @@ import * as path from 'path';
     FacultyModule,
     HodModule,
     ReportsModule,
-    TimetablesModule,
-    ManagementModule,
-    PrincipalModule,
+    ComplaintsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
 })

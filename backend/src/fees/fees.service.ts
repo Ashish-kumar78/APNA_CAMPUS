@@ -1,5 +1,13 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { createHash, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateFeeStructureDto, SanctionScholarshipDto, UploadPaymentProofDto } from './fees.dto';
 
 @Injectable()
 export class FeesService {
@@ -18,11 +26,6 @@ export class FeesService {
       .filter((t: any) => t.status === 'Verified' || t.status === 'Reconciled' || t.status === 'Successful')
       .reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0);
 
-    // Institutional Cohort Fees Assessment
-    const totalAssessed = 41370000; // 420 Students across Semesters x Average ₹98,500
-    const totalOutstanding = Math.max(0, totalAssessed - totalCollected);
-    const collectionRate = totalAssessed > 0 ? ((totalCollected / totalAssessed) * 100).toFixed(1) : '87.6';
-
     const pendingVerificationsCount = verifications.filter((v: any) => v.status === 'PENDING').length;
     const pendingVerificationsSum = verifications
       .filter((v: any) => v.status === 'PENDING')
@@ -30,41 +33,24 @@ export class FeesService {
 
     const scholarshipsSanctionedSum = scholarships.reduce((sum: number, s: any) => sum + (Number(s.amount) || 0), 0);
     const scholarshipsDisbursedSum = scholarships
-      .filter((s: any) => s.status === 'Disbursed' || s.status === 'Approved')
-      .reduce((sum: number, s: any) => sum + (Number(s.amount) || 0), 0);
+      .filter((s: any) => s.status === 'Disbursed')
+      .reduce((sum: number, s: any) => sum + (Number(s.disbursedAmount) || 0), 0);
 
     return {
-      totalAssessed,
+      totalAssessed: null,
       totalCollected,
-      totalOutstanding,
-      collectionRate: Number(collectionRate),
-      studentsWithDues: 54,
+      totalOutstanding: null,
+      collectionRate: null,
+      studentsWithDues: null,
       pendingVerificationsCount,
       pendingVerificationsSum,
-      failedTransactionsCount: 2,
+      failedTransactionsCount: null,
       scholarshipsSanctioned: scholarshipsSanctionedSum,
       scholarshipsDisbursed: scholarshipsDisbursedSum,
-      refundsAndReversals: 25000,
-      monthlyTrends: [
-        { month: 'Jun', assessed: 8200000, collected: 7100000 },
-        { month: 'Jul', assessed: 12500000, collected: 11200000 },
-        { month: 'Aug', assessed: 9800000, collected: 8900000 },
-        { month: 'Sep', assessed: 6400000, collected: 5600000 },
-        { month: 'Oct', assessed: 4470000, collected: 3440000 },
-      ],
-      feeHeadBreakdown: [
-        { head: 'Tuition & Academic Fee', percentage: 55, amount: 22753500 },
-        { head: 'Development & Infrastructure', percentage: 18, amount: 7446600 },
-        { head: 'Hostel & Residential Boarding', percentage: 15, amount: 6205500 },
-        { head: 'Transportation Fleet Charges', percentage: 7, amount: 2895900 },
-        { head: 'Examination & Autonomous Evaluation', percentage: 5, amount: 2068500 },
-      ],
-      paymentChannelDistribution: [
-        { channel: 'Online Net Banking', percentage: 48, count: 214 },
-        { channel: 'UPI / QR Campus Scan', percentage: 32, count: 142 },
-        { channel: 'Bank Challan / NEFT', percentage: 14, count: 62 },
-        { channel: 'Accounts Counter Cash', percentage: 6, count: 26 },
-      ],
+      refundsAndReversals: null,
+      monthlyTrends: [],
+      feeHeadBreakdown: [],
+      paymentChannelDistribution: [],
     };
   }
 
@@ -77,95 +63,20 @@ export class FeesService {
       orderBy: { createdAt: 'desc' },
     });
 
-    if (records.length === 0) {
-      const defaultProofs = [
-        {
-          id: 'PAY-8821',
-          studentName: 'Ashish Kumar',
-          rollNumber: '2305201037',
-          department: 'Computer Science & Engineering',
-          amount: 20000,
-          paymentDate: '2026-10-05',
-          paymentMethod: 'UPI',
-          transactionId: 'UPI9842109238',
-          referenceNumber: 'REF-2026-0912',
-          remarks: 'Semester 7 tuition fee partial payment',
-          proofUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80',
-          fileName: 'upi_screenshot_sem7.jpg',
-          fileType: 'image/jpeg',
-          status: 'PENDING',
-          submittedAt: '2026-10-05T09:30:00Z',
-          rejectionReason: null,
-          ocrMatch: { txnMatch: 'EXACT', amountMatch: 'EXACT', confidence: 98 },
-        },
-        {
-          id: 'PAY-8819',
-          studentName: 'Rahul Sharma',
-          rollNumber: '2305201038',
-          department: 'Computer Science & Engineering',
-          amount: 15000,
-          paymentDate: '2026-10-05',
-          paymentMethod: 'Bank Transfer',
-          transactionId: 'HDFC00019284',
-          referenceNumber: 'TXN-98124',
-          remarks: 'Hostel and Mess fee installment',
-          proofUrl: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=600&q=80',
-          fileName: 'bank_ack_receipt.pdf',
-          fileType: 'application/pdf',
-          status: 'APPROVED',
-          submittedAt: '2026-10-04T14:15:00Z',
-          verifiedBy: 'Accounts Officer (Subhashree Jena)',
-          verifiedAt: '2026-10-04T16:00:00Z',
-          rejectionReason: null,
-          ocrMatch: { txnMatch: 'EXACT', amountMatch: 'EXACT', confidence: 99 },
-        },
-        {
-          id: 'PAY-8815',
-          studentName: 'Amit Verma',
-          rollNumber: '2305201039',
-          department: 'Mechanical Engineering',
-          amount: 10000,
-          paymentDate: '2026-10-04',
-          paymentMethod: 'NEFT',
-          transactionId: 'NEFT77123984',
-          referenceNumber: 'REF-7712',
-          remarks: 'Library & Exam Fee',
-          proofUrl: 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&w=600&q=80',
-          fileName: 'blurry_slip.jpg',
-          fileType: 'image/jpeg',
-          status: 'REJECTED',
-          submittedAt: '2026-10-04T11:00:00Z',
-          verifiedBy: 'Accounts Officer (Subhashree Jena)',
-          verifiedAt: '2026-10-04T12:30:00Z',
-          rejectionReason: 'Transaction ID could not be verified in bank statement log.',
-          ocrMatch: { txnMatch: 'MISMATCH', amountMatch: 'EXACT', confidence: 45 },
-        },
-      ];
+    if (records.length === 0) return [];
 
-      for (const p of defaultProofs) {
-        await this.prisma.workflowRequest.create({
-          data: {
-            workflowType: 'PAYMENT_PROOF',
-            title: `Payment Proof: ${p.studentName} - ₹${p.amount}`,
-            requesterId: p.rollNumber,
-            requesterName: p.studentName,
-            requesterRole: 'Student',
-            department: p.department,
-            details: p,
-            currentStage: p.status,
-            status: p.status,
-          },
-        });
-      }
 
-      return defaultProofs;
-    }
 
-    let list = records.map(r => ({
-      id: r.id,
-      ...((r.details as any) || {}),
-      status: r.status,
-    }));
+    let list: any[] = records.map(r => {
+      const { fileData, fileStored, ...details } = this.asDetails(r.details);
+      delete details.studentId;
+      return {
+        id: r.id,
+        ...details,
+        proofAvailable: fileStored === true || (typeof fileData === 'string' && fileData.startsWith('data:')),
+        status: r.status,
+      };
+    });
 
     if (statusFilter && statusFilter !== 'ALL') {
       list = list.filter(item => item.status === statusFilter);
@@ -184,244 +95,275 @@ export class FeesService {
     return list;
   }
 
-  async uploadPaymentProof(payload: any) {
-    if (!payload.amount || Number(payload.amount) <= 0) {
+  async getStudentPaymentProofs(studentId: string) {
+    const records = await this.prisma.workflowRequest.findMany({
+      where: { workflowType: 'PAYMENT_PROOF', requesterId: studentId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, status: true, details: true, createdAt: true },
+    });
+
+    return records.map((record) => {
+      const details = this.asDetails(record.details);
+      return {
+        id: record.id,
+        amount: details.amount,
+        paymentDate: details.paymentDate,
+        paymentMethod: details.paymentMethod,
+        transactionId: details.transactionId,
+        referenceNumber: details.referenceNumber,
+        remarks: details.remarks,
+        head: details.head,
+        fileName: details.fileName,
+        fileType: details.fileType,
+        proofAvailable: details.fileStored === true,
+        status: record.status,
+        submittedAt: details.submittedAt || record.createdAt.toISOString(),
+        verifiedAt: details.verifiedAt || null,
+        verifiedBy: details.verifiedBy || null,
+        rejectionReason: details.rejectionReason || null,
+        receiptNo: details.receiptNo || null,
+      };
+    });
+  }
+
+  async uploadPaymentProof(
+    payload: UploadPaymentProofDto,
+    student: { id: string; name: string; rollNumber: string; department: string; semester: string },
+  ) {
+    if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
       throw new BadRequestException('Payment amount must be greater than zero.');
     }
 
-    const proofId = `PAY-${Math.floor(1000 + Math.random() * 9000)}`;
+    const dataUri = /^data:(image\/jpeg|image\/png|image\/webp|application\/pdf);base64,([A-Za-z0-9+/]+={0,2})$/.exec(payload.fileData);
+    if (!dataUri || dataUri[1] !== payload.fileType) {
+      throw new BadRequestException('Payment proof must be a valid JPG, PNG, WEBP, or PDF file.');
+    }
+    const fileBytes = Buffer.from(dataUri[2], 'base64');
+    if (fileBytes.length === 0 || fileBytes.length > 5 * 1024 * 1024 || fileBytes.toString('base64') !== dataUri[2]) {
+      throw new BadRequestException('Payment proof file must be smaller than 5 MB and contain valid base64 data.');
+    }
+    const mimeMatchesContent = dataUri[1] === 'image/jpeg'
+      ? fileBytes[0] === 0xff && fileBytes[1] === 0xd8 && fileBytes[2] === 0xff
+      : dataUri[1] === 'image/png'
+        ? fileBytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+        : dataUri[1] === 'image/webp'
+          ? fileBytes.subarray(0, 4).toString('ascii') === 'RIFF' && fileBytes.subarray(8, 12).toString('ascii') === 'WEBP'
+          : fileBytes.subarray(0, 5).toString('ascii') === '%PDF-';
+    if (!mimeMatchesContent) {
+      throw new BadRequestException('The payment proof file content does not match its declared file type.');
+    }
+
+    const transactionId = payload.transactionId.trim();
+    const duplicateKey = transactionId.replace(/\s+/g, '').toUpperCase();
+    const proofId = `payproof_${createHash('sha256').update(duplicateKey).digest('hex')}`;
+    const fileName = payload.fileName.split(/[\\/]/).pop()!.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 128);
+    const submittedAt = new Date().toISOString();
     const proofData = {
-      id: proofId,
-      studentName: payload.studentName || 'Student',
-      rollNumber: payload.rollNumber || '2305201001',
-      department: payload.department || 'Computer Science & Engineering',
-      amount: Number(payload.amount),
-      paymentDate: payload.paymentDate || new Date().toISOString().split('T')[0],
-      paymentMethod: payload.paymentMethod || 'UPI',
-      transactionId: payload.transactionId || `TXN${Date.now()}`,
-      referenceNumber: payload.referenceNumber || `REF-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      remarks: payload.remarks || '',
-      proofUrl: payload.previewUrl || payload.fileUrl || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80',
-      fileName: payload.fileName || 'payment_receipt.jpg',
-      fileType: payload.fileType || 'image/jpeg',
+      studentId: student.id,
+      studentName: student.name,
+      rollNumber: student.rollNumber,
+      department: student.department,
+      semester: student.semester,
+      amount: payload.amount,
+      paymentDate: payload.paymentDate,
+      paymentMethod: payload.paymentMethod,
+      transactionId,
+      referenceNumber: payload.referenceNumber?.trim() || null,
+      remarks: payload.remarks?.trim() || '',
+      head: payload.head?.trim() || 'Payment proof submission',
+      fileName,
+      fileType: dataUri[1],
+      fileStored: true,
       status: 'PENDING',
-      submittedAt: new Date().toISOString(),
-      ocrMatch: { txnMatch: 'VERIFYING', amountMatch: 'MATCH', confidence: 95 },
+      submittedAt,
     };
 
-    const record = await this.prisma.workflowRequest.create({
-      data: {
+    try {
+      const record = await this.prisma.$transaction(async (tx) => {
+        const createdProof = await tx.workflowRequest.create({
+          data: {
+            id: proofId,
+            workflowType: 'PAYMENT_PROOF',
+            title: `Payment proof: ${student.rollNumber} - ${payload.amount}`,
+            requesterId: student.id,
+            requesterName: student.name,
+            requesterRole: 'STUDENT',
+            department: student.department,
+            details: proofData,
+            currentStage: 'PENDING',
+            status: 'PENDING',
+          },
+        });
+        await tx.workflowRequest.create({
+          data: {
+            id: this.paymentProofFileId(proofId),
+            workflowType: 'PAYMENT_PROOF_FILE',
+            title: `Payment proof file: ${student.rollNumber}`,
+            requesterId: student.id,
+            requesterName: student.name,
+            requesterRole: 'STUDENT',
+            department: student.department,
+            details: { paymentProofId: proofId, fileData: payload.fileData, fileName, fileType: dataUri[1] },
+            currentStage: 'STORED',
+            status: 'STORED',
+          },
+        });
+        return createdProof;
+      });
+      return { ...proofData, proofAvailable: true, id: record.id };
+    } catch (error) {
+      if ((error as any)?.code === 'P2002') {
+        throw new ConflictException('A payment proof with this transaction ID has already been submitted.');
+      }
+      throw error;
+    }
+  }
+
+  async getPaymentProofFile(id: string, studentId?: string) {
+    const proof = await this.prisma.workflowRequest.findFirst({
+      where: {
+        id,
         workflowType: 'PAYMENT_PROOF',
-        title: `Payment Proof: ${proofData.studentName} - ₹${proofData.amount}`,
-        requesterId: proofData.rollNumber,
-        requesterName: proofData.studentName,
-        requesterRole: 'Student',
-        department: proofData.department,
-        details: proofData,
-        currentStage: 'PENDING',
-        status: 'PENDING',
+        ...(studentId ? { requesterId: studentId } : {}),
       },
     });
-
-    return { ...proofData, id: record.id };
+    if (!proof) throw new NotFoundException('Payment proof submission not found.');
+    const details = this.asDetails(proof.details);
+    if (typeof details.fileData === 'string') {
+      return { fileData: details.fileData, fileName: details.fileName, fileType: details.fileType };
+    }
+    const storedFile = await this.prisma.workflowRequest.findFirst({
+      where: { id: this.paymentProofFileId(id), workflowType: 'PAYMENT_PROOF_FILE' },
+    });
+    const file = this.asDetails(storedFile?.details);
+    if (!storedFile || typeof file.fileData !== 'string') {
+      throw new NotFoundException('The submitted payment proof file is not available.');
+    }
+    return { fileData: file.fileData, fileName: file.fileName, fileType: file.fileType };
   }
 
-  async approvePayment(id: string, reviewerName = 'Accounts Officer (Subhashree Jena)') {
-    const proof = await this.prisma.workflowRequest.findUnique({ where: { id } });
+  async approvePayment(id: string, reviewer: { id: string; name: string }) {
+    const proof = await this.prisma.workflowRequest.findFirst({ where: { id, workflowType: 'PAYMENT_PROOF' } });
     if (!proof) throw new NotFoundException('Payment proof submission not found.');
+    if (proof.status !== 'PENDING') throw new ConflictException(`Payment proof is already ${proof.status.toLowerCase()}.`);
 
-    const details = (proof.details as any) || {};
-    details.status = 'APPROVED';
-    details.verifiedBy = reviewerName;
-    details.verifiedAt = new Date().toISOString();
-    details.rejectionReason = null;
+    const details = this.asDetails(proof.details);
+    if (!details.rollNumber || !details.studentName || !Number.isFinite(Number(details.amount)) || Number(details.amount) <= 0) {
+      throw new BadRequestException('Payment proof is missing valid student or amount details.');
+    }
+    const verifiedAt = new Date();
+    const reviewerName = reviewer.name;
+    const receiptNo = `RCPT-${verifiedAt.getUTCFullYear()}-${randomUUID()}`;
+    const updatedDetails = {
+      ...details,
+      status: 'APPROVED',
+      verifiedBy: reviewerName,
+      verifiedAt: verifiedAt.toISOString(),
+      rejectionReason: null,
+      receiptNo,
+    };
 
-    await this.prisma.workflowRequest.update({
-      where: { id },
-      data: {
-        status: 'APPROVED',
-        currentStage: 'APPROVED',
-        approvalNotes: `Approved by ${reviewerName}`,
-        details,
-      },
+    const transaction = await this.prisma.$transaction(async (tx) => {
+      const changed = await tx.workflowRequest.updateMany({
+        where: { id, workflowType: 'PAYMENT_PROOF', status: 'PENDING' },
+        data: {
+          status: 'APPROVED',
+          currentStage: 'APPROVED',
+          approverId: reviewer.id,
+          approverName: reviewerName,
+          approvalNotes: `Approved by ${reviewerName}`,
+          details: updatedDetails,
+        },
+      });
+      if (changed.count !== 1) {
+        throw new ConflictException('This payment proof was already reviewed. Refresh the verification queue.');
+      }
+
+      return tx.feeTransaction.create({
+        data: {
+          studentName: details.studentName,
+          rollNumber: details.rollNumber,
+          semester: details.semester || 'Unspecified',
+          head: details.head || 'Payment proof submission',
+          amount: Number(details.amount),
+          mode: details.paymentMethod || 'Other',
+          date: verifiedAt.toISOString(),
+          status: 'Verified',
+          receiptNo,
+        },
+      });
     });
 
-    // Automatically post approved payment to verified transaction ledger
-    await this.recordPayment({
-      studentName: details.studentName,
-      rollNumber: details.rollNumber,
-      semester: details.semester || 'Semester 7',
-      head: details.remarks || 'Tuition & Academic Fee',
-      amount: details.amount,
-      mode: details.paymentMethod || 'Online Transfer',
-      referenceNumber: details.transactionId,
-    });
-
-    return { success: true, message: 'Payment proof verified and posted to student ledger.', data: details };
+    return {
+      success: true,
+      message: 'Payment proof verified and posted to the fee transaction ledger.',
+      data: updatedDetails,
+      transaction,
+    };
   }
 
-  async rejectPayment(id: string, rejectionReason: string, reviewerName = 'Accounts Officer (Subhashree Jena)') {
-    const proof = await this.prisma.workflowRequest.findUnique({ where: { id } });
+  async rejectPayment(id: string, rejectionReason: string, reviewer: { id: string; name: string }) {
+    const proof = await this.prisma.workflowRequest.findFirst({ where: { id, workflowType: 'PAYMENT_PROOF' } });
     if (!proof) throw new NotFoundException('Payment proof submission not found.');
+    if (proof.status !== 'PENDING') throw new ConflictException(`Payment proof is already ${proof.status.toLowerCase()}.`);
 
-    const details = (proof.details as any) || {};
-    details.status = 'REJECTED';
-    details.verifiedBy = reviewerName;
-    details.verifiedAt = new Date().toISOString();
-    details.rejectionReason = rejectionReason || 'Transaction ID could not be validated against bank statement.';
-
-    await this.prisma.workflowRequest.update({
-      where: { id },
+    const details = this.asDetails(proof.details);
+    const reviewerName = reviewer.name;
+    const reason = rejectionReason.trim();
+    const updatedDetails = {
+      ...details,
+      status: 'REJECTED',
+      verifiedBy: reviewerName,
+      verifiedAt: new Date().toISOString(),
+      rejectionReason: reason,
+    };
+    const changed = await this.prisma.workflowRequest.updateMany({
+      where: { id, workflowType: 'PAYMENT_PROOF', status: 'PENDING' },
       data: {
         status: 'REJECTED',
         currentStage: 'REJECTED',
-        approvalNotes: `Rejected: ${rejectionReason}`,
-        details,
+        approverId: reviewer.id,
+        approverName: reviewerName,
+        approvalNotes: `Rejected: ${reason}`,
+        details: updatedDetails,
       },
     });
+    if (changed.count !== 1) {
+      throw new ConflictException('This payment proof was already reviewed. Refresh the verification queue.');
+    }
 
-    return { success: true, message: 'Payment proof rejected and feedback dispatched to student.', data: details };
+    return { success: true, message: 'Payment proof rejected with the supplied reason.', data: updatedDetails };
   }
 
   // =========================================================================
   // 3. STUDENT FEE LEDGER & INVOICES
   // =========================================================================
-  async getStudentStatement(rollNumber = '2305201001') {
-    const transactions = await this.getTransactions(rollNumber);
-    const structures = await this.getFeeStructures();
-
-    const studentInfo = {
-      studentName: 'Rakesh Das',
-      rollNumber,
-      department: 'Computer Science & Engineering',
-      program: 'B.Tech (Autonomous)',
-      semester: 'Semester 7 (4th Year)',
-      academicYear: '2026-27',
-      category: 'General',
-      quota: 'State Counselling (OJEE)',
-    };
-
-    // Itemized invoice fee heads for current term
-    const feeHeads = [
-      { id: 'FH-01', head: 'Tuition Fee (Autumn Term)', assessed: 38000, paid: 38000, balance: 0, dueDate: '15 Aug 2026', status: 'Cleared' },
-      { id: 'FH-02', head: 'Development & Infrastructure Fee', assessed: 10500, paid: 10500, balance: 0, dueDate: '15 Aug 2026', status: 'Cleared' },
-      { id: 'FH-03', head: 'Laboratory & Computing Systems Fee', assessed: 6000, paid: 6000, balance: 0, dueDate: '30 Aug 2026', status: 'Cleared' },
-      { id: 'FH-04', head: 'Autonomous Semester Examination Fee', assessed: 2500, paid: 2500, balance: 0, dueDate: '10 Sep 2026', status: 'Cleared' },
-      { id: 'FH-05', head: 'Central Library & Digital ERP Access', assessed: 1500, paid: 1500, balance: 0, dueDate: '10 Sep 2026', status: 'Cleared' },
-      { id: 'FH-06', head: 'Hostel & Residential Boarding (Sarojini Block)', assessed: 28000, paid: 20000, balance: 8000, dueDate: '15 Nov 2026', status: 'Partial' },
-      { id: 'FH-07', head: 'Mess Catering Charges (Installment 2)', assessed: 12000, paid: 8000, balance: 4000, dueDate: '15 Nov 2026', status: 'Partial' },
-    ];
-
-    const totalAnnualDues = feeHeads.reduce((s, h) => s + h.assessed, 0);
-    const paidAmount = feeHeads.reduce((s, h) => s + h.paid, 0);
-    const scholarshipCredit = 15000;
-    const outstanding = Math.max(0, totalAnnualDues - paidAmount);
-
-    return {
-      student: studentInfo,
-      totalAnnualDues,
-      paidAmount,
-      scholarshipCredit,
-      outstanding,
-      nextDueDate: '15 Nov 2026',
-      feeHeads,
-      transactions,
-      structures,
-    };
+  async getStudentStatement(_rollNumber?: string) {
+    throw new ServiceUnavailableException(
+      'Student fee statements are unavailable until official student fee assessments and due dates are configured.',
+    );
   }
 
   // =========================================================================
   // 4. TRANSACTION REGISTER & OFFICIAL RECEIPTS
   // =========================================================================
   async getTransactions(search?: string) {
-    const records = await this.prisma.workflowRequest.findMany({
-      where: { workflowType: 'FEE_TRANSACTION' },
-      orderBy: { createdAt: 'desc' },
-    });
+    const [transactions, records] = await Promise.all([
+      this.prisma.feeTransaction.findMany({ orderBy: { createdAt: 'desc' } }),
+      this.prisma.workflowRequest.findMany({
+        where: { workflowType: 'FEE_TRANSACTION' },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
-    if (records.length === 0) {
-      const defaultTxns = [
-        {
-          id: 'TXN-98421',
-          studentName: 'Rakesh Das',
-          rollNumber: '2305201001',
-          semester: 'Semester 7',
-          head: 'Tuition & Development Fee',
-          amount: 48500,
-          mode: 'Net Banking',
-          date: '10 Aug 2026, 11:30 AM',
-          status: 'Verified',
-          receiptNo: 'RCPT-2026-8821',
-          channel: 'HDFC BillDesk Gateway',
-          referenceNumber: 'HDFC772184129',
-        },
-        {
-          id: 'TXN-98422',
-          studentName: 'Amit Nayak',
-          rollNumber: '2305201002',
-          semester: 'Semester 7',
-          head: 'Hostel Boarding & Mess Fee',
-          amount: 36000,
-          mode: 'UPI',
-          date: '12 Aug 2026, 02:15 PM',
-          status: 'Verified',
-          receiptNo: 'RCPT-2026-8822',
-          channel: 'Campus PhonePe Scan',
-          referenceNumber: 'UPI9921401284',
-        },
-        {
-          id: 'TXN-98423',
-          studentName: 'Subham Mahapatra',
-          rollNumber: '2305201015',
-          semester: 'Semester 7',
-          head: 'Examination Fee',
-          amount: 2500,
-          mode: 'Cash at Counter',
-          date: '02 Sep 2026, 10:45 AM',
-          status: 'Verified',
-          receiptNo: 'RCPT-2026-8823',
-          channel: 'Cash Desk 01',
-          referenceNumber: 'CSH-98124',
-        },
-        {
-          id: 'TXN-98424',
-          studentName: 'Priya Patra',
-          rollNumber: '2305201004',
-          semester: 'Semester 7',
-          head: 'Transportation Fleet Fee',
-          amount: 16000,
-          mode: 'Bank Challan',
-          date: '08 Sep 2026, 04:00 PM',
-          status: 'Verified',
-          receiptNo: 'RCPT-2026-8824',
-          channel: 'PNB Bank Challan',
-          referenceNumber: 'CHL-PNB-0941',
-        },
-      ];
-
-      for (const t of defaultTxns) {
-        await this.prisma.workflowRequest.create({
-          data: {
-            workflowType: 'FEE_TRANSACTION',
-            title: `Fee Transaction: ${t.receiptNo} - ₹${t.amount}`,
-            requesterId: t.rollNumber,
-            requesterName: t.studentName,
-            requesterRole: 'Student',
-            details: t,
-            currentStage: t.status,
-            status: t.status,
-          },
-        });
-      }
-
-      return defaultTxns;
-    }
-
-    let list = records.map(r => ({
-      id: r.id,
-      ...((r.details as any) || {}),
-      status: r.status,
-    }));
+    let list: any[] = [
+      ...transactions,
+      ...records.map((r) => ({
+        id: r.id,
+        ...this.asDetails(r.details),
+        status: r.status,
+      })),
+    ];
 
     if (search && search.trim()) {
       const q = search.trim().toLowerCase();
@@ -438,183 +380,114 @@ export class FeesService {
   }
 
   async recordPayment(data: {
-    studentName: string;
+    idempotencyKey: string;
     rollNumber: string;
     semester: string;
     head: string;
     amount: number;
     mode: string;
-    referenceNumber?: string;
-  }) {
-    if (!data.amount || Number(data.amount) <= 0) {
+  }, recordedBy: { id: string; name: string; role: string }) {
+    if (!Number.isFinite(Number(data.amount)) || Number(data.amount) <= 0) {
       throw new BadRequestException('Payment collection amount must be a positive number.');
     }
+    if (!data.rollNumber.trim() || !data.semester.trim() || !data.head.trim() || !data.mode.trim()) {
+      throw new BadRequestException('Student roll number, semester, fee head, and payment mode are required.');
+    }
+    const paymentRequestId = `counter-payment_${createHash('sha256').update(data.idempotencyKey).digest('hex')}`;
+    const requestFingerprint = createHash('sha256').update(JSON.stringify([
+      data.rollNumber.trim(), data.semester.trim(), data.head.trim(), Number(data.amount), data.mode.trim(),
+    ])).digest('hex');
 
-    const receiptNo = `RCPT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const txnRecord = {
-      id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
-      studentName: data.studentName,
-      rollNumber: data.rollNumber,
-      semester: data.semester || 'Semester 7',
-      head: data.head || 'Tuition & Academic Fee',
-      amount: Number(data.amount),
-      mode: data.mode || 'Cash at Counter',
-      date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'Verified',
-      receiptNo,
-      referenceNumber: data.referenceNumber || `REF-${Math.floor(1000 + Math.random() * 9000)}`,
-      channel: data.mode === 'Cash at Counter' ? 'Bursar Counter 01' : 'Bank Integration',
-    };
-
-    const record = await this.prisma.workflowRequest.create({
-      data: {
-        workflowType: 'FEE_TRANSACTION',
-        title: `Fee Transaction: ${txnRecord.receiptNo} - ₹${txnRecord.amount}`,
-        requesterId: txnRecord.rollNumber,
-        requesterName: txnRecord.studentName,
-        requesterRole: 'Student',
-        details: txnRecord,
-        currentStage: 'Verified',
-        status: 'Verified',
-      },
+    const prior = await this.prisma.workflowRequest.findFirst({
+      where: { id: paymentRequestId, workflowType: 'COUNTER_PAYMENT' },
     });
+    if (prior) return this.getIdempotentPayment(prior, requestFingerprint);
 
-    return { ...txnRecord, id: record.id };
+    const student = await this.prisma.student.findUnique({
+      where: { rollNumber: data.rollNumber.trim() },
+      select: { name: true, rollNumber: true },
+    });
+    if (!student) throw new NotFoundException('Student record for this roll number was not found.');
+
+    const createdAt = new Date();
+    const receiptNo = `RCPT-${createdAt.getUTCFullYear()}-${randomUUID()}`;
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const transaction = await tx.feeTransaction.create({
+          data: {
+            studentName: student.name,
+            rollNumber: student.rollNumber,
+            semester: data.semester.trim(),
+            head: data.head.trim(),
+            amount: Number(data.amount),
+            mode: data.mode.trim(),
+            date: createdAt.toISOString(),
+            status: 'Verified',
+            receiptNo,
+          },
+        });
+        await tx.workflowRequest.create({
+          data: {
+            id: paymentRequestId,
+            workflowType: 'COUNTER_PAYMENT',
+            title: `Counter payment receipt ${receiptNo}`,
+            requesterId: recordedBy.id,
+            requesterName: recordedBy.name,
+            requesterRole: recordedBy.role,
+            details: { receiptNo, transactionId: transaction.id, requestFingerprint },
+            currentStage: 'RECORDED',
+            status: 'RECORDED',
+          },
+        });
+        return transaction;
+      });
+    } catch (error) {
+      if ((error as any)?.code !== 'P2002') throw error;
+      const createdByConcurrentRequest = await this.prisma.workflowRequest.findFirst({
+        where: { id: paymentRequestId, workflowType: 'COUNTER_PAYMENT' },
+      });
+      if (createdByConcurrentRequest) return this.getIdempotentPayment(createdByConcurrentRequest, requestFingerprint);
+      throw error;
+    }
   }
 
   // =========================================================================
   // 5. CONFIGURABLE FEE STRUCTURES
   // =========================================================================
   async getFeeStructures() {
-    const records = await this.prisma.workflowRequest.findMany({
-      where: { workflowType: 'FEE_STRUCTURE' },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (records.length === 0) {
-      const defaultStructures = [
-        {
-          id: 'FS-01',
-          course: 'B.Tech (Computer Science & Engineering)',
-          program: 'B.Tech',
-          academicYear: '2026-27',
-          annualFee: 98500,
-          semesterFee: 49250,
-          tuitionFee: 38000,
-          developmentFee: 10500,
-          examFee: 2500,
-          labFee: 6000,
-          libraryFee: 1500,
-          effectiveDate: '01 Jul 2026',
-          status: 'Active',
-        },
-        {
-          id: 'FS-02',
-          course: 'B.Tech (Electronics & Communication)',
-          program: 'B.Tech',
-          academicYear: '2026-27',
-          annualFee: 94500,
-          semesterFee: 47250,
-          tuitionFee: 36000,
-          developmentFee: 10500,
-          examFee: 2500,
-          labFee: 5000,
-          libraryFee: 1500,
-          effectiveDate: '01 Jul 2026',
-          status: 'Active',
-        },
-        {
-          id: 'FS-03',
-          course: 'B.Tech (Mechanical Engineering)',
-          program: 'B.Tech',
-          academicYear: '2026-27',
-          annualFee: 88500,
-          semesterFee: 44250,
-          tuitionFee: 34000,
-          developmentFee: 9500,
-          examFee: 2500,
-          labFee: 4500,
-          libraryFee: 1500,
-          effectiveDate: '01 Jul 2026',
-          status: 'Active',
-        },
-        {
-          id: 'FS-04',
-          course: 'Master of Computer Applications (MCA)',
-          program: 'MCA',
-          academicYear: '2026-27',
-          annualFee: 78000,
-          semesterFee: 39000,
-          tuitionFee: 30000,
-          developmentFee: 8500,
-          examFee: 2500,
-          labFee: 5000,
-          libraryFee: 1500,
-          effectiveDate: '01 Jul 2026',
-          status: 'Active',
-        },
-      ];
-
-      for (const fs of defaultStructures) {
-        await this.prisma.workflowRequest.create({
-          data: {
-            workflowType: 'FEE_STRUCTURE',
-            title: `Fee Structure: ${fs.course}`,
-            requesterId: fs.program,
-            requesterName: 'Bursar & Academic Council',
-            requesterRole: 'ACCOUNTS',
-            details: fs,
-            currentStage: 'Active',
-            status: 'Active',
-          },
-        });
-      }
-
-      return defaultStructures;
-    }
-
-    return records.map(r => ({
-      id: r.id,
-      ...((r.details as any) || {}),
-      status: r.status,
-    }));
+    return this.prisma.feeStructure.findMany({ orderBy: { term: 'desc' } });
   }
 
-  async createFeeStructure(data: any) {
-    if (!data.course || !data.annualFee) {
-      throw new BadRequestException('Course name and annual fee are required.');
+  async createFeeStructure(data: CreateFeeStructureDto) {
+    const program = data.program.trim();
+    const term = data.term.trim();
+    const amounts = [data.tuitionFee, data.developmentFee, data.labLibraryFee, data.examinationFee, data.hostelMessFee];
+    if (amounts.some((amount) => !Number.isFinite(amount) || amount < 0)) {
+      throw new BadRequestException('Every fee component must be a valid non-negative amount.');
     }
-
-    const newStructure = {
-      id: `FS-${Math.floor(10 + Math.random() * 90)}`,
-      course: data.course,
-      program: data.program || 'B.Tech',
-      academicYear: data.academicYear || '2026-27',
-      annualFee: Number(data.annualFee),
-      semesterFee: Math.round(Number(data.annualFee) / 2),
-      tuitionFee: Number(data.tuitionFee) || Math.round(Number(data.annualFee) * 0.75),
-      developmentFee: Number(data.developmentFee) || 10500,
-      examFee: 2500,
-      labFee: 5000,
-      libraryFee: 1500,
-      effectiveDate: new Date().toISOString().split('T')[0],
-      status: 'Active',
-    };
-
-    const record = await this.prisma.workflowRequest.create({
-      data: {
-        workflowType: 'FEE_STRUCTURE',
-        title: `Fee Structure: ${newStructure.course}`,
-        requesterId: newStructure.program,
-        requesterName: 'Accounts Office',
-        requesterRole: 'ACCOUNTS',
-        details: newStructure,
-        currentStage: 'Active',
-        status: 'Active',
-      },
-    });
-
-    return { ...newStructure, id: record.id };
+    const id = `fee-structure_${createHash('sha256').update(`${program.toLowerCase()}|${term.toLowerCase()}`).digest('hex')}`;
+    const total = amounts.reduce((sum, amount) => sum + amount, 0);
+    if (total <= 0) throw new BadRequestException('The total fee structure must be greater than zero.');
+    try {
+      return await this.prisma.feeStructure.create({
+        data: {
+          id,
+          program,
+          term,
+          tuitionFee: data.tuitionFee,
+          developmentFee: data.developmentFee,
+          labLibraryFee: data.labLibraryFee,
+          examinationFee: data.examinationFee,
+          hostelMessFee: data.hostelMessFee,
+          total,
+        },
+      });
+    } catch (error) {
+      if ((error as any)?.code === 'P2002') {
+        throw new ConflictException('A fee structure already exists for this program and term.');
+      }
+      throw error;
+    }
   }
 
   // =========================================================================
@@ -626,71 +499,9 @@ export class FeesService {
       orderBy: { createdAt: 'desc' },
     });
 
-    if (records.length === 0) {
-      const defaultScholarships = [
-        {
-          id: 'SCH-01',
-          name: 'PRERANA Post-Matric Scholarship (Govt. of Odisha)',
-          sponsor: 'ST & SC Development Department',
-          category: 'Government DBT',
-          amount: 25000,
-          beneficiaries: 142,
-          disbursedAmount: 3550000,
-          status: 'Disbursed',
-          academicYear: '2026-27',
-        },
-        {
-          id: 'SCH-02',
-          name: 'Apna Campus Institutional Merit Scholarship (Top 5% CGPA)',
-          sponsor: 'Apna Campus Endowment Trust',
-          category: 'Institutional Merit Waiver',
-          amount: 20000,
-          beneficiaries: 68,
-          disbursedAmount: 1360000,
-          status: 'Disbursed',
-          academicYear: '2026-27',
-        },
-        {
-          id: 'SCH-03',
-          name: 'AICTE Pragati Scholarship for Girl Students',
-          sponsor: 'Ministry of Education (Govt. of India)',
-          category: 'Central Scheme',
-          amount: 50000,
-          beneficiaries: 34,
-          disbursedAmount: 1700000,
-          status: 'Approved',
-          academicYear: '2026-27',
-        },
-        {
-          id: 'SCH-04',
-          name: 'Autonomous Need-Based Fee Concession Support',
-          sponsor: 'Bursar Relief Fund',
-          category: 'Fee Concession',
-          amount: 15000,
-          beneficiaries: 28,
-          disbursedAmount: 420000,
-          status: 'Under Verification',
-          academicYear: '2026-27',
-        },
-      ];
+    if (records.length === 0) return [];
 
-      for (const s of defaultScholarships) {
-        await this.prisma.workflowRequest.create({
-          data: {
-            workflowType: 'SCHOLARSHIP',
-            title: `Scholarship: ${s.name}`,
-            requesterId: s.category,
-            requesterName: s.sponsor,
-            requesterRole: 'ACCOUNTS',
-            details: s,
-            currentStage: s.status,
-            status: s.status,
-          },
-        });
-      }
 
-      return defaultScholarships;
-    }
 
     return records.map(r => ({
       id: r.id,
@@ -699,33 +510,57 @@ export class FeesService {
     }));
   }
 
-  async sanctionScholarship(data: any) {
-    const newSch = {
-      id: `SCH-${Math.floor(10 + Math.random() * 90)}`,
-      name: data.name,
-      sponsor: data.sponsor || 'Apna Campus Endowment Trust',
-      category: data.category || 'Institutional Merit Waiver',
-      amount: Number(data.amount) || 15000,
-      beneficiaries: Number(data.beneficiaries) || 1,
-      disbursedAmount: Number(data.amount) || 15000,
+  async sanctionScholarship(data: SanctionScholarshipDto, sanctionedBy: { id: string; name: string; role: string }) {
+    const student = await this.prisma.student.findUnique({
+      where: { rollNumber: data.studentRoll.trim() },
+      select: { id: true, name: true, rollNumber: true, department: true },
+    });
+    if (!student) throw new NotFoundException('Student record for this roll number was not found.');
+
+    const name = data.name.trim();
+    const academicYear = data.academicYear.trim();
+    const id = `scholarship_${createHash('sha256').update(`${student.id}|${name.toLowerCase()}|${academicYear}`).digest('hex')}`;
+    const scholarship = {
+      name,
+      authority: data.authority.trim(),
+      category: data.category.trim(),
+      studentId: student.id,
+      studentRoll: student.rollNumber,
+      studentName: student.name,
+      department: student.department,
+      amount: data.amount,
+      benefit: `₹${data.amount.toLocaleString('en-IN')} / Year`,
+      beneficiaries: data.beneficiaries,
+      disbursedAmount: 0,
       status: 'Approved',
-      academicYear: data.academicYear || '2026-27',
+      academicYear,
+      sanctionedById: sanctionedBy.id,
+      sanctionedByName: sanctionedBy.name,
+      sanctionedAt: new Date().toISOString(),
     };
 
-    const record = await this.prisma.workflowRequest.create({
-      data: {
-        workflowType: 'SCHOLARSHIP',
-        title: `Scholarship: ${newSch.name}`,
-        requesterId: newSch.category,
-        requesterName: newSch.sponsor,
-        requesterRole: 'ACCOUNTS',
-        details: newSch,
-        currentStage: 'Approved',
-        status: 'Approved',
-      },
-    });
-
-    return { ...newSch, id: record.id };
+    try {
+      const record = await this.prisma.workflowRequest.create({
+        data: {
+          id,
+          workflowType: 'SCHOLARSHIP',
+          title: `Scholarship: ${name} for ${student.rollNumber}`,
+          requesterId: sanctionedBy.id,
+          requesterName: sanctionedBy.name,
+          requesterRole: sanctionedBy.role,
+          department: student.department,
+          details: scholarship,
+          currentStage: 'Approved',
+          status: 'Approved',
+        },
+      });
+      return { ...scholarship, id: record.id };
+    } catch (error) {
+      if ((error as any)?.code === 'P2002') {
+        throw new ConflictException('This scholarship has already been sanctioned for the student in this academic year.');
+      }
+      throw error;
+    }
   }
 
   // =========================================================================
@@ -759,75 +594,9 @@ export class FeesService {
       orderBy: { createdAt: 'desc' },
     });
 
-    if (records.length === 0) {
-      const defaultDocs = [
-        {
-          id: 'DOC-8801',
-          rollNumber: '2305201001',
-          studentName: 'Rakesh Das',
-          title: 'Official Admission Fee Payment Receipt',
-          category: 'Fee Receipt',
-          fileName: 'Fee_Receipt_2305201001_Sem7.pdf',
-          fileSize: '184 KB',
-          uploadDate: '10 Aug 2026',
-          status: 'Verified',
-          verifiedBy: 'Accounts Officer (Subhashree Jena)',
-        },
-        {
-          id: 'DOC-8802',
-          rollNumber: '2305201001',
-          studentName: 'Rakesh Das',
-          title: 'PRERANA Scholarship Sanction Order',
-          category: 'Scholarship',
-          fileName: 'PRERANA_Sanction_2026.pdf',
-          fileSize: '340 KB',
-          uploadDate: '28 Aug 2026',
-          status: 'Verified',
-          verifiedBy: 'Accounts Officer (Subhashree Jena)',
-        },
-        {
-          id: 'DOC-8803',
-          rollNumber: '2305201002',
-          studentName: 'Amit Nayak',
-          title: 'Hostel Caution & Accommodation Fee Challan',
-          category: 'Hostel Clearance',
-          fileName: 'Hostel_Challan_HDFC_9941.pdf',
-          fileSize: '210 KB',
-          uploadDate: '12 Aug 2026',
-          status: 'Verified',
-          verifiedBy: 'Accounts Officer (Subhashree Jena)',
-        },
-        {
-          id: 'DOC-8804',
-          rollNumber: '2305201004',
-          studentName: 'Priya Patra',
-          title: 'Transport Pass Semester Clearance Voucher',
-          category: 'Transport Voucher',
-          fileName: 'Transit_Voucher_8824.pdf',
-          fileSize: '155 KB',
-          uploadDate: '08 Sep 2026',
-          status: 'Verified',
-          verifiedBy: 'Accounts Officer (Subhashree Jena)',
-        },
-      ];
+    if (records.length === 0) return [];
 
-      for (const d of defaultDocs) {
-        await this.prisma.workflowRequest.create({
-          data: {
-            workflowType: 'FEE_DOCUMENT',
-            title: `${d.title} - ${d.studentName}`,
-            requesterId: d.rollNumber,
-            requesterName: d.studentName,
-            requesterRole: 'Student',
-            details: d,
-            currentStage: d.status,
-            status: d.status,
-          },
-        });
-      }
 
-      return defaultDocs;
-    }
 
     let list = records.map(r => ({
       id: r.id,
@@ -840,5 +609,26 @@ export class FeesService {
     }
 
     return list;
+  }
+
+  private asDetails(value: unknown): Record<string, any> {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return { ...(value as Record<string, any>) };
+    }
+    return {};
+  }
+
+  private paymentProofFileId(proofId: string) {
+    return `payment-proof-file_${createHash('sha256').update(proofId).digest('hex')}`;
+  }
+
+  private async getIdempotentPayment(record: any, requestFingerprint: string) {
+    const details = this.asDetails(record.details);
+    if (details.requestFingerprint !== requestFingerprint) {
+      throw new ConflictException('This payment request key was already used for different payment details.');
+    }
+    const transaction = await this.prisma.feeTransaction.findUnique({ where: { receiptNo: details.receiptNo } });
+    if (!transaction) throw new ConflictException('The existing payment request has no ledger transaction. Contact Accounts support.');
+    return transaction;
   }
 }

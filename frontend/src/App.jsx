@@ -3,13 +3,10 @@ import {
   ArrowRight,
   BookOpen,
   Calendar,
-  CalendarDays,
-  Check,
   Eye,
   EyeOff,
   GraduationCap,
   LockKeyhole,
-  LogOut,
   Mail,
   ShieldCheck,
   UserRound,
@@ -17,11 +14,7 @@ import {
   CreditCard,
   Home,
   Utensils,
-  ChevronDown,
-  ChevronUp,
   BarChart3,
-  LayoutGrid,
-  Building2,
   Loader2,
   HardHat,
   Wrench,
@@ -48,9 +41,10 @@ import AccountActivationModal from './components/AccountActivationModal.jsx'
 import UniversalWhatsAppLauncher from './components/CampusConnect/UniversalWhatsAppLauncher.jsx'
 import ApnaAIChatbot from './components/Chatbot/ApnaAIChatbot.jsx'
 import UnifiedFloatingAssistant from './components/Common/UnifiedFloatingAssistant.jsx'
-import MarksManagementModule from './marks/MarksManagementModule.jsx'
 import DigitalAnswerSheetEvaluationSystem from './components/DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx'
+import PublicTimetable from './components/PublicTimetable.jsx'
 import { api } from './services/api.js'
+<<<<<<< HEAD
 import { getActiveStudent, setActiveStudent, findStudentByQuery } from './services/studentStore.js'
 import { getTimeGreeting, getGreetingDisplayName } from './utils/timeGreeting.js'
 
@@ -252,10 +246,12 @@ const accounts = {
     detail: 'Chief Campus Operations Officer · Facilities & Infrastructure',
   },
 }
+=======
+>>>>>>> origin/main
 
 const roleCopy = {
   super_admin: { label: 'Super Admin console', icon: ShieldCheck },
-  management: { label: 'Governing board', icon: ShieldCheck },
+  management: { label: 'Management', icon: ShieldCheck },
   principal: { label: 'Principal office', icon: GraduationCap },
   admissions: { label: 'Admissions & intake', icon: GraduationCap },
   student: { label: 'Student portal', icon: GraduationCap },
@@ -270,6 +266,7 @@ const roleCopy = {
   placement: { label: 'Placement cell', icon: ShieldCheck },
   staff: { label: 'Staff operations', icon: ShieldCheck },
   canteen: { label: 'Canteen portal', icon: Utensils },
+<<<<<<< HEAD
   campus_operations: { label: 'Campus Operations', icon: HardHat },
 }
 
@@ -323,28 +320,287 @@ const demoCategories = [
       { key: 'campus_operations', label: 'Campus Operations' },
     ],
   },
+=======
+  hostel: { label: 'Hostel operations', icon: Home },
+  maintenance: { label: 'Maintenance', icon: ShieldCheck },
+  non_teaching: { label: 'Non-teaching staff', icon: UsersRound },
+}
+
+const roleGroups = [
+  { id: 'administration', label: 'Administration', tone: 'blue', icon: ShieldCheck, roles: ['super_admin', 'management', 'principal', 'admin'] },
+  { id: 'academics', label: 'Academics', tone: 'green', icon: GraduationCap, roles: ['student', 'faculty', 'hod', 'exam_cell', 'admissions'] },
+  { id: 'services', label: 'Campus Services', tone: 'orange', icon: Home, roles: ['accounts', 'library', 'placement', 'transport', 'hostel', 'warden', 'staff', 'canteen', 'maintenance', 'non_teaching'] },
+>>>>>>> origin/main
 ]
 
+const CLIENT_FALLBACK_ACCOUNTS = {
+  super_admin: {
+    id: 'demo-superadmin',
+    name: 'Er. Bikramaditya Patra',
+    email: 'superadmin@gift.edu.in',
+    role: 'super_admin',
+    roleEnum: 'SUPER_ADMIN',
+    identifier: 'superadmin',
+    designation: 'Chief Enterprise Systems Architect',
+    detail: 'Root System & Security Administrator',
+    department: 'Office of Information Technology',
+    phone: '+91 94370 00001',
+    permissions: ['*'],
+  },
+  management: {
+    id: 'demo-management',
+    name: 'Shri Patitapaban Panda',
+    email: 'management@gift.edu.in',
+    role: 'management',
+    roleEnum: 'MANAGEMENT',
+    identifier: 'management',
+    designation: 'Managing Trustee',
+    detail: 'Institutional Governance & Oversight',
+    department: 'Governing Body & Trust Board',
+    phone: '+91 94370 00002',
+    permissions: ['*'],
+  },
+  principal: {
+    id: 'demo-principal',
+    name: 'Dr. Sujit Kumar Khuntia',
+    email: 'principal@gift.edu.in',
+    role: 'principal',
+    roleEnum: 'PRINCIPAL',
+    identifier: 'principal',
+    designation: 'Principal & Director',
+    detail: 'Academic Council & Executive Head',
+    department: 'Office of the Principal',
+    phone: '+91 94370 00003',
+    permissions: ['*'],
+  },
+  admin: {
+    id: 'demo-admin',
+    name: 'Sri Manoranjan Tripathy',
+    email: 'admin@gift.edu.in',
+    role: 'admin',
+    roleEnum: 'ADMIN',
+    identifier: 'admin',
+    designation: 'Chief Administrative Officer',
+    detail: 'Admissions, Records & Campus Services',
+    department: 'Administrative Operations',
+    phone: '+91 94370 00004',
+    permissions: ['*'],
+  },
+  hod: {
+    id: 'demo-hod',
+    name: 'Dr. P. K. Pattnaik',
+    email: 'hod@gift.edu.in',
+    role: 'hod',
+    roleEnum: 'HOD',
+    identifier: 'hod',
+    designation: 'Professor & Head of Department',
+    detail: 'Department Administrator · CSE',
+    department: 'Computer Science & Engineering',
+    phone: '+91 94370 00005',
+    permissions: ['academics', 'faculty_management'],
+  },
+  faculty: {
+    id: 'demo-faculty',
+    name: 'Dr. S. Mohanty',
+    email: 'faculty@gift.edu.in',
+    role: 'faculty',
+    roleEnum: 'FACULTY',
+    identifier: 'faculty',
+    designation: 'Associate Professor',
+    detail: 'Faculty · School of Computing',
+    department: 'Computer Science & Engineering',
+    phone: '+91 94370 00006',
+    identity: 'FAC-042',
+    permissions: ['attendance', 'grading'],
+  },
+  student: {
+    id: 'demo-student',
+    name: 'Rakesh Das',
+    email: 'student@gift.edu.in',
+    role: 'student',
+    roleEnum: 'STUDENT',
+    identifier: '2305201001',
+    registrationNumber: '2305201001',
+    identity: '2305201001',
+    designation: 'Student',
+    detail: 'B.Tech Semester 5 · Section A',
+    department: 'Computer Science & Engineering',
+    phone: '+91 98610 23010',
+    permissions: ['view_grades', 'attend_classes'],
+  },
+  exam_cell: {
+    id: 'demo-examcell',
+    name: 'Prof. S. R. Mahapatra',
+    email: 'examcell@gift.edu.in',
+    role: 'exam_cell',
+    roleEnum: 'EXAM_CELL',
+    identifier: 'examcell',
+    designation: 'Controller of Examinations',
+    detail: 'Autonomous Examination Cell',
+    department: 'Autonomous Examination Cell',
+    phone: '+91 94370 00008',
+    permissions: ['exam_management', 'question_paper_moderation'],
+  },
+  accounts: {
+    id: 'demo-accounts',
+    name: 'CA S. K. Agrawal',
+    email: 'accounts@gift.edu.in',
+    role: 'accounts',
+    roleEnum: 'ACCOUNTS',
+    identifier: 'accounts',
+    designation: 'Chief Finance Officer',
+    detail: 'Student Fee Ledgers & Payroll',
+    department: 'Finance & Accounts Division',
+    phone: '+91 94370 00009',
+    permissions: ['fee_collection', 'payroll'],
+  },
+  library: {
+    id: 'demo-library',
+    name: 'Dr. B. K. Jena',
+    email: 'library@gift.edu.in',
+    role: 'library',
+    roleEnum: 'LIBRARY',
+    identifier: 'library',
+    designation: 'Chief Librarian',
+    detail: 'Central Autonomous Library',
+    department: 'Learning Resource Centre',
+    phone: '+91 94370 00010',
+    permissions: ['book_circulation', 'cataloguing'],
+  },
+  placement: {
+    id: 'demo-placement',
+    name: 'Mr. Soumya Ranjan Das',
+    email: 'placement@gift.edu.in',
+    role: 'placement',
+    roleEnum: 'PLACEMENT',
+    identifier: 'placement',
+    designation: 'Head - Corporate Relations',
+    detail: 'Training & Placement Division',
+    department: 'Industry Relations & Placements',
+    phone: '+91 94370 00011',
+    permissions: ['placement_drives', 'recruiter_liaison'],
+  },
+  transport: {
+    id: 'demo-transport',
+    name: 'Mr. Ramesh Behera',
+    email: 'transport@gift.edu.in',
+    role: 'transport',
+    roleEnum: 'TRANSPORT',
+    identifier: 'transport',
+    designation: 'Transport Supervisor',
+    detail: 'Fleet Operations & Campus Bus Routes',
+    department: 'Logistics & Transport',
+    phone: '+91 94370 00012',
+    permissions: ['fleet_management', 'route_scheduling'],
+  },
+  warden: {
+    id: 'demo-warden',
+    name: 'Capt. (Retd) D. N. Rout',
+    email: 'hostel@gift.edu.in',
+    role: 'warden',
+    roleEnum: 'HOSTEL_WARDEN',
+    identifier: 'warden',
+    designation: 'Chief Hostel Warden',
+    detail: 'Gents & Ladies Hostels',
+    department: 'Hostel Administration',
+    phone: '+91 94370 00013',
+    permissions: ['room_allocation', 'gatepass_approval'],
+  },
+  staff: {
+    id: 'demo-staff',
+    name: 'Mr. Ashok Kumar Jena',
+    email: 'staff@gift.edu.in',
+    role: 'staff',
+    roleEnum: 'STAFF',
+    identifier: 'staff',
+    designation: 'Senior Technical Officer',
+    detail: 'CSE Cloud & AI Advanced Labs',
+    department: 'Computer Science & Engineering',
+    phone: '+91 94370 00014',
+    permissions: ['lab_equipment', 'maintenance'],
+  },
+  canteen: {
+    id: 'demo-canteen',
+    name: 'Mr. Rabindra Jena',
+    email: 'canteen@gift.edu.in',
+    role: 'canteen',
+    roleEnum: 'CANTEEN',
+    identifier: 'canteen',
+    designation: 'Campus Catering Manager',
+    detail: 'Food Court & Student Mess Operations',
+    department: 'Food & Beverage Services',
+    phone: '+91 94370 00015',
+    permissions: ['mess_menu', 'meal_punching'],
+  },
+  admissions: {
+    id: 'demo-admissions',
+    name: 'Er. Sujata Mohapatra',
+    email: 'admissions@gift.edu.in',
+    role: 'admissions',
+    roleEnum: 'ADMISSION',
+    identifier: 'admissions',
+    designation: 'Dean Admissions',
+    detail: 'B.Tech & M.Tech Enrollment Cell',
+    department: 'Admissions & Outreach Cell',
+    phone: '+91 94370 00016',
+    permissions: ['admission_approval', 'leads_management'],
+  },
+}
+
+CLIENT_FALLBACK_ACCOUNTS['superadmin'] = CLIENT_FALLBACK_ACCOUNTS['super_admin']
+CLIENT_FALLBACK_ACCOUNTS['examcell'] = CLIENT_FALLBACK_ACCOUNTS['exam_cell']
+CLIENT_FALLBACK_ACCOUNTS['admission'] = CLIENT_FALLBACK_ACCOUNTS['admissions']
+CLIENT_FALLBACK_ACCOUNTS['2305201001'] = CLIENT_FALLBACK_ACCOUNTS['student']
+
 function App() {
-  const [identifier, setIdentifier] = useState('2305201001')
-  const [password, setPassword] = useState('gift123')
+  const [identifier, setIdentifier] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(true)
+  const [rememberMe, setRememberMe] = useState(false)
   const [account, setAccount] = useState(null)
   const [error, setError] = useState('')
   const [resetRequested, setResetRequested] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [expandedCategory, setExpandedCategory] = useState('admin')
   const [showDigitalEvaluation, setShowDigitalEvaluation] = useState(false)
   const [digitalEvalRole, setDigitalEvalRole] = useState('faculty')
   const [activationModalOpen, setActivationModalOpen] = useState(false)
   const [activationTokenInput, setActivationTokenInput] = useState('')
+  const [activeRoleGroup, setActiveRoleGroup] = useState('administration')
+  const [selectedRole, setSelectedRole] = useState('')
 
   useEffect(() => {
+    async function validateSession() {
+      try {
+        const user = await api.getMe();
+        if (user && user.success && user.user) {
+          setAccount(user.user);
+          return;
+        }
+      } catch (err) {
+        console.info('Backend session check skipped or offline:', err?.message || err);
+      }
+
+      // Check for cached user session (preserves session during Render backend spin-up)
+      try {
+        const cached = localStorage.getItem('collegeflow_user');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.role) {
+            setAccount(parsed);
+          }
+        }
+      } catch (e) {}
+
+      setIsInitializing(false);
+    }
+
     if (typeof window !== 'undefined') {
+      validateSession();
       const hash = window.location.hash || ''
       const search = window.location.search || ''
-      if (hash.includes('activate?token=')) {
+      if (hash.includes('timetable') || search.includes('timetable')) {
+        setShowPublicTimetable(true)
+      } else if (hash.includes('activate?token=')) {
         const tok = hash.split('activate?token=')[1]?.split('&')[0]
         if (tok) {
           setActivationTokenInput(tok)
@@ -362,136 +618,33 @@ function App() {
   }, [])
 
   async function handleLogin(event) {
-    if (event) event.preventDefault()
+    if (event && event.preventDefault) event.preventDefault()
     clearUrlHash()
     setError('')
     setResetRequested(false)
+    setIsSubmitting(true)
+
+    if (!selectedRole) {
+      setError('Choose your role in Explore by Role before signing in.')
+      setIsSubmitting(false)
+      return
+    }
 
     try {
       const res = await api.login(identifier, password)
-      if (res && res.success && res.user) {
-        setAccount(res.user)
-        return
+      if (!res?.success || !res?.user) {
+        throw new Error('We could not verify those sign-in details. Please check your College ID and password.')
       }
+      if (res.user.role !== selectedRole) {
+        await api.logout()
+        throw new Error(`This account belongs to ${roleCopy[res.user.role]?.label || res.user.role}. Select the matching role and sign in again.`)
+      }
+      setAccount(res.user)
     } catch (apiErr) {
-      // Fallback to local accounts dictionary if server is not reached
-      console.info('Attempting fallback authentication:', apiErr.message)
+      setError(apiErr?.message || 'Unable to sign in. Check your details and try again.')
+    } finally {
+      setIsSubmitting(false)
     }
-
-    const key = identifier.trim().toLowerCase()
-
-    // Accepted passwords: gift123, password123, or Gift@YEAR (auto-generated for admitted students)
-    const isValidPassword = (pwd) =>
-      pwd === 'gift123' ||
-      pwd === 'password123' ||
-      /^Gift@\d{4}$/.test(pwd) // e.g. Gift@2023, Gift@2026
-
-    if (!isValidPassword(password)) {
-      setError('We could not verify those sign-in details. Please check your College ID and password.')
-      return
-    }
-
-    // 1. Check if entered identifier matches any registered student in the store
-    //    (covers both original roll numbers AND auto-generated reg numbers like 23CSE0092)
-    const studentMatch = findStudentByQuery(key)
-    if (studentMatch) {
-      // Accept if password matches their stored defaultPassword OR any accepted password
-      const storedDefaultPwd = studentMatch.defaultPassword
-      if (
-        isValidPassword(password) ||
-        (storedDefaultPwd && password === storedDefaultPwd)
-      ) {
-        setActiveStudent(studentMatch.id)
-        setAccount({
-          role: 'student',
-          ...studentMatch,
-        })
-        return
-      }
-    }
-
-    // 2. Match exact account dictionary (staff / demo accounts)
-    const matchedAccount = accounts[key]
-    if (matchedAccount) {
-      if (matchedAccount.role === 'student') {
-        const activeStd = findStudentByQuery(matchedAccount.registrationNumber) || getActiveStudent()
-        setAccount({ ...matchedAccount, ...(activeStd || {}) })
-      } else {
-        setAccount(matchedAccount)
-      }
-      return
-    }
-
-    // 3. Role-prefix automatic routing for any valid institutional ID
-    if (key.startsWith('super')) {
-      setAccount(accounts['super_admin'])
-      return
-    }
-    if (key.startsWith('mgmt') || key.includes('management') || key.includes('director') || key.includes('trustee')) {
-      setAccount(accounts['management'])
-      return
-    }
-    if (key.startsWith('prin')) {
-      setAccount(accounts['principal'])
-      return
-    }
-    if (key.startsWith('exam') || key.includes('coe')) {
-      setAccount(accounts['exam_cell'])
-      return
-    }
-    if (key.startsWith('lib')) {
-      setAccount(accounts['library'])
-      return
-    }
-    if (key.startsWith('trans') || key.includes('bus')) {
-      setAccount(accounts['transport'])
-      return
-    }
-    if (key.startsWith('place') || key.includes('tpo')) {
-      setAccount(accounts['placement'])
-      return
-    }
-    if (key.startsWith('staff') || key.includes('tech') || key.includes('lab')) {
-      setAccount(accounts['staff'])
-      return
-    }
-    if (key.startsWith('fac') || key.includes('faculty')) {
-      setAccount(accounts['faculty'])
-      return
-    }
-    if (key.startsWith('hod')) {
-      setAccount(accounts['hod'])
-      return
-    }
-    if (key.startsWith('adm')) {
-      setAccount(accounts['admin'])
-      return
-    }
-    if (key.startsWith('acc') || key.includes('account')) {
-      setAccount(accounts['accounts'])
-      return
-    }
-    if (key.startsWith('wrd') || key.includes('warden')) {
-      setAccount(accounts['warden'])
-      return
-    }
-    if (key.startsWith('can') || key.includes('canteen')) {
-      setAccount(accounts['canteen'])
-      return
-    }
-    // 4. Numeric reg number fallback (6-12 digits) — treat as student
-    if (/^\d{6,12}$/.test(key)) {
-      const demoStd = getActiveStudent() || {}
-      setAccount({
-        role: 'student',
-        ...demoStd,
-        registrationNumber: identifier,
-        rollNumber: identifier.slice(-2) || '01',
-      })
-      return
-    }
-
-    setError('We could not verify those sign-in details. Please check your College ID and password.')
   }
 
   const clearUrlHash = () => {
@@ -503,48 +656,50 @@ function App() {
     }
   }
 
-  async function handleQuickLogin(roleKey) {
-    clearUrlHash()
-    setError('')
-    setResetRequested(false)
-    setIdentifier(roleKey)
-    setPassword('gift123')
-
-    if (roleKey === 'student') {
-      const activeStd = getActiveStudent()
-      if (activeStd) {
-        setAccount({
-          role: 'student',
-          ...activeStd
-        })
-        return
-      }
-    }
-
-    try {
-      const res = await api.login(roleKey, 'gift123')
-      if (res && res.success && res.user) {
-        setAccount(res.user)
-        return
-      }
-    } catch (apiErr) {
-      // Fallback
-    }
-
-    const acc = accounts[roleKey]
-    if (acc) {
-      setAccount(acc)
-    }
-  }
-
   function handleLogout() {
     api.logout()
     clearUrlHash()
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('apna_campus_sidebar_open');
+        localStorage.setItem('apna_campus_sidebar_open', 'false');
+      }
+    } catch (e) {}
     setAccount(null)
-    setIdentifier('2305201001')
-    setPassword('gift123')
+    setIdentifier('')
+    setPassword('')
+    setSelectedRole('')
     setError('')
     setResetRequested(false)
+  }
+
+  // Public Timetable View (one-click access without login)
+  if (showPublicTimetable) {
+    return (
+      <PublicTimetable
+        onClose={() => {
+          setShowPublicTimetable(false)
+          clearUrlHash()
+        }}
+      />
+    )
+  }
+
+  // Show a loading screen while validating the current session.
+  if (isInitializing) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          background: '#090d16',
+        }}
+      >
+        <Loader2 className="erp-spin" size={40} style={{ color: '#22d3ee' }} />
+      </div>
+    )
   }
 
   // Digital Answer Sheet Evaluation System Fullscreen Overlay
@@ -560,11 +715,10 @@ function App() {
     )
   }
 
-  // Role-based Router Guard
   if (account) {
     let portal = null
     if (account.role === 'super_admin') {
-      portal = <SuperAdminPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
+      portal = <SuperAdminPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'management') {
       portal = <ManagementPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'principal') {
@@ -583,18 +737,22 @@ function App() {
       portal = <LibraryPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'warden') {
       portal = <HostelPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'hostel') {
+      portal = <HostelPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'transport') {
       portal = <TransportPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'placement') {
       portal = <PlacementPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'staff') {
       portal = <StaffPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'maintenance' || account.role === 'non_teaching') {
+      portal = <StaffPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'canteen') {
       portal = <CanteenPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'campus_operations') {
       portal = <CampusOperationsPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'admissions') {
-      portal = <AdmissionsPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
+      portal = <AdmissionsPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'student') {
       portal = <StudentPortal account={account} onLogout={handleLogout} />
     }
@@ -611,17 +769,14 @@ function App() {
     }
   }
 
-  // Otherwise render the Login Page first
   return (
     <>
       <UniversalWhatsAppLauncher account={account} hideTrigger={true} />
       <ApnaAIChatbot account={account} hideTrigger={true} />
       <UnifiedFloatingAssistant account={account} />
       <main className="erp-split-page">
-        {/* Left hero panel (Campus photo at golden hour with dark vignette) */}
         <div className="erp-hero-panel">
           <div className="erp-hero-content">
-            {/* Top brand header */}
             <header className="erp-top-brand-wrapper">
               <div className="erp-top-brand">
                 <div className="erp-logo-box">
@@ -637,8 +792,6 @@ function App() {
                 <span>NAAC A++ ACCREDITED</span>
               </div>
             </header>
-
-            {/* Hero Main Content */}
             <div className="erp-hero-body">
               <div className="erp-hero-kicker">
                 <span>LEARN</span>
@@ -648,12 +801,10 @@ function App() {
                 <span>CONNECT</span>
                 <span className="erp-kicker-line"></span>
               </div>
-
               <h1 className="erp-hero-title">
                 A Smarter<br />
                 <span className="erp-cyan-text">Campus Experience.</span>
               </h1>
-
               <div className="erp-hero-pills-row">
                 <span>People</span>
                 <span className="erp-dot">•</span>
@@ -663,12 +814,14 @@ function App() {
                 <span className="erp-dot">•</span>
                 <span>Opportunities</span>
               </div>
-
               <div className="erp-hero-divider-bar" />
-
-              {/* 4 Feature indicators with circular icon containers */}
               <div className="erp-feature-indicators">
-                <div className="erp-feature-item">
+                <div
+                  className="erp-feature-item"
+                  style={{ cursor: 'pointer' }}
+                  title="View Public Timetable"
+                  onClick={() => setShowPublicTimetable(true)}
+                >
                   <div className="erp-feature-icon-circle">
                     <Calendar size={16} />
                   </div>
@@ -677,7 +830,6 @@ function App() {
                     <span>Timetable</span>
                   </div>
                 </div>
-
                 <div className="erp-feature-item">
                   <div className="erp-feature-icon-circle">
                     <BarChart3 size={16} />
@@ -687,7 +839,6 @@ function App() {
                     <span>Evaluations</span>
                   </div>
                 </div>
-
                 <div className="erp-feature-item">
                   <div className="erp-feature-icon-circle">
                     <UsersRound size={16} />
@@ -699,43 +850,17 @@ function App() {
                 </div>
               </div>
 
-              {/* Statistics row at bottom with vertical dividers */}
-              <div className="erp-stats-row">
-                <div className="erp-stat-col">
-                  <div className="erp-stat-num">
-                    2,480<span className="erp-stat-plus">+</span>
-                  </div>
-                  <div className="erp-stat-label">STUDENTS</div>
-                </div>
-
-                <div className="erp-stat-divider" />
-
-                <div className="erp-stat-col">
-                  <div className="erp-stat-num">
-                    146<span className="erp-stat-plus">+</span>
-                  </div>
-                  <div className="erp-stat-label">FACULTY</div>
-                </div>
-
-                <div className="erp-stat-divider" />
-
-                <div className="erp-stat-col">
-                  <div className="erp-stat-num">18</div>
-                  <div className="erp-stat-label">PROGRAMS</div>
-                </div>
-              </div>
             </div>
+
+
           </div>
         </div>
-
-        {/* Right login panel: Clean White Floating Card */}
         <section className="erp-login-section" aria-label="Sign In">
           <div className="erp-login-card">
             <div className="erp-card-brand-header">
               <h2 className="erp-card-title">Welcome Back</h2>
               <p className="erp-card-subtitle">Sign in to your Apna Campus account</p>
             </div>
-
             <form className="erp-login-form" onSubmit={handleLogin} noValidate>
               <div className="erp-field-group">
                 <div className="erp-input-wrapper">
@@ -753,7 +878,6 @@ function App() {
                   />
                 </div>
               </div>
-
               <div className="erp-field-group">
                 <div className="erp-input-wrapper">
                   <LockKeyhole className="erp-input-icon" size={17} aria-hidden="true" />
@@ -778,8 +902,6 @@ function App() {
                   </button>
                 </div>
               </div>
-
-              {/* Options row */}
               <div className="erp-options-row">
                 <label className="erp-checkbox-label">
                   <input
@@ -798,8 +920,6 @@ function App() {
                   Forgot password?
                 </button>
               </div>
-
-              {/* Feedback alert (Error or Password Reset feedback) */}
               {(error || resetRequested) && (
                 <div
                   className={`erp-alert-box ${error ? 'is-error' : 'is-success'}`}
@@ -817,8 +937,6 @@ function App() {
                   </button>
                 </div>
               )}
-
-              {/* Cyan-to-blue gradient login button */}
               <button
                 type="submit"
                 className="erp-primary-btn"
@@ -836,8 +954,6 @@ function App() {
                   </>
                 )}
               </button>
-
-              {/* New user / Activate account link */}
               <div className="erp-sublink-row">
                 <span className="erp-sublink-text">New user?</span>
                 <button
@@ -849,90 +965,61 @@ function App() {
                 </button>
               </div>
 
-              {/* Section Divider */}
-              <div className="erp-section-divider">
-                <span>OR</span>
-              </div>
-
-              {/* Explore by Role Section */}
-              <div className="erp-demo-section">
-                <div className="erp-demo-header">
-                  <h3 className="erp-demo-title">Explore by Role</h3>
-                  <p className="erp-demo-subtitle">Explore the portal with different roles</p>
+              <div className="erp-role-explorer" aria-label="Explore portals by role">
+                <div className="erp-role-divider"><span /><b>OR</b><span /></div>
+                <div className="erp-role-heading">
+                  <div>
+                    <h3>Explore by Role</h3>
+                    <p>Choose your portal before signing in</p>
+                  </div>
+                  {selectedRole && <span className="erp-role-selected-label">{roleCopy[selectedRole]?.label}</span>}
                 </div>
-
-                {/* 3 Category Cards */}
-                <div className="erp-category-cards-grid">
-                  {demoCategories.map((cat) => {
-                    const CatIcon = cat.icon
-                    const isExpanded = expandedCategory === cat.id
-                    return (
-                      <div
-                        key={cat.id}
-                        className={`erp-cat-card ${isExpanded ? 'active' : ''}`}
-                        onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
-                        role="button"
-                        tabIndex={0}
-                        style={{ '--cat-bg': cat.bg, '--cat-border': cat.border, '--cat-color': cat.color }}
-                      >
-                        <div className="erp-cat-top">
-                          <div className="erp-cat-icon-box">
-                            <CatIcon size={18} />
-                          </div>
-                          <ArrowRight size={13} className="erp-cat-arrow" />
-                        </div>
-                        <div className="erp-cat-bottom">
-                          <strong className="erp-cat-name">{cat.title}</strong>
-                          <span className="erp-cat-count">{cat.count}</span>
-                        </div>
-                      </div>
-                    )
-                  })}
+                <div className="erp-role-groups" role="tablist" aria-label="Portal categories">
+                  {roleGroups.map((group) => (
+                    <button
+                      type="button"
+                      key={group.id}
+                      role="tab"
+                      aria-selected={activeRoleGroup === group.id}
+                      className={`erp-role-group-card ${group.tone} ${activeRoleGroup === group.id ? 'is-active' : ''}`}
+                      onClick={() => setActiveRoleGroup(group.id)}
+                    >
+                      <group.icon size={18} aria-hidden="true" />
+                      <span className="erp-role-group-copy"><strong>{group.label}</strong><small>{group.roles.length} Roles</small></span>
+                      <ArrowRight size={15} aria-hidden="true" />
+                    </button>
+                  ))}
                 </div>
-
-                {/* Expanded Role Selection Popover / Drawer */}
-                {expandedCategory && (
-                  <div className="erp-expanded-roles-drawer">
-                    <div className="erp-drawer-header">
-                      <span>Select {demoCategories.find((c) => c.id === expandedCategory)?.title} Role:</span>
+                <div className="erp-role-options" role="tabpanel" aria-label={`${roleGroups.find((group) => group.id === activeRoleGroup)?.label} roles`}>
+                  <div className="erp-role-options-title">
+                    <span>Select {roleGroups.find((group) => group.id === activeRoleGroup)?.label} Role:</span>
+                    {selectedRole && <button type="button" onClick={() => setSelectedRole('')} aria-label="Clear selected role">×</button>}
+                  </div>
+                  <div className="erp-role-chips">
+                    {roleGroups.find((group) => group.id === activeRoleGroup)?.roles.map((role) => (
                       <button
                         type="button"
-                        className="erp-drawer-close"
-                        onClick={() => setExpandedCategory(null)}
+                        key={role}
+                        className={`erp-role-chip ${selectedRole === role ? 'is-selected' : ''}`}
+                        aria-pressed={selectedRole === role}
+                        onClick={() => { setSelectedRole(role); setError(''); }}
                       >
-                        ×
+                        {roleCopy[role].label}<ArrowRight size={13} aria-hidden="true" />
                       </button>
-                    </div>
-                    <div className="erp-drawer-roles">
-                      {demoCategories
-                        .find((c) => c.id === expandedCategory)
-                        ?.roles.map((r) => (
-                          <button
-                            key={r.key}
-                            type="button"
-                            className="erp-drawer-role-pill"
-                            onClick={async () => {
-                              await handleQuickLogin(r.key)
-                            }}
-                          >
-                            <span>{r.label}</span>
-                            <ArrowRight size={11} />
-                          </button>
-                        ))}
-                    </div>
+                    ))}
                   </div>
-                )}
+                  {selectedRole && <p className="erp-role-hint">Your role and permissions are verified by the server when you sign in.</p>}
+                </div>
               </div>
-            </form>
 
-            {/* University Portal Footer */}
+            </form>
             <footer className="erp-card-footer">
               <div className="erp-footer-links">
                 <a href="#help" onClick={(e) => e.preventDefault()}>Help</a>
                 <span className="erp-footer-bar">|</span>
                 <a href="#privacy" onClick={(e) => e.preventDefault()}>Privacy</a>
                 <span className="erp-footer-bar">|</span>
-                <a href="#contact" onClick={(e) => e.preventDefault()}>Contact</a>
+                <a href="#contact" onClick={(e) => e.preventDefault()} >Contact</a>
               </div>
               <p className="erp-footer-copyright">
                 © 2026 Apna Campus
@@ -941,7 +1028,6 @@ function App() {
           </div>
         </section>
       </main>
-
       {activationModalOpen && (
         <AccountActivationModal
           initialToken={activationTokenInput}
@@ -955,140 +1041,5 @@ function App() {
     </>
   )
 }
-
-function Dashboard({ account, onLogout }) {
-  const { label, icon: RoleIcon } = roleCopy[account.role]
-
-  return (
-    <main className="dashboard-page">
-      <header className="dashboard-header">
-        <a className="dashboard-brand" href="#home" aria-label="Apna Campus">
-          <GiftMark size={36} />
-          <span>APNA CAMPUS</span>
-        </a>
-      </header>
-
-      <div className="dashboard-layout">
-        <aside className="dashboard-account-rail" aria-label="Signed-in account details">
-          <div className="dashboard-rail-emblem"><RoleIcon size={27} /></div>
-          <p className="eyebrow">CURRENT ACCOUNT</p>
-          <h2>{account.name}</h2>
-          <p className="dashboard-rail-detail">{account.detail}</p>
-          <dl className="dashboard-rail-details">
-            <div>
-              <dt>{account.role === 'student' ? 'Registration number' : 'College ID'}</dt>
-              <dd>{account.registrationNumber || account.identity}</dd>
-            </div>
-            <div><dt>Department</dt><dd>{account.department}</dd></div>
-            <div><dt>Account type</dt><dd>{label}</dd></div>
-          </dl>
-          <div className="dashboard-rail-status"><span />Account active</div>
-          <button
-            type="button"
-            onClick={onLogout}
-            style={{
-              marginTop: '1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              padding: '0.625rem 1rem',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              background: '#fff',
-              color: '#e11d48',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              width: '100%',
-              transition: 'background 0.2s',
-            }}
-          >
-            <LogOut size={16} /> Sign out
-          </button>
-        </aside>
-
-        <section className="dashboard-content" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div className="welcome-row">
-            <div>
-              <p className="eyebrow"><RoleIcon size={15} />{label}</p>
-              <h1>{account.role === 'admin' ? 'Campus overview' : 'Faculty Workspace'}</h1>
-              <p className="welcome-detail">{getTimeGreeting()}, {getGreetingDisplayName(account.name)}. Manage student continuous evaluation & assessments.</p>
-            </div>
-            <div className="today-chip"><CalendarDays size={15} /> Friday, 02 October 2026</div>
-          </div>
-
-          <section className="overview-section">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Academic Portal</p>
-                <h2>{account.role === 'admin' ? 'Campus overview' : 'Quick metrics'}</h2>
-              </div>
-              <span className="live-status"><span />Academic year 2026–27</span>
-            </div>
-            <div className="overview-grid">
-              {getOverview(account.role).map((item) => (
-                <article className="overview-item" key={item.label}>
-                  <div className={`overview-icon ${item.tone}`}><item.icon size={19} /></div>
-                  <div className="overview-copy">
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                    <small>{item.note}</small>
-                  </div>
-                  <ArrowRight size={16} className="overview-arrow" />
-                </article>
-              ))}
-            </div>
-          </section>
-
-          {/* Full Marks Management Module embedded directly for faculty/admin */}
-          <div style={{ marginTop: '0.5rem' }}>
-            <MarksManagementModule initialRole="teacher" />
-          </div>
-        </section>
-      </div>
-    </main>
-  )
-}
-
-function getOverview(role) {
-  if (role === 'admin') {
-    return [
-      { icon: UsersRound, label: 'Students', value: '2,480', note: 'Across all programs', tone: 'blue' },
-      { icon: GraduationCap, label: 'Faculty', value: '146', note: 'Teaching staff', tone: 'green' },
-      { icon: BookOpen, label: 'Programs', value: '18', note: 'Active programs', tone: 'gold' },
-    ]
-  }
-  if (role === 'faculty') {
-    return [
-      { icon: UsersRound, label: 'My students', value: '64', note: 'Across 2 sections', tone: 'blue' },
-      { icon: BookOpen, label: 'Courses', value: '3', note: 'Assigned this term', tone: 'green' },
-      { icon: CalendarDays, label: 'Next class', value: '10:30 AM', note: 'Data Structures · Room 204', tone: 'gold' },
-    ]
-  }
-  return [
-    { icon: BookOpen, label: 'Enrolled courses', value: '6', note: 'Semester 5', tone: 'blue' },
-    { icon: CalendarDays, label: 'Next class', value: '10:30 AM', note: 'Data Structures · Room 204', tone: 'green' },
-    { icon: Check, label: 'Attendance', value: '92%', note: 'This semester', tone: 'gold' },
-  ]
-}
-
-function GiftMark({ size = 34 }) {
-  return (
-    <img
-      src="/logo.png"
-      alt="Apna Campus Logo"
-      className="apna-campus-logo-img"
-      style={{
-        height: `${size}px`,
-        width: 'auto',
-        maxHeight: '100%',
-        objectFit: 'contain',
-        display: 'inline-block',
-        verticalAlign: 'middle',
-      }}
-    />
-  )
-}
-
 export default App
+

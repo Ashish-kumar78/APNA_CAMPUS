@@ -23,7 +23,7 @@ import { facultyApi } from '../services/facultyApi.js';
 import MarksManagementModule from '../marks/MarksManagementModule.jsx';
 import { notesApi } from '../services/notesApi.js';
 import { getDocumentsForRole, getAllStudents, saveStudent } from '../services/studentStore.js';
-import { useTimeGreeting } from '../utils/timeGreeting.js';
+import { useTimeGreeting, getGreetingDisplayName } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
@@ -984,7 +984,7 @@ export default function FacultyPortal({ account, onLogout }) {
                 <div className="dash-hero-glow" aria-hidden="true" />
                 <div className="dash-hero-main">
                   <p className="dash-hero-kicker"><Sparkles size={13} /> Faculty workspace · {currentAssignment.deptCode || 'CSE'} Department</p>
-                  <h2 className="dash-hero-title">{timeGreeting.wish}, {(account?.name || 'Dr. S. Mohanty').split(' ')[0]}</h2>
+                  <h2 className="dash-hero-title">{timeGreeting.wish}, {getGreetingDisplayName(account?.name || 'Dr. S. Mohanty')}</h2>
                   <p className="dash-hero-caption">{timeGreeting.caption}</p>
                   <div className="dash-motd" role="note" aria-label="Message of the day">
                     <span className="dash-motd-icon"><Megaphone size={14} /></span>

@@ -23,6 +23,8 @@ import {
   LayoutGrid,
   Building2,
   Loader2,
+  HardHat,
+  Wrench,
 } from 'lucide-react'
 import './App.css'
 import StudentPortal from './StudentPortal.jsx'
@@ -41,6 +43,7 @@ import TransportPortal from './components/TransportPortal.jsx'
 import PlacementPortal from './components/PlacementPortal.jsx'
 import StaffPortal from './components/StaffPortal.jsx'
 import AdmissionsPortal from './components/AdmissionsPortal.jsx'
+import CampusOperationsPortal from './components/CampusOperations/CampusOperationsPortal.jsx'
 import AccountActivationModal from './components/AccountActivationModal.jsx'
 import UniversalWhatsAppLauncher from './components/CampusConnect/UniversalWhatsAppLauncher.jsx'
 import ApnaAIChatbot from './components/Chatbot/ApnaAIChatbot.jsx'
@@ -49,7 +52,7 @@ import MarksManagementModule from './marks/MarksManagementModule.jsx'
 import DigitalAnswerSheetEvaluationSystem from './components/DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx'
 import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, findStudentByQuery } from './services/studentStore.js'
-import { getTimeGreeting } from './utils/timeGreeting.js'
+import { getTimeGreeting, getGreetingDisplayName } from './utils/timeGreeting.js'
 
 const accounts = {
   '2401432265': {
@@ -234,6 +237,20 @@ const accounts = {
     department: 'Estate Maintenance & Civil Works',
     detail: 'Estate Maintenance Supervisor',
   },
+  'campus_operations': {
+    role: 'campus_operations',
+    name: 'Mr. Ramesh Chandra Parida',
+    identity: 'OPS-DIR-01',
+    department: 'Estate Maintenance & Campus Operations',
+    detail: 'Chief Campus Operations Officer · Facilities & Infrastructure',
+  },
+  'ops-dir-01': {
+    role: 'campus_operations',
+    name: 'Mr. Ramesh Chandra Parida',
+    identity: 'OPS-DIR-01',
+    department: 'Estate Maintenance & Campus Operations',
+    detail: 'Chief Campus Operations Officer · Facilities & Infrastructure',
+  },
 }
 
 const roleCopy = {
@@ -253,6 +270,7 @@ const roleCopy = {
   placement: { label: 'Placement cell', icon: ShieldCheck },
   staff: { label: 'Staff operations', icon: ShieldCheck },
   canteen: { label: 'Canteen portal', icon: Utensils },
+  campus_operations: { label: 'Campus Operations', icon: HardHat },
 }
 
 const demoCategories = [
@@ -290,7 +308,7 @@ const demoCategories = [
   {
     id: 'services',
     title: 'Campus Services',
-    count: '6 Roles',
+    count: '7 Roles',
     color: '#ea580c',
     bg: '#fff7ed',
     border: '#ffedd5',
@@ -302,6 +320,7 @@ const demoCategories = [
       { key: 'transport', label: 'Transport' },
       { key: 'warden', label: 'Hostel' },
       { key: 'staff', label: 'Staff (Labs)' },
+      { key: 'campus_operations', label: 'Campus Operations' },
     ],
   },
 ]
@@ -572,6 +591,8 @@ function App() {
       portal = <StaffPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'canteen') {
       portal = <CanteenPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'campus_operations') {
+      portal = <CampusOperationsPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'admissions') {
       portal = <AdmissionsPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'student') {
@@ -992,7 +1013,7 @@ function Dashboard({ account, onLogout }) {
             <div>
               <p className="eyebrow"><RoleIcon size={15} />{label}</p>
               <h1>{account.role === 'admin' ? 'Campus overview' : 'Faculty Workspace'}</h1>
-              <p className="welcome-detail">{getTimeGreeting()}, {account.name.split(' ')[0]}. Manage student continuous evaluation & assessments.</p>
+              <p className="welcome-detail">{getTimeGreeting()}, {getGreetingDisplayName(account.name)}. Manage student continuous evaluation & assessments.</p>
             </div>
             <div className="today-chip"><CalendarDays size={15} /> Friday, 02 October 2026</div>
           </div>

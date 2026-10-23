@@ -57,6 +57,7 @@ import {
 } from 'lucide-react';
 import '../DashboardHome.css';
 import './RoleDashboardLanding.css';
+import { getGreetingDisplayName } from '../utils/timeGreeting.js';
 
 // DetailRow matching StudentPortal
 function DetailRow({ label, value }) {
@@ -959,6 +960,66 @@ export const ROLE_CONFIGS = {
       { day: '11', month: 'OCT', tag: 'SAFETY', tagTone: 'tag-green', title: 'Laboratory Chemical & Electrical Fire Safety Inspection', desc: 'All fire extinguishers, emergency power cut-offs, and first aid kits recertified.' },
     ],
   },
+
+  // 15. CAMPUS OPERATIONS
+  campus_operations: {
+    roleKey: 'campus_operations',
+    roleTitle: 'Campus Operations',
+    dashboardTitle: 'Campus Operations dashboard',
+    kicker: 'CAMPUS INFRASTRUCTURE & FACILITY OPERATIONS · ESTATE DIVISION',
+    caption: 'Oversee institutional facilities, preventive maintenance, technical crews, housekeeping hygiene, and 24/7 security gate monitoring.',
+    motd: 'Morning perimeter inspection completed. All 12 backup diesel generators and water treatment systems verified.',
+    officer: {
+      name: 'Mr. Ramesh Chandra Parida',
+      id: 'OPS-DIR-01',
+      employeeCode: 'EMP-OPS-2016-011',
+      designation: 'Chief Campus Operations Officer & Estate Superintendent',
+      department: 'Estate Maintenance & Campus Operations',
+      specialization: 'Civil Infrastructure, Power Distribution & Operational Safety',
+      office: 'Estate Control Room 102 · Ground Floor, Engineering Annex',
+      qualification: 'B.Tech (Civil), Post-Grad Diploma in Industrial Safety',
+      experience: '17+ Years Institutional Facilities Management',
+      assignedResponsibilities: 'Civil, Electrical, Plumbing, HVAC, Cleaning, Security Roster & Inventory',
+      academicYear: '2026–2027',
+      email: 'operations@apnacampus.edu.in',
+      phone: '+91 94370 00140',
+      employmentType: 'Full-Time Regular (Permanent)',
+      dateOfJoining: '12 Sep 2016',
+      employmentStatus: 'Active · On Duty',
+      reportingAuthority: 'Er. S. K. Nayak (CAO) & Dr. B. K. Sarap (Principal)',
+      photo: '/passport_photo_male.svg',
+      scope: 'Campus Operations & Estate Superintendent',
+      biometricId: 'BIO-OPS-011',
+      maskedAadhaar: '•••• •••• 5591',
+      maskedPan: '•••••481K',
+      identityVerification: 'Verified Official (Aadhaar: •••• •••• 5591 · PAN: •••••481K)',
+    },
+    stats: {
+      c1: { icon: ClipboardList, label: 'Active Work Orders', badge: '10 Tasks', val: '10 Dockets', desc: '8 In Progress · 2 On-Site Verified', pills: ['4 Electrical', '3 Plumbing', '3 General'] },
+      c2: { icon: CheckCircle2, label: 'Workforce On Duty Today', badge: '100% Turnout', val: '15 / 15', ratio: '15 Active / 15 Categories', pct: '100%', foot: 'All shifts fully covered across campus' },
+      c3: { icon: Wrench, label: 'Open Maintenance Requests', badge: '09 Pending', val: '09 Items', desc: '4 Washroom/water · 3 Electrical · 2 HVAC', foot: 'Average turnaround: 3.8 hours' },
+      c4: { icon: ShieldCheck, label: 'Safety & Statutory Audits', badge: 'NOC Active', val: '100%', desc: 'Fire, Elevator & Water Potability Certified', foot: 'Zero critical hazard violations' },
+    },
+    quickActions: [
+      { id: 'tasks', label: 'View Work Orders', icon: ClipboardList },
+      { id: 'maintenance', label: 'Maintenance Requests', icon: Wrench },
+      { id: 'staff', label: 'Staff Directory', icon: Users },
+    ],
+    overviewTitle: 'Critical Campus Infrastructure Health & Utility Status',
+    overviewItems: [
+      { col1: 'Central Substation 1 & 2 (11kV)', col2: 'Main Transformers Active', col3: '415V Phase Balanced (49.98 Hz)', col4: 'Operational', badge: 'status-green' },
+      { col1: 'Kirloskar 320kVA DG Backup Sets 1-4', col2: 'Fuel Tank 92% Full', col3: 'Auto-Mains Failure (AMF) Ready', col4: 'Standby Ready', badge: 'status-green' },
+      { col1: 'Central RO Potable Water Plant (2000 LPH)', col2: 'TDS: 104 PPM (Optimal)', col3: 'Distribution Pressure 3.2 Bar', col4: 'Healthy', badge: 'status-green' },
+      { col1: 'Tech Tower Passenger Elevators L1-L3', col2: 'Door Interlocks Certified', col3: 'Zero Vibration Faults Logged', col4: 'Certified Safe', badge: 'status-green' },
+      { col1: 'Gate 1, 2 & 3 Access Boom Barriers', col2: 'RFID System Synchronized', col3: '14 Active Visitors on Campus', col4: 'Secure', badge: 'status-green' },
+    ],
+    overviewColumns: ['Infrastructure System', 'Specification', 'Runtime Operational Metric', 'Health Status'],
+    announcements: [
+      { day: '22', month: 'OCT', tag: 'MAINTENANCE', tagTone: 'tag-violet', title: 'Overhead Reservoir Chlorination & Tank Cleaning', desc: 'Routine cleaning scheduled for Saturday night 10:00 PM. Alternate pumps operational.' },
+      { day: '20', month: 'OCT', tag: 'SAFETY', tagTone: 'tag-blue', title: 'Pre-Cyclone Wind Safety & Perimeter Storm Drain Clearances', desc: 'Tree pruning near 11kV lines completed. Outdoor hoardings anchored.' },
+      { day: '17', month: 'OCT', tag: 'INSPECTION', tagTone: 'tag-green', title: 'State Fire Service Safety NOC Inspection Cleared', desc: 'All campus hydrants, DCP extinguishers and sprinkler risers recertified.' },
+    ],
+  },
 };
 
 export default function RoleDashboardLanding({
@@ -986,7 +1047,7 @@ export default function RoleDashboardLanding({
     if (hour >= 4 && hour < 12) {
       return {
         wish: 'Good morning',
-        emoji: '🌅',
+        emoji: '',
         period: 'Morning',
         themeClass: 'dash-hero-morning',
       };
@@ -994,7 +1055,7 @@ export default function RoleDashboardLanding({
     if (hour >= 12 && hour < 17) {
       return {
         wish: 'Good afternoon',
-        emoji: '☀️',
+        emoji: '',
         period: 'Afternoon',
         themeClass: 'dash-hero-afternoon',
       };
@@ -1002,14 +1063,14 @@ export default function RoleDashboardLanding({
     if (hour >= 17 && hour < 22) {
       return {
         wish: 'Good evening',
-        emoji: '🌇',
+        emoji: '',
         period: 'Evening',
         themeClass: 'dash-hero-evening',
       };
     }
     return {
       wish: 'Good night',
-      emoji: '🌙',
+      emoji: '',
       period: 'Night',
       themeClass: 'dash-hero-night',
     };
@@ -1124,28 +1185,15 @@ export default function RoleDashboardLanding({
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
   };
 
-  // Quick Action Modal State (Dashboard Shortcut Only - does not build internal module)
-  const [activeShortcutModal, setActiveShortcutModal] = useState(null);
-
   // Officer Profile Section State
   const [profileTab, setProfileTab] = useState('profile'); // 'profile' | 'academic' | 'identity'
   const [photoError, setPhotoError] = useState(false);
   const [isDossierModalOpen, setIsDossierModalOpen] = useState(false);
 
-  const handleQuickActionClick = (action) => {
-    // If the portal provides a tab switcher to an existing view, try it
-    if (onNavigateTab && typeof onNavigateTab === 'function') {
-      const handled = onNavigateTab(action.id);
-      if (handled) return;
-    }
-    // Otherwise open a high-fidelity dashboard shortcut preview modal
-    setActiveShortcutModal(action);
-  };
-
   // Officer Profile
   const officer = config.officer;
   const officerDisplayName = account?.name || officer.name;
-  const officerShortName = officerDisplayName.split(' ').filter(Boolean)[0] || 'Officer';
+  const greetingName = getGreetingDisplayName(officerDisplayName);
 
   const { c1, c2, c3, c4 } = config.stats;
   const C1Icon = c1.icon;
@@ -1294,7 +1342,7 @@ export default function RoleDashboardLanding({
               <Sparkles size={13} /> {config.kicker}
             </p>
             <h2 className="dash-hero-title">
-              {timeGreeting.wish}, {officerShortName} {timeGreeting.emoji}
+              {timeGreeting.wish}, {greetingName}
             </h2>
             <p className="dash-hero-caption">{config.caption}</p>
             <div className="dash-motd" role="note" aria-label="Message of the day">
@@ -1319,28 +1367,6 @@ export default function RoleDashboardLanding({
           </div>
         </section>
 
-        {/* ==========================================================
-            QUICK ACTIONS BAR (Section 7 - Dashboard Shortcuts Only)
-            ========================================================== */}
-        <section className="role-quick-actions-bar" aria-label="Quick Action Shortcuts">
-          <span className="role-quick-actions-label">
-            <Zap size={14} color="#2563eb" /> Quick Actions
-          </span>
-          {config.quickActions.map((act) => {
-            const ActIcon = act.icon;
-            return (
-              <button
-                key={act.id}
-                type="button"
-                className="role-quick-action-pill"
-                onClick={() => handleQuickActionClick(act)}
-              >
-                <ActIcon size={14} color="#2563eb" />
-                <span>{act.label}</span>
-              </button>
-            );
-          })}
-        </section>
 
         {/* ==========================================================
             HERO SPLIT: Left Profile Card + Right 2x2 Stats Cards (50%/50%)
@@ -1781,64 +1807,6 @@ export default function RoleDashboardLanding({
         </footer>
       </div>
 
-      {/* ==========================================================
-          LIGHTWEIGHT DASHBOARD SHORTCUT MODAL (Section 7)
-          Dashboard shortcuts only — does not develop destination module
-          ========================================================== */}
-      {activeShortcutModal && (
-        <div className="role-modal-overlay" onClick={() => setActiveShortcutModal(null)}>
-          <div className="role-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="role-modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <activeShortcutModal.icon size={18} color="#2563eb" />
-                <h3>{activeShortcutModal.label}</h3>
-              </div>
-              <button
-                type="button"
-                className="role-notif-close"
-                onClick={() => setActiveShortcutModal(null)}
-                aria-label="Close modal"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="role-modal-body">
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px 16px', borderRadius: '10px', marginBottom: '14px', fontSize: '13px', color: '#1e40af', lineHeight: 1.5 }}>
-                <strong>Phase 1 Dashboard Shortcut:</strong> This quick action provides high-level preview access for <strong>{config.roleTitle}</strong>. Full granular sub-modules will be expanded in Phase 2.
-              </div>
-              <p style={{ fontSize: '13.5px', color: '#334155', margin: '0 0 10px 0', lineHeight: 1.5 }}>
-                Current system status for <strong>{activeShortcutModal.label}</strong> is synchronized with active college databases.
-              </p>
-              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12.5px', color: '#64748b', lineHeight: 1.6 }}>
-                <li>Role authority: <strong>{config.roleTitle}</strong></li>
-                <li>Designated officer: <strong>{officerDisplayName}</strong></li>
-                <li>Audit status: <strong>Verified &amp; Logged</strong></li>
-              </ul>
-            </div>
-            <div className="role-modal-footer">
-              <button
-                type="button"
-                className="role-quick-action-pill"
-                onClick={() => setActiveShortcutModal(null)}
-              >
-                Dismiss
-              </button>
-              <button
-                type="button"
-                className="role-quick-action-pill active-action"
-                onClick={() => {
-                  if (onNavigateTab) {
-                    onNavigateTab(activeShortcutModal.id);
-                  }
-                  setActiveShortcutModal(null);
-                }}
-              >
-                Open Section Preview
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ==========================================================
           INSTITUTIONAL PROFILE DOSSIER MODAL (Full Multi-Section View)

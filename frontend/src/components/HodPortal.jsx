@@ -60,7 +60,7 @@ import { erpStore } from '../services/erpStore.js';
 import MarksManagementModule from '../marks/MarksManagementModule.jsx';
 import { api, hodApi } from '../services/api.js';
 import { getDocumentsForRole, getAllStudents } from '../services/studentStore.js';
-import { useTimeGreeting } from '../utils/timeGreeting.js';
+import { useTimeGreeting, getGreetingDisplayName } from '../utils/timeGreeting.js';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
@@ -1366,7 +1366,7 @@ export default function HodPortal({ account, onLogout }) {
                 <div className="dash-hero-glow" aria-hidden="true" />
                 <div className="dash-hero-main">
                   <p className="dash-hero-kicker"><Sparkles size={13} /> Head of Department Workspace · Department of Computer Science &amp; Engineering</p>
-                  <h2 className="dash-hero-title">{timeGreeting.wish}, {(account?.name || 'Dr. P. K. Pattnaik').split(' ')[0]}</h2>
+                  <h2 className="dash-hero-title">{timeGreeting.wish}, {getGreetingDisplayName(account?.name || 'Dr. P. K. Pattnaik')}</h2>
                   <p className="dash-hero-caption">{timeGreeting.caption}</p>
                   <div className="dash-motd" role="note" aria-label="Department governance notice">
                     <span className="dash-motd-icon"><Megaphone size={14} /></span>

@@ -45,6 +45,7 @@ export const initialRolesList = [
   { key: 'transport', label: 'Transport Fleet Manager', category: 'Operations', usersCount: 4, description: 'Bus fleet, routes, stops, bus passes & drivers' },
   { key: 'placement', label: 'Placement & Training Officer', category: 'Career', usersCount: 5, description: 'Corporate recruitment drives, eligibility & training' },
   { key: 'staff', label: 'Non-Teaching Staff', category: 'Support', usersCount: 38, description: 'Labs, office clerical, reception & facility maintenance' },
+  { key: 'campus_operations', label: 'Campus Operations', category: 'Operations', usersCount: 15, description: 'Maintenance, security, housekeeping, canteen, facilities & field crews' },
 ];
 
 export const permissionDefinitions = [

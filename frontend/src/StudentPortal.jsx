@@ -43,6 +43,7 @@ import {
 } from 'lucide-react'
 import './StudentPortal.css'
 import './DashboardHome.css'
+import { getGreetingDisplayName } from './utils/timeGreeting.js'
 import StudentProfile from './StudentProfile.jsx'
 import AcademicsPage from './pages/AcademicsPage.jsx'
 import BloggingPage from './pages/BloggingPage.jsx'
@@ -961,7 +962,7 @@ function StudentPortal({ account, onLogout }) {
             <div className="dash-hero-glow" aria-hidden="true" />
             <div className="dash-hero-main">
               <p className="dash-hero-kicker"><Sparkles size={13} /> Student workspace · Semester 5</p>
-              <h2 className="dash-hero-title">{timeGreeting.wish}, {(account?.name || 'Student').split(' ')[0]}</h2>
+              <h2 className="dash-hero-title">{timeGreeting.wish}, {getGreetingDisplayName(account?.name || 'Student')}</h2>
               <p className="dash-hero-caption">{timeGreeting.caption}</p>
               <div className="dash-motd" role="note" aria-label="Message of the day">
                 <span className="dash-motd-icon"><Megaphone size={14} /></span>

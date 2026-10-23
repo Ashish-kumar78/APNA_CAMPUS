@@ -39,7 +39,14 @@ import {
   BellRing,
   ArrowUpRight,
   FileSpreadsheet,
-  MessageSquare
+  MessageSquare,
+  ShieldAlert,
+  Gavel,
+  Sliders,
+  Building2,
+  QrCode,
+  Truck,
+  Barcode
 } from 'lucide-react';
 import './ExamCellPortal.css';
 import './SuperAdminPortal.css';
@@ -47,6 +54,15 @@ import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import ExamRegistrationModule from './ExaminationCell/ExamRegistrationModule.jsx';
+import QuestionPaperVaultModule from './ExaminationCell/QuestionPaperVaultModule.jsx';
+import AnswerBookletTrackingModule from './ExaminationCell/AnswerBookletTrackingModule.jsx';
+import PracticalVivaModule from './ExaminationCell/PracticalVivaModule.jsx';
+import CertificatesDegreeModule from './ExaminationCell/CertificatesDegreeModule.jsx';
+import MalpracticeGrievancesModule from './ExaminationCell/MalpracticeGrievancesModule.jsx';
+import ExaminerManagementModule from './ExaminationCell/ExaminerManagementModule.jsx';
+import ExamSettingsModule from './ExaminationCell/ExamSettingsModule.jsx';
+import { examinationStore } from '../services/examinationStore.js';
 import { erpStore } from '../services/erpStore.js';
 import { examsApi } from '../services/examsApi.js';
 import {
@@ -103,6 +119,45 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
   const [moderationData, setModerationData] = useState(() => erpStore.getModerationMarks('CS501'));
   const [reevaluationRequests, setReevaluationRequests] = useState(() => erpStore.getReevaluationRequests());
   const [examCirculars, setExamCirculars] = useState(() => erpStore.getExamCirculars());
+
+  // Sub-tabs State for extended modules
+  const [dashboardView, setDashboardView] = useState('command_center'); // 'command_center' | 'profile'
+  const [timetableSubTab, setTimetableSubTab] = useState('schedule'); // 'schedule' | 'centres'
+  const [seatingSubTab, setSeatingSubTab] = useState('seating'); // 'seating' | 'invigilation'
+  const [moderationSubTab, setModerationSubTab] = useState('cie'); // 'cie' | 'external' | 'ia_breakdown' | 'audit'
+  const [gradingSubTab, setGradingSubTab] = useState('engine'); // 'engine' | 'gazette' | 'transcripts' | 'history'
+  const [scrutinySubTab, setScrutinySubTab] = useState('cases'); // 'cases' | 'supplementary' | 'amendments'
+  const [circularsSubTab, setCircularsSubTab] = useState('bulletins'); // 'bulletins' | 'calendar'
+
+  // Additional data from examinationStore
+  const [centres, setCentres] = useState(() => examinationStore.getCentres());
+  const [invigilationRoster, setInvigilationRoster] = useState(() => examinationStore.getInvigilationRoster());
+  const [calendarMilestones, setCalendarMilestones] = useState(() => examinationStore.getCalendar());
+
+  // External marks entry local state
+  const [externalMarksCourse, setExternalMarksCourse] = useState('CS501');
+  const [externalMarksBatch, setExternalMarksBatch] = useState([
+    { roll: '01', regNo: '2305201001', name: 'Rakesh Das', marks: 72, absent: false, withheld: false, malpractice: false, status: 'Dual Entry Verified' },
+    { roll: '02', regNo: '2305201002', name: 'Amit Nayak', marks: 64, absent: false, withheld: false, malpractice: false, status: 'Dual Entry Verified' },
+    { roll: '03', regNo: '2305201003', name: 'Raj Sahoo', marks: 58, absent: false, withheld: false, malpractice: false, status: 'Dual Entry Verified' },
+    { roll: '04', regNo: '2305201004', name: 'Priya Patra', marks: 74, absent: false, withheld: false, malpractice: false, status: 'Dual Entry Verified' },
+    { roll: '05', regNo: '2305201005', name: 'Sourav Mohanty', marks: 26, absent: false, withheld: false, malpractice: false, status: 'Verified Borderline' },
+    { roll: '07', regNo: '2305201007', name: 'Debabrata Jena', marks: 55, absent: false, withheld: false, malpractice: false, status: 'Dual Entry Verified' },
+    { roll: '10', regNo: '2305201010', name: 'Bikramjit Rout', marks: 66, absent: false, withheld: false, malpractice: false, status: 'Dual Entry Verified' },
+  ]);
+
+  // Supplementary exam clearance state
+  const [supplementaryRecords, setSupplementaryRecords] = useState([
+    { id: 'SUP-01', roll: '05', regNo: '2305201005', name: 'Sourav Mohanty', subjectCode: 'CS502', subjectName: 'Operating Systems', semester: 'Sem 5', attempts: 2, feeStatus: 'Paid (₹600)', clearanceStatus: 'Approved & Desk Assigned' },
+    { id: 'SUP-02', roll: '09', regNo: '2305201009', name: 'Subham Swain', subjectCode: 'EC301', subjectName: 'Network Theory', semester: 'Sem 3', attempts: 1, feeStatus: 'Paid (₹600)', clearanceStatus: 'Approved & Desk Assigned' },
+    { id: 'SUP-03', roll: '11', regNo: '2305201011', name: 'Tanmay Mohapatra', subjectCode: 'ME302', subjectName: 'Fluid Mechanics', semester: 'Sem 3', attempts: 2, feeStatus: 'Paid (₹600)', clearanceStatus: 'Under Scrutiny Verification' },
+  ]);
+
+  // Gazette published state
+  const [gazettePublished, setGazettePublished] = useState(true);
+
+  // Transcript preview modal
+  const [transcriptPreviewModal, setTranscriptPreviewModal] = useState(null);
 
   // Filter & Search states
   const [cycleSearch, setCycleSearch] = useState('');
@@ -550,6 +605,7 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
           </div>
 
           <nav className="erp-sidebar-nav">
+            <div className="erp-sidebar-heading">Core Examination</div>
             <button
               className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
               onClick={() => setActiveTab('dashboard')}
@@ -567,11 +623,19 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               <span className="erp-nav-badge">{examCycles.length}</span>
             </button>
             <button
+              className={`erp-nav-item ${activeTab === 'registration' ? 'active' : ''}`}
+              onClick={() => setActiveTab('registration')}
+            >
+              <UserCheck size={18} />
+              <span>Exam Registration &amp; Eligibility</span>
+              <span className="erp-nav-badge" style={{ background: '#3b82f6', color: '#ffffff' }}>New</span>
+            </button>
+            <button
               className={`erp-nav-item ${activeTab === 'timetable' ? 'active' : ''}`}
               onClick={() => setActiveTab('timetable')}
             >
               <Clock size={18} />
-              <span>Timetable & Schedule</span>
+              <span>Timetable &amp; Schedule</span>
               <span className="erp-nav-badge">{examTimetable.length}</span>
             </button>
             <button
@@ -579,7 +643,7 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               onClick={() => setActiveTab('seating')}
             >
               <Users size={18} />
-              <span>Seating & Door Charts</span>
+              <span>Seating &amp; Door Charts</span>
               <span className="erp-nav-badge">{seatingArrangements.length}</span>
             </button>
             <button
@@ -591,36 +655,38 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               <span className="erp-nav-badge">{hallTickets.length}</span>
             </button>
             <button
+              className={`erp-nav-item ${activeTab === 'question_papers' ? 'active' : ''}`}
+              onClick={() => setActiveTab('question_papers')}
+            >
+              <Lock size={18} />
+              <span>Question Paper Vault</span>
+              <span className="erp-nav-badge" style={{ background: '#7c3aed', color: '#ffffff' }}>Vault</span>
+            </button>
+
+            <div className="erp-sidebar-heading">Evaluation &amp; Marks</div>
+            <button
+              className={`erp-nav-item ${activeTab === 'booklets' ? 'active' : ''}`}
+              onClick={() => setActiveTab('booklets')}
+            >
+              <Layers size={18} />
+              <span>Answer Booklets &amp; Custody</span>
+              <span className="erp-nav-badge">New</span>
+            </button>
+            <button
+              className={`erp-nav-item ${activeTab === 'practical_viva' ? 'active' : ''}`}
+              onClick={() => setActiveTab('practical_viva')}
+            >
+              <FileCheck2 size={18} />
+              <span>Practical &amp; Viva Exams</span>
+              <span className="erp-nav-badge">New</span>
+            </button>
+            <button
               className={`erp-nav-item ${activeTab === 'moderation' ? 'active' : ''}`}
               onClick={() => setActiveTab('moderation')}
             >
               <Layers size={18} />
               <span>Marks Moderation (CIE)</span>
               <span className="erp-nav-badge">Live</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'grading' ? 'active' : ''}`}
-              onClick={() => setActiveTab('grading')}
-            >
-              <Award size={18} />
-              <span>SGPA/CGPA Engine</span>
-              <span className="erp-nav-badge">{gradeRoster.length}</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'scrutiny' ? 'active' : ''}`}
-              onClick={() => setActiveTab('scrutiny')}
-            >
-              <RotateCcw size={18} />
-              <span>Re-Evaluation & Scrutiny</span>
-              <span className="erp-nav-badge">{reevaluationRequests.length}</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'circulars' ? 'active' : ''}`}
-              onClick={() => setActiveTab('circulars')}
-            >
-              <BellRing size={18} />
-              <span>CoE Circulars</span>
-              <span className="erp-nav-badge">{examCirculars.length}</span>
             </button>
             <button
               className={`erp-nav-item ${activeTab === 'digital_evaluation' ? 'active' : ''}`}
@@ -635,12 +701,72 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               <span className="erp-nav-badge" style={{ background: '#7c3aed', color: '#ffffff' }}>Live</span>
             </button>
             <button
+              className={`erp-nav-item ${activeTab === 'examiners' ? 'active' : ''}`}
+              onClick={() => setActiveTab('examiners')}
+            >
+              <Users size={18} />
+              <span>Examiners &amp; Evaluators</span>
+              <span className="erp-nav-badge">Panel</span>
+            </button>
+
+            <div className="erp-sidebar-heading">Results &amp; Records</div>
+            <button
+              className={`erp-nav-item ${activeTab === 'grading' ? 'active' : ''}`}
+              onClick={() => setActiveTab('grading')}
+            >
+              <Award size={18} />
+              <span>SGPA/CGPA Engine</span>
+              <span className="erp-nav-badge">{gradeRoster.length}</span>
+            </button>
+            <button
+              className={`erp-nav-item ${activeTab === 'scrutiny' ? 'active' : ''}`}
+              onClick={() => setActiveTab('scrutiny')}
+            >
+              <RotateCcw size={18} />
+              <span>Re-Evaluation &amp; Scrutiny</span>
+              <span className="erp-nav-badge">{reevaluationRequests.length}</span>
+            </button>
+            <button
+              className={`erp-nav-item ${activeTab === 'certificates' ? 'active' : ''}`}
+              onClick={() => setActiveTab('certificates')}
+            >
+              <Award size={18} />
+              <span>Certificates &amp; Degree Desk</span>
+              <span className="erp-nav-badge" style={{ background: '#f59e0b', color: '#000000' }}>Desk</span>
+            </button>
+
+            <div className="erp-sidebar-heading">Compliance &amp; Settings</div>
+            <button
+              className={`erp-nav-item ${activeTab === 'malpractice_grievances' ? 'active' : ''}`}
+              onClick={() => setActiveTab('malpractice_grievances')}
+            >
+              <ShieldAlert size={18} />
+              <span>Malpractice &amp; Grievances</span>
+              <span className="erp-nav-badge" style={{ background: '#ef4444', color: '#ffffff' }}>UFM</span>
+            </button>
+            <button
+              className={`erp-nav-item ${activeTab === 'circulars' ? 'active' : ''}`}
+              onClick={() => setActiveTab('circulars')}
+            >
+              <BellRing size={18} />
+              <span>CoE Circulars</span>
+              <span className="erp-nav-badge">{examCirculars.length}</span>
+            </button>
+            <button
               className={`erp-nav-item ${activeTab === 'report-generation' ? 'active' : ''}`}
               onClick={() => setActiveTab('report-generation')}
             >
               <FileSpreadsheet size={18} />
               <span>Report Generation</span>
               <span className="erp-nav-badge" style={{ background: '#3b82f6', color: '#ffffff' }}>New</span>
+            </button>
+            <button
+              className={`erp-nav-item ${activeTab === 'exam_settings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('exam_settings')}
+            >
+              <Sliders size={18} />
+              <span>Examination Settings</span>
+              <span className="erp-nav-badge">Rules</span>
             </button>
           </nav>
         </aside>
@@ -748,210 +874,270 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               TAB 0: CoE OPERATIONS DASHBOARD
              ========================================================================= */}
           {activeTab === 'dashboard' && (
-            <RoleDashboardLanding
-              roleKey="exam_cell"
-              account={account}
-              onLogout={onLogout}
-              onSwitchRole={onSwitchRole}
-              onNavigate={(target) => {
-                if (target === 'exam-sched') setActiveTab('timetable');
-                else if (target === 'exam-eval') setActiveTab('digital_evaluation');
-                else if (target === 'exam-subs') setActiveTab('moderation');
-                else setActiveTab('timetable');
-              }}
-            />
-          )}
-
-          {false && activeTab === 'dashboard' && (
             <div>
-              {/* Top Operational KPI Grid */}
-              <div className="erp-stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-                <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('cycles')}>
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">Active Cycles</span>
-                    <Calendar size={18} color="#7c3aed" />
-                  </div>
-                  <div className="erp-stat-val">{examCycles.filter(c => c.status !== 'Closed').length} Cycles</div>
-                  <div className="erp-stat-note">Autumn 2026 &amp; Backlog Series</div>
-                  <div className="kpi-hover-hint">View Cycles <ArrowUpRight size={13} /></div>
-                </div>
-
-                <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('hall_tickets')}>
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">Enrolled Candidates</span>
-                    <Users size={18} color="#0284c7" />
-                  </div>
-                  <div className="erp-stat-val">2,480</div>
-                  <div className="erp-stat-note">Verified examinees across 6 departments</div>
-                  <div className="kpi-hover-hint">View Candidates <ArrowUpRight size={13} /></div>
-                </div>
-
-                <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('timetable')}>
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">Scheduled Papers</span>
-                    <BookOpen size={18} color="#10b981" />
-                  </div>
-                  <div className="erp-stat-val">{examTimetable.length} Papers</div>
-                  <div className="erp-stat-note">0 Timetable Conflicts Detected</div>
-                  <div className="kpi-hover-hint">View Timetable <ArrowUpRight size={13} /></div>
-                </div>
-
-                <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('seating')}>
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">Hall Capacity</span>
-                    <Award size={18} color="#f59e0b" />
-                  </div>
-                  <div className="erp-stat-val">88.4%</div>
-                  <div className="erp-stat-note">338 / 350 Desks Allocated</div>
-                  <div className="kpi-hover-hint">View Seating <ArrowUpRight size={13} /></div>
-                </div>
-
-                <div className="erp-stat-card clickable-kpi" onClick={() => { setHallTicketStatusFilter('issued'); setActiveTab('hall_tickets'); }}>
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">Admit Cards Live</span>
-                    <Ticket size={18} color="#10b981" />
-                  </div>
-                  <div className="erp-stat-val" style={{ color: '#059669' }}>
-                    {hallTickets.filter(h => h.hallTicketStatus === 'Issued').length}
-                  </div>
-                  <div className="erp-stat-note">Active on student self-service portal</div>
-                  <div className="kpi-hover-hint">View Hall Tickets <ArrowUpRight size={13} /></div>
-                </div>
-
-                <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('moderation')}>
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">Marks Moderation</span>
-                    <Layers size={18} color="#7c3aed" />
-                  </div>
-                  <div className="erp-stat-val">Live</div>
-                  <div className="erp-stat-note">Continuous Internal Evaluation (CIE)</div>
-                  <div className="kpi-hover-hint">Moderate Marks <ArrowUpRight size={13} /></div>
-                </div>
-
-                <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('grading')}>
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">Grading Engine</span>
-                    <GraduationCap size={18} color="#0284c7" />
-                  </div>
-                  <div className="erp-stat-val">Certified</div>
-                  <div className="erp-stat-note">SGPA/CGPA Weighted Credit Matrix</div>
-                  <div className="kpi-hover-hint">View Grade Roster <ArrowUpRight size={13} /></div>
-                </div>
-
-                <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('scrutiny')}>
-                  <div className="erp-stat-card-header">
-                    <span className="erp-stat-card-title">Scrutiny / Re-Eval</span>
-                    <RotateCcw size={18} color="#f59e0b" />
-                  </div>
-                  <div className="erp-stat-val">{reevaluationRequests.length} Cases</div>
-                  <div className="erp-stat-note">Fee Verified &amp; Committee Assigned</div>
-                  <div className="kpi-hover-hint">Process Scrutiny <ArrowUpRight size={13} /></div>
-                </div>
+              <div className="coe-subtabs-bar" style={{ marginBottom: '1.25rem' }}>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${dashboardView === 'command_center' ? 'active' : ''}`}
+                  onClick={() => setDashboardView('command_center')}
+                >
+                  <ShieldCheck size={16} />
+                  <span>CoE Operational Command Center</span>
+                  <span className="coe-subtab-badge" style={{ background: '#dcfce7', color: '#16a34a' }}>Live</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${dashboardView === 'profile' ? 'active' : ''}`}
+                  onClick={() => setDashboardView('profile')}
+                >
+                  <GraduationCap size={16} />
+                  <span>Officer Profile &amp; Governance Bulletins</span>
+                </button>
               </div>
 
-              {/* Operational Widgets: Agenda & Readiness Checklist */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem', marginBottom: '1.75rem' }}>
-                {/* Upcoming Papers Schedule */}
-                <div className="erp-panel" style={{ marginBottom: 0 }}>
-                  <div className="erp-panel-header">
-                    <div className="erp-panel-title">
-                      <h3>Upcoming Examination Sessions</h3>
-                      <p>Paper schedule, session timings, halls assigned, and invigilator squad deployment</p>
+              {dashboardView === 'profile' ? (
+                <RoleDashboardLanding
+                  roleKey="exam_cell"
+                  account={account}
+                  onLogout={onLogout}
+                  onSwitchRole={onSwitchRole}
+                  onNavigate={(target) => {
+                    if (target === 'exam-sched') setActiveTab('timetable');
+                    else if (target === 'exam-eval') setActiveTab('digital_evaluation');
+                    else if (target === 'exam-subs') setActiveTab('moderation');
+                    else setActiveTab('timetable');
+                  }}
+                />
+              ) : (
+                <div>
+                  {/* Top Operational KPI Grid */}
+                  <div className="erp-stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
+                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('cycles')}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Active Cycles</span>
+                        <Calendar size={18} color="#7c3aed" />
+                      </div>
+                      <div className="erp-stat-val">{examCycles.filter(c => c.status !== 'Closed').length} Cycles</div>
+                      <div className="erp-stat-note">Autumn 2026 &amp; Backlog Series</div>
+                      <div className="kpi-hover-hint">View Cycles <ArrowUpRight size={13} /></div>
                     </div>
-                    <button className="erp-btn erp-btn-secondary" onClick={() => setActiveTab('timetable')}>
-                      Full Schedule
-                    </button>
+
+                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('registration')}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Registered Examinees</span>
+                        <Users size={18} color="#0284c7" />
+                      </div>
+                      <div className="erp-stat-val">2,480</div>
+                      <div className="erp-stat-note">Regular &amp; Arrear examinees</div>
+                      <div className="kpi-hover-hint">View Registrations <ArrowUpRight size={13} /></div>
+                    </div>
+
+                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('registration')}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Pending Applications</span>
+                        <Clock size={18} color="#f59e0b" />
+                      </div>
+                      <div className="erp-stat-val" style={{ color: '#d97706' }}>18 Pending</div>
+                      <div className="erp-stat-note">Clearance verification queue</div>
+                      <div className="kpi-hover-hint">Review Applications <ArrowUpRight size={13} /></div>
+                    </div>
+
+                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('timetable')}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Scheduled Papers</span>
+                        <BookOpen size={18} color="#10b981" />
+                      </div>
+                      <div className="erp-stat-val">{examTimetable.length} Papers</div>
+                      <div className="erp-stat-note">0 Timetable Conflicts Detected</div>
+                      <div className="kpi-hover-hint">View Timetable <ArrowUpRight size={13} /></div>
+                    </div>
+
+                    <div className="erp-stat-card clickable-kpi" onClick={() => { setActiveTab('timetable'); setTimetableSubTab('centres'); }}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Centres in Use</span>
+                        <Building2 size={18} color="#0284c7" />
+                      </div>
+                      <div className="erp-stat-val">{centres.length} Centres</div>
+                      <div className="erp-stat-note">14 Examination Halls Active</div>
+                      <div className="kpi-hover-hint">View Centres <ArrowUpRight size={13} /></div>
+                    </div>
+
+                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('examiners')}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Evaluator Assignments</span>
+                        <UserCheck size={18} color="#7c3aed" />
+                      </div>
+                      <div className="erp-stat-val">4 Panelists</div>
+                      <div className="erp-stat-note">2 Bundles Pending Assignment</div>
+                      <div className="kpi-hover-hint">Manage Examiners <ArrowUpRight size={13} /></div>
+                    </div>
+
+                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('booklets')}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Booklets for Evaluation</span>
+                        <Layers size={18} color="#f59e0b" />
+                      </div>
+                      <div className="erp-stat-val">120 Booklets</div>
+                      <div className="erp-stat-note">4 Bundles in Vault Custody</div>
+                      <div className="kpi-hover-hint">Track Booklets <ArrowUpRight size={13} /></div>
+                    </div>
+
+                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('moderation')}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Marks Moderation</span>
+                        <FileCheck2 size={18} color="#7c3aed" />
+                      </div>
+                      <div className="erp-stat-val">Live</div>
+                      <div className="erp-stat-note">Continuous Internal Evaluation</div>
+                      <div className="kpi-hover-hint">Moderate Marks <ArrowUpRight size={13} /></div>
+                    </div>
+
+                    <div className="erp-stat-card clickable-kpi" onClick={() => { setActiveTab('grading'); setGradingSubTab('gazette'); }}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Results Approval</span>
+                        <Award size={18} color="#10b981" />
+                      </div>
+                      <div className="erp-stat-val" style={{ color: '#16a34a' }}>Gazette Ready</div>
+                      <div className="erp-stat-note">95.1% Pass Percentage</div>
+                      <div className="kpi-hover-hint">Preview Gazette <ArrowUpRight size={13} /></div>
+                    </div>
+
+                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('scrutiny')}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Re-Eval &amp; Scrutiny</span>
+                        <RotateCcw size={18} color="#f59e0b" />
+                      </div>
+                      <div className="erp-stat-val">{reevaluationRequests.length} Cases</div>
+                      <div className="erp-stat-note">Committee assigned</div>
+                      <div className="kpi-hover-hint">Process Scrutiny <ArrowUpRight size={13} /></div>
+                    </div>
+
+                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('malpractice_grievances')}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Malpractice (UFM)</span>
+                        <ShieldAlert size={18} color="#dc2626" />
+                      </div>
+                      <div className="erp-stat-val" style={{ color: '#dc2626' }}>2 Cases</div>
+                      <div className="erp-stat-note">Disciplinary hearings scheduled</div>
+                      <div className="kpi-hover-hint">View UFM Cases <ArrowUpRight size={13} /></div>
+                    </div>
+
+                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('certificates')}>
+                      <div className="erp-stat-card-header">
+                        <span className="erp-stat-card-title">Certificates Desk</span>
+                        <Award size={18} color="#0284c7" />
+                      </div>
+                      <div className="erp-stat-val">4 Requests</div>
+                      <div className="erp-stat-note">Degree &amp; Transcripts</div>
+                      <div className="kpi-hover-hint">Process Requests <ArrowUpRight size={13} /></div>
+                    </div>
                   </div>
 
-                  <div className="erp-table-responsive">
-                    <table className="erp-table">
-                      <thead>
-                        <tr>
-                          <th>Date &amp; Session</th>
-                          <th>Course / Paper</th>
-                          <th>Halls Assigned</th>
-                          <th>Examinees</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {examTimetable.slice(0, 4).map(item => (
-                          <tr key={item.id}>
-                            <td>
-                              <strong>{item.date}</strong>
-                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{item.time}</div>
-                            </td>
-                            <td>
-                              <strong>{item.code}</strong>
-                              <div style={{ fontSize: '0.75rem', color: '#475569' }}>{item.subject}</div>
-                            </td>
-                            <td>
-                              <span style={{ background: '#f3e8ff', color: '#7c3aed', padding: '2px 8px', borderRadius: '4px', fontSize: '0.74rem', fontWeight: 700 }}>
-                                {item.roomCount} Halls Assigned
-                              </span>
-                            </td>
-                            <td><strong>{item.roomCount * 22} Candidates</strong></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  {/* Operational Widgets: Agenda & Readiness Checklist */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem', marginBottom: '1.75rem' }}>
+                    {/* Upcoming Papers Schedule */}
+                    <div className="erp-panel" style={{ marginBottom: 0 }}>
+                      <div className="erp-panel-header">
+                        <div className="erp-panel-title">
+                          <h3>Upcoming Examination Sessions</h3>
+                          <p>Paper schedule, session timings, halls assigned, and invigilator squad deployment</p>
+                        </div>
+                        <button className="erp-btn erp-btn-secondary" onClick={() => setActiveTab('timetable')}>
+                          Full Schedule
+                        </button>
+                      </div>
+
+                      <div className="erp-table-responsive">
+                        <table className="erp-table">
+                          <thead>
+                            <tr>
+                              <th>Date &amp; Session</th>
+                              <th>Course / Paper</th>
+                              <th>Halls Assigned</th>
+                              <th>Examinees</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {examTimetable.slice(0, 4).map(item => (
+                              <tr key={item.id}>
+                                <td>
+                                  <strong>{item.date}</strong>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{item.time}</div>
+                                </td>
+                                <td>
+                                  <strong>{item.code}</strong>
+                                  <div style={{ fontSize: '0.75rem', color: '#475569' }}>{item.subject}</div>
+                                </td>
+                                <td>
+                                  <span style={{ background: '#f3e8ff', color: '#7c3aed', padding: '2px 8px', borderRadius: '4px', fontSize: '0.74rem', fontWeight: 700 }}>
+                                    {item.roomCount} Halls Assigned
+                                  </span>
+                                </td>
+                                <td><strong>{item.roomCount * 22} Candidates</strong></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Examination Readiness Checklist */}
+                    <div className="erp-panel" style={{ marginBottom: 0 }}>
+                      <div className="erp-panel-header">
+                        <div className="erp-panel-title">
+                          <h3>Autonomous Readiness &amp; Governance</h3>
+                          <p>Regulatory prerequisite compliance audit</p>
+                        </div>
+                        <span className="erp-role-badge">
+                          <ShieldCheck size={14} /> 100% Compliant
+                        </span>
+                      </div>
+
+                      <div className="exam-readiness-checklist">
+                        <div className="exam-readiness-item complete">
+                          <div>
+                            <strong>1. Autonomous Exam Cycles Configured</strong>
+                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>End-Sem Autumn 2026 session initialized with academic dates</div>
+                          </div>
+                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Done</span>
+                        </div>
+
+                        <div className="exam-readiness-item complete">
+                          <div>
+                            <strong>2. Timetable Conflict Validation</strong>
+                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Zero room double-bookings, invigilator clashes, or paper overlaps</div>
+                          </div>
+                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Passed</span>
+                        </div>
+
+                        <div className="exam-readiness-item complete">
+                          <div>
+                            <strong>3. Seating Plan &amp; Door Charts Staggering</strong>
+                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Anti-cheating branch separation across 5 examination halls</div>
+                          </div>
+                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Optimized</span>
+                        </div>
+
+                        <div className="exam-readiness-item complete">
+                          <div>
+                            <strong>4. Student Clearance &amp; Admit Card Generation</strong>
+                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Attendance vetted (&ge;75%) and accounts fee verified</div>
+                          </div>
+                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Live</span>
+                        </div>
+
+                        <div className="exam-readiness-item complete">
+                          <div>
+                            <strong>5. Question Paper Vault Sealed</strong>
+                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>AES-256 hardware encryption with dual keycards active</div>
+                          </div>
+                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Protected</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                {/* Examination Readiness Checklist */}
-                <div className="erp-panel" style={{ marginBottom: 0 }}>
-                  <div className="erp-panel-header">
-                    <div className="erp-panel-title">
-                      <h3>Autonomous Readiness &amp; Governance</h3>
-                      <p>Regulatory prerequisite compliance audit</p>
-                    </div>
-                    <span className="erp-role-badge">
-                      <ShieldCheck size={14} /> 100% Compliant
-                    </span>
-                  </div>
-
-                  <div className="exam-readiness-checklist">
-                    <div className="exam-readiness-item complete">
-                      <div>
-                        <strong>1. Autonomous Exam Cycles Configured</strong>
-                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>End-Sem Autumn 2026 session initialized with academic dates</div>
-                      </div>
-                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Done</span>
-                    </div>
-
-                    <div className="exam-readiness-item complete">
-                      <div>
-                        <strong>2. Timetable Conflict Validation</strong>
-                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Zero room double-bookings, invigilator clashes, or paper overlaps</div>
-                      </div>
-                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Passed</span>
-                    </div>
-
-                    <div className="exam-readiness-item complete">
-                      <div>
-                        <strong>3. Seating Plan &amp; Door Charts Staggering</strong>
-                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Anti-cheating branch separation across 5 examination halls</div>
-                      </div>
-                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Optimized</span>
-                    </div>
-
-                    <div className="exam-readiness-item complete">
-                      <div>
-                        <strong>4. Student Clearance &amp; Admit Card Generation</strong>
-                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Attendance vetted (&ge;75%) and accounts fee verified</div>
-                      </div>
-                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Live</span>
-                    </div>
-
-                    <div className="exam-readiness-item complete">
-                      <div>
-                        <strong>5. Continuous Internal Evaluation Moderation</strong>
-                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Departmental marks review and council grace application</div>
-                      </div>
-                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Verified</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -1062,106 +1248,272 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               TAB 2: TIMETABLE & PAPER SCHEDULER
              ========================================================================= */}
           {activeTab === 'timetable' && (
-            <div className="erp-panel">
-              <div className="erp-panel-header">
-                <div className="erp-panel-title">
-                  <h3>Autonomous Semester Examination Timetable</h3>
-                  <p>Paper schedule, session timings, halls assigned, and invigilator squad deployment</p>
-                </div>
-                <div className="erp-panel-actions">
-                  <button
-                    className="erp-btn erp-btn-secondary"
-                    onClick={() => {
-                      downloadExamTimetableMasterPdf(filteredTimetable);
-                      triggerToast('Master Autonomous Examination Timetable PDF downloaded!');
-                    }}
-                  >
-                    <Download size={15} /> Download PDF Timetable
-                  </button>
-                  <button
-                    className="erp-btn erp-btn-secondary"
-                    onClick={() => {
-                      exportToCsv('Examination_Timetable.csv', filteredTimetable);
-                      triggerToast('Examination Timetable exported to CSV.');
-                    }}
-                  >
-                    <FileSpreadsheet size={15} /> Export CSV
-                  </button>
-                  <button className="erp-btn erp-btn-secondary" onClick={handlePrintTimetable}>
-                    <Printer size={15} /> Print
-                  </button>
-                  <button className="erp-btn erp-btn-primary" onClick={() => setNewPaperModal(true)}>
-                    <Plus size={15} /> Schedule Exam Paper
-                  </button>
-                </div>
-              </div>
-
-              <div className="exam-toolbar">
-                <div className="exam-search-box">
-                  <Search size={16} color="#64748b" />
-                  <input
-                    type="text"
-                    placeholder="Search courses by code or subject name..."
-                    value={timetableSearch}
-                    onChange={(e) => setTimetableSearch(e.target.value)}
-                  />
-                </div>
-                <select
-                  className="exam-filter-select"
-                  value={timetableSemesterFilter}
-                  onChange={(e) => setTimetableSemesterFilter(e.target.value)}
+            <div>
+              {/* Subtabs Bar */}
+              <div className="coe-subtabs-bar">
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${timetableSubTab === 'schedule' ? 'active' : ''}`}
+                  onClick={() => setTimetableSubTab('schedule')}
                 >
-                  <option value="all">All Semesters</option>
-                  <option value="Semester 1">Semester 1</option>
-                  <option value="Semester 3">Semester 3</option>
-                  <option value="Semester 5">Semester 5</option>
-                  <option value="Semester 7">Semester 7</option>
-                </select>
+                  <Clock size={15} />
+                  <span>Master Examination Timetable</span>
+                  <span className="coe-subtab-badge">{filteredTimetable.length} Slots</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${timetableSubTab === 'centres' ? 'active' : ''}`}
+                  onClick={() => setTimetableSubTab('centres')}
+                >
+                  <Building2 size={15} />
+                  <span>Centres &amp; Room Capacities</span>
+                  <span className="coe-subtab-badge">{centres.length} Centres</span>
+                </button>
               </div>
 
-              <div className="erp-table-responsive">
-                <table className="erp-table">
-                  <thead>
-                    <tr>
-                      <th>Subject Code & Course Title</th>
-                      <th>Exam Date</th>
-                      <th>Session Timing</th>
-                      <th>Semester & Branches</th>
-                      <th>Halls Assigned</th>
-                      <th>Invigilators</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTimetable.map(item => (
-                      <tr key={item.id}>
-                        <td>
-                          <strong>{item.subject}</strong>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Code: <code>{item.code}</code></div>
-                        </td>
-                        <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.date}</td>
-                        <td style={{ color: '#475569' }}>{item.time}</td>
-                        <td>
-                          <span style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#334155' }}>
-                            {item.semester} · {Array.isArray(item.branches) ? item.branches.join(', ') : item.branches}
-                          </span>
-                        </td>
-                        <td><strong>{item.roomCount} Halls</strong></td>
-                        <td>{item.invigilators} Faculty Members</td>
-                        <td>
-                          <button
-                            className="erp-btn erp-btn-danger erp-btn-sm"
-                            onClick={() => handleDeletePaper(item.id)}
-                            title="Remove paper"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {timetableSubTab === 'schedule' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>Autonomous Semester Examination Timetable</h3>
+                      <p>Paper schedule, session timings, halls assigned, and invigilator squad deployment</p>
+                    </div>
+                    <div className="erp-panel-actions">
+                      <button
+                        className="erp-btn erp-btn-secondary"
+                        onClick={() => {
+                          downloadExamTimetableMasterPdf(filteredTimetable);
+                          triggerToast('Master Autonomous Examination Timetable PDF downloaded!');
+                        }}
+                      >
+                        <Download size={15} /> Download PDF Timetable
+                      </button>
+                      <button
+                        className="erp-btn erp-btn-secondary"
+                        onClick={() => {
+                          exportToCsv('Examination_Timetable.csv', filteredTimetable);
+                          triggerToast('Examination Timetable exported to CSV.');
+                        }}
+                      >
+                        <FileSpreadsheet size={15} /> Export CSV
+                      </button>
+                      <button className="erp-btn erp-btn-secondary" onClick={handlePrintTimetable}>
+                        <Printer size={15} /> Print
+                      </button>
+                      <button className="erp-btn erp-btn-primary" onClick={() => setNewPaperModal(true)}>
+                        <Plus size={15} /> Schedule Exam Paper
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="exam-toolbar">
+                    <div className="exam-search-box">
+                      <Search size={16} color="#64748b" />
+                      <input
+                        type="text"
+                        placeholder="Search courses by code or subject name..."
+                        value={timetableSearch}
+                        onChange={(e) => setTimetableSearch(e.target.value)}
+                      />
+                    </div>
+                    <select
+                      className="exam-filter-select"
+                      value={timetableSemesterFilter}
+                      onChange={(e) => setTimetableSemesterFilter(e.target.value)}
+                    >
+                      <option value="all">All Semesters</option>
+                      <option value="Semester 1">Semester 1</option>
+                      <option value="Semester 3">Semester 3</option>
+                      <option value="Semester 5">Semester 5</option>
+                      <option value="Semester 7">Semester 7</option>
+                    </select>
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th>Subject Code &amp; Course Title</th>
+                          <th>Exam Date</th>
+                          <th>Session Timing</th>
+                          <th>Semester &amp; Branches</th>
+                          <th>Halls Assigned</th>
+                          <th>Invigilators</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredTimetable.map(item => (
+                          <tr key={item.id}>
+                            <td>
+                              <strong>{item.subject}</strong>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Code: <code>{item.code}</code></div>
+                            </td>
+                            <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.date}</td>
+                            <td style={{ color: '#475569' }}>{item.time}</td>
+                            <td>
+                              <span style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#334155' }}>
+                                {item.semester} · {Array.isArray(item.branches) ? item.branches.join(', ') : item.branches}
+                              </span>
+                            </td>
+                            <td><strong>{item.roomCount} Halls</strong></td>
+                            <td>{item.invigilators} Faculty Members</td>
+                            <td>
+                              <button
+                                className="erp-btn erp-btn-danger erp-btn-sm"
+                                onClick={() => handleDeletePaper(item.id)}
+                                title="Remove paper"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {timetableSubTab === 'centres' && (
+                <div>
+                  <div className="erp-summary-grid" style={{ marginBottom: '1.25rem' }}>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper blue"><Building2 size={22} /></div>
+                      <div>
+                        <span className="label">Designated Centres</span>
+                        <h4>{centres.length} Examination Venues</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper purple"><Users size={22} /></div>
+                      <div>
+                        <span className="label">Total Desks Available</span>
+                        <h4>{centres.reduce((acc, c) => acc + c.totalCapacity, 0)} Seats</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper green"><ShieldCheck size={22} /></div>
+                      <div>
+                        <span className="label">CCTV Surveillance</span>
+                        <h4>100% Operational</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper orange"><AlertCircle size={22} /></div>
+                      <div>
+                        <span className="label">Buffer Desks Reserved</span>
+                        <h4>24 Emergency Desks</h4>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="erp-panel">
+                    <div className="erp-panel-header">
+                      <div className="erp-panel-title">
+                        <h3>Designated Examination Centres &amp; Superintendents</h3>
+                        <p>Centre codes, chief superintendents, room breakdown, and CCTV coverage compliance</p>
+                      </div>
+                      <button
+                        className="erp-btn erp-btn-secondary"
+                        onClick={() => {
+                          exportToCsv('Examination_Centres_Roster.csv', centres);
+                          triggerToast('Centres directory exported to CSV.');
+                        }}
+                      >
+                        <FileSpreadsheet size={15} /> Export Centres CSV
+                      </button>
+                    </div>
+
+                    <div className="erp-table-responsive">
+                      <table className="erp-table">
+                        <thead>
+                          <tr>
+                            <th>Centre Code &amp; Name</th>
+                            <th>Chief Superintendent</th>
+                            <th>Contact</th>
+                            <th>Halls</th>
+                            <th>Total Capacity</th>
+                            <th>CCTV Status</th>
+                            <th>Centre Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {centres.map((ctr) => (
+                            <tr key={ctr.id}>
+                              <td>
+                                <strong>{ctr.name}</strong>
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Code: <code>{ctr.code}</code> · ID: {ctr.id}</div>
+                              </td>
+                              <td>
+                                <strong>{ctr.chiefSuperintendent}</strong>
+                              </td>
+                              <td style={{ fontSize: '0.8rem', color: '#475569' }}>{ctr.contact}</td>
+                              <td><strong>{ctr.totalRooms} Rooms</strong></td>
+                              <td><strong style={{ color: '#2563eb' }}>{ctr.totalCapacity} Desks</strong></td>
+                              <td>
+                                <span style={{ background: '#dcfce7', color: '#15803d', padding: '3px 8px', borderRadius: '4px', fontSize: '0.74rem', fontWeight: 700 }}>
+                                  ✓ Live Stream 24/7
+                                </span>
+                              </td>
+                              <td>
+                                <span className="status-pill success">{ctr.status}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Room Breakdown Sample */}
+                  <div className="erp-panel" style={{ marginTop: '1.25rem' }}>
+                    <div className="erp-panel-header">
+                      <div className="erp-panel-title">
+                        <h3>Academic Block B — Room Capacity &amp; Floor Staggering</h3>
+                        <p>Per-room desk capacities, buffer desks reserved for emergencies, and accessibility provisions</p>
+                      </div>
+                    </div>
+
+                    <div className="erp-table-responsive">
+                      <table className="erp-table">
+                        <thead>
+                          <tr>
+                            <th>Room / Hall No</th>
+                            <th>Floor</th>
+                            <th>Total Desks</th>
+                            <th>Allocated Examinees</th>
+                            <th>Emergency Buffer</th>
+                            <th>Accessibility</th>
+                            <th>Surveillance</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {centres[0]?.rooms?.map((rm, idx) => (
+                            <tr key={idx}>
+                              <td><strong>{rm.roomNo}</strong></td>
+                              <td>{rm.floor}</td>
+                              <td>{rm.capacity} Desks</td>
+                              <td><strong style={{ color: '#16a34a' }}>{rm.allocated} Candidates</strong></td>
+                              <td><span style={{ color: '#f59e0b', fontWeight: 600 }}>{rm.buffer} Buffer</span></td>
+                              <td>
+                                {rm.accessible ? (
+                                  <span style={{ color: '#2563eb', fontSize: '0.75rem', fontWeight: 700 }}>♿ Wheelchair Accessible</span>
+                                ) : (
+                                  <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Staircase Access</span>
+                                )}
+                              </td>
+                              <td>
+                                <span style={{ color: '#16a34a', fontSize: '0.75rem', fontWeight: 700 }}>● {rm.cctv}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1169,83 +1521,257 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               TAB 3: SEATING PLAN & DOOR CHARTS
              ========================================================================= */}
           {activeTab === 'seating' && (
-            <div className="erp-panel">
-              <div className="erp-panel-header">
-                <div className="erp-panel-title">
-                  <h3>Examination Hall Seating Arrangement & Door Charts</h3>
-                  <p>Room capacities, roll number distribution, and room chief superintendents</p>
-                </div>
-                <div className="erp-panel-actions">
-                  <button
-                    className="erp-btn erp-btn-secondary"
-                    onClick={() => {
-                      exportToCsv('Exam_Seating_Arrangements.csv', seatingArrangements);
-                      triggerToast('Seating arrangements exported to CSV.');
-                    }}
-                  >
-                    <FileSpreadsheet size={15} /> Export CSV
-                  </button>
-                  <button className="erp-btn erp-btn-secondary" onClick={handleAutoSeating}>
-                    <Sparkles size={15} /> Auto-Optimize Seating
-                  </button>
-                  <button className="erp-btn erp-btn-primary" onClick={() => setNewHallModal(true)}>
-                    <Plus size={15} /> Add Examination Hall
-                  </button>
-                </div>
+            <div>
+              {/* Subtabs Bar */}
+              <div className="coe-subtabs-bar">
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${seatingSubTab === 'seating' ? 'active' : ''}`}
+                  onClick={() => setSeatingSubTab('seating')}
+                >
+                  <Users size={15} />
+                  <span>Hall Seating &amp; Door Charts</span>
+                  <span className="coe-subtab-badge">{seatingArrangements.length} Halls</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${seatingSubTab === 'invigilation' ? 'active' : ''}`}
+                  onClick={() => setSeatingSubTab('invigilation')}
+                >
+                  <UserCheck size={15} />
+                  <span>Invigilation &amp; Duty Roster</span>
+                  <span className="coe-subtab-badge">{invigilationRoster.length} Roster</span>
+                </button>
               </div>
 
-              <div className="erp-table-responsive">
-                <table className="erp-table">
-                  <thead>
-                    <tr>
-                      <th>Examination Hall</th>
-                      <th>Capacity</th>
-                      <th>Allocated Count</th>
-                      <th>Chief Invigilator</th>
-                      <th>Session</th>
-                      <th>Roll Number Range</th>
-                      <th>Door Chart Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {seatingArrangements.map((s, idx) => (
-                      <tr key={idx}>
-                        <td><strong>{s.hall}</strong></td>
-                        <td>{s.capacity} Desks</td>
-                        <td>
-                          <strong style={{ color: '#16a34a' }}>{s.allocated} Candidates</strong>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                            {Math.round((s.allocated / s.capacity) * 100)}% Occupancy
-                          </div>
-                        </td>
-                        <td style={{ color: '#475569' }}>{s.invigilator}</td>
-                        <td>{s.session}</td>
-                        <td style={{ fontSize: '0.78rem', color: '#334155' }}>{s.range}</td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              className="erp-btn erp-btn-outline erp-btn-sm"
-                              onClick={() => setDoorChartPreviewModal(s)}
-                            >
-                              <Eye size={13} /> View Slip
-                            </button>
-                            <button
-                              className="erp-btn erp-btn-secondary erp-btn-sm"
-                              onClick={() => {
-                                downloadDoorChartPdf(s);
-                                triggerToast(`Official Door Chart PDF downloaded for ${s.hall}`);
-                              }}
-                              title="Download Official Door Chart PDF"
-                            >
-                              <Download size={13} /> PDF
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {seatingSubTab === 'seating' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>Examination Hall Seating Arrangement &amp; Door Charts</h3>
+                      <p>Room capacities, roll number distribution, and room chief superintendents</p>
+                    </div>
+                    <div className="erp-panel-actions">
+                      <button
+                        className="erp-btn erp-btn-secondary"
+                        onClick={() => {
+                          exportToCsv('Exam_Seating_Arrangements.csv', seatingArrangements);
+                          triggerToast('Seating arrangements exported to CSV.');
+                        }}
+                      >
+                        <FileSpreadsheet size={15} /> Export CSV
+                      </button>
+                      <button className="erp-btn erp-btn-secondary" onClick={handleAutoSeating}>
+                        <Sparkles size={15} /> Auto-Optimize Seating
+                      </button>
+                      <button className="erp-btn erp-btn-primary" onClick={() => setNewHallModal(true)}>
+                        <Plus size={15} /> Add Examination Hall
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th>Examination Hall</th>
+                          <th>Capacity</th>
+                          <th>Allocated Count</th>
+                          <th>Chief Invigilator</th>
+                          <th>Session</th>
+                          <th>Roll Number Range</th>
+                          <th>Door Chart Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {seatingArrangements.map((s, idx) => (
+                          <tr key={idx}>
+                            <td><strong>{s.hall}</strong></td>
+                            <td>{s.capacity} Desks</td>
+                            <td>
+                              <strong style={{ color: '#16a34a' }}>{s.allocated} Candidates</strong>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                {Math.round((s.allocated / s.capacity) * 100)}% Occupancy
+                              </div>
+                            </td>
+                            <td style={{ color: '#475569' }}>{s.invigilator}</td>
+                            <td>{s.session}</td>
+                            <td style={{ fontSize: '0.78rem', color: '#334155' }}>{s.range}</td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button
+                                  className="erp-btn erp-btn-outline erp-btn-sm"
+                                  onClick={() => setDoorChartPreviewModal(s)}
+                                >
+                                  <Eye size={13} /> View Slip
+                                </button>
+                                <button
+                                  className="erp-btn erp-btn-secondary erp-btn-sm"
+                                  onClick={() => {
+                                    downloadDoorChartPdf(s);
+                                    triggerToast(`Official Door Chart PDF downloaded for ${s.hall}`);
+                                  }}
+                                  title="Download Official Door Chart PDF"
+                                >
+                                  <Download size={13} /> PDF
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {seatingSubTab === 'invigilation' && (
+                <div>
+                  <div className="erp-summary-grid" style={{ marginBottom: '1.25rem' }}>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper blue"><Users size={22} /></div>
+                      <div>
+                        <span className="label">Total Invigilation Duties</span>
+                        <h4>48 Sessions Assigned</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper green"><CheckCircle size={22} /></div>
+                      <div>
+                        <span className="label">Confirmed by Faculty</span>
+                        <h4>42 Confirmed (87.5%)</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper orange"><Clock size={22} /></div>
+                      <div>
+                        <span className="label">Pending Confirmation</span>
+                        <h4>6 Awaiting SMS Reply</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper purple"><ShieldCheck size={22} /></div>
+                      <div>
+                        <span className="label">Duty Conflicts</span>
+                        <h4 style={{ color: '#16a34a' }}>0 Clashes Detected</h4>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Conflict Check Banner */}
+                  <div style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '10px',
+                    padding: '12px 18px',
+                    marginBottom: '1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <ShieldCheck size={20} color="#16a34a" />
+                      <div>
+                        <strong style={{ color: '#166534', fontSize: '0.88rem' }}>Automated Invigilation Conflict Audit: Zero Clashes Detected</strong>
+                        <div style={{ fontSize: '0.75rem', color: '#15803d' }}>
+                          No faculty member is scheduled in two overlapping sessions, nor assigned to subjects from their own immediate department.
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      className="erp-btn erp-btn-secondary erp-btn-sm"
+                      onClick={() => triggerToast('Conflict check re-run: All 48 invigilation allocations verified clean!')}
+                    >
+                      <RotateCcw size={13} /> Re-verify Clashes
+                    </button>
+                  </div>
+
+                  <div className="erp-panel">
+                    <div className="erp-panel-header">
+                      <div className="erp-panel-title">
+                        <h3>Invigilation Squad &amp; Flying Squad Duty Roster</h3>
+                        <p>Faculty duty allocations, reporting requirements, contact channels, and confirmation acknowledgments</p>
+                      </div>
+                      <button
+                        className="erp-btn erp-btn-secondary"
+                        onClick={() => {
+                          exportToCsv('Invigilation_Duty_Roster.csv', invigilationRoster);
+                          triggerToast('Invigilation duty roster exported to CSV.');
+                        }}
+                      >
+                        <FileSpreadsheet size={15} /> Export Roster CSV
+                      </button>
+                    </div>
+
+                    <div className="erp-table-responsive">
+                      <table className="erp-table">
+                        <thead>
+                          <tr>
+                            <th>Duty ID &amp; Faculty Name</th>
+                            <th>Department</th>
+                            <th>Assigned Centre &amp; Hall</th>
+                            <th>Exam Date &amp; Shift</th>
+                            <th>Reporting Time</th>
+                            <th>Contact</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {invigilationRoster.map((inv) => (
+                            <tr key={inv.id}>
+                              <td>
+                                <strong>{inv.facultyName}</strong>
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Duty ID: <code>{inv.id}</code></div>
+                              </td>
+                              <td>{inv.department}</td>
+                              <td>
+                                <strong>{inv.hall}</strong>
+                                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{inv.centre}</div>
+                              </td>
+                              <td>
+                                <div><strong>{inv.date}</strong></div>
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{inv.shift}</div>
+                              </td>
+                              <td>
+                                <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                  {inv.reportingTime}
+                                </span>
+                              </td>
+                              <td style={{ fontSize: '0.78rem', color: '#475569' }}>{inv.contact}</td>
+                              <td>
+                                <span className={`status-pill ${inv.status.includes('Confirmed') ? 'success' : 'warning'}`}>
+                                  {inv.status}
+                                </span>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                  <button
+                                    className="erp-btn erp-btn-secondary erp-btn-sm"
+                                    onClick={() => {
+                                      setInvigilationRoster(prev => prev.map(item => item.id === inv.id ? { ...item, status: 'Confirmed by Faculty' } : item));
+                                      triggerToast(`Invigilation duty confirmed for ${inv.facultyName}`);
+                                    }}
+                                  >
+                                    <Check size={12} /> Confirm
+                                  </button>
+                                  <button
+                                    className="erp-btn erp-btn-outline erp-btn-sm"
+                                    onClick={() => triggerToast(`SMS duty reminder resent to ${inv.contact}`)}
+                                    title="Resend SMS Notice"
+                                  >
+                                    <Send size={12} /> SMS
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1395,139 +1921,454 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               TAB 5: MARKS MODERATION (CIE / CONTINUOUS INTERNAL EVALUATION)
              ========================================================================= */}
           {activeTab === 'moderation' && (
-            <div className="erp-panel">
-              <div className="erp-panel-header">
-                <div className="erp-panel-title">
-                  <h3>Continuous Internal Evaluation (CIE) & Marks Moderation</h3>
-                  <p>Autonomous moderation committee marks review, grace mark adjustment, and permanent locking</p>
-                </div>
-                <div className="erp-panel-actions">
-                  <button
-                    className="erp-btn erp-btn-secondary"
-                    onClick={() => {
-                      exportToCsv(`Moderation_Marks_${activeSubjectCode}.csv`, moderationData?.records || []);
-                      triggerToast(`Moderation marks for ${activeSubjectCode} exported to CSV.`);
-                    }}
-                  >
-                    <FileSpreadsheet size={15} /> Export Marks CSV
-                  </button>
-                  <button
-                    className="erp-btn erp-btn-secondary"
-                    onClick={handleApplyGraceMarks}
-                    disabled={moderationData?.isLocked}
-                  >
-                    <Sparkles size={15} /> Apply Grace Marks (+2)
-                  </button>
-                  <button
-                    className="erp-btn erp-btn-primary"
-                    onClick={handleCertifyLockMarks}
-                    disabled={moderationData?.isLocked}
-                  >
-                    <Lock size={15} /> {moderationData?.isLocked ? 'Marks Locked & Certified' : 'Certify & Lock Marks'}
-                  </button>
-                </div>
+            <div>
+              {/* Subtabs Bar */}
+              <div className="coe-subtabs-bar">
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${moderationSubTab === 'cie' ? 'active' : ''}`}
+                  onClick={() => setModerationSubTab('cie')}
+                >
+                  <Layers size={15} />
+                  <span>CIE Marks Moderation</span>
+                  <span className="coe-subtab-badge">Active</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${moderationSubTab === 'external' ? 'active' : ''}`}
+                  onClick={() => setModerationSubTab('external')}
+                >
+                  <Edit3 size={15} />
+                  <span>External Theory Marks Entry</span>
+                  <span className="coe-subtab-badge">Max 80M</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${moderationSubTab === 'ia_breakdown' ? 'active' : ''}`}
+                  onClick={() => setModerationSubTab('ia_breakdown')}
+                >
+                  <FileText size={15} />
+                  <span>Internal Assessment (IA) Components</span>
+                  <span className="coe-subtab-badge">Breakdown</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${moderationSubTab === 'audit' ? 'active' : ''}`}
+                  onClick={() => setModerationSubTab('audit')}
+                >
+                  <RotateCcw size={15} />
+                  <span>Correction History &amp; Audit Log</span>
+                  <span className="coe-subtab-badge">Audit</span>
+                </button>
               </div>
 
-              <div className="exam-toolbar" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Select Course:</span>
-                  <select
-                    className="exam-filter-select"
-                    value={activeSubjectCode}
-                    onChange={(e) => handleSelectSubjectModeration(e.target.value)}
-                  >
-                    <option value="CS501">CS501 - Data Structures & Algorithms</option>
-                    <option value="CS502">CS502 - Operating Systems</option>
-                    <option value="CS503">CS503 - Database Management Systems</option>
-                  </select>
-                </div>
+              {/* Subtab 1: CIE Marks Moderation (Existing) */}
+              {moderationSubTab === 'cie' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>Continuous Internal Evaluation (CIE) &amp; Marks Moderation</h3>
+                      <p>Autonomous moderation committee marks review, grace mark adjustment, and permanent locking</p>
+                    </div>
+                    <div className="erp-panel-actions">
+                      <button
+                        className="erp-btn erp-btn-secondary"
+                        onClick={() => {
+                          exportToCsv(`Moderation_Marks_${activeSubjectCode}.csv`, moderationData?.records || []);
+                          triggerToast(`Moderation marks for ${activeSubjectCode} exported to CSV.`);
+                        }}
+                      >
+                        <FileSpreadsheet size={15} /> Export Marks CSV
+                      </button>
+                      <button
+                        className="erp-btn erp-btn-secondary"
+                        onClick={handleApplyGraceMarks}
+                        disabled={moderationData?.isLocked}
+                      >
+                        <Sparkles size={15} /> Apply Grace Marks (+2)
+                      </button>
+                      <button
+                        className="erp-btn erp-btn-primary"
+                        onClick={handleCertifyLockMarks}
+                        disabled={moderationData?.isLocked}
+                      >
+                        <Lock size={15} /> {moderationData?.isLocked ? 'Marks Locked & Certified' : 'Certify & Lock Marks'}
+                      </button>
+                    </div>
+                  </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className={`status-pill ${moderationData?.isLocked ? 'success' : 'warning'}`}>
-                    {moderationData?.isLocked ? '✓ Permanently Certified & Locked' : '⚠ Active Moderation In Progress'}
-                  </span>
-                </div>
-              </div>
+                  <div className="exam-toolbar" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Select Course:</span>
+                      <select
+                        className="exam-filter-select"
+                        value={activeSubjectCode}
+                        onChange={(e) => handleSelectSubjectModeration(e.target.value)}
+                      >
+                        <option value="CS501">CS501 - Data Structures &amp; Algorithms</option>
+                        <option value="CS502">CS502 - Operating Systems</option>
+                        <option value="CS503">CS503 - Database Management Systems</option>
+                      </select>
+                    </div>
 
-              <div className="erp-table-responsive moderation-table">
-                <table className="erp-table">
-                  <thead>
-                    <tr>
-                      <th>Roll Number & Reg No</th>
-                      <th>Candidate Name</th>
-                      <th>Internal (Max 20)</th>
-                      <th>External (Max 80)</th>
-                      <th>Grace Marks</th>
-                      <th>Total (100)</th>
-                      <th>Letter Grade</th>
-                      <th>Classification</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {moderationData?.records?.map(r => (
-                      <tr key={r.rollNumber}>
-                        <td>
-                          <strong>Roll {r.rollNumber}</strong>
-                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Reg: {r.regNo}</div>
-                        </td>
-                        <td>{r.name}</td>
-                        <td>
-                          {moderationData.isLocked ? (
-                            <strong>{r.internal}</strong>
-                          ) : (
-                            <input
-                              type="number"
-                              className="mark-edit-input"
-                              min="0"
-                              max="20"
-                              value={r.internal}
-                              onChange={(e) => handleMarkChange(r.rollNumber, 'internal', e.target.value)}
-                            />
-                          )}
-                        </td>
-                        <td>
-                          {moderationData.isLocked ? (
-                            <strong>{r.external}</strong>
-                          ) : (
-                            <input
-                              type="number"
-                              className="mark-edit-input"
-                              min="0"
-                              max="80"
-                              value={r.external}
-                              onChange={(e) => handleMarkChange(r.rollNumber, 'external', e.target.value)}
-                            />
-                          )}
-                        </td>
-                        <td>
-                          <span style={{ color: r.grace > 0 ? '#7c3aed' : '#64748b', fontWeight: 600 }}>
-                            +{r.grace || 0}
-                          </span>
-                        </td>
-                        <td>
-                          <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{r.total}</strong>
-                        </td>
-                        <td>
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            fontWeight: 800,
-                            background: r.grade === 'O' ? '#dcfce7' : r.grade === 'F' ? '#fee2e2' : '#f3e8ff',
-                            color: r.grade === 'O' ? '#15803d' : r.grade === 'F' ? '#b91c1c' : '#6d28d9',
-                          }}>
-                            {r.grade} ({r.points} Pts)
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`status-pill ${r.status.includes('Passed') ? 'success' : 'danger'}`}>
-                            {r.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className={`status-pill ${moderationData?.isLocked ? 'success' : 'warning'}`}>
+                        {moderationData?.isLocked ? '✓ Permanently Certified & Locked' : '⚠ Active Moderation In Progress'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="erp-table-responsive moderation-table">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th>Roll Number &amp; Reg No</th>
+                          <th>Candidate Name</th>
+                          <th>Internal (Max 20)</th>
+                          <th>External (Max 80)</th>
+                          <th>Grace Marks</th>
+                          <th>Total (100)</th>
+                          <th>Letter Grade</th>
+                          <th>Classification</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {moderationData?.records?.map(r => (
+                          <tr key={r.rollNumber}>
+                            <td>
+                              <strong>Roll {r.rollNumber}</strong>
+                              <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Reg: {r.regNo}</div>
+                            </td>
+                            <td>{r.name}</td>
+                            <td>
+                              {moderationData.isLocked ? (
+                                <strong>{r.internal}</strong>
+                              ) : (
+                                <input
+                                  type="number"
+                                  className="mark-edit-input"
+                                  min="0"
+                                  max="20"
+                                  value={r.internal}
+                                  onChange={(e) => handleMarkChange(r.rollNumber, 'internal', e.target.value)}
+                                />
+                              )}
+                            </td>
+                            <td>
+                              {moderationData.isLocked ? (
+                                <strong>{r.external}</strong>
+                              ) : (
+                                <input
+                                  type="number"
+                                  className="mark-edit-input"
+                                  min="0"
+                                  max="80"
+                                  value={r.external}
+                                  onChange={(e) => handleMarkChange(r.rollNumber, 'external', e.target.value)}
+                                />
+                              )}
+                            </td>
+                            <td>
+                              <span style={{ color: r.grace > 0 ? '#7c3aed' : '#64748b', fontWeight: 600 }}>
+                                +{r.grace || 0}
+                              </span>
+                            </td>
+                            <td>
+                              <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{r.total}</strong>
+                            </td>
+                            <td>
+                              <span style={{
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                fontWeight: 800,
+                                background: r.grade === 'O' ? '#dcfce7' : r.grade === 'F' ? '#fee2e2' : '#f3e8ff',
+                                color: r.grade === 'O' ? '#15803d' : r.grade === 'F' ? '#b91c1c' : '#6d28d9',
+                              }}>
+                                {r.grade} ({r.points} Pts)
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`status-pill ${r.status.includes('Passed') ? 'success' : 'danger'}`}>
+                                {r.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Subtab 2: External Theory Marks Entry & Dual Verification Queue */}
+              {moderationSubTab === 'external' && (
+                <div>
+                  <div className="erp-summary-grid" style={{ marginBottom: '1.25rem' }}>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper blue"><Edit3 size={22} /></div>
+                      <div>
+                        <span className="label">Evaluation Mode</span>
+                        <h4>Theory End-Semester (80M)</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper green"><CheckCircle size={22} /></div>
+                      <div>
+                        <span className="label">Dual Entry Match</span>
+                        <h4>100% Concordance</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper orange"><AlertTriangle size={22} /></div>
+                      <div>
+                        <span className="label">Withheld / Absent</span>
+                        <h4>0 Withheld · 0 Absent</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper purple"><Lock size={22} /></div>
+                      <div>
+                        <span className="label">External Verification</span>
+                        <h4 style={{ color: '#16a34a' }}>Queue Ready</h4>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="erp-panel">
+                    <div className="erp-panel-header">
+                      <div className="erp-panel-title">
+                        <h3>External Theory Marks Entry &amp; Double-Blind Verification</h3>
+                        <p>Direct entry of external end-sem marks (Max 80) with automatic capping validation, AB/WH flags, and dual-evaluator reconciliation</p>
+                      </div>
+                      <div className="erp-panel-actions">
+                        <button
+                          className="erp-btn erp-btn-secondary"
+                          onClick={() => {
+                            exportToCsv('External_Theory_Marks.csv', externalMarksBatch);
+                            triggerToast('External theory marks exported to CSV.');
+                          }}
+                        >
+                          <FileSpreadsheet size={15} /> Export CSV
+                        </button>
+                        <button
+                          className="erp-btn erp-btn-primary"
+                          onClick={() => triggerToast('✓ External Marks Batch verified and submitted to Controller Queue!')}
+                        >
+                          <CheckCircle size={15} /> Verify &amp; Submit Batch
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="exam-toolbar" style={{ justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Select Course Paper:</span>
+                        <select
+                          className="exam-filter-select"
+                          value={externalMarksCourse}
+                          onChange={(e) => setExternalMarksCourse(e.target.value)}
+                        >
+                          <option value="CS501">CS501 - Data Structures &amp; Algorithms (CSE Sem 5)</option>
+                          <option value="CS502">CS502 - Operating Systems (CSE Sem 5)</option>
+                          <option value="EC301">EC301 - Network Theory (ECE Sem 3)</option>
+                        </select>
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                        Passing Criterion: <strong>Min 28/80 (35%)</strong> in External Component
+                      </div>
+                    </div>
+
+                    <div className="erp-table-responsive">
+                      <table className="erp-table">
+                        <thead>
+                          <tr>
+                            <th>Roll &amp; Reg No</th>
+                            <th>Student Name</th>
+                            <th>Theory Marks (Max 80)</th>
+                            <th>Absent (AB)</th>
+                            <th>Withheld (WH)</th>
+                            <th>Result Status</th>
+                            <th>Verification Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {externalMarksBatch.map((st, idx) => (
+                            <tr key={st.roll}>
+                              <td>
+                                <strong>Roll {st.roll}</strong>
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{st.regNo}</div>
+                              </td>
+                              <td>{st.name}</td>
+                              <td>
+                                <input
+                                  type="number"
+                                  className="mark-edit-input"
+                                  min="0"
+                                  max="80"
+                                  disabled={st.absent || st.withheld}
+                                  value={st.absent ? 0 : st.marks}
+                                  onChange={(e) => {
+                                    const val = Math.min(80, Math.max(0, parseInt(e.target.value) || 0));
+                                    setExternalMarksBatch(prev => prev.map((item, i) => i === idx ? { ...item, marks: val } : item));
+                                  }}
+                                  style={{
+                                    borderColor: st.marks < 28 && !st.absent ? '#ef4444' : '#cbd5e1',
+                                    background: st.marks < 28 && !st.absent ? '#fef2f2' : '#ffffff'
+                                  }}
+                                />
+                                <span style={{ marginLeft: '6px', fontSize: '0.75rem', color: '#64748b' }}>/ 80</span>
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={st.absent}
+                                  onChange={(e) => {
+                                    setExternalMarksBatch(prev => prev.map((item, i) => i === idx ? { ...item, absent: e.target.checked } : item));
+                                  }}
+                                />
+                                <span style={{ fontSize: '0.75rem', marginLeft: '4px', color: st.absent ? '#dc2626' : '#64748b' }}>
+                                  {st.absent ? 'Marked Absent' : 'Present'}
+                                </span>
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={st.withheld}
+                                  onChange={(e) => {
+                                    setExternalMarksBatch(prev => prev.map((item, i) => i === idx ? { ...item, withheld: e.target.checked } : item));
+                                  }}
+                                />
+                                <span style={{ fontSize: '0.75rem', marginLeft: '4px', color: st.withheld ? '#dc2626' : '#64748b' }}>
+                                  {st.withheld ? 'Withheld (Pending)' : 'Cleared'}
+                                </span>
+                              </td>
+                              <td>
+                                {st.absent ? (
+                                  <span className="status-pill danger">Absent (AB)</span>
+                                ) : st.withheld ? (
+                                  <span className="status-pill warning">Withheld (WH)</span>
+                                ) : st.marks >= 28 ? (
+                                  <span className="status-pill success">Theory Cleared ({st.marks}/80)</span>
+                                ) : (
+                                  <span className="status-pill danger">Arrear Risk ({st.marks}/80)</span>
+                                )}
+                              </td>
+                              <td>
+                                <span style={{ background: '#f3e8ff', color: '#7c3aed', padding: '3px 8px', borderRadius: '4px', fontSize: '0.74rem', fontWeight: 700 }}>
+                                  {st.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Subtab 3: Internal Assessment (IA) Component Breakdown */}
+              {moderationSubTab === 'ia_breakdown' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>Internal Assessment (IA) Multi-Component Structure</h3>
+                      <p>Breakdown across Mid-Term 1, Mid-Term 2, Surprise Quizzes, and Term Assignments</p>
+                    </div>
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th>Roll &amp; Student</th>
+                          <th>Mid-Sem I (20M)</th>
+                          <th>Mid-Sem II (20M)</th>
+                          <th>Quizzes (10M)</th>
+                          <th>Assignments (10M)</th>
+                          <th>Raw Aggregate (60M)</th>
+                          <th>Scaled CIE (20M)</th>
+                          <th>Attainment</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { roll: '01', name: 'Rakesh Das', m1: 18, m2: 19, qz: 9, asg: 10, raw: 56, cie: 19 },
+                          { roll: '02', name: 'Amit Nayak', m1: 16, m2: 15, qz: 8, asg: 9, raw: 48, cie: 16 },
+                          { roll: '03', name: 'Raj Sahoo', m1: 14, m2: 13, qz: 7, asg: 8, raw: 42, cie: 14 },
+                          { roll: '04', name: 'Priya Patra', m1: 19, m2: 20, qz: 10, asg: 10, raw: 59, cie: 20 },
+                          { roll: '05', name: 'Sourav Mohanty', m1: 10, m2: 11, qz: 6, asg: 7, raw: 34, cie: 11 },
+                        ].map((ia) => (
+                          <tr key={ia.roll}>
+                            <td>
+                              <strong>Roll {ia.roll}</strong>
+                              <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{ia.name}</div>
+                            </td>
+                            <td>{ia.m1} / 20</td>
+                            <td>{ia.m2} / 20</td>
+                            <td>{ia.qz} / 10</td>
+                            <td>{ia.asg} / 10</td>
+                            <td><strong>{ia.raw} / 60</strong></td>
+                            <td><strong style={{ color: '#7c3aed', fontSize: '1rem' }}>{ia.cie} / 20</strong></td>
+                            <td>
+                              <span style={{ color: '#16a34a', fontSize: '0.75rem', fontWeight: 700 }}>
+                                {Math.round((ia.cie / 20) * 100)}% OBE Level 3
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Subtab 4: Correction History & Audit Log */}
+              {moderationSubTab === 'audit' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>Marks Amendment &amp; Moderation Audit Trail</h3>
+                      <p>Permanent immutable audit record of all marks changes, authorizations, and board orders</p>
+                    </div>
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th>Timestamp</th>
+                          <th>Student &amp; Roll</th>
+                          <th>Subject Code</th>
+                          <th>Original Mark</th>
+                          <th>Amended Mark</th>
+                          <th>Authorized Officer</th>
+                          <th>Reason / Authority</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { time: '2026-10-21 16:30', roll: 'Roll 02', name: 'Amit Nayak', code: 'CS501', oldM: '14 CIE', newM: '16 CIE', auth: 'Dr. K. C. Patra (CoE)', reason: 'Moderation Committee Review (Quiz 2 Re-totaling)' },
+                          { time: '2026-10-20 11:15', roll: 'Roll 05', name: 'Sourav Mohanty', code: 'CS502', oldM: '24 Ext', newM: '26 Ext', auth: 'Prof. S. R. Mohapatra', reason: 'Official Scrutiny Recounting (Page 12 uncounted step)' },
+                          { time: '2026-10-19 14:00', roll: 'Roll 01', name: 'Rakesh Das', code: 'CS503', oldM: '70 Ext', newM: '72 Ext', auth: 'Dr. K. C. Patra (CoE)', reason: 'Question Error Compensation (Q4b print ambiguity)' },
+                        ].map((log, idx) => (
+                          <tr key={idx}>
+                            <td style={{ fontSize: '0.78rem', color: '#64748b' }}>{log.time}</td>
+                            <td>
+                              <strong>{log.roll}</strong>
+                              <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{log.name}</div>
+                            </td>
+                            <td><code>{log.code}</code></td>
+                            <td><span style={{ color: '#ef4444', fontWeight: 600 }}>{log.oldM}</span></td>
+                            <td><strong style={{ color: '#16a34a' }}>{log.newM}</strong></td>
+                            <td><strong>{log.auth}</strong></td>
+                            <td style={{ fontSize: '0.78rem', color: '#334155' }}>{log.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1535,108 +2376,414 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               TAB 6: SGPA / CGPA ENGINE & TRANSCRIPTS
              ========================================================================= */}
           {activeTab === 'grading' && (
-            <div className="erp-panel">
-              <div className="erp-panel-header">
-                <div className="erp-panel-title">
-                  <h3>Autonomous SGPA & CGPA Grade Calculation Engine</h3>
-                  <p>Weighted credit computation: (Sum of Credits &times; Grade Points) / Total Credits</p>
-                </div>
-
-                <div className="erp-panel-actions">
-                  <button
-                    className="erp-btn erp-btn-secondary"
-                    onClick={() => {
-                      exportToCsv('Autonomous_Grade_Roster.csv', filteredGradeRoster);
-                      triggerToast('Grade roster exported to CSV.');
-                    }}
-                  >
-                    <FileSpreadsheet size={15} /> Export Roster CSV
-                  </button>
-                  <button
-                    className="erp-btn erp-btn-primary"
-                    onClick={handleRunGradingEngine}
-                    disabled={isGradingRunning}
-                  >
-                    <Play size={15} className={isGradingRunning ? 'animate-spin' : ''} />
-                    {isGradingRunning ? 'Computing Grades...' : 'Execute Calculation Engine'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="exam-toolbar">
-                <div className="exam-search-box">
-                  <Search size={16} color="#64748b" />
-                  <input
-                    type="text"
-                    placeholder="Search candidate by name, roll no or reg no..."
-                    value={gradeSearch}
-                    onChange={(e) => setGradeSearch(e.target.value)}
-                  />
-                </div>
-                <select
-                  className="exam-filter-select"
-                  value={gradeStatusFilter}
-                  onChange={(e) => setGradeStatusFilter(e.target.value)}
+            <div>
+              {/* Subtabs Bar */}
+              <div className="coe-subtabs-bar">
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${gradingSubTab === 'engine' ? 'active' : ''}`}
+                  onClick={() => setGradingSubTab('engine')}
                 >
-                  <option value="all">All Classifications</option>
-                  <option value="distinction">First Class Distinction</option>
-                  <option value="passed">First Class</option>
-                  <option value="backlog">Backlog / Arrear</option>
-                </select>
+                  <Award size={15} />
+                  <span>SGPA / CGPA Engine</span>
+                  <span className="coe-subtab-badge">{filteredGradeRoster.length} Records</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${gradingSubTab === 'gazette' ? 'active' : ''}`}
+                  onClick={() => setGradingSubTab('gazette')}
+                >
+                  <FileText size={15} />
+                  <span>Result Gazette Publication</span>
+                  <span className="coe-subtab-badge" style={{ background: '#10b981', color: '#ffffff' }}>Gazette</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${gradingSubTab === 'transcripts' ? 'active' : ''}`}
+                  onClick={() => setGradingSubTab('transcripts')}
+                >
+                  <GraduationCap size={15} />
+                  <span>Academic Transcripts</span>
+                  <span className="coe-subtab-badge">WES / QR</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${gradingSubTab === 'history' ? 'active' : ''}`}
+                  onClick={() => setGradingSubTab('history')}
+                >
+                  <RotateCcw size={15} />
+                  <span>Result Revision History</span>
+                  <span className="coe-subtab-badge">Log</span>
+                </button>
               </div>
 
-              <div className="erp-table-responsive">
-                <table className="erp-table">
-                  <thead>
-                    <tr>
-                      <th>Roll Number & Reg No</th>
-                      <th>Student Name</th>
-                      <th>Semester</th>
-                      <th>Credits</th>
-                      <th>Computed SGPA</th>
-                      <th>Computed CGPA</th>
-                      <th>Result Classification</th>
-                      <th>Official Marksheet</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredGradeRoster.map(g => (
-                      <tr key={g.rollNumber}>
-                        <td>
-                          <strong>Roll {g.rollNumber}</strong>
-                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Reg: {g.regNo}</div>
-                        </td>
-                        <td>{g.name}</td>
-                        <td>{g.semester}</td>
-                        <td>{g.creditsEarned} / {g.creditsTaken}</td>
-                        <td><strong style={{ color: '#7c3aed', fontSize: '1rem' }}>{g.sgpa}</strong></td>
-                        <td><strong style={{ color: '#10b981', fontSize: '1rem' }}>{g.cgpa}</strong></td>
-                        <td>
-                          <span className={`status-pill ${g.backlogCount === 0 ? 'success' : 'danger'}`}>
-                            {g.status}
-                          </span>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <button
-                              className="erp-btn erp-btn-secondary erp-btn-sm"
-                              onClick={() => handleViewMarksheet(g)}
-                            >
-                              <Eye size={13} /> View Grade Card
-                            </button>
-                            <button
-                              className="erp-btn erp-btn-primary erp-btn-sm"
-                              onClick={() => handleDownloadStudentGradeCardPdf(g)}
-                            >
-                              <Download size={13} /> PDF
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {/* Subtab 1: Engine (Existing) */}
+              {gradingSubTab === 'engine' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>Autonomous SGPA &amp; CGPA Grade Calculation Engine</h3>
+                      <p>Weighted credit computation: (Sum of Credits &times; Grade Points) / Total Credits</p>
+                    </div>
+
+                    <div className="erp-panel-actions">
+                      <button
+                        className="erp-btn erp-btn-secondary"
+                        onClick={() => {
+                          exportToCsv('Autonomous_Grade_Roster.csv', filteredGradeRoster);
+                          triggerToast('Grade roster exported to CSV.');
+                        }}
+                      >
+                        <FileSpreadsheet size={15} /> Export Roster CSV
+                      </button>
+                      <button
+                        className="erp-btn erp-btn-primary"
+                        onClick={handleRunGradingEngine}
+                        disabled={isGradingRunning}
+                      >
+                        <Play size={15} className={isGradingRunning ? 'animate-spin' : ''} />
+                        {isGradingRunning ? 'Computing Grades...' : 'Execute Calculation Engine'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="exam-toolbar">
+                    <div className="exam-search-box">
+                      <Search size={16} color="#64748b" />
+                      <input
+                        type="text"
+                        placeholder="Search candidate by name, roll no or reg no..."
+                        value={gradeSearch}
+                        onChange={(e) => setGradeSearch(e.target.value)}
+                      />
+                    </div>
+                    <select
+                      className="exam-filter-select"
+                      value={gradeStatusFilter}
+                      onChange={(e) => setGradeStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Classifications</option>
+                      <option value="distinction">First Class Distinction</option>
+                      <option value="passed">First Class</option>
+                      <option value="backlog">Backlog / Arrear</option>
+                    </select>
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th>Roll Number &amp; Reg No</th>
+                          <th>Student Name</th>
+                          <th>Semester</th>
+                          <th>Credits</th>
+                          <th>Computed SGPA</th>
+                          <th>Computed CGPA</th>
+                          <th>Result Classification</th>
+                          <th>Official Marksheet</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredGradeRoster.map(g => (
+                          <tr key={g.rollNumber}>
+                            <td>
+                              <strong>Roll {g.rollNumber}</strong>
+                              <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Reg: {g.regNo}</div>
+                            </td>
+                            <td>{g.name}</td>
+                            <td>{g.semester}</td>
+                            <td>{g.creditsEarned} / {g.creditsTaken}</td>
+                            <td><strong style={{ color: '#7c3aed', fontSize: '1rem' }}>{g.sgpa}</strong></td>
+                            <td><strong style={{ color: '#10b981', fontSize: '1rem' }}>{g.cgpa}</strong></td>
+                            <td>
+                              <span className={`status-pill ${g.backlogCount === 0 ? 'success' : 'danger'}`}>
+                                {g.status}
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                  className="erp-btn erp-btn-secondary erp-btn-sm"
+                                  onClick={() => handleViewMarksheet(g)}
+                                >
+                                  <Eye size={13} /> View Grade Card
+                                </button>
+                                <button
+                                  className="erp-btn erp-btn-primary erp-btn-sm"
+                                  onClick={() => handleDownloadStudentGradeCardPdf(g)}
+                                >
+                                  <Download size={13} /> PDF
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Subtab 2: Gazette Publication */}
+              {gradingSubTab === 'gazette' && (
+                <div>
+                  <div className="erp-summary-grid" style={{ marginBottom: '1.25rem' }}>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper blue"><FileText size={22} /></div>
+                      <div>
+                        <span className="label">Total Appeared</span>
+                        <h4>1,420 Candidates</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper green"><CheckCircle size={22} /></div>
+                      <div>
+                        <span className="label">Overall Pass Rate</span>
+                        <h4>96.34% (1,368 Passed)</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper purple"><Award size={22} /></div>
+                      <div>
+                        <span className="label">Distinction Honours</span>
+                        <h4>412 Students (&ge;8.5)</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper orange"><AlertTriangle size={22} /></div>
+                      <div>
+                        <span className="label">Backlogs / Arrears</span>
+                        <h4>52 Candidates (3.66%)</h4>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Gazette Publication Status Banner */}
+                  <div style={{
+                    background: gazettePublished ? '#f0fdf4' : '#fffbeb',
+                    border: `1px solid ${gazettePublished ? '#86efac' : '#fde68a'}`,
+                    borderRadius: '12px',
+                    padding: '16px 20px',
+                    marginBottom: '1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{
+                          background: gazettePublished ? '#15803d' : '#d97706',
+                          color: '#ffffff',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.74rem',
+                          fontWeight: 700
+                        }}>
+                          {gazettePublished ? 'OFFICIAL GAZETTE PUBLISHED' : 'GAZETTE DRAFT MODE'}
+                        </span>
+                        <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>
+                          Autonomous Notification No: AC/EXAM/2026/GZ-04
+                        </strong>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '4px' }}>
+                        Semester: <strong>B.Tech Autumn 2026 (Semesters 3, 5, 7)</strong> · Declared on: <strong>22 October 2026</strong> · Signed by: Dr. K. C. Patra, Controller of Examinations
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="erp-btn erp-btn-secondary erp-btn-sm"
+                        onClick={() => {
+                          window.print();
+                        }}
+                      >
+                        <Printer size={13} /> Print Official Gazette
+                      </button>
+                      <button
+                        className="erp-btn erp-btn-primary erp-btn-sm"
+                        onClick={() => {
+                          setGazettePublished(true);
+                          triggerToast('✓ Official Gazette re-broadcasted to Student & Parent Portals!');
+                        }}
+                      >
+                        <CheckCircle size={13} /> Re-Notify Results
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="erp-panel">
+                    <div className="erp-panel-header">
+                      <div className="erp-panel-title">
+                        <h3>University Official Examination Result Gazette</h3>
+                        <p>Authentic notification register authorized for display boards, official transcripts, and government degree registries</p>
+                      </div>
+                    </div>
+
+                    <div className="erp-table-responsive">
+                      <table className="erp-table">
+                        <thead>
+                          <tr>
+                            <th>Reg No &amp; Roll</th>
+                            <th>Candidate Full Name</th>
+                            <th>Semester</th>
+                            <th>SGPA</th>
+                            <th>CGPA</th>
+                            <th>Official Award / Classification</th>
+                            <th>Gazette Verification Code</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredGradeRoster.map(g => (
+                            <tr key={g.rollNumber}>
+                              <td>
+                                <strong>{g.regNo}</strong>
+                                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Roll: {g.rollNumber}</div>
+                              </td>
+                              <td><strong>{g.name}</strong></td>
+                              <td>{g.semester}</td>
+                              <td><strong style={{ color: '#7c3aed' }}>{g.sgpa}</strong></td>
+                              <td><strong style={{ color: '#10b981' }}>{g.cgpa}</strong></td>
+                              <td>
+                                <span className={`status-pill ${g.backlogCount === 0 ? 'success' : 'danger'}`}>
+                                  {g.status}
+                                </span>
+                              </td>
+                              <td>
+                                <code style={{ fontSize: '0.72rem', background: '#f1f5f9', padding: '3px 6px', borderRadius: '4px' }}>
+                                  AC-GZ-{g.regNo.slice(-6)}-{g.sgpa.replace('.', '')}
+                                </code>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Subtab 3: Academic Transcripts */}
+              {gradingSubTab === 'transcripts' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>Official Academic Transcripts &amp; Grade Cards Desk</h3>
+                      <p>Generate consolidated 8-semester transcripts, WES international credentials, and QR-authenticated grade cards</p>
+                    </div>
+                    <div className="erp-panel-actions">
+                      <button
+                        className="erp-btn erp-btn-secondary"
+                        onClick={() => triggerToast('Transcript batch generation scheduled for 140 graduates.')}
+                      >
+                        <GraduationCap size={15} /> Batch Generate Transcripts
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th>Student &amp; Roll</th>
+                          <th>Reg No &amp; Program</th>
+                          <th>Completed Semesters</th>
+                          <th>Cumulative Credits</th>
+                          <th>Final CGPA</th>
+                          <th>Transcript Type</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredGradeRoster.map(g => (
+                          <tr key={g.rollNumber}>
+                            <td>
+                              <strong>{g.name}</strong>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Roll: {g.rollNumber}</div>
+                            </td>
+                            <td>
+                              <code>{g.regNo}</code>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>B.Tech Computer Science</div>
+                            </td>
+                            <td>5 / 8 Semesters</td>
+                            <td>110 Credits Earned</td>
+                            <td><strong style={{ color: '#10b981', fontSize: '0.98rem' }}>{g.cgpa}</strong></td>
+                            <td>
+                              <span style={{ background: '#f3e8ff', color: '#7c3aed', padding: '3px 8px', borderRadius: '4px', fontSize: '0.74rem', fontWeight: 600 }}>
+                                8-Sem Consolidated / WES
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button
+                                  className="erp-btn erp-btn-secondary erp-btn-sm"
+                                  onClick={() => setTranscriptPreviewModal(g)}
+                                >
+                                  <Eye size={12} /> Preview Transcript
+                                </button>
+                                <button
+                                  className="erp-btn erp-btn-primary erp-btn-sm"
+                                  onClick={() => {
+                                    handleDownloadStudentGradeCardPdf(g);
+                                    triggerToast(`Official Transcript PDF generated for ${g.name}`);
+                                  }}
+                                >
+                                  <Download size={12} /> Issue PDF
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Subtab 4: Result Revision History */}
+              {gradingSubTab === 'history' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>SGPA / CGPA Result Revision &amp; Council Amendments</h3>
+                      <p>Full version history of GPA revisions following re-evaluation, moderation, or scrutiny awards</p>
+                    </div>
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th>Revision Date</th>
+                          <th>Student &amp; Roll</th>
+                          <th>Reg No</th>
+                          <th>Prior SGPA</th>
+                          <th>Revised SGPA</th>
+                          <th>CGPA Impact</th>
+                          <th>Revision Order</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { date: '2026-10-21', roll: 'Roll 02', name: 'Amit Nayak', regNo: '2305201002', oldS: '8.32', newS: '8.48', cgpa: '8.62 -> 8.66', order: 'Council Order CO-2026-89' },
+                          { date: '2026-10-18', roll: 'Roll 05', name: 'Sourav Mohanty', regNo: '2305201005', oldS: '6.15', newS: '6.42', cgpa: '6.30 -> 6.36', order: 'Scrutiny Committee SC-2026-14' },
+                        ].map((rev, idx) => (
+                          <tr key={idx}>
+                            <td style={{ fontSize: '0.8rem', color: '#64748b' }}>{rev.date}</td>
+                            <td>
+                              <strong>{rev.name}</strong>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{rev.roll}</div>
+                            </td>
+                            <td><code>{rev.regNo}</code></td>
+                            <td><span style={{ color: '#ef4444', fontWeight: 600 }}>{rev.oldS}</span></td>
+                            <td><strong style={{ color: '#16a34a' }}>{rev.newS}</strong></td>
+                            <td><strong style={{ color: '#7c3aed' }}>{rev.cgpa}</strong></td>
+                            <td><span className="status-pill info">{rev.order}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1644,72 +2791,275 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               TAB 7: RE-EVALUATION & SCRUTINY CELL
              ========================================================================= */}
           {activeTab === 'scrutiny' && (
-            <div className="erp-panel">
-              <div className="erp-panel-header">
-                <div className="erp-panel-title">
-                  <h3>Autonomous Re-Evaluation &amp; Answer Script Scrutiny Cell</h3>
-                  <p>Student re-checking applications, external evaluator re-totalling, and marks amendment</p>
-                </div>
-                <div className="erp-panel-actions">
-                  <button
-                    className="erp-btn erp-btn-secondary"
-                    onClick={() => {
-                      exportToCsv('Reevaluation_Scrutiny_Register.csv', reevaluationRequests);
-                      triggerToast('Scrutiny applications register exported to CSV.');
-                    }}
-                  >
-                    <FileSpreadsheet size={15} /> Export Scrutiny CSV
-                  </button>
-                </div>
+            <div>
+              {/* Subtabs Bar */}
+              <div className="coe-subtabs-bar">
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${scrutinySubTab === 'cases' ? 'active' : ''}`}
+                  onClick={() => setScrutinySubTab('cases')}
+                >
+                  <RotateCcw size={15} />
+                  <span>Re-Evaluation &amp; Scrutiny Cases</span>
+                  <span className="coe-subtab-badge">{reevaluationRequests.length} Cases</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${scrutinySubTab === 'supplementary' ? 'active' : ''}`}
+                  onClick={() => setScrutinySubTab('supplementary')}
+                >
+                  <Layers size={15} />
+                  <span>Supplementary &amp; Backlog Clearance</span>
+                  <span className="coe-subtab-badge" style={{ background: '#f59e0b', color: '#000000' }}>Backlogs</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${scrutinySubTab === 'amendments' ? 'active' : ''}`}
+                  onClick={() => setScrutinySubTab('amendments')}
+                >
+                  <CheckCircle size={15} />
+                  <span>Post-Scrutiny Amendments</span>
+                  <span className="coe-subtab-badge">Gazette Updates</span>
+                </button>
               </div>
 
-              <div className="erp-table-responsive">
-                <table className="erp-table">
-                  <thead>
-                    <tr>
-                      <th>Application ID</th>
-                      <th>Candidate & Roll</th>
-                      <th>Subject</th>
-                      <th>Original Marks</th>
-                      <th>Scrutiny Fee</th>
-                      <th>Date Applied</th>
-                      <th>Decision Status</th>
-                      <th>Evaluate Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reevaluationRequests.map(req => (
-                      <tr key={req.id}>
-                        <td><code>{req.id}</code></td>
-                        <td>
-                          <strong>{req.studentName}</strong>
-                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Roll {req.rollNumber} · {req.regNo}</div>
-                        </td>
-                        <td>
-                          <strong>{req.subjectName}</strong>
-                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}><code>{req.subjectCode}</code></div>
-                        </td>
-                        <td><strong>{req.originalMarks} / 100</strong></td>
-                        <td><span style={{ color: '#16a34a', fontWeight: 600 }}>{req.feePaid}</span></td>
-                        <td style={{ fontSize: '0.8rem', color: '#64748b' }}>{req.dateApplied}</td>
-                        <td>
-                          <span className={`status-pill ${req.status.includes('Approved') ? 'success' : req.status === 'Rejected' ? 'danger' : 'warning'}`}>
-                            {req.status}
-                          </span>
-                        </td>
-                        <td>
-                          <button
-                            className="erp-btn erp-btn-primary erp-btn-sm"
-                            onClick={() => setScrutinyEditModal(req)}
-                          >
-                            <Edit3 size={13} /> Evaluate Case
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {/* Subtab 1: Cases (Existing) */}
+              {scrutinySubTab === 'cases' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>Autonomous Re-Evaluation &amp; Answer Script Scrutiny Cell</h3>
+                      <p>Student re-checking applications, external evaluator re-totalling, and marks amendment</p>
+                    </div>
+                    <div className="erp-panel-actions">
+                      <button
+                        className="erp-btn erp-btn-secondary"
+                        onClick={() => {
+                          exportToCsv('Reevaluation_Scrutiny_Register.csv', reevaluationRequests);
+                          triggerToast('Scrutiny applications register exported to CSV.');
+                        }}
+                      >
+                        <FileSpreadsheet size={15} /> Export Scrutiny CSV
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th>Application ID</th>
+                          <th>Candidate &amp; Roll</th>
+                          <th>Subject</th>
+                          <th>Original Marks</th>
+                          <th>Scrutiny Fee</th>
+                          <th>Date Applied</th>
+                          <th>Decision Status</th>
+                          <th>Evaluate Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reevaluationRequests.map(req => (
+                          <tr key={req.id}>
+                            <td><code>{req.id}</code></td>
+                            <td>
+                              <strong>{req.studentName}</strong>
+                              <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Roll {req.rollNumber} · {req.regNo}</div>
+                            </td>
+                            <td>
+                              <strong>{req.subjectName}</strong>
+                              <div style={{ fontSize: '0.74rem', color: '#64748b' }}><code>{req.subjectCode}</code></div>
+                            </td>
+                            <td><strong>{req.originalMarks} / 100</strong></td>
+                            <td><span style={{ color: '#16a34a', fontWeight: 600 }}>{req.feePaid}</span></td>
+                            <td style={{ fontSize: '0.8rem', color: '#64748b' }}>{req.dateApplied}</td>
+                            <td>
+                              <span className={`status-pill ${req.status.includes('Approved') ? 'success' : req.status === 'Rejected' ? 'danger' : 'warning'}`}>
+                                {req.status}
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                className="erp-btn erp-btn-primary erp-btn-sm"
+                                onClick={() => setScrutinyEditModal(req)}
+                              >
+                                <Edit3 size={13} /> Evaluate Case
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Subtab 2: Supplementary & Backlog Clearance */}
+              {scrutinySubTab === 'supplementary' && (
+                <div>
+                  <div className="erp-summary-grid" style={{ marginBottom: '1.25rem' }}>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper orange"><AlertCircle size={22} /></div>
+                      <div>
+                        <span className="label">Registered Backlogs</span>
+                        <h4>52 Arrear Papers</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper blue"><FileText size={22} /></div>
+                      <div>
+                        <span className="label">Supplementary Applications</span>
+                        <h4>34 Candidates Enrolled</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper green"><CheckCircle size={22} /></div>
+                      <div>
+                        <span className="label">Fee Accounts Cleared</span>
+                        <h4>32 Cleared (₹600/paper)</h4>
+                      </div>
+                    </div>
+                    <div className="erp-summary-card">
+                      <div className="icon-wrapper purple"><Ticket size={22} /></div>
+                      <div>
+                        <span className="label">Admit Cards Released</span>
+                        <h4>30 Admit Cards Active</h4>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="erp-panel">
+                    <div className="erp-panel-header">
+                      <div className="erp-panel-title">
+                        <h3>Supplementary &amp; Arrear Examination Clearance Desk</h3>
+                        <p>Backlog subject registration, accounts fee reconciliation, and supplementary hall allocation</p>
+                      </div>
+                      <button
+                        className="erp-btn erp-btn-secondary"
+                        onClick={() => {
+                          exportToCsv('Supplementary_Backlog_Register.csv', supplementaryRecords);
+                          triggerToast('Supplementary candidate register exported to CSV.');
+                        }}
+                      >
+                        <FileSpreadsheet size={15} /> Export Backlogs CSV
+                      </button>
+                    </div>
+
+                    <div className="erp-table-responsive">
+                      <table className="erp-table">
+                        <thead>
+                          <tr>
+                            <th>Application ID</th>
+                            <th>Student &amp; Roll</th>
+                            <th>Backlog Subject</th>
+                            <th>Attempt</th>
+                            <th>Supplementary Fee</th>
+                            <th>Clearance Status</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {supplementaryRecords.map((sup) => (
+                            <tr key={sup.id}>
+                              <td><code>{sup.id}</code></td>
+                              <td>
+                                <strong>{sup.name}</strong>
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Roll {sup.roll} · {sup.regNo}</div>
+                              </td>
+                              <td>
+                                <strong>{sup.subjectName}</strong>
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Code: <code>{sup.subjectCode}</code> · {sup.semester}</div>
+                              </td>
+                              <td>
+                                <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                  Attempt {sup.attempts}
+                                </span>
+                              </td>
+                              <td>
+                                <strong style={{ color: '#16a34a' }}>{sup.feeStatus}</strong>
+                              </td>
+                              <td>
+                                <span className={`status-pill ${sup.clearanceStatus.includes('Approved') ? 'success' : 'warning'}`}>
+                                  {sup.clearanceStatus}
+                                </span>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                  <button
+                                    className="erp-btn erp-btn-secondary erp-btn-sm"
+                                    onClick={() => {
+                                      setSupplementaryRecords(prev => prev.map(item => item.id === sup.id ? { ...item, clearanceStatus: 'Approved & Desk Assigned' } : item));
+                                      triggerToast(`Supplementary desk cleared for ${sup.name}`);
+                                    }}
+                                  >
+                                    <Check size={12} /> Clear Desk
+                                  </button>
+                                  <button
+                                    className="erp-btn erp-btn-primary erp-btn-sm"
+                                    onClick={() => triggerToast(`Supplementary Admit Card generated for ${sup.name} (${sup.subjectCode})`)}
+                                    title="Issue Supplementary Admit Card"
+                                  >
+                                    <Download size={12} /> Admit Card
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Subtab 3: Post-Scrutiny Amendments */}
+              {scrutinySubTab === 'amendments' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>Post-Scrutiny Marksheet Amendments Register</h3>
+                      <p>Certified revisions updated to academic ledger and national academic depository</p>
+                    </div>
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th>Order ID</th>
+                          <th>Candidate &amp; Roll</th>
+                          <th>Subject</th>
+                          <th>Initial Grade</th>
+                          <th>Revised Grade</th>
+                          <th>Scrutinizer / Evaluator</th>
+                          <th>Approval Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { order: 'REV-2026-08', name: 'Amit Nayak', roll: 'Roll 02', code: 'CS501', oldG: 'A (8 Pts)', newG: 'A+ (9 Pts)', eval: 'Dr. Debabrata Jena', status: 'Gazette Synchronized' },
+                          { order: 'REV-2026-04', name: 'Sourav Mohanty', roll: 'Roll 05', code: 'CS502', oldG: 'F (0 Pts)', newG: 'P (4 Pts - Cleared)', eval: 'Prof. S. R. Mohapatra', status: 'Gazette Synchronized' },
+                        ].map((am, idx) => (
+                          <tr key={idx}>
+                            <td><code>{am.order}</code></td>
+                            <td>
+                              <strong>{am.name}</strong>
+                              <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{am.roll}</div>
+                            </td>
+                            <td><code>{am.code}</code></td>
+                            <td><span style={{ color: '#ef4444', fontWeight: 600 }}>{am.oldG}</span></td>
+                            <td><strong style={{ color: '#16a34a' }}>{am.newG}</strong></td>
+                            <td>{am.eval}</td>
+                            <td>
+                              <span className="status-pill success">{am.status}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1717,60 +3067,208 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
               TAB 8: COE CIRCULARS & NOTIFICATIONS
              ========================================================================= */}
           {activeTab === 'circulars' && (
-            <div className="erp-panel">
-              <div className="erp-panel-header">
-                <div className="erp-panel-title">
-                  <h3>Controller of Examinations Official Circulars & Bulletins</h3>
-                  <p>Issue examination notifications, anti-malpractice rules, and schedules across portals</p>
-                </div>
-                <div className="erp-panel-actions">
-                  <button className="erp-btn erp-btn-primary" onClick={() => setNewCircularModal(true)}>
-                    <Plus size={15} /> Publish New Circular
-                  </button>
-                </div>
+            <div>
+              {/* Subtabs Bar */}
+              <div className="coe-subtabs-bar">
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${circularsSubTab === 'bulletins' ? 'active' : ''}`}
+                  onClick={() => setCircularsSubTab('bulletins')}
+                >
+                  <BellRing size={15} />
+                  <span>Official Circulars &amp; Notices</span>
+                  <span className="coe-subtab-badge">{examCirculars.length} Bulletins</span>
+                </button>
+                <button
+                  type="button"
+                  className={`coe-subtab-btn ${circularsSubTab === 'calendar' ? 'active' : ''}`}
+                  onClick={() => setCircularsSubTab('calendar')}
+                >
+                  <Calendar size={15} />
+                  <span>Academic Examination Calendar</span>
+                  <span className="coe-subtab-badge">{calendarMilestones.length} Milestones</span>
+                </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {examCirculars.map(circ => (
-                  <div key={circ.id} style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    padding: '1.25rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7c3aed' }}>{circ.circularNo}</span>
-                        <span className={`status-pill ${circ.priority === 'Urgent' ? 'danger' : circ.priority === 'High' ? 'warning' : 'info'}`}>
-                          {circ.priority} Priority
-                        </span>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Audience: {circ.audience}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{circ.date}</span>
-                        <button
-                          className="erp-btn erp-btn-danger erp-btn-sm"
-                          onClick={() => handleDeleteCircular(circ.id)}
-                          title="Delete notice"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+              {/* Subtab 1: Bulletins (Existing) */}
+              {circularsSubTab === 'bulletins' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>Controller of Examinations Official Circulars &amp; Bulletins</h3>
+                      <p>Issue examination notifications, anti-malpractice rules, and schedules across portals</p>
                     </div>
-                    <h4 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a' }}>{circ.title}</h4>
-                    <p style={{ margin: 0, fontSize: '0.84rem', color: '#475569', lineHeight: 1.5 }}>
-                      {circ.content}
-                    </p>
+                    <div className="erp-panel-actions">
+                      <button className="erp-btn erp-btn-primary" onClick={() => setNewCircularModal(true)}>
+                        <Plus size={15} /> Publish New Circular
+                      </button>
+                    </div>
                   </div>
-                ))}
-              </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {examCirculars.map(circ => (
+                      <div key={circ.id} style={{
+                        background: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        padding: '1.25rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7c3aed' }}>{circ.circularNo}</span>
+                            <span className={`status-pill ${circ.priority === 'Urgent' ? 'danger' : circ.priority === 'High' ? 'warning' : 'info'}`}>
+                              {circ.priority} Priority
+                            </span>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Audience: {circ.audience}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{circ.date}</span>
+                            <button
+                              className="erp-btn erp-btn-danger erp-btn-sm"
+                              onClick={() => handleDeleteCircular(circ.id)}
+                              title="Delete notice"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                        <h4 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a' }}>{circ.title}</h4>
+                        <p style={{ margin: 0, fontSize: '0.84rem', color: '#475569', lineHeight: 1.5 }}>
+                          {circ.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Subtab 2: Examination Calendar & Timeline */}
+              {circularsSubTab === 'calendar' && (
+                <div className="erp-panel">
+                  <div className="erp-panel-header">
+                    <div className="erp-panel-title">
+                      <h3>Autumn 2026 Autonomous Examination Regulatory Calendar</h3>
+                      <p>Statutory timelines, deadlines, and milestone readiness track across academic governance</p>
+                    </div>
+                    <button
+                      className="erp-btn erp-btn-secondary"
+                      onClick={() => {
+                        exportToCsv('Examination_Academic_Calendar.csv', calendarMilestones);
+                        triggerToast('Academic Calendar exported to CSV.');
+                      }}
+                    >
+                      <FileSpreadsheet size={15} /> Export Calendar CSV
+                    </button>
+                  </div>
+
+                  <div className="erp-table-responsive">
+                    <table className="erp-table">
+                      <thead>
+                        <tr>
+                          <th>Milestone Date / Window</th>
+                          <th>Examination Activity / Event</th>
+                          <th>Category</th>
+                          <th>Statutory Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {calendarMilestones.map((cal) => (
+                          <tr key={cal.id}>
+                            <td>
+                              <strong>{cal.date}</strong>
+                            </td>
+                            <td>
+                              <strong>{cal.title}</strong>
+                            </td>
+                            <td>
+                              <span style={{ background: '#f1f5f9', color: '#334155', padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                                {cal.category}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`status-pill ${cal.status.includes('Completed') ? 'success' : cal.status.includes('Active') || cal.status.includes('Open') ? 'info' : 'warning'}`}>
+                                {cal.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* TAB: REPORT GENERATION */}
+          {/* =========================================================================
+              WORKFLOW A & B: EXAM REGISTRATION & ELIGIBILITY / DEBARMENT
+             ========================================================================= */}
+          {activeTab === 'registration' && (
+            <ExamRegistrationModule triggerToast={triggerToast} />
+          )}
+
+          {/* =========================================================================
+              WORKFLOW C: QUESTION PAPER VAULT & OBE BLUEPRINT
+             ========================================================================= */}
+          {activeTab === 'question_papers' && (
+            <QuestionPaperVaultModule triggerToast={triggerToast} currentUser={account} />
+          )}
+
+          {/* =========================================================================
+              WORKFLOW E: ANSWER BOOKLET TRACKING & CUSTODY HANDOVER
+             ========================================================================= */}
+          {activeTab === 'booklets' && (
+            <AnswerBookletTrackingModule triggerToast={triggerToast} />
+          )}
+
+          {/* =========================================================================
+              WORKFLOW F: PRACTICAL & VIVA-VOCE EXAMINATIONS
+             ========================================================================= */}
+          {activeTab === 'practical_viva' && (
+            <PracticalVivaModule triggerToast={triggerToast} />
+          )}
+
+          {/* =========================================================================
+              DIGITAL EVALUATION SYSTEM (EXISTING LIVE MODULE)
+             ========================================================================= */}
+          {activeTab === 'digital_evaluation' && (
+            <DigitalAnswerSheetEvaluationSystem account={account} onBack={() => setActiveTab('dashboard')} />
+          )}
+
+          {/* =========================================================================
+              WORKFLOW L: EXAMINER & EVALUATOR MANAGEMENT
+             ========================================================================= */}
+          {activeTab === 'examiners' && (
+            <ExaminerManagementModule triggerToast={triggerToast} />
+          )}
+
+          {/* =========================================================================
+              WORKFLOW J: CERTIFICATES & DEGREE PROCESSING DESK
+             ========================================================================= */}
+          {activeTab === 'certificates' && (
+            <CertificatesDegreeModule triggerToast={triggerToast} />
+          )}
+
+          {/* =========================================================================
+              WORKFLOW K: MALPRACTICE (UFM) & GRIEVANCE COMPLIANCE
+             ========================================================================= */}
+          {activeTab === 'malpractice_grievances' && (
+            <MalpracticeGrievancesModule triggerToast={triggerToast} />
+          )}
+
+          {/* =========================================================================
+              WORKFLOW M: EXAMINATION SETTINGS & POLICIES
+             ========================================================================= */}
+          {activeTab === 'exam_settings' && (
+            <ExamSettingsModule triggerToast={triggerToast} />
+          )}
+
+          {/* =========================================================================
+              EXISTING TAB: REPORT GENERATION
+             ========================================================================= */}
           {activeTab === 'report-generation' && (
             <ReportGenerationModule account={account} role="exam_cell" />
           )}
@@ -2602,10 +4100,198 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                   Cancel
                 </button>
                 <button type="submit" className="erp-btn erp-btn-primary">
-                  <Send size={14} /> Release & Publish Circular
+                  <Send size={14} /> Release &amp; Publish Circular
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 9: CONSOLIDATED ACADEMIC TRANSCRIPT PREVIEW
+         ========================================================================= */}
+      {transcriptPreviewModal && (
+        <div className="exam-modal-overlay">
+          <div className="exam-modal-card" style={{ maxWidth: '820px' }}>
+            <div className="exam-modal-header">
+              <div>
+                <h3>Official Consolidated Academic Transcript</h3>
+                <p>Candidate: {transcriptPreviewModal.name} · Reg No: <code>{transcriptPreviewModal.regNo}</code></p>
+              </div>
+              <button className="exam-modal-close-btn" onClick={() => setTranscriptPreviewModal(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="exam-modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{
+                border: '2px solid #0f2b48',
+                borderRadius: '8px',
+                padding: '24px',
+                background: '#ffffff',
+                fontFamily: 'serif'
+              }}>
+                {/* Transcript Header */}
+                <div style={{ textAlign: 'center', borderBottom: '2px solid #0f2b48', paddingBottom: '14px', marginBottom: '18px' }}>
+                  <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#0f2b48', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    Apna Campus Autonomous Engineering College
+                  </h2>
+                  <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '4px' }}>
+                    Affiliated to State Technological University · Approved by AICTE · NAAC 'A+' Accredited
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic', marginTop: '2px' }}>
+                    Office of the Controller of Examinations — Autonomous Academic Wing
+                  </div>
+                  <div style={{
+                    display: 'inline-block',
+                    background: '#0f2b48',
+                    color: '#ffffff',
+                    padding: '4px 16px',
+                    borderRadius: '4px',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    letterSpacing: '1px',
+                    marginTop: '10px'
+                  }}>
+                    CONSOLIDATED ACADEMIC TRANSCRIPT
+                  </div>
+                </div>
+
+                {/* Student Info Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '8px 24px',
+                  fontSize: '0.85rem',
+                  fontFamily: 'sans-serif',
+                  marginBottom: '18px',
+                  background: '#f8fafc',
+                  padding: '12px 16px',
+                  borderRadius: '6px'
+                }}>
+                  <div><strong>Student Name:</strong> {transcriptPreviewModal.name}</div>
+                  <div><strong>University Reg No:</strong> <code>{transcriptPreviewModal.regNo}</code></div>
+                  <div><strong>Examination Roll No:</strong> {transcriptPreviewModal.rollNumber}</div>
+                  <div><strong>Degree Program:</strong> B.Tech in Computer Science &amp; Engineering</div>
+                  <div><strong>Period of Study:</strong> 2023 — 2027 (Autonomous Regulation R-23)</div>
+                  <div><strong>Medium of Instruction:</strong> English</div>
+                </div>
+
+                {/* Semester Summary Table */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', fontFamily: 'sans-serif', marginBottom: '18px' }}>
+                  <thead>
+                    <tr style={{ background: '#0f2b48', color: '#ffffff', textAlign: 'left' }}>
+                      <th style={{ padding: '8px', border: '1px solid #cbd5e1' }}>Semester</th>
+                      <th style={{ padding: '8px', border: '1px solid #cbd5e1' }}>Session</th>
+                      <th style={{ padding: '8px', border: '1px solid #cbd5e1' }}>Credits Registered</th>
+                      <th style={{ padding: '8px', border: '1px solid #cbd5e1' }}>Credits Earned</th>
+                      <th style={{ padding: '8px', border: '1px solid #cbd5e1' }}>SGPA</th>
+                      <th style={{ padding: '8px', border: '1px solid #cbd5e1' }}>Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { sem: 'Semester 1', session: 'Autumn 2023', reg: 22, earned: 22, sgpa: '8.75', result: 'Passed 1st Class' },
+                      { sem: 'Semester 2', session: 'Spring 2024', reg: 22, earned: 22, sgpa: '8.60', result: 'Passed 1st Class' },
+                      { sem: 'Semester 3', session: 'Autumn 2024', reg: 22, earned: 22, sgpa: '8.90', result: 'Passed 1st Class' },
+                      { sem: 'Semester 4', session: 'Spring 2025', reg: 22, earned: 22, sgpa: '8.82', result: 'Passed 1st Class' },
+                      { sem: 'Semester 5', session: 'Autumn 2026', reg: 22, earned: 22, sgpa: transcriptPreviewModal.sgpa, result: transcriptPreviewModal.status },
+                    ].map((row, idx) => (
+                      <tr key={idx} style={{ background: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                        <td style={{ padding: '6px 8px', border: '1px solid #cbd5e1', fontWeight: 600 }}>{row.sem}</td>
+                        <td style={{ padding: '6px 8px', border: '1px solid #cbd5e1', color: '#64748b' }}>{row.session}</td>
+                        <td style={{ padding: '6px 8px', border: '1px solid #cbd5e1' }}>{row.reg}</td>
+                        <td style={{ padding: '6px 8px', border: '1px solid #cbd5e1' }}>{row.earned}</td>
+                        <td style={{ padding: '6px 8px', border: '1px solid #cbd5e1', fontWeight: 700, color: '#7c3aed' }}>{row.sgpa}</td>
+                        <td style={{ padding: '6px 8px', border: '1px solid #cbd5e1' }}>
+                          <span style={{ color: '#16a34a', fontWeight: 600 }}>{row.result}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Cumulative Performance Box */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: '#f1f5f9',
+                  padding: '12px 18px',
+                  borderRadius: '6px',
+                  fontFamily: 'sans-serif',
+                  marginBottom: '20px'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b', textTransform: 'uppercase' }}>Total Credits Earned</span>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>110 / 110 Credits</div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b', textTransform: 'uppercase' }}>Cumulative Grade Point Average (CGPA)</span>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#10b981' }}>{transcriptPreviewModal.cgpa} / 10.00</div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b', textTransform: 'uppercase' }}>Classification</span>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0f2b48' }}>First Class with Distinction</div>
+                  </div>
+                </div>
+
+                {/* Signatures & Seal */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-end',
+                  paddingTop: '20px',
+                  borderTop: '1px solid #e2e8f0',
+                  fontFamily: 'sans-serif'
+                }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                      width: '64px',
+                      height: '64px',
+                      border: '1px dashed #94a3b8',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 6px',
+                      color: '#64748b',
+                      fontSize: '0.65rem'
+                    }}>
+                      [QR VERIFY]
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Digital Security Hash Verified</div>
+                  </div>
+
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f2b48' }}>Mrs. Sunita Mohanty</div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Assistant Registrar (Exams)</div>
+                  </div>
+
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f2b48' }}>Dr. K. C. Patra</div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Controller of Examinations</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="exam-modal-footer">
+              <button type="button" className="erp-btn erp-btn-secondary" onClick={() => window.print()}>
+                <Printer size={14} /> Print Transcript
+              </button>
+              <button
+                type="button"
+                className="erp-btn erp-btn-primary"
+                onClick={() => {
+                  handleDownloadStudentGradeCardPdf(transcriptPreviewModal);
+                  triggerToast(`Official Academic Transcript PDF downloaded for ${transcriptPreviewModal.name}`);
+                }}
+              >
+                <Download size={14} /> Export Official PDF
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1140,69 +1140,6 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
               {/* TAB 1: SYSTEM HEALTH & METRICS */}
               {activeTab === 'health' && (
             <div>
-              {/* Compact Quick Actions Bar */}
-              <div className="erp-quick-actions-bar">
-                <div className="erp-quick-actions-label">
-                  <Sliders size={15} color="#2563eb" />
-                  <span>Quick Actions:</span>
-                </div>
-                <div className="erp-quick-actions-buttons">
-                  <button
-                    type="button"
-                    className="erp-quick-btn"
-                    onClick={() => setActiveTab('users')}
-                    title="Open Central User Directory"
-                  >
-                    <Users size={14} color="#2563eb" />
-                    <span>Manage Users</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="erp-quick-btn"
-                    onClick={() => setActiveTab('rbac')}
-                    title="Open RBAC Matrix & Granular Access Policies"
-                  >
-                    <KeyRound size={14} color="#6366f1" />
-                    <span>Manage Roles & Permissions</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="erp-quick-btn"
-                    onClick={() => setActiveTab('audit')}
-                    title="Inspect Global Tamper-Evident Audit Trail"
-                  >
-                    <History size={14} color="#d97706" />
-                    <span>View Audit Trail</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="erp-quick-btn"
-                    onClick={handleRunDiagnostics}
-                    title="Execute live diagnostics check across all subsystems"
-                  >
-                    <CheckCircle2 size={14} color="#16a34a" />
-                    <span>Run Diagnostics</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="erp-quick-btn"
-                    onClick={() => setActiveTab('backup')}
-                    title="Access Disaster Recovery & Snapshot Vault"
-                  >
-                    <Database size={14} color="#0284c7" />
-                    <span>Backup & Recovery</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="erp-quick-btn"
-                    onClick={() => setActiveTab('approvals')}
-                    title="Review Pending Administrative Approvals Queue"
-                  >
-                    <FileCheck size={14} color="#dc2626" />
-                    <span>Approvals Queue ({approvalsList.filter(a => a.status === 'PENDING').length})</span>
-                  </button>
-                </div>
-              </div>
 
               {/* Four Interactive Overview Cards */}
               <div className="erp-stats-grid">

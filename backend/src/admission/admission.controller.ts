@@ -128,7 +128,7 @@ export class AdmissionController {
     });
     return {
       success: true,
-      message: `Document status updated to ${body.status}.`,
+      message: 'Applicant eligibility verified.',
       data: updated,
     };
   }
@@ -148,7 +148,7 @@ export class AdmissionController {
     });
     return {
       success: true,
-      message: `Application decision updated to ${body.decision}.`,
+      message: 'Application rejected.',
       data: updated,
     };
   }

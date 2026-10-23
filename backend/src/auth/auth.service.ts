@@ -366,18 +366,24 @@ export class AuthService {
 
       if (!user) return null;
 
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      identifier: user.identifier,
-      role: roleKey,
-      roleEnum: user.role,
-      registrationNumber: regNo,
-      identity: user.faculty?.employeeId || regNo,
-      department: user.department,
-      detail: user.detail || '',
-    };
+      const roleKey = user.role.toLowerCase();
+      const regNo = user.student?.rollNumber || user.student?.studentId;
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        identifier: user.identifier,
+        role: roleKey,
+        roleEnum: user.role,
+        registrationNumber: regNo,
+        identity: user.faculty?.employeeId || regNo,
+        department: user.department || 'Computer Science & Engineering',
+        detail: user.detail || '',
+      };
+    } catch (e) {
+      return null;
+    }
   }
 
   async checkActivationToken(token: string) {

@@ -127,8 +127,12 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  height: calc(100vh - 65px);
   max-height: calc(100vh - 65px);
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
   position: sticky;
   top: 65px;
   box-shadow: 0 14px 35px rgba(2, 6, 23, 0.4);

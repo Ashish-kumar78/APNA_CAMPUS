@@ -361,11 +361,19 @@ button {
 .canteen-sidebar,
 .faculty-sidebar,
 .hod-sidebar,
+.principal-sidebar,
+.superadmin-sidebar,
+.transport-sidebar,
+.placement-sidebar,
+.exam-cell-sidebar,
+.library-sidebar,
 .campus-os-sidebar {
   background: #091326 !important;
   background: linear-gradient(180deg, #091326 0%, #0b1a36 100%) !important;
   border-right: 1px solid #1a2a44 !important;
   box-shadow: 0 14px 35px rgba(2, 6, 23, 0.4) !important;
+  box-sizing: border-box !important;
+  overscroll-behavior: contain !important;
 }
 
 /* Consistent Scrollbar Across All Sidebars */
@@ -377,7 +385,14 @@ button {
 .canteen-sidebar::-webkit-scrollbar,
 .faculty-sidebar::-webkit-scrollbar,
 .hod-sidebar::-webkit-scrollbar,
-.campus-os-sidebar::-webkit-scrollbar {
+.principal-sidebar::-webkit-scrollbar,
+.superadmin-sidebar::-webkit-scrollbar,
+.transport-sidebar::-webkit-scrollbar,
+.placement-sidebar::-webkit-scrollbar,
+.exam-cell-sidebar::-webkit-scrollbar,
+.library-sidebar::-webkit-scrollbar,
+.campus-os-sidebar::-webkit-scrollbar,
+.campus-os-nav::-webkit-scrollbar {
   width: 5px;
 }
 
@@ -389,9 +404,90 @@ button {
 .canteen-sidebar::-webkit-scrollbar-thumb,
 .faculty-sidebar::-webkit-scrollbar-thumb,
 .hod-sidebar::-webkit-scrollbar-thumb,
-.campus-os-sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+.principal-sidebar::-webkit-scrollbar-thumb,
+.superadmin-sidebar::-webkit-scrollbar-thumb,
+.transport-sidebar::-webkit-scrollbar-thumb,
+.placement-sidebar::-webkit-scrollbar-thumb,
+.exam-cell-sidebar::-webkit-scrollbar-thumb,
+.library-sidebar::-webkit-scrollbar-thumb,
+.campus-os-sidebar::-webkit-scrollbar-thumb,
+.campus-os-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 4px;
+}
+
+/* ── Universal Sidebar Positioning Stability & Independent Scrolling ── */
+.erp-sidebar {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  position: sticky !important;
+  top: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.erp-sidebar-brand {
+  flex-shrink: 0 !important;
+}
+
+.erp-sidebar-nav {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  padding-right: 4px !important;
+}
+
+.erp-sidebar-footer {
+  flex-shrink: 0 !important;
+  margin-top: auto !important;
+}
+
+.admin-sidebar,
+.accounts-sidebar,
+.hostel-sidebar,
+.canteen-sidebar,
+.faculty-sidebar,
+.hod-sidebar {
+  position: sticky !important;
+  top: 65px !important;
+  height: calc(100vh - 65px) !important;
+  max-height: calc(100vh - 65px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  flex-shrink: 0 !important;
+}
+
+.campus-os-sidebar {
+  position: sticky !important;
+  top: 24px !important;
+  height: calc(100vh - 48px) !important;
+  max-height: calc(100vh - 48px) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-shrink: 0 !important;
+  overscroll-behavior: contain !important;
+}
+
+.campus-os-brand {
+  flex-shrink: 0 !important;
+}
+
+.campus-os-nav {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+}
+
+.campus-os-role-card {
+  flex-shrink: 0 !important;
+  margin-top: auto !important;
 }
 
 /* Sidebar Brand Titles */

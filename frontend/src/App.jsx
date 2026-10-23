@@ -733,8 +733,8 @@ function App() {
                   gap: '10px',
                   padding: '11px 18px',
                   borderRadius: '12px',
-                  background: 'rgba(255, 255, 255, 0.14)',
-                  border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                  background: 'rgba(10, 25, 47, 0.65)',
+                  border: '1.5px solid rgba(255, 255, 255, 0.22)',
                   color: '#fff',
                   fontFamily: "'Outfit', sans-serif",
                   fontSize: '0.9rem',
@@ -742,16 +742,17 @@ function App() {
                   cursor: 'pointer',
                   backdropFilter: 'blur(10px)',
                   transition: 'all 0.2s ease',
-                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25)',
+                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.35)',
+                  textShadow: '0 1px 3px rgba(0, 0, 0, 0.85)'
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.24)';
+                  e.currentTarget.style.background = 'rgba(10, 25, 47, 0.85)';
                   e.currentTarget.style.borderColor = '#38bdf8';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                  e.currentTarget.style.background = 'rgba(10, 25, 47, 0.65)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.22)';
                   e.currentTarget.style.transform = 'none';
                 }}
               >
@@ -773,55 +774,39 @@ function App() {
           </div>
         </div>
 
-      {/* ── Right login panel ── */}
-      <section className="login-panel" aria-labelledby="login-title">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '1rem' }}>
-          <a className="panel-brand" href="#home" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <GiftMark size={42} />
-            <span>Apna Campus</span>
-          </a>
-          <button
-            type="button"
-            id="panel-view-timetable-btn"
-            onClick={() => setShowPublicTimetable(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              border: '1.5px solid rgba(37, 99, 235, 0.25)',
-              background: 'rgba(37, 99, 235, 0.08)',
-              color: '#1d4ed8',
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.18)' }}
-            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.08)' }}
-            title="View public timetable without login"
-          >
-            <CalendarDays size={15} color="#2563eb" />
-            <span>View Timetable</span>
-          </button>
-        </div>
-        <h1 id="login-title">Welcome back</h1>
-
-        <form className="login-form" onSubmit={handleLogin}>
-          <div className="field-group">
-            <label className="field-label" htmlFor="identifier">College ID / Registration Number</label>
-            <div className="input-wrap">
-              <UserRound aria-hidden="true" size={17} />
-              <input
-                id="identifier"
-                name="identifier"
-                autoComplete="username"
-                placeholder="e.g. 23CSE0001 · FAC-042 · ADM-001"
-                value={identifier}
-                onChange={(event) => setIdentifier(event.target.value)}
-                required
-              />
+        {/* Right login panel: Clean White Floating Card */}
+        <section className="erp-login-section" aria-label="Sign In">
+          <div className="erp-login-card">
+            <div className="erp-card-brand-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+              <div>
+                <h2 className="erp-card-title">Welcome Back</h2>
+                <p className="erp-card-subtitle">Sign in to your Apna Campus account</p>
+              </div>
+              <button
+                type="button"
+                id="panel-view-timetable-btn"
+                onClick={() => setShowPublicTimetable(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid rgba(37, 99, 235, 0.25)',
+                  background: 'rgba(37, 99, 235, 0.08)',
+                  color: '#1d4ed8',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.18)' }}
+                onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.08)' }}
+                title="View public timetable without login"
+              >
+                <CalendarDays size={15} color="#2563eb" />
+                <span>Timetable</span>
+              </button>
             </div>
 
             <form className="erp-login-form" onSubmit={handleLogin} noValidate>

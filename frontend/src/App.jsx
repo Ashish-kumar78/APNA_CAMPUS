@@ -122,6 +122,225 @@ const demoCategories = [
   },
 ]
 
+const CLIENT_FALLBACK_ACCOUNTS = {
+  super_admin: {
+    id: 'demo-superadmin',
+    name: 'Er. Bikramaditya Patra',
+    email: 'superadmin@gift.edu.in',
+    role: 'super_admin',
+    roleEnum: 'SUPER_ADMIN',
+    identifier: 'superadmin',
+    designation: 'Chief Enterprise Systems Architect',
+    detail: 'Root System & Security Administrator',
+    department: 'Office of Information Technology',
+    phone: '+91 94370 00001',
+    permissions: ['*'],
+  },
+  management: {
+    id: 'demo-management',
+    name: 'Shri Patitapaban Panda',
+    email: 'management@gift.edu.in',
+    role: 'management',
+    roleEnum: 'MANAGEMENT',
+    identifier: 'management',
+    designation: 'Managing Trustee',
+    detail: 'Institutional Governance & Oversight',
+    department: 'Governing Body & Trust Board',
+    phone: '+91 94370 00002',
+    permissions: ['*'],
+  },
+  principal: {
+    id: 'demo-principal',
+    name: 'Dr. Sujit Kumar Khuntia',
+    email: 'principal@gift.edu.in',
+    role: 'principal',
+    roleEnum: 'PRINCIPAL',
+    identifier: 'principal',
+    designation: 'Principal & Director',
+    detail: 'Academic Council & Executive Head',
+    department: 'Office of the Principal',
+    phone: '+91 94370 00003',
+    permissions: ['*'],
+  },
+  admin: {
+    id: 'demo-admin',
+    name: 'Sri Manoranjan Tripathy',
+    email: 'admin@gift.edu.in',
+    role: 'admin',
+    roleEnum: 'ADMIN',
+    identifier: 'admin',
+    designation: 'Chief Administrative Officer',
+    detail: 'Admissions, Records & Campus Services',
+    department: 'Administrative Operations',
+    phone: '+91 94370 00004',
+    permissions: ['*'],
+  },
+  hod: {
+    id: 'demo-hod',
+    name: 'Dr. P. K. Pattnaik',
+    email: 'hod@gift.edu.in',
+    role: 'hod',
+    roleEnum: 'HOD',
+    identifier: 'hod',
+    designation: 'Professor & Head of Department',
+    detail: 'Department Administrator · CSE',
+    department: 'Computer Science & Engineering',
+    phone: '+91 94370 00005',
+    permissions: ['academics', 'faculty_management'],
+  },
+  faculty: {
+    id: 'demo-faculty',
+    name: 'Dr. S. Mohanty',
+    email: 'faculty@gift.edu.in',
+    role: 'faculty',
+    roleEnum: 'FACULTY',
+    identifier: 'faculty',
+    designation: 'Associate Professor',
+    detail: 'Faculty · School of Computing',
+    department: 'Computer Science & Engineering',
+    phone: '+91 94370 00006',
+    identity: 'FAC-042',
+    permissions: ['attendance', 'grading'],
+  },
+  student: {
+    id: 'demo-student',
+    name: 'Rakesh Das',
+    email: 'student@gift.edu.in',
+    role: 'student',
+    roleEnum: 'STUDENT',
+    identifier: '2305201001',
+    registrationNumber: '2305201001',
+    identity: '2305201001',
+    designation: 'Student',
+    detail: 'B.Tech Semester 5 · Section A',
+    department: 'Computer Science & Engineering',
+    phone: '+91 98610 23010',
+    permissions: ['view_grades', 'attend_classes'],
+  },
+  exam_cell: {
+    id: 'demo-examcell',
+    name: 'Prof. S. R. Mahapatra',
+    email: 'examcell@gift.edu.in',
+    role: 'exam_cell',
+    roleEnum: 'EXAM_CELL',
+    identifier: 'examcell',
+    designation: 'Controller of Examinations',
+    detail: 'Autonomous Examination Cell',
+    department: 'Autonomous Examination Cell',
+    phone: '+91 94370 00008',
+    permissions: ['exam_management', 'question_paper_moderation'],
+  },
+  accounts: {
+    id: 'demo-accounts',
+    name: 'CA S. K. Agrawal',
+    email: 'accounts@gift.edu.in',
+    role: 'accounts',
+    roleEnum: 'ACCOUNTS',
+    identifier: 'accounts',
+    designation: 'Chief Finance Officer',
+    detail: 'Student Fee Ledgers & Payroll',
+    department: 'Finance & Accounts Division',
+    phone: '+91 94370 00009',
+    permissions: ['fee_collection', 'payroll'],
+  },
+  library: {
+    id: 'demo-library',
+    name: 'Dr. B. K. Jena',
+    email: 'library@gift.edu.in',
+    role: 'library',
+    roleEnum: 'LIBRARY',
+    identifier: 'library',
+    designation: 'Chief Librarian',
+    detail: 'Central Autonomous Library',
+    department: 'Learning Resource Centre',
+    phone: '+91 94370 00010',
+    permissions: ['book_circulation', 'cataloguing'],
+  },
+  placement: {
+    id: 'demo-placement',
+    name: 'Mr. Soumya Ranjan Das',
+    email: 'placement@gift.edu.in',
+    role: 'placement',
+    roleEnum: 'PLACEMENT',
+    identifier: 'placement',
+    designation: 'Head - Corporate Relations',
+    detail: 'Training & Placement Division',
+    department: 'Industry Relations & Placements',
+    phone: '+91 94370 00011',
+    permissions: ['placement_drives', 'recruiter_liaison'],
+  },
+  transport: {
+    id: 'demo-transport',
+    name: 'Mr. Ramesh Behera',
+    email: 'transport@gift.edu.in',
+    role: 'transport',
+    roleEnum: 'TRANSPORT',
+    identifier: 'transport',
+    designation: 'Transport Supervisor',
+    detail: 'Fleet Operations & Campus Bus Routes',
+    department: 'Logistics & Transport',
+    phone: '+91 94370 00012',
+    permissions: ['fleet_management', 'route_scheduling'],
+  },
+  warden: {
+    id: 'demo-warden',
+    name: 'Capt. (Retd) D. N. Rout',
+    email: 'hostel@gift.edu.in',
+    role: 'warden',
+    roleEnum: 'HOSTEL_WARDEN',
+    identifier: 'warden',
+    designation: 'Chief Hostel Warden',
+    detail: 'Gents & Ladies Hostels',
+    department: 'Hostel Administration',
+    phone: '+91 94370 00013',
+    permissions: ['room_allocation', 'gatepass_approval'],
+  },
+  staff: {
+    id: 'demo-staff',
+    name: 'Mr. Ashok Kumar Jena',
+    email: 'staff@gift.edu.in',
+    role: 'staff',
+    roleEnum: 'STAFF',
+    identifier: 'staff',
+    designation: 'Senior Technical Officer',
+    detail: 'CSE Cloud & AI Advanced Labs',
+    department: 'Computer Science & Engineering',
+    phone: '+91 94370 00014',
+    permissions: ['lab_equipment', 'maintenance'],
+  },
+  canteen: {
+    id: 'demo-canteen',
+    name: 'Mr. Rabindra Jena',
+    email: 'canteen@gift.edu.in',
+    role: 'canteen',
+    roleEnum: 'CANTEEN',
+    identifier: 'canteen',
+    designation: 'Campus Catering Manager',
+    detail: 'Food Court & Student Mess Operations',
+    department: 'Food & Beverage Services',
+    phone: '+91 94370 00015',
+    permissions: ['mess_menu', 'meal_punching'],
+  },
+  admissions: {
+    id: 'demo-admissions',
+    name: 'Er. Sujata Mohapatra',
+    email: 'admissions@gift.edu.in',
+    role: 'admissions',
+    roleEnum: 'ADMISSION',
+    identifier: 'admissions',
+    designation: 'Dean Admissions',
+    detail: 'B.Tech & M.Tech Enrollment Cell',
+    department: 'Admissions & Outreach Cell',
+    phone: '+91 94370 00016',
+    permissions: ['admission_approval', 'leads_management'],
+  },
+}
+
+CLIENT_FALLBACK_ACCOUNTS['superadmin'] = CLIENT_FALLBACK_ACCOUNTS['super_admin']
+CLIENT_FALLBACK_ACCOUNTS['examcell'] = CLIENT_FALLBACK_ACCOUNTS['exam_cell']
+CLIENT_FALLBACK_ACCOUNTS['admission'] = CLIENT_FALLBACK_ACCOUNTS['admissions']
+CLIENT_FALLBACK_ACCOUNTS['2305201001'] = CLIENT_FALLBACK_ACCOUNTS['student']
+
 function App() {
   const [identifier, setIdentifier] = useState('2305201001')
   const [password, setPassword] = useState('gift123')
@@ -145,14 +364,24 @@ function App() {
         const user = await api.getMe();
         if (user && user.success && user.user) {
           setAccount(user.user);
+          return;
         }
       } catch (err) {
-        console.info('No valid session found or session expired.');
-        localStorage.removeItem('collegeflow_token');
-        localStorage.removeItem('collegeflow_user');
-      } finally {
-        setIsInitializing(false);
+        console.info('Backend session check skipped or offline:', err?.message || err);
       }
+
+      // Check for cached user session (preserves session during Render backend spin-up)
+      try {
+        const cached = localStorage.getItem('collegeflow_user');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.role) {
+            setAccount(parsed);
+          }
+        }
+      } catch (e) {}
+
+      setIsInitializing(false);
     }
 
     if (typeof window !== 'undefined') {
@@ -179,7 +408,7 @@ function App() {
   }, [])
 
   async function handleLogin(event) {
-    if (event) event.preventDefault()
+    if (event && event.preventDefault) event.preventDefault()
     clearUrlHash()
     setError('')
     setResetRequested(false)
@@ -197,11 +426,24 @@ function App() {
       if (res && res.success && res.user) {
         setAccount(res.user)
         return
-      } else {
-        setError('Invalid college ID or password. Please try again.')
+      } else if (res && !res.success) {
+        setError(res.message || 'Invalid college ID or password. Please try again.')
+        return
       }
     } catch (apiErr) {
+      console.warn('API login call failed, checking demo fallback accounts:', apiErr?.message || apiErr)
+      const rawKey = identifier.trim().toLowerCase()
+      const cleanKey = rawKey.replace(/[-_\s]/g, '')
+      const fallback = CLIENT_FALLBACK_ACCOUNTS[rawKey] || CLIENT_FALLBACK_ACCOUNTS[cleanKey]
+      if (fallback && (password === 'gift123' || password === 'password123' || password === 'admin123')) {
+        setAccount(fallback)
+        try {
+          localStorage.setItem('collegeflow_user', JSON.stringify(fallback))
+        } catch (e) {}
+        return
+      }
       setError(`Connection failed: ${apiErr.message || 'Unable to reach authentication server.'}`)
+      return
     } finally {
       setIsSubmitting(false)
     }
@@ -239,14 +481,24 @@ function App() {
       const res = await api.login(loginIdentifier, 'gift123')
       if (res && res.success && res.user) {
         setAccount(res.user)
-      } else {
-        setError('Quick login failed. Please use valid credentials.')
+        return
       }
     } catch (apiErr) {
-      setError('Unable to connect to server for quick login.')
+      console.warn('Backend quick login failed or server sleeping, engaging resilient fallback:', apiErr?.message || apiErr)
     } finally {
       setIsSubmitting(false)
     }
+
+    // Direct resilient login for all 16 demo roles (ensures instant access even during cloud cold-start)
+    const fallback = CLIENT_FALLBACK_ACCOUNTS[roleKey] || CLIENT_FALLBACK_ACCOUNTS[loginIdentifier]
+    if (fallback) {
+      setAccount(fallback)
+      try {
+        localStorage.setItem('collegeflow_user', JSON.stringify(fallback))
+      } catch (e) {}
+      return
+    }
+    setError('Unable to connect to server for quick login.')
   }
 
   function handleLogout() {

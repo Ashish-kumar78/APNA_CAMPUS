@@ -21,7 +21,20 @@ async function request(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, { ...options, headers });
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { success: response.ok, message: text || `HTTP ${response.status}` };
+    }
+    if (!response.ok && (!data || !data.success)) {
+      const errorMsg = data?.message || `Request failed with status ${response.status}`;
+      const err = new Error(errorMsg);
+      err.response = data;
+      err.status = response.status;
+      throw err;
+    }
     return data;
   } catch (error) {
     console.warn(`API call to ${endpoint} failed:`, error.message);

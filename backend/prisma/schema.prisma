@@ -1303,18 +1303,5 @@ model TimetableConflict {
   @@index([timetableId])
 }
 
-model AdmissionDeadline {
-  id            String   @id @default(cuid())
-  title         String
-  category      String   @default("General")
-  programmeCode String?  @default("All")
-  deadlineDate  String
-  time          String?  @default("05:00 PM")
-  description   String?
-  status        String   @default("Active")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
 
 

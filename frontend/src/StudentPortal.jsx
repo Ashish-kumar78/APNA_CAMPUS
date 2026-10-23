@@ -40,6 +40,8 @@ import {
   Award,
   Maximize2,
 } from 'lucide-react'
+import { MasterSidebarHeader, useMasterSidebarState } from './components/Navigation/MasterSidebar.jsx'
+import './components/Navigation/MasterNavigation.css'
 import './StudentPortal.css'
 import './DashboardHome.css'
 import StudentProfile from './StudentProfile.jsx'
@@ -268,7 +270,7 @@ function StudentPortal({ account, onLogout }) {
     return { page: 'dashboard', link: 'Dashboard', tab: '', quickView: '' };
   };
   const init = getInitial();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeLink, setActiveLink] = useState(init.link);
   const [activePage, setActivePage] = useState(init.page);
   const [initialConvId, setInitialConvId] = useState('conv-ds');
@@ -375,7 +377,7 @@ function StudentPortal({ account, onLogout }) {
     if (shell) shell.scrollTop = 0;
     const main = document.querySelector('.campus-os-main');
     if (main) main.scrollTop = 0;
-  }, [activePage]);
+  }, [activePage, activeLink]);
   const [noticeTab, setNoticeTab] = useState('Latest')
   const [noticeQuery, setNoticeQuery] = useState('')
   const [expandedNotice, setExpandedNotice] = useState('')
@@ -625,36 +627,10 @@ function StudentPortal({ account, onLogout }) {
         {/* Floating Sidebar identical to Campus OS Dashboard */}
         {sidebarOpen && (
           <aside className="campus-os-sidebar">
-            <div className="campus-os-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div className="campus-brand-icon" style={{ background: '#ffffff', padding: '4px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-                </div>
-                <div>
-                  <p className="campus-brand-kicker">APNA CAMPUS</p>
-                  <h2 className="campus-brand-title">Student Portal</h2>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  color: '#ffffff',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <MasterSidebarHeader
+              roleTitle="STUDENT PORTAL"
+              onToggle={() => setSidebarOpen(false)}
+            />
 
             <nav className="campus-os-nav">
               {navSections.map((sec) => (
@@ -662,7 +638,7 @@ function StudentPortal({ account, onLogout }) {
                   <p className="campus-os-nav-section-title">{sec.title}</p>
                   {sec.items.map(({ label, icon: Icon, page, badge }) => (
                     <a
-                      className={activeLink === label ? 'active' : ''}
+                      className={`campus-nav-item ${activeLink === label ? 'active' : ''}`}
                       href={`#${page}`}
                       aria-current={activeLink === label ? 'page' : undefined}
                       key={label}
@@ -671,7 +647,9 @@ function StudentPortal({ account, onLogout }) {
                         setActiveLink(label)
                         setActivePage(page)
                         window.location.hash = page
-                        setSidebarOpen(false)
+                        if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+                          setSidebarOpen(false)
+                        }
                       }}
                     >
                       <Icon size={18} />
@@ -694,7 +672,9 @@ function StudentPortal({ account, onLogout }) {
                 setProfileTab('Personal');
                 setProfileQuickView('');
                 window.location.hash = 'profile';
-                setSidebarOpen(false);
+                if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+                  setSidebarOpen(false);
+                }
               }}
               style={{ cursor: 'pointer' }}
               title="View student profile"

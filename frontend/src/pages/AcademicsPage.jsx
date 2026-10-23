@@ -123,6 +123,30 @@ const semesters = [
       { code: 'CS305', name: 'Software Engineering', credits: 3, faculty: 'Prof. S. Nanda', type: 'Theory', grade: 'A', sgpa: 8.5 },
     ],
   },
+  {
+    label: '2nd Semester',
+    current: false,
+    subjects: [
+      { code: 'BTBS-T-BS-201', name: 'Engineering Mathematics - II', credits: 4, faculty: 'Dr. S. Pattnaik', type: 'Theory', grade: 'A', sgpa: 8.42 },
+      { code: 'BTBS-T-BS-202', name: 'Engineering Chemistry', credits: 4, faculty: 'Dr. M. Behera', type: 'Theory', grade: 'B+', sgpa: 7.5 },
+      { code: 'BTES-T-ES-201', name: 'Basic Electrical Engineering', credits: 4, faculty: 'Prof. R. Das', type: 'Theory', grade: 'A+', sgpa: 9.0 },
+      { code: 'BTCS-T-PC-201', name: 'Programming in C', credits: 4, faculty: 'Dr. A. Nanda', type: 'Theory', grade: 'A', sgpa: 8.5 },
+      { code: 'BTES-L-ES-201', name: 'Electrical Engg. Lab', credits: 2, faculty: 'Prof. R. Das', type: 'Lab', grade: 'O', sgpa: 10.0 },
+      { code: 'BTCS-L-PC-201', name: 'Programming in C Lab', credits: 2, faculty: 'Dr. A. Nanda', type: 'Lab', grade: 'O', sgpa: 10.0 },
+    ],
+  },
+  {
+    label: '1st Semester',
+    current: false,
+    subjects: [
+      { code: 'BTBS-T-BS-101', name: 'Engineering Mathematics - I', credits: 4, faculty: 'Dr. P. Sahu', type: 'Theory', grade: 'B+', sgpa: 7.5 },
+      { code: 'BTBS-T-BS-102', name: 'Engineering Physics', credits: 4, faculty: 'Dr. N. Mohanty', type: 'Theory', grade: 'A', sgpa: 8.5 },
+      { code: 'BTES-T-ES-101', name: 'Basic Electronics Engineering', credits: 4, faculty: 'Prof. K. Mishra', type: 'Theory', grade: 'A+', sgpa: 9.0 },
+      { code: 'BTHS-T-HS-101', name: 'Communicative English', credits: 3, faculty: 'Dr. S. Jena', type: 'Theory', grade: 'A', sgpa: 8.5 },
+      { code: 'BTBS-L-BS-101', name: 'Engineering Physics Lab', credits: 2, faculty: 'Dr. N. Mohanty', type: 'Lab', grade: 'O', sgpa: 10.0 },
+      { code: 'BTES-L-ES-101', name: 'Basic Electronics Lab', credits: 2, faculty: 'Prof. K. Mishra', type: 'Lab', grade: 'O', sgpa: 10.0 },
+    ],
+  },
 ]
 
 export default function AcademicsPage({ account }) {
@@ -284,8 +308,8 @@ export default function AcademicsPage({ account }) {
         {[
           { id: 'subjects', label: 'Enrolled Subjects' },
           { id: 'progression', label: 'Programme & Term History' },
-          { id: 'syllabus', label: 'Syllabus' },
-          { id: 'admit-card', label: 'Download Admit Card' }
+          { id: 'admit-card', label: 'Download Admit Card' },
+          { id: 'notes', label: 'Class Note Sharing' }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -442,7 +466,7 @@ export default function AcademicsPage({ account }) {
                 Handwritten notes, lecture diagrams & board photos shared by students. Verified by course faculty.
               </p>
             </div>
-            <button 
+            <button
               type="button"
               className="btn-academic-upload-notes"
               onClick={() => {
@@ -510,11 +534,11 @@ export default function AcademicsPage({ account }) {
 
                     <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#64748b' }}>
                       <div>
-                        <span><Calendar size={12} /> {note.date}</span> · 
+                        <span><Calendar size={12} /> {note.date}</span> ·
                         <span> By: <strong>{note.uploadedBy?.name}</strong></span>
                       </div>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         className="btn-view-academic-note"
                         onClick={() => setViewingNote(note)}
                       >

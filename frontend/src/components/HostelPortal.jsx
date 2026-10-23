@@ -53,7 +53,8 @@ import ReportGenerationModule from './ReportGenerationModule.jsx';
 import './HostelPortal.css';
 import '../components/AdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
-import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import { MasterSidebarHeader, MasterNavBadge, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import { downloadHostelCensusPdf } from '../utils/pdfGenerator';
 import {
   initialHostels,
@@ -93,9 +94,18 @@ import HostelSettingsRulesSection from './hostel/HostelSettingsRulesSection.jsx'
 
 
 export default function HostelPortal({ account, onLogout }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.hostel-main, .role-dash-container, .admin-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [hostels, setHostels] = useState(initialHostels);
   const [rooms, setRooms] = useState(initialHostelRooms);
   const [complaints, setComplaints] = useState(initialHostelComplaints);
@@ -738,15 +748,17 @@ export default function HostelPortal({ account, onLogout }) {
       {/* Top Header */}
       <header className="hostel-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <button
-            className="campus-nav-toggle-btn"
-            type="button"
-            onClick={() => setSidebarOpen(prev => !prev)}
-            title={sidebarOpen ? "Hide Navigation" : "Show Navigation"}
-            aria-label={sidebarOpen ? "Hide Navigation" : "Show Navigation"}
-          >
-            <Menu size={20} />
-          </button>
+          {!sidebarOpen && (
+            <button
+              className="campus-nav-toggle-btn"
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              title="Show Navigation"
+              aria-label="Show Navigation"
+            >
+              <Menu size={20} />
+            </button>
+          )}
           <div className="hostel-brand">
             <div className="hostel-brand-icon" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
@@ -784,22 +796,23 @@ export default function HostelPortal({ account, onLogout }) {
         </div>
       </header>
 
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="erp-sidebar-backdrop active"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Layout */}
       <div className={`hostel-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
         {/* Sidebar */}
         {sidebarOpen && (
           <aside className="hostel-sidebar">
-            <div className="hostel-sidebar-header">
-              <span className="hostel-sidebar-title">Hostel Menu</span>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="hostel-sidebar-close"
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <MasterSidebarHeader
+              roleTitle="HOSTEL OPERATIONS"
+              onToggle={() => setSidebarOpen(false)}
+            />
             {/* ── Category 1: Residence & Allocations ── */}
             <div className="hostel-nav-category">Residence &amp; Rooms</div>
             <button
@@ -962,7 +975,6 @@ export default function HostelPortal({ account, onLogout }) {
               <Settings size={17} /> Settings &amp; Hostel Rules
             </button>
           </aside>
-
         )}
 
         {/* Dynamic Content Pane */}
@@ -976,25 +988,6 @@ export default function HostelPortal({ account, onLogout }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
-            <RoleDashboardLanding
-              roleKey="warden"
-              account={account}
-              onLogout={onLogout}
-              onNavigate={(target) => {
-                if (target === 'rooms') setActiveTab('rooms');
-                else if (target === 'complaints') setActiveTab('complaints');
-                else if (target === 'maintenance') setActiveTab('maintenance-repairs');
-                else if (target === 'attendance') setActiveTab('attendance');
-                else if (target === 'leave') setActiveTab('leave-mgmt');
-                else if (target === 'mess') setActiveTab('mess-dining');
-                else if (target) setActiveTab(target);
-                else setActiveTab('rooms');
-              }}
-
-            />
-          )}
-
-          {false && activeTab === 'dashboard' && (
             <div>
               <div className="admin-view-header">
                 <div>

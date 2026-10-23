@@ -186,6 +186,13 @@ function App() {
     setIsSubmitting(true)
 
     try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('apna_campus_sidebar_open');
+        localStorage.setItem('apna_campus_sidebar_open', 'false');
+      }
+    } catch (e) {}
+
+    try {
       const res = await api.login(identifier, password)
       if (res && res.success && res.user) {
         setAccount(res.user)
@@ -213,6 +220,12 @@ function App() {
     clearUrlHash()
     setError('')
     setResetRequested(false)
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('apna_campus_sidebar_open');
+        localStorage.setItem('apna_campus_sidebar_open', 'false');
+      }
+    } catch (e) {}
     const demoIdentifierMap = {
       super_admin: 'superadmin',
       exam_cell: 'examcell',
@@ -239,6 +252,12 @@ function App() {
   function handleLogout() {
     api.logout()
     clearUrlHash()
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('apna_campus_sidebar_open');
+        localStorage.setItem('apna_campus_sidebar_open', 'false');
+      }
+    } catch (e) {}
     setAccount(null)
     setIdentifier('2305201001')
     setPassword('gift123')
@@ -383,7 +402,12 @@ function App() {
               </div>
               <div className="erp-hero-divider-bar" />
               <div className="erp-feature-indicators">
-                <div className="erp-feature-item">
+                <div
+                  className="erp-feature-item"
+                  style={{ cursor: 'pointer' }}
+                  title="View Public Timetable"
+                  onClick={() => setShowPublicTimetable(true)}
+                >
                   <div className="erp-feature-icon-circle">
                     <Calendar size={16} />
                   </div>
@@ -433,55 +457,7 @@ function App() {
               </div>
             </div>
 
-            {/* Public Timetable Hero CTA Button */}
-            <div style={{ marginTop: '22px' }}>
-              <button
-                type="button"
-                id="hero-view-timetable-btn"
-                onClick={() => setShowPublicTimetable(true)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '11px 18px',
-                  borderRadius: '12px',
-                  background: 'rgba(255, 255, 255, 0.14)',
-                  border: '1.5px solid rgba(255, 255, 255, 0.3)',
-                  color: '#fff',
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: '0.9rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  backdropFilter: 'blur(10px)',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25)',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.24)';
-                  e.currentTarget.style.borderColor = '#38bdf8';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                  e.currentTarget.style.transform = 'none';
-                }}
-              >
-                <CalendarDays size={18} color="#38bdf8" />
-                <span>View Public Timetable</span>
-                <span style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  background: 'rgba(56, 189, 248, 0.25)',
-                  color: '#7dd3fc',
-                  padding: '2px 8px',
-                  borderRadius: '20px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em'
-                }}>No login required</span>
-                <ArrowRight size={15} />
-              </button>
-            </div>
+
           </div>
         </div>
         <section className="erp-login-section" aria-label="Sign In">
@@ -532,23 +508,23 @@ function App() {
                 </div>
               </div>
               <div className="erp-options-row">
-                  <label className="erp-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      disabled={isSubmitting}
-                    />
-                    <span>Remember me</span>
-                  </label>
-                  <button
-                    type="button"
-                    className="erp-text-link"
-                    onClick={() => { setResetRequested((prev) => !prev); setError(''); }}
-                  >
-                    Forgot password?
-                  </button>
-                </div>
+                <label className="erp-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    disabled={isSubmitting}
+                  />
+                  <span>Remember me</span>
+                </label>
+                <button
+                  type="button"
+                  className="erp-text-link"
+                  onClick={() => { setResetRequested((prev) => !prev); setError(''); }}
+                >
+                  Forgot password?
+                </button>
+              </div>
               {(error || resetRequested) && (
                 <div
                   className={`erp-alert-box ${error ? 'is-error' : 'is-success'}`}
@@ -586,81 +562,81 @@ function App() {
               <div className="erp-sublink-row">
                 <span className="erp-sublink-text">New user?</span>
                 <button
-                      type="button"
-                      className="erp-highlight-link"
-                      onClick={() => { setActivationModalOpen(true); setActivationTokenInput(''); }}
-                    >
-                      Activate Account
-                    </button>
+                  type="button"
+                  className="erp-highlight-link"
+                  onClick={() => { setActivationModalOpen(true); setActivationTokenInput(''); }}
+                >
+                  Activate Account
+                </button>
+              </div>
+              <div className="erp-section-divider">
+                <span>OR</span>
+              </div>
+              <div className="erp-demo-section">
+                <div className="erp-demo-header">
+                  <h3 className="erp-demo-title">Explore by Role</h3>
+                  <p className="erp-demo-subtitle">Explore the portal with different roles</p>
                 </div>
-                <div className="erp-section-divider">
-                  <span>OR</span>
-                </div>
-                <div className="erp-demo-section">
-                  <div className="erp-demo-header">
-                    <h3 className="erp-demo-title">Explore by Role</h3>
-                    <p className="erp-demo-subtitle">Explore the portal with different roles</p>
-                  </div>
-                  <div className="erp-category-cards-grid">
-                    {demoCategories.map((cat) => {
-                      const CatIcon = cat.icon
-                      const isExpanded = expandedCategory === cat.id
-                      return (
-                        <div
-                          key={cat.id}
-                          className={`erp-cat-card ${isExpanded ? 'active' : ''}`}
-                          onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
-                          role="button"
-                          tabIndex={0}
-                          style={{ '--cat-bg': cat.bg, '--cat-border': cat.border, '--cat-color': cat.color }}
-                        >
-                          <div className="erp-cat-top">
-                            <div className="erp-cat-icon-box">
-                              <CatIcon size={18} />
-                            </div>
-                            <ArrowRight size={13} className="erp-cat-arrow" />
+                <div className="erp-category-cards-grid">
+                  {demoCategories.map((cat) => {
+                    const CatIcon = cat.icon
+                    const isExpanded = expandedCategory === cat.id
+                    return (
+                      <div
+                        key={cat.id}
+                        className={`erp-cat-card ${isExpanded ? 'active' : ''}`}
+                        onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
+                        role="button"
+                        tabIndex={0}
+                        style={{ '--cat-bg': cat.bg, '--cat-border': cat.border, '--cat-color': cat.color }}
+                      >
+                        <div className="erp-cat-top">
+                          <div className="erp-cat-icon-box">
+                            <CatIcon size={18} />
                           </div>
-                          <div className="erp-cat-bottom">
-                            <strong className="erp-cat-name">{cat.title}</strong>
-                            <span className="erp-cat-count">{cat.count}</span>
-                          </div>
+                          <ArrowRight size={13} className="erp-cat-arrow" />
                         </div>
-                      )
-                    })}
-                  </div>
-                  {expandedCategory && (
-                    <div className="erp-expanded-roles-drawer">
-                      <div className="erp-drawer-header">
-                        <span>Select {demoCategories.find((c) => c.id === expandedCategory)?.title} Role:</span>
-                        <button
+                        <div className="erp-cat-bottom">
+                          <strong className="erp-cat-name">{cat.title}</strong>
+                          <span className="erp-cat-count">{cat.count}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {expandedCategory && (
+                  <div className="erp-expanded-roles-drawer">
+                    <div className="erp-drawer-header">
+                      <span>Select {demoCategories.find((c) => c.id === expandedCategory)?.title} Role:</span>
+                      <button
                         type="button"
                         className="erp-drawer-close"
                         onClick={() => setExpandedCategory(null)}
                       >
                         ×
                       </button>
-                      </div>
-                      <div className="erp-drawer-roles">
-                        {demoCategories
-                          .find((c) => c.id === expandedCategory)
-                          ?.roles.map((r) => (
-                            <button
-                              key={r.key}
-                              type="button"
-                              className="erp-drawer-role-pill"
-                              onClick={async () => {
-                                await handleQuickLogin(r.key)
-                              }}
-                            >
+                    </div>
+                    <div className="erp-drawer-roles">
+                      {demoCategories
+                        .find((c) => c.id === expandedCategory)
+                        ?.roles.map((r) => (
+                          <button
+                            key={r.key}
+                            type="button"
+                            className="erp-drawer-role-pill"
+                            onClick={async () => {
+                              await handleQuickLogin(r.key)
+                            }}
+                          >
                             <span>{r.label}</span>
                             <ArrowRight size={11} />
                           </button>
                         ))}
-                      </div>
                     </div>
-                  )}
-                </div>
-              </form>
+                  </div>
+                )}
+              </div>
+            </form>
             <footer className="erp-card-footer">
               <div className="erp-footer-links">
                 <a href="#help" onClick={(e) => e.preventDefault()}>Help</a>

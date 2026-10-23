@@ -58,7 +58,8 @@ import { api } from '../services/api.js';
 import { feesApi } from '../services/feesApi.js';
 import { useTimeGreeting } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
-import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import { MasterSidebarHeader, MasterNavBadge, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 
 // CSV Export Helper
 function exportToCsv(filename, rows) {
@@ -92,9 +93,18 @@ function exportToCsv(filename, rows) {
 }
 
 export default function AccountsPortal({ account, onLogout }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.accounts-main, .role-dash-container, .admin-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
 
   // Core Data States
   const [feeStructures, setFeeStructures] = useState(initialFeeStructures);
@@ -515,24 +525,23 @@ export default function AccountsPortal({ account, onLogout }) {
         </div>
       </header>
 
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="erp-sidebar-backdrop active"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Layout */}
       <div className={`accounts-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
         {/* Sidebar */}
         {sidebarOpen && (
           <aside className="accounts-sidebar">
-            <div className="accounts-sidebar-header">
-              <span className="accounts-sidebar-title">
-                Financial Controls
-              </span>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="accounts-sidebar-close"
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <MasterSidebarHeader
+              roleTitle="ACCOUNTS & FINANCE"
+              onToggle={() => setSidebarOpen(false)}
+            />
 
             <button
               className={`accounts-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
@@ -611,20 +620,6 @@ export default function AccountsPortal({ account, onLogout }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
-            <RoleDashboardLanding
-              roleKey="accounts"
-              account={account}
-              onLogout={onLogout}
-              onNavigate={(target) => {
-                if (target === 'acc-fee') setActiveTab('structure');
-                else if (target === 'acc-verify') setActiveTab('verifications');
-                else if (target === 'acc-txns') setActiveTab('transactions');
-                else setActiveTab('transactions');
-              }}
-            />
-          )}
-
-          {false && activeTab === 'dashboard' && (
             <div>
               <div className="admin-view-header">
                 <div>

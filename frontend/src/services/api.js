@@ -856,10 +856,71 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
-  approveAndEnrollApplicant: (id) =>
-    request(`/admission/applicants/${id}/approve`, {
+  approveAndEnrollApplicant: (id, options = {}) =>
+    request(`/admission/applicants/${id}/enroll`, {
       method: 'POST',
+      body: JSON.stringify(options),
     }),
+  approveAndEnroll: (id, options = {}) =>
+    request(`/admission/applicants/${id}/enroll`, {
+      method: 'POST',
+      body: JSON.stringify(options),
+    }),
+  verifyDocument: (applicantId, docId, data) =>
+    request(`/admission/applicants/${applicantId}/document/${docId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  bulkVerifyDocuments: (applicantIds) =>
+    request('/admission/applicants/bulk-verify', {
+      method: 'POST',
+      body: JSON.stringify({ applicantIds }),
+    }),
+  reviewApplicant: (applicantId, data) =>
+    request(`/admission/applicants/${applicantId}/review`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  generateAdmissionOffer: (applicantId, data = {}) =>
+    request(`/admission/applicants/${applicantId}/offer`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  respondToOffer: (applicantId, data) =>
+    request(`/admission/applicants/${applicantId}/offer/respond`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  confirmAdmissionFee: (applicantId, data) =>
+    request(`/admission/applicants/${applicantId}/fee-confirm`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getAdmissionDeadlines: () => request('/admission/deadlines'),
+  createAdmissionDeadline: (data) =>
+    request('/admission/deadlines', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateAdmissionDeadline: (id, data) =>
+    request(`/admission/deadlines/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteAdmissionDeadline: (id) =>
+    request(`/admission/deadlines/${id}`, {
+      method: 'DELETE',
+    }),
+  getAdmissionNotices: () => request('/admission/notices'),
+  createAdmissionNotice: (data) =>
+    request('/admission/notices', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getAdmissionMeritList: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admission/merit-list${q ? '?' + q : ''}`);
+  },
 
   // 26. Account Activation & Password Recovery
   verifyActivationToken: (token) => request(`/auth/verify-activation-token?token=${encodeURIComponent(token)}`),

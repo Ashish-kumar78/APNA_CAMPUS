@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { downloadTimetablePdf } from '../utils/pdfGenerator';
 import './PublicTimetable.css';
+import ApnaCampusLogo from './ApnaCampusLogo';
 
 // SVG Crest Emblem matching the college gear logo shown in the prompt images
 function CollegeGearLogo({ size = 70 }) {
@@ -194,10 +195,10 @@ const ROUTINE_SLOTS = [
 export default function PublicTimetable({ onClose }) {
   // Navigation Tabs matching top bar in images
   const [activeTab, setActiveTab] = useState('students'); // 'students' | 'faculty' | 'rooms' | 'floormanagers' | 'online'
-  
+
   // Currently displayed detailed routine
   const [selectedRoutineTitle, setSelectedRoutineTitle] = useState('BTECH 2028-P/5 TH SEM/CSE (AI) - Genius\'s Timetable');
-  const [showRoutineGrid, setShowRoutineGrid] = useState(true);
+  const [showRoutineGrid, setShowRoutineGrid] = useState(false);
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -319,11 +320,11 @@ export default function PublicTimetable({ onClose }) {
         {/* Centered Crest Header */}
         <header className="apna-tt-header-box">
           <div className="apna-tt-logo-center">
-            <CollegeGearLogo size={74} />
+            <ApnaCampusLogo size={74} />
           </div>
 
           <h1 className="apna-tt-college-title">
-            Apna Campus Autonomous, Bhubaneswar
+            Apna Campus
           </h1>
 
           {/* Subtitle: Either the exact Routine Title or Category Heading */}

@@ -51,14 +51,25 @@ import {
 import { api } from '../services/api.js';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
+import { MasterSidebarHeader, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import './SuperAdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import { erpStore, permissionDefinitions, initialRolesList } from '../services/erpStore.js';
 
 export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const [activeTab, setActiveTab] = useState('overview'); // overview, security-incidents, system-logs, rbac, users, audit, sessions, settings, integrations, backup, timetable, report-generation
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.erp-main-content, .role-dash-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [rolePermissions, setRolePermissions] = useState(() => erpStore.getRolePermissions());
   const [settings, setSettings] = useState(() => erpStore.getSettings());
   const [auditLogs, setAuditLogs] = useState(() => erpStore.getAuditLogs());
@@ -873,39 +884,21 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="erp-sidebar-backdrop active"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       {sidebarOpen && (
         <aside className="erp-sidebar">
-          <div className="erp-sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div className="erp-brand-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-              </div>
-              <div className="erp-brand-text">
-                <h2>Apna Campus ERP</h2>
-                <span>Super Admin Center</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <MasterSidebarHeader
+            roleTitle="SUPER ADMIN CENTER"
+            onToggle={() => setSidebarOpen(false)}
+          />
 
           <nav className="erp-sidebar-nav">
             {/* GROUP A: OVERSIGHT */}
@@ -1045,6 +1038,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
             roleKey="super_admin"
             onLogout={onLogout}
             onSwitchRole={onSwitchRole}
+            sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
             onNavigateTab={(tabId) => {
               if (tabId === 'users') setActiveTab('users');

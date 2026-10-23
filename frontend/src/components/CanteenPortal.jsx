@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Utensils,
   ShoppingBag,
@@ -19,6 +19,8 @@ import {
   Menu,
   MessageSquare
 } from 'lucide-react';
+import { MasterSidebarHeader, useMasterSidebarState } from './Navigation/MasterSidebar.jsx';
+import './Navigation/MasterNavigation.css';
 import './CanteenPortal.css';
 import '../components/AdminPortal.css';
 import { downloadCanteenStatementPdf } from '../utils/pdfGenerator';
@@ -28,9 +30,18 @@ import { useTimeGreeting } from '../utils/timeGreeting.js';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 
 export default function CanteenPortal({ account, onLogout }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useMasterSidebarState(false);
   const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Reset scroll position to top whenever activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollables = document.querySelectorAll('.canteen-main, .role-dash-container');
+    scrollables.forEach((el) => { el.scrollTop = 0; });
+  }, [activeTab]);
   const [foodItems, setFoodItems] = useState(initialFoodItems);
   const [orders, setOrders] = useState(initialCanteenOrders);
 
@@ -176,47 +187,48 @@ export default function CanteenPortal({ account, onLogout }) {
         </div>
       </header>
 
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div
+          className="erp-sidebar-backdrop active"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Layout */}
       <div className={`canteen-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
         {/* Sidebar */}
         {sidebarOpen && (
           <aside className="canteen-sidebar">
-            <div className="canteen-sidebar-header">
-              <span className="canteen-sidebar-title">Canteen Menu</span>
+            <MasterSidebarHeader
+                roleTitle="CANTEEN OPERATIONS"
+                onToggle={() => setSidebarOpen(false)}
+              />
               <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="canteen-sidebar-close"
-                title="Close Navigation"
+                className={`canteen-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+                onClick={() => setActiveTab('dashboard')}
               >
-                <X size={16} />
+                <Layers size={17} /> Dashboard
               </button>
-            </div>
-            <button
-              className={`canteen-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Layers size={17} /> Dashboard
-            </button>
-            <button
-              className={`canteen-nav-btn ${activeTab === 'orders' ? 'active' : ''}`}
-              onClick={() => setActiveTab('orders')}
-            >
-              <ShoppingBag size={17} /> Live Order Queue ({pendingOrders + preparingOrders})
-            </button>
-            <button
-              className={`canteen-nav-btn ${activeTab === 'menu' ? 'active' : ''}`}
-              onClick={() => setActiveTab('menu')}
-            >
-              <Utensils size={17} /> Food Menu & Pricing
-            </button>
-            <button
-              className={`canteen-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reports')}
-            >
-              <FileText size={17} /> Daily Sales Reports
-            </button>
-          </aside>
+              <button
+                className={`canteen-nav-btn ${activeTab === 'orders' ? 'active' : ''}`}
+                onClick={() => setActiveTab('orders')}
+              >
+                <ShoppingBag size={17} /> Live Order Queue ({pendingOrders + preparingOrders})
+              </button>
+              <button
+                className={`canteen-nav-btn ${activeTab === 'menu' ? 'active' : ''}`}
+                onClick={() => setActiveTab('menu')}
+              >
+                <Utensils size={17} /> Food Menu & Pricing
+              </button>
+              <button
+                className={`canteen-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
+                onClick={() => setActiveTab('reports')}
+              >
+                <FileText size={17} /> Daily Sales Reports
+              </button>
+            </aside>
         )}
 
         {/* Dynamic Content Pane */}

@@ -1,0 +1,978 @@
+/* ==========================================================================
+   Apna Campus ERP — Master Navigation Design System
+   Standardized dark navy sidebar (#0B1830), blue active states (#2563EB),
+   consistent typography, badge styling, and responsive layout across all portals.
+   ========================================================================== */
+
+:root {
+  --sidebar-bg: #0B1830;
+  --sidebar-header-bg: #071226;
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 76px;
+  --sidebar-accent: #2563EB;
+  --sidebar-accent-hover: #1D4ED8;
+  --sidebar-text-primary: #F8FAFC;
+  --sidebar-text-secondary: #B8C5D6;
+  --sidebar-text-muted: #8292AA;
+  --sidebar-divider: rgba(148, 163, 184, 0.16);
+  --sidebar-item-hover: rgba(255, 255, 255, 0.07);
+  --app-main-bg: #F5F7FB;
+  --header-height: 64px;
+}
+
+/* ── Universal Master Layout ── */
+.master-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background: var(--app-main-bg);
+  color: #0F172A;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ── Master Sidebar Container ── */
+.master-sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  max-width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--sidebar-bg);
+  background: linear-gradient(180deg, #0B1830 0%, #071124 100%);
+  border-right: 1px solid var(--sidebar-divider);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  box-sizing: border-box;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s ease;
+  overflow: hidden;
+  box-shadow: 4px 0 24px rgba(2, 6, 23, 0.35);
+}
+
+/* Desktop Collapsed State */
+.master-sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+  min-width: var(--sidebar-collapsed-width);
+  max-width: var(--sidebar-collapsed-width);
+}
+
+/* ── Fixed Sidebar Header ── */
+.master-sidebar-header {
+  height: var(--header-height);
+  min-height: var(--header-height);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--sidebar-divider);
+  background: var(--sidebar-header-bg);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.master-brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.master-brand-logo-frame {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 9px;
+  background: #ffffff;
+  padding: 3px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+}
+
+.master-brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.master-brand-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.master-brand-name {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--sidebar-text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.master-brand-role {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #60A5FA;
+  margin: 2px 0 0;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.master-sidebar-toggle-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--sidebar-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.master-sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Scrollable Nav Area ── */
+.master-sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 12px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+.master-sidebar-nav::-webkit-scrollbar {
+  width: 5px;
+}
+
+.master-sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.master-sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.master-sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Section Title ── */
+.master-nav-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sidebar-text-muted);
+  padding: 16px 12px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.master-sidebar.collapsed .master-nav-section-title {
+  display: none;
+}
+
+/* ── Navigation Menu Item ── */
+.master-nav-item {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--sidebar-text-secondary);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  text-decoration: none;
+  position: relative;
+}
+
+.master-nav-item:hover {
+  background: var(--sidebar-item-hover);
+  color: var(--sidebar-text-primary);
+}
+
+.master-nav-item svg {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  flex-shrink: 0;
+  color: #94A3B8;
+  transition: color 0.18s ease;
+}
+
+.master-nav-item:hover svg {
+  color: #F8FAFC;
+}
+
+.master-nav-item-label {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  white-space: normal;
+}
+
+/* Active State */
+.master-nav-item.active {
+  background: var(--sidebar-accent) !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.38) !important;
+}
+
+.master-nav-item.active svg {
+  color: #FFFFFF !important;
+}
+
+/* ── Collapsible Menu Group ── */
+.master-nav-collapsible-btn {
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: var(--sidebar-text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border-radius: 8px;
+  margin-top: 8px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.master-nav-collapsible-btn:hover {
+  color: var(--sidebar-text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.master-nav-collapsible-icon {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.master-nav-collapsible-icon.open {
+  transform: rotate(180deg);
+}
+
+.master-nav-collapsible-items {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.master-nav-collapsible-items.open {
+  max-height: 1200px;
+  opacity: 1;
+}
+
+/* Child item indent */
+.master-nav-item.child {
+  padding-left: 18px;
+  font-size: 13.5px;
+}
+
+/* ── Standardized Notification Badges ── */
+.master-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-left: auto;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.master-nav-badge.badge-blue {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+
+.master-nav-badge.badge-amber {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.master-nav-badge.badge-red,
+.master-nav-badge.badge-urgent {
+  background: #FEE2E2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+}
+
+.master-nav-badge.badge-green,
+.master-nav-badge.badge-success {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+.master-nav-badge.badge-neutral {
+  background: rgba(255, 255, 255, 0.14);
+  color: #F1F5F9;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Active item badge contrast */
+.master-nav-item.active .master-nav-badge {
+  background: #FFFFFF !important;
+  color: #1D4ED8 !important;
+  border-color: #FFFFFF !important;
+}
+
+/* ── Collapsed Tooltips ── */
+.master-sidebar.collapsed .master-nav-item-label,
+.master-sidebar.collapsed .master-nav-badge,
+.master-sidebar.collapsed .master-brand-info {
+  display: none;
+}
+
+.master-sidebar.collapsed .master-nav-item {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.master-sidebar.collapsed .master-nav-item[data-tooltip] {
+  position: relative;
+}
+
+.master-sidebar.collapsed .master-nav-item[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #0F172A;
+  color: #FFFFFF;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* ── Sidebar Footer CTA ── */
+.master-sidebar-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--sidebar-divider);
+  background: rgba(7, 17, 36, 0.7);
+  flex-shrink: 0;
+}
+
+.master-sidebar.collapsed .master-sidebar-footer {
+  display: none;
+}
+
+/* ── Main Workspace Surface ── */
+.master-main-surface {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-main-bg);
+  box-sizing: border-box;
+}
+
+/* ── Master Universal Top Header ── */
+.master-header {
+  height: var(--header-height);
+  min-height: var(--header-height);
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  box-sizing: border-box;
+  gap: 16px;
+}
+
+.master-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.master-header-hamburger {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  color: #0F172A;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.master-header-hamburger:hover {
+  background: #E2E8F0;
+  color: #1E3A8A;
+}
+
+.master-header-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.master-header-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.master-header-title {
+  margin: 2px 0 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.master-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ── Mobile Navigation Drawer Backdrop ── */
+.master-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 9998;
+  animation: master-fade-in 0.2s ease;
+}
+
+@keyframes master-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 1024px) {
+  .master-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 9999;
+    transform: translateX(-100%);
+  }
+
+  .master-sidebar.open-mobile {
+    transform: translateX(0);
+  }
+}
+
+/* ==========================================================================
+   Universal Portal Harmonization Overrides
+   Enforces consistent dark navy (#0B1830), 280px width, blue active state (#2563EB),
+   and standard typography across existing portal classes.
+   ========================================================================== */
+
+/* Pattern A: Full-height sidebars (Super Admin, Mgmt, Student, Admissions, Library, Placement, Staff, Transport) */
+.erp-sidebar,
+.mgmt-sidebar,
+.campus-os-sidebar {
+  width: var(--sidebar-width) !important;
+  min-width: var(--sidebar-width) !important;
+  max-width: var(--sidebar-width) !important;
+  height: 100vh !important;
+  background: var(--sidebar-bg) !important;
+  background: linear-gradient(180deg, #0B1830 0%, #071124 100%) !important;
+  border-right: 1px solid var(--sidebar-divider) !important;
+  box-shadow: 4px 0 24px rgba(2, 6, 23, 0.35) !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Pattern B: Top-header grid portals (Accounts, Hostel, HOD, Faculty, Admin, Canteen) */
+.admin-sidebar,
+.accounts-sidebar,
+.faculty-sidebar,
+.hod-sidebar,
+.hostel-sidebar,
+.canteen-sidebar {
+  width: 260px !important;
+  min-width: 260px !important;
+  max-width: 260px !important;
+  height: calc(100vh - 65px) !important;
+  max-height: calc(100vh - 65px) !important;
+  background: var(--sidebar-bg) !important;
+  background: linear-gradient(180deg, #0B1830 0%, #071124 100%) !important;
+  border-right: 1px solid var(--sidebar-divider) !important;
+  box-shadow: 4px 0 24px rgba(2, 6, 23, 0.35) !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: sticky !important;
+  top: 65px !important;
+  z-index: 30 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Custom scrollbars for Pattern B sidebars */
+.admin-sidebar::-webkit-scrollbar,
+.accounts-sidebar::-webkit-scrollbar,
+.faculty-sidebar::-webkit-scrollbar,
+.hod-sidebar::-webkit-scrollbar,
+.hostel-sidebar::-webkit-scrollbar,
+.canteen-sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb,
+.accounts-sidebar::-webkit-scrollbar-thumb,
+.faculty-sidebar::-webkit-scrollbar-thumb,
+.hod-sidebar::-webkit-scrollbar-thumb,
+.hostel-sidebar::-webkit-scrollbar-thumb,
+.canteen-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+/* Top headers in Pattern B portals must always remain at the top above the sidebar */
+.admin-header,
+.accounts-header,
+.faculty-header,
+.hod-header,
+.hostel-header,
+.canteen-header {
+  position: sticky !important;
+  top: 0 !important;
+  height: 65px !important;
+  min-height: 65px !important;
+  z-index: 60 !important;
+  box-sizing: border-box !important;
+}
+
+/* Layout synchronization for Pattern B portals */
+.admin-layout,
+.accounts-layout,
+.faculty-layout,
+.hod-layout,
+.hostel-layout,
+.canteen-layout {
+  display: grid !important;
+  grid-template-columns: 260px minmax(0, 1fr) !important;
+  width: 100% !important;
+  min-height: calc(100vh - 65px) !important;
+  transition: grid-template-columns 0.2s ease !important;
+}
+
+.admin-layout.sidebar-closed,
+.accounts-layout.sidebar-closed,
+.faculty-layout.sidebar-closed,
+.hod-layout.sidebar-closed,
+.hostel-layout.sidebar-closed,
+.canteen-layout.sidebar-closed {
+  grid-template-columns: 1fr !important;
+}
+
+/* Main content areas in Pattern B portals - Always full width like Staff Portal */
+.admin-main,
+.accounts-main,
+.faculty-main,
+.hod-main,
+.hostel-main,
+.canteen-main {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 1024px) {
+  .admin-layout,
+  .accounts-layout,
+  .faculty-layout,
+  .hod-layout,
+  .hostel-layout,
+  .canteen-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-sidebar,
+  .accounts-sidebar,
+  .faculty-sidebar,
+  .hod-sidebar,
+  .hostel-sidebar,
+  .canteen-sidebar {
+    position: fixed !important;
+    top: 65px !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 260px !important;
+    z-index: 99 !important;
+  }
+}
+
+/* Sidebar Backdrop for Mobile/Drawer Views */
+.erp-sidebar-backdrop {
+  display: none !important;
+}
+
+@media (max-width: 1024px) {
+  .erp-sidebar-backdrop.active {
+    display: block !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(15, 23, 42, 0.55) !important;
+    backdrop-filter: blur(2px) !important;
+    z-index: 45 !important;
+  }
+}
+
+/* Exam Cell Layout Specifics - Pinned 100vh sidebar and scrollable main content */
+.erp-exam-layout {
+  display: flex !important;
+  width: 100% !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  background-color: #f8fafc !important;
+}
+
+.erp-exam-layout .erp-sidebar {
+  width: 280px !important;
+  min-width: 280px !important;
+  max-width: 280px !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: var(--sidebar-bg) !important;
+  background: linear-gradient(180deg, #0B1830 0%, #071124 100%) !important;
+  border-right: 1px solid var(--sidebar-divider) !important;
+  box-shadow: 4px 0 24px rgba(2, 6, 23, 0.35) !important;
+}
+
+.erp-exam-layout .erp-sidebar-nav {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 1rem 0.75rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+}
+
+.erp-exam-layout .erp-main-content {
+  flex: 1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: #f8fafc !important;
+  box-sizing: border-box !important;
+}
+
+/* Sidebar header harmonization */
+.admin-sidebar-header,
+.accounts-sidebar-header,
+.erp-sidebar-brand,
+.faculty-sidebar-header,
+.hod-sidebar-header,
+.hostel-sidebar-header,
+.canteen-sidebar-header,
+.mgmt-sidebar-header,
+.campus-os-brand {
+  height: var(--header-height) !important;
+  min-height: var(--header-height) !important;
+  padding: 0 16px !important;
+  border-bottom: 1px solid var(--sidebar-divider) !important;
+  background: var(--sidebar-header-bg) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+/* Sidebar nav scroll harmonization */
+.admin-sidebar,
+.accounts-sidebar,
+.erp-sidebar-nav,
+.faculty-sidebar,
+.hod-sidebar,
+.hostel-sidebar,
+.canteen-sidebar,
+.mgmt-nav,
+.campus-os-nav {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Uniform Menu Buttons */
+.admin-nav-btn,
+.accounts-nav-btn,
+.erp-nav-item,
+.faculty-nav-btn,
+.hod-nav-btn,
+.hostel-nav-btn,
+.canteen-nav-btn,
+.mgmt-nav-item,
+.campus-nav-item {
+  width: 100% !important;
+  min-height: 46px !important;
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--sidebar-text-secondary) !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  text-align: left !important;
+  line-height: 1.35 !important;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-sizing: border-box !important;
+}
+
+.admin-nav-btn:hover,
+.accounts-nav-btn:hover,
+.erp-nav-item:hover,
+.faculty-nav-btn:hover,
+.hod-nav-btn:hover,
+.hostel-nav-btn:hover,
+.canteen-nav-btn:hover,
+.mgmt-nav-item:hover,
+.campus-nav-item:hover {
+  background: var(--sidebar-item-hover) !important;
+  color: var(--sidebar-text-primary) !important;
+}
+
+.admin-nav-btn svg,
+.accounts-nav-btn svg,
+.erp-nav-item svg,
+.faculty-nav-btn svg,
+.hod-nav-btn svg,
+.hostel-nav-btn svg,
+.canteen-nav-btn svg,
+.mgmt-nav-item svg,
+.campus-nav-item svg {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  flex-shrink: 0 !important;
+  color: #94A3B8 !important;
+  transition: color 0.18s ease !important;
+}
+
+.admin-nav-btn:hover svg,
+.accounts-nav-btn:hover svg,
+.erp-nav-item:hover svg,
+.faculty-nav-btn:hover svg,
+.hod-nav-btn:hover svg,
+.hostel-nav-btn:hover svg,
+.canteen-nav-btn:hover svg,
+.mgmt-nav-item:hover svg,
+.campus-nav-item:hover svg {
+  color: #FFFFFF !important;
+}
+
+/* Master Active Item Standard: #2563EB solid blue */
+.admin-nav-btn.active,
+.accounts-nav-btn.active,
+.erp-nav-item.active,
+.faculty-nav-btn.active,
+.hod-nav-btn.active,
+.hostel-nav-btn.active,
+.canteen-nav-btn.active,
+.mgmt-nav-item.active,
+.campus-nav-item.active {
+  background: var(--sidebar-accent) !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.38) !important;
+}
+
+.admin-nav-btn.active svg,
+.accounts-nav-btn.active svg,
+.erp-nav-item.active svg,
+.faculty-nav-btn.active svg,
+.hod-nav-btn.active svg,
+.hostel-nav-btn.active svg,
+.canteen-nav-btn.active svg,
+.mgmt-nav-item.active svg,
+.campus-nav-item.active svg {
+  color: #FFFFFF !important;
+}
+
+/* Standardized Section Labels */
+.admin-nav-section-title,
+.admin-nav-section-dropdown,
+.erp-nav-section-title,
+.hostel-nav-category,
+.mgmt-nav-section,
+.campus-os-nav-section-title {
+  color: var(--sidebar-text-muted) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  padding: 14px 12px 6px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Ensure navigation buttons and collapsible rosters never shrink in flex layouts */
+.roster-items {
+  flex-shrink: 0 !important;
+}
+
+.admin-nav-btn,
+.accounts-nav-btn,
+.faculty-nav-btn,
+.hod-nav-btn,
+.hostel-nav-btn,
+.canteen-nav-btn {
+  flex-shrink: 0 !important;
+}
+
+/* Badges */
+.erp-nav-badge,
+.hostel-badge-count,
+.admin-badge,
+.master-nav-badge {
+  margin-left: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* ── Universal Solid Black Navigation Toggle Button ── */
+.campus-nav-toggle-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  border: 1px solid #000000 !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3) !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+}
+
+.campus-nav-toggle-btn svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+.campus-nav-toggle-btn:hover {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+

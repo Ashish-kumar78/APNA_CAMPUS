@@ -17,16 +17,17 @@ Maps predictions to the official 7 College Complaint Categories:
 import io
 import re
 import os
+import json
 import base64
 import logging
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
 from PIL import Image
 import numpy as np
 
 logger = logging.getLogger("AI_VISION")
 
 # Official 7 College Complaint Categories
-COLLEGE_CATEGORIES = [
+COLLEGE_CATEGORIES: List[str] = [
     "PLUMBING",
     "ELECTRICAL",
     "CLEANING",
@@ -37,17 +38,17 @@ COLLEGE_CATEGORIES = [
 ]
 
 # Mapping between 6-class legacy NLP model and 7-class College Taxonomy
-MODEL_CLASS_TO_COLLEGE = {
+MODEL_CLASS_TO_COLLEGE: Dict[str, str] = {
     "plumbing": "PLUMBING",
     "electrical": "ELECTRICAL",
     "cleaning": "CLEANING",
     "internet_it": "NETWORK",
-    "maintenance": "FURNITURE", # Subdivided by cues between FURNITURE and CIVIL
+    "maintenance": "FURNITURE",  # Subdivided by cues between FURNITURE and CIVIL
     "other": "OTHER",
 }
 
 # Contextual keyword dictionaries for filenames and cues
-KEYWORD_MAPPINGS = {
+KEYWORD_MAPPINGS: Dict[str, List[str]] = {
     "PLUMBING": [
         "tap", "faucet", "pipe", "water", "leak", "flush", "drain", "sink",
         "shower", "basin", "geyser", "tank", "valve", "plumb", "puddle", "washbasin"
@@ -77,18 +78,21 @@ KEYWORD_MAPPINGS = {
 
 def _extract_image_features(img_bytes: bytes) -> Dict[str, Any]:
     """Extracts real visual features from image bytes using Pillow and NumPy."""
-    try:
-        pil_img = Image.open(io.BytesIO(img_bytes))
-        width, height = pil_img.size
-        
-        # Guard against zero or corrupted dimensions
-        if width <= 0 or height <= 0:
-            return {"valid": False, "error": "Invalid image dimensions"}
+    if not img_bytes:
+        return {"valid": False, "error": "Empty image bytes"}
 
-        # Resize for consistent, fast feature computation (max 384px)
-        pil_img.thumbnail((384, 384))
-        rgb_img = pil_img.convert("RGB")
-        img_np = np.array(rgb_img, dtype=np.float32)
+    try:
+        with Image.open(io.BytesIO(img_bytes)) as pil_img:
+            width, height = pil_img.size
+
+            # Guard against zero or corrupted dimensions
+            if width <= 0 or height <= 0:
+                return {"valid": False, "error": "Invalid image dimensions"}
+
+            # Resize for consistent, fast feature computation (max 384px)
+            pil_img.thumbnail((384, 384))
+            rgb_img = pil_img.convert("RGB")
+            img_np = np.array(rgb_img, dtype=np.float32)
 
         avg_r = float(np.mean(img_np[:, :, 0]))
         avg_g = float(np.mean(img_np[:, :, 1]))
@@ -97,7 +101,7 @@ def _extract_image_features(img_bytes: bytes) -> Dict[str, Any]:
 
         # Compute grayscale luminance
         gray = 0.2989 * img_np[:, :, 0] + 0.5870 * img_np[:, :, 1] + 0.1140 * img_np[:, :, 2]
-        
+
         # Edge density approximation (spatial gradients)
         if gray.shape[0] > 1 and gray.shape[1] > 1:
             dy = np.abs(gray[1:, :] - gray[:-1, :])
@@ -152,6 +156,21 @@ def analyze_image_bytes(image_bytes: bytes, filename: str = "", location_hint: s
     an actionable title, structured description, calibrated confidence, and human verification guidance.
     Never fabricates facts not supported by visual or textual evidence.
     """
+    if not image_bytes or len(image_bytes) == 0:
+        return {
+            "title": "Maintenance Issue Requires Review",
+            "description": "Image format could not be verified automatically. Please select your category and provide details.",
+            "category": "other",
+            "college_category": "OTHER",
+            "confidence": 0.40,
+            "confidence_level": "low",
+            "explanation": "No image data was provided for analysis.",
+            "detected_cues": ["Unrecognized or unreadable image stream"],
+            "suggested_priority": "Medium",
+            "needs_review": True,
+            "source": "local_cv_validator",
+        }
+
     # 1. Check optional Groq Vision API if configured (opt-in only)
     groq_api_key = os.environ.get("GROQ_API_KEY")
     if groq_api_key:
@@ -159,7 +178,7 @@ def analyze_image_bytes(image_bytes: bytes, filename: str = "", location_hint: s
             from groq import Groq
             client = Groq(api_key=groq_api_key)
             b64_img = base64.b64encode(image_bytes).decode("utf-8")
-            
+
             prompt = (
                 "You are an institutional campus maintenance inspector. Examine this complaint photo submitted by a student. "
                 "Classify the defect strictly into one of these 7 categories: [PLUMBING, ELECTRICAL, CLEANING, FURNITURE, CIVIL, NETWORK, OTHER]. "
@@ -172,8 +191,9 @@ def analyze_image_bytes(image_bytes: bytes, filename: str = "", location_hint: s
                 "'suggested_priority' ('Low', 'Medium', 'High')."
             )
 
+            vision_model = os.environ.get("GROQ_VISION_MODEL", "llama-3.2-11b-vision-preview")
             completion = client.chat.completions.create(
-                model="llama-3.2-11b-vision-preview",
+                model=vision_model,
                 messages=[
                     {
                         "role": "user",
@@ -189,13 +209,16 @@ def analyze_image_bytes(image_bytes: bytes, filename: str = "", location_hint: s
                 temperature=0.1,
                 response_format={"type": "json_object"},
             )
-            import json
-            groq_res = json.loads(completion.choices[0].message.content)
-            raw_cat = groq_res.get("category", "OTHER").upper()
+            choice = completion.choices[0] if getattr(completion, "choices", None) else None
+            raw_content = choice.message.content if choice and choice.message and choice.message.content else None
+            if not raw_content:
+                raise ValueError("Groq Vision API returned empty response content")
+            groq_res = json.loads(raw_content)
+            raw_cat = str(groq_res.get("category", "OTHER")).upper()
             college_cat = raw_cat if raw_cat in COLLEGE_CATEGORIES else "OTHER"
             conf = max(0.0, min(1.0, float(groq_res.get("confidence", 0.85))))
             conf_level = "high" if conf >= 0.80 else ("medium" if conf >= 0.60 else "low")
-            
+
             # Map back to 6-class model label for legacy compatibility
             model_class = "other"
             for k, v in MODEL_CLASS_TO_COLLEGE.items():
@@ -208,7 +231,7 @@ def analyze_image_bytes(image_bytes: bytes, filename: str = "", location_hint: s
                 "description": groq_res.get("description", f"Visual inspection indicates possible {college_cat.lower()} issue. Please confirm details."),
                 "category": model_class,
                 "college_category": college_cat,
-                "confidence": conf,
+                "confidence": round(conf, 4),
                 "confidence_level": conf_level,
                 "explanation": groq_res.get("explanation", f"AI vision identified visual cues corresponding to {college_cat.lower()} infrastructure."),
                 "detected_cues": ["Visual AI feature identification"],
@@ -241,13 +264,15 @@ def analyze_image_bytes(image_bytes: bytes, filename: str = "", location_hint: s
     fn_lower = (filename or "").lower()
     loc_lower = (location_hint or "").lower()
     combined_hints = f"{fn_lower} {loc_lower}"
+    # Replace separators with spaces for robust word-boundary matching
+    clean_hints = re.sub(r'[^a-zA-Z0-9]', ' ', combined_hints)
 
     matched_keyword_cat = None
     matched_keyword = None
 
     for cat_name, kws in KEYWORD_MAPPINGS.items():
         for kw in kws:
-            if re.search(r'\b' + re.escape(kw) + r'\b', combined_hints) or kw in fn_lower:
+            if re.search(r'\b' + re.escape(kw) + r'\b', clean_hints) or kw in fn_lower:
                 matched_keyword_cat = cat_name
                 matched_keyword = kw
                 break
@@ -255,15 +280,15 @@ def analyze_image_bytes(image_bytes: bytes, filename: str = "", location_hint: s
             break
 
     detected_cues: List[str] = []
-    
+
     # Analyze visual characteristics
-    if features["is_metallic_cool"]:
+    if features.get("is_metallic_cool"):
         detected_cues.append("Cool metallic/reflective surface tones typical of water fixtures")
-    if features["is_warm_toned"]:
+    if features.get("is_warm_toned"):
         detected_cues.append("Warm copper/wooden hue distribution")
-    if features["is_high_texture"]:
+    if features.get("is_high_texture"):
         detected_cues.append("High edge/geometry density indicating detailed fixture or wiring")
-    if features["is_flat_surface"]:
+    if features.get("is_flat_surface"):
         detected_cues.append("Low contrast planar surface characteristic of walls or doors")
 
     # Determine predicted College Category
@@ -273,16 +298,16 @@ def analyze_image_bytes(image_bytes: bytes, filename: str = "", location_hint: s
         confidence = 0.88 if len(detected_cues) >= 2 else 0.76
     else:
         # Rely on computed visual properties without hallucination
-        if features["is_metallic_cool"] and ("bath" in loc_lower or "wash" in loc_lower or features["edge_density"] > 16):
+        if features.get("is_metallic_cool") and ("bath" in loc_lower or "wash" in loc_lower or features.get("edge_density", 0) > 16):
             college_category = "PLUMBING"
             confidence = 0.82
-        elif features["is_warm_toned"] and features["is_high_texture"]:
+        elif features.get("is_warm_toned") and features.get("is_high_texture"):
             college_category = "ELECTRICAL"
             confidence = 0.78
-        elif features["is_flat_surface"] and ("room" in loc_lower or "hall" in loc_lower):
+        elif features.get("is_flat_surface") and ("room" in loc_lower or "hall" in loc_lower):
             college_category = "CIVIL"
             confidence = 0.72
-        elif features["is_high_texture"] and ("mess" in loc_lower or "floor" in loc_lower or "corridor" in loc_lower):
+        elif features.get("is_high_texture") and ("mess" in loc_lower or "floor" in loc_lower or "corridor" in loc_lower):
             college_category = "CLEANING"
             confidence = 0.70
         elif "lab" in loc_lower or "wifi" in loc_lower or "computer" in loc_lower:
@@ -368,3 +393,18 @@ def analyze_image_bytes(image_bytes: bytes, filename: str = "", location_hint: s
         "needs_review": needs_review,
         "source": "local_cv_pipeline",
     }
+
+
+__all__ = ["analyze_image_bytes", "COLLEGE_CATEGORIES", "MODEL_CLASS_TO_COLLEGE"]
+
+
+if __name__ == "__main__":
+    import sys
+    print("Testing Apna Campus Vision Analysis Pipeline...")
+    # Generate synthetic 100x100 RGB image
+    test_img = Image.new("RGB", (100, 100), color=(120, 170, 220))
+    test_buf = io.BytesIO()
+    test_img.save(test_buf, format="JPEG")
+    res = analyze_image_bytes(test_buf.getvalue(), filename="tap_leak.jpg", location_hint="Hostel Block A Bathroom")
+    print(f"Status: OK | Category: {res['college_category']} | Confidence: {res['confidence']} | Title: {res['title']}")
+    sys.exit(0)

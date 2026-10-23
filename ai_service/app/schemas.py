@@ -8,10 +8,10 @@ class PredictRequest(BaseModel):
         min_length=3,
         max_length=2000,
         description="The complaint description text submitted by the student.",
-        example="The water tap in my hostel bathroom is leaking continuously."
+        json_schema_extra={"example": "The water tap in my hostel bathroom is leaking continuously."}
     )
     threshold_override: Optional[float] = Field(
-        None,
+        default=None,
         ge=0.0,
         le=1.0,
         description="Optional custom confidence threshold for manual review decision."
@@ -24,7 +24,7 @@ class PredictResponse(BaseModel):
     needs_review: bool = Field(..., description="True if confidence is below threshold or category is 'other'")
     threshold_used: float = Field(..., description="The confidence threshold applied")
     probabilities: Dict[str, float] = Field(default_factory=dict, description="Full probability distribution across all classes")
-    review_reason: Optional[str] = Field(None, description="Explanation when needs_review is true")
+    review_reason: Optional[str] = Field(default=None, description="Explanation when needs_review is true")
 
 
 class HealthResponse(BaseModel):
@@ -38,20 +38,19 @@ class HealthResponse(BaseModel):
 
 class ImagePredictRequest(BaseModel):
     image_base64: str = Field(..., description="Base64 encoded image string or data URI (data:image/jpeg;base64,...)")
-    filename: Optional[str] = Field("", description="Optional filename of the uploaded image for contextual clues")
-    location_hint: Optional[str] = Field("", description="Optional hostel room or area location")
+    filename: Optional[str] = Field(default="", description="Optional filename of the uploaded image for contextual clues")
+    location_hint: Optional[str] = Field(default="", description="Optional hostel room or area location")
 
 
 class ImagePredictResponse(BaseModel):
     title: str = Field(..., description="Suggested problem title based on detected cues")
     description: str = Field(..., description="Suggested problem description prompting student for details")
     category: str = Field(..., description="Predicted category (underlying 6-class model)")
-    college_category: str = Field("OTHER", description="Mapped 7-category college taxonomy (PLUMBING, ELECTRICAL, CLEANING, FURNITURE, CIVIL, NETWORK, OTHER)")
+    college_category: str = Field(default="OTHER", description="Mapped 7-category college taxonomy (PLUMBING, ELECTRICAL, CLEANING, FURNITURE, CIVIL, NETWORK, OTHER)")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Calibrated confidence score")
-    confidence_level: str = Field("medium", description="Qualitative confidence: high, medium, or low")
-    explanation: str = Field("", description="Clear factual explanation of visual cues detected")
+    confidence_level: str = Field(default="medium", description="Qualitative confidence: high, medium, or low")
+    explanation: str = Field(default="", description="Clear factual explanation of visual cues detected")
     detected_cues: List[str] = Field(default_factory=list, description="List of observed physical/color/structural cues")
-    suggested_priority: str = Field("Medium", description="Suggested priority level (Low, Medium, High)")
-    needs_review: bool = Field(False, description="Flag indicating human supervisor review is recommended")
+    suggested_priority: str = Field(default="Medium", description="Suggested priority level (Low, Medium, High)")
+    needs_review: bool = Field(default=False, description="Flag indicating human supervisor review is recommended")
     source: str = Field(..., description="Vision model identifier")
-

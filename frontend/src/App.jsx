@@ -304,6 +304,8 @@ function App() {
   const [activationTokenInput, setActivationTokenInput] = useState('')
   const [activeRoleGroup, setActiveRoleGroup] = useState('administration')
   const [selectedRole, setSelectedRole] = useState('')
+  const [showPublicTimetable, setShowPublicTimetable] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
 
   useEffect(() => {
     async function validateSession() {

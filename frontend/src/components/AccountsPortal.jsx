@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { AppLayout } from './Navigation';
 import {
+  GraduationCap,
   CreditCard,
   DollarSign,
   Receipt,
@@ -444,8 +446,82 @@ export default function AccountsPortal({ account, onLogout }) {
       }));
   }, [students]);
 
+
+  const accountsNavSections = [
+    {
+      title: 'FINANCIAL DASHBOARD',
+      items: [
+        { id: 'dashboard', label: 'Accounts Dashboard', icon: Layers },
+        { id: 'verifications', label: 'Payment Verifications', icon: CheckCircle2, badge: unverifiedCount || undefined, badgeType: 'urgent' },
+        { id: 'transactions', label: 'Transaction Audit Ledger', icon: CreditCard },
+      ]
+    },
+    {
+      title: 'FEE & SCHOLARSHIP MANAGEMENT',
+      items: [
+        { id: 'students', label: 'Student Fee Directory', icon: GraduationCap },
+        { id: 'structure', label: 'Fee Structures & Schedules', icon: Building2 },
+        { id: 'scholarships', label: 'Scholarships & Waivers', icon: DollarSign },
+      ]
+    },
+    {
+      title: 'REPORTS & DOCUMENTS',
+      items: [
+        { id: 'reports', label: 'Financial Reports & Exports', icon: FileText },
+        { id: 'documents', label: 'Student Financial Documents', icon: Download },
+        { id: 'campus-connect', label: 'Campus Connect Broadcast', icon: MessageSquare },
+      ]
+    }
+  ];
+
+  const getAccountsHeading = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: 'Accounts & Finance Command Center',
+          subtitle: 'Institutional bursar operations, fee realizations, reconciliations, and digital payment verification.'
+        };
+      case 'verifications':
+        return {
+          title: 'Digital Payment Proof Verification Audit',
+          subtitle: `${unverifiedCount} Student bank transfer proofs awaiting finance verification and receipt issuance.`
+        };
+      case 'students':
+        return {
+          title: 'Student Fee Ledger & Defaulter Registry',
+          subtitle: 'Searchable ledger of all student fee demands, scholarship adjustments, and pending balances.'
+        };
+      case 'transactions':
+        return {
+          title: 'Institutional Payment & Transaction Ledger',
+          subtitle: 'Real-time record of all verified campus fee transactions, payment gateway syncs, and receipts.'
+        };
+      case 'structure':
+        return {
+          title: 'Academic Fee Structure & Program Tariffs',
+          subtitle: 'Autonomous tuition fees, lab dues, development funds, and installment policies.'
+        };
+      case 'scholarships':
+        return {
+          title: 'State & Merit Scholarship Concessions',
+          subtitle: 'PRERANA, NSP, tuition fee waivers, and institutional merit disbursements.'
+        };
+      case 'reports':
+        return {
+          title: 'Master Financial Reports & Compliance Returns',
+          subtitle: 'Daily cash collections, bank reconciliation statements, and audit ledgers.'
+        };
+      default:
+        return {
+          title: (activeTab || 'Accounts Portal').replace(/-/g, ' ').toUpperCase(),
+          subtitle: 'Bursar & Finance Office'
+        };
+    }
+  };
+
+  const accountsHeading = getAccountsHeading();
   return (
-    <div className="accounts-portal-root">
+    <>
       {/* Toast Alert */}
       {toastMessage && (
         <div
@@ -472,136 +548,20 @@ export default function AccountsPortal({ account, onLogout }) {
         </div>
       )}
 
-      {/* Top Header */}
-      <header className="accounts-header">
-        <div className="accounts-brand" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {!sidebarOpen && (
-            <button
-              className="campus-nav-toggle-btn"
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              title="Show Navigation"
-              aria-label="Show Navigation"
-            >
-              <Menu size={20} />
-            </button>
-          )}
-          <div className="accounts-brand-icon" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-          </div>
-          <div className="accounts-brand-text">
-            <h1>APNA CAMPUS · ACCOUNTS &amp; FINANCE</h1>
-            <p>Bursar Office &amp; Integrated Institutional Financial System</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="campus-user-pill">
-            <div className="campus-user-avatar">ACC</div>
-            <div className="campus-user-details">
-              <strong>{account?.name || 'Accounts Officer'}</strong>
-              <small>Bursar &amp; Finance Management</small>
-            </div>
-            <button
-              className="campus-logout-btn"
-              type="button"
-              onClick={onLogout}
-              title="Sign out"
-              aria-label="Sign out"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
-      <div className={`accounts-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
-        {/* Sidebar */}
-        {sidebarOpen && (
-          <aside className="accounts-sidebar">
-            <div className="accounts-sidebar-header">
-              <span className="accounts-sidebar-title">
-                Financial Controls
-              </span>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="accounts-sidebar-close"
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <button
-              className={`accounts-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Layers size={17} /> Dashboard
-            </button>
-            <button
-              className={`accounts-nav-btn ${activeTab === 'verifications' ? 'active' : ''}`}
-              onClick={() => setActiveTab('verifications')}
-            >
-              <ShieldCheck size={17} /> Digital Proof Verifications
-              {pendingCount > 0 && (
-                <span
-                  style={{
-                    marginLeft: 'auto',
-                    background: '#d97706',
-                    color: '#ffffff',
-                    padding: '2px 8px',
-                    borderRadius: '10px',
-                    fontSize: '0.72rem',
-                    fontWeight: 700
-                  }}
-                >
-                  {pendingCount}
-                </span>
-              )}
-            </button>
-            <button
-              className={`accounts-nav-btn ${activeTab === 'students' ? 'active' : ''}`}
-              onClick={() => setActiveTab('students')}
-            >
-              <Users size={17} /> Student Fee Ledger
-            </button>
-            <button
-              className={`accounts-nav-btn ${activeTab === 'transactions' ? 'active' : ''}`}
-              onClick={() => setActiveTab('transactions')}
-            >
-              <Receipt size={17} /> Payment Transactions
-            </button>
-            <button
-              className={`accounts-nav-btn ${activeTab === 'structure' ? 'active' : ''}`}
-              onClick={() => setActiveTab('structure')}
-            >
-              <Building2 size={17} /> Fee Structures
-            </button>
-            <button
-              className={`accounts-nav-btn ${activeTab === 'scholarships' ? 'active' : ''}`}
-              onClick={() => setActiveTab('scholarships')}
-            >
-              <DollarSign size={17} /> Scholarships
-            </button>
-            <button
-              className={`accounts-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reports')}
-            >
-              <FileText size={17} /> Financial Reports
-            </button>
-            <button
-              className={`accounts-nav-btn ${activeTab === 'documents' ? 'active' : ''}`}
-              onClick={() => setActiveTab('documents')}
-            >
-              <Download size={17} /> Student Documents
-            </button>
-          </aside>
-        )}
-
-        {/* Dynamic Content Pane */}
-        <main className="accounts-main">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Finance Portal"
+        portalSubtitle="Bursar & Accounts Management"
+        portalHomeTab="dashboard"
+        navSections={accountsNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={accountsHeading.title}
+        pageSubtitle={accountsHeading.subtitle}
+      >
+        <div className="accounts-portal-content-wrap">
           {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
           {activeTab === 'campus-connect' && (
             <div style={{ height: 'calc(100vh - 120px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>
@@ -1705,8 +1665,8 @@ export default function AccountsPortal({ account, onLogout }) {
           {activeTab === 'documents' && (
             <StudentDocumentsTable portalRole="accounts" />
           )}
-        </main>
-      </div>
+        </div>
+      </AppLayout>
 
       {/* MODAL: PROOF AUDIT & VERIFICATION */}
       {selectedProof && (
@@ -2547,6 +2507,6 @@ export default function AccountsPortal({ account, onLogout }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

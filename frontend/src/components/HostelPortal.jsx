@@ -1,4 +1,6 @@
+import { Building2, CalendarDays, UsersRound, Megaphone } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
+import { AppLayout } from './Navigation';
 import {
   Building,
   Bed,
@@ -711,8 +713,83 @@ export default function HostelPortal({ account, onLogout }) {
     });
   }, [hostelRoomsWithResidents, roomFloorFilter, roomSearchQuery]);
 
+
+  const hostelNavSections = [
+    {
+      title: 'RESIDENTIAL OPERATIONS',
+      items: [
+        { id: 'dashboard', label: 'Warden Dashboard', icon: Home },
+        { id: 'hostels', label: 'Hostel Blocks & Wings', icon: Building2 },
+        { id: 'rooms', label: 'Rooms & Bed Allotment', icon: Bed },
+        { id: 'checkin-checkout', label: 'Check-In & Check-Out', icon: UserCheck },
+        { id: 'attendance', label: 'Night Roll Call', icon: Clock },
+      ]
+    },
+    {
+      title: 'LEAVES & DIGITAL PASSES',
+      items: [
+        { id: 'leave-mgmt', label: 'Hostel Leaves', icon: CalendarDays },
+        { id: 'gatepasses', label: 'Digital Gate Passes', icon: ShieldCheck },
+        { id: 'visitors', label: 'Visitor Logs', icon: Users },
+        { id: 'disciplinary', label: 'Disciplinary Records', icon: AlertTriangle },
+        { id: 'emergency-incidents', label: 'Incident Hotline', icon: ShieldAlert },
+      ]
+    },
+    {
+      title: 'SERVICES & ASSETS',
+      items: [
+        { id: 'mess-dining', label: 'Mess & Dining Menu', icon: Utensils },
+        { id: 'complaints', label: 'Room Complaints', icon: Wrench },
+        { id: 'inventory-assets', label: 'Furniture & Inventory', icon: Layers },
+        { id: 'fees-dues', label: 'Hostel Fee Ledger', icon: CreditCard },
+        { id: 'staff-mgmt', label: 'Warden & Caretaker Roster', icon: UsersRound },
+        { id: 'notices-announcements', label: 'Hostel Notices', icon: Megaphone },
+      ]
+    },
+    {
+      title: 'REPORTS & POLICIES',
+      items: [
+        { id: 'reports', label: 'Occupancy & Meal Reports', icon: FileText },
+        { id: 'documents', label: 'Student Resident Docs', icon: Download },
+        { id: 'report-generation', label: 'Report Generation', icon: FileSpreadsheet },
+        { id: 'settings-rules', label: 'Hostel Rules & Curfew', icon: Settings },
+      ]
+    }
+  ];
+
+  const getHostelHeading = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: 'Hostel & Residential Services Management',
+          subtitle: 'Real-time room occupancy, night roll calls, gate passes, and resident welfare.'
+        };
+      case 'gatepasses':
+        return {
+          title: 'Autonomous Digital Gate Pass Registry',
+          subtitle: 'Biometric and warden-verified exit/entry logs with parent SMS dispatch.'
+        };
+      case 'rooms':
+        return {
+          title: 'Room Allotment & Bed Capacity Manager',
+          subtitle: 'Block-wise bed occupancy, vacancy monitoring, and student room transfers.'
+        };
+      case 'mess-dining':
+        return {
+          title: 'Mess Nutrition, Meal Count & Menu Management',
+          subtitle: 'Weekly rotational student menu, meal reservations, and kitchen hygiene audit.'
+        };
+      default:
+        return {
+          title: (activeTab || 'Hostel Portal').replace(/-/g, ' ').toUpperCase(),
+          subtitle: 'Office of the Chief Warden & Residential Affairs'
+        };
+    }
+  };
+
+  const hostelHeading = getHostelHeading();
   return (
-    <div className="hostel-portal-root">
+    <>
       {/* Toast Notification */}
       {toastMessage && (
         <div style={{
@@ -735,238 +812,20 @@ export default function HostelPortal({ account, onLogout }) {
         </div>
       )}
 
-      {/* Top Header */}
-      <header className="hostel-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <button
-            className="campus-nav-toggle-btn"
-            type="button"
-            onClick={() => setSidebarOpen(prev => !prev)}
-            title={sidebarOpen ? "Hide Navigation" : "Show Navigation"}
-            aria-label={sidebarOpen ? "Hide Navigation" : "Show Navigation"}
-          >
-            <Menu size={20} />
-          </button>
-          <div className="hostel-brand">
-            <div className="hostel-brand-icon" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-            </div>
-            <div className="hostel-brand-text">
-              <h1>Apna Campus</h1>
-              <p>Hostel &amp; Residential Services Management</p>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="hostel-role-badge">
-            <ShieldCheck size={14} /> Warden Desk Active
-          </div>
-
-          <div className="campus-user-pill">
-            <div className="campus-user-avatar" style={{ background: '#7c3aed' }}>
-              {account?.name ? account.name.split(' ').map(n => n[0]).join('').slice(0, 2) : 'WRD'}
-            </div>
-            <div className="campus-user-details">
-              <strong>{account?.name || 'Chief Warden'}</strong>
-              <small>{account?.detail || 'Hostel Administration'}</small>
-            </div>
-            <button
-              className="campus-logout-btn"
-              type="button"
-              onClick={onLogout}
-              title="Sign out"
-              aria-label="Sign out"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
-      <div className={`hostel-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
-        {/* Sidebar */}
-        {sidebarOpen && (
-          <aside className="hostel-sidebar">
-            <div className="hostel-sidebar-header">
-              <span className="hostel-sidebar-title">Hostel Menu</span>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="hostel-sidebar-close"
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            {/* ── Category 1: Residence & Allocations ── */}
-            <div className="hostel-nav-category">Residence &amp; Rooms</div>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Layers size={17} /> Dashboard
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'hostels' ? 'active' : ''}`}
-              onClick={() => setActiveTab('hostels')}
-            >
-              <Building size={17} /> Hostels &amp; Buildings
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'rooms' ? 'active' : ''}`}
-              onClick={() => setActiveTab('rooms')}
-            >
-              <Bed size={17} /> Rooms &amp; Bed Allocations
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'checkin-checkout' ? 'active' : ''}`}
-              onClick={() => setActiveTab('checkin-checkout')}
-            >
-              <LogIn size={17} /> Student Check-in / Check-out
-            </button>
-
-            {/* ── Category 2: Student Movement & Dining ── */}
-            <div className="hostel-nav-category">Daily Movement &amp; Dining</div>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'attendance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('attendance')}
-            >
-              <UserCheck size={17} /> Hostel Attendance
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'leave-mgmt' ? 'active' : ''}`}
-              onClick={() => setActiveTab('leave-mgmt')}
-            >
-              <Calendar size={17} /> Leave Management
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'gatepasses' ? 'active' : ''}`}
-              onClick={() => setActiveTab('gatepasses')}
-            >
-              <ShieldCheck size={17} /> Gate Pass (Outing / Home)
-              {pendingGatePassCount > 0 && (
-                <span className="hostel-badge-count">{pendingGatePassCount}</span>
-              )}
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'visitors' ? 'active' : ''}`}
-              onClick={() => setActiveTab('visitors')}
-            >
-              <Users size={17} /> Visitor Management ({activeVisitors.length})
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'mess-dining' ? 'active' : ''}`}
-              onClick={() => setActiveTab('mess-dining')}
-            >
-              <Utensils size={17} /> Mess &amp; Dining Management
-            </button>
-
-            {/* ── Category 3: Facilities & Maintenance ── */}
-            <div className="hostel-nav-category">Facilities &amp; Assets</div>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'complaints' ? 'active' : ''}`}
-              onClick={() => setActiveTab('complaints')}
-            >
-              <AlertCircle size={17} /> Complaints ({pendingComplaints})
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'maintenance-repairs' ? 'active' : ''}`}
-              onClick={() => setActiveTab('maintenance-repairs')}
-            >
-              <Wrench size={17} /> Maintenance &amp; Repairs
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'inventory-assets' ? 'active' : ''}`}
-              onClick={() => setActiveTab('inventory-assets')}
-            >
-              <Boxes size={17} /> Inventory &amp; Assets
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'inspection-compliance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('inspection-compliance')}
-            >
-              <ClipboardCheck size={17} /> Inspection &amp; Compliance
-            </button>
-
-            {/* ── Category 4: Student Discipline & Welfare ── */}
-            <div className="hostel-nav-category">Discipline &amp; Welfare</div>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'disciplinary' ? 'active' : ''}`}
-              onClick={() => setActiveTab('disciplinary')}
-            >
-              <ShieldAlert size={17} /> Disciplinary Management
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'emergency-incidents' ? 'active' : ''}`}
-              onClick={() => setActiveTab('emergency-incidents')}
-            >
-              <AlertOctagon size={17} /> Emergency &amp; Incident Reports
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'feedback-suggestions' ? 'active' : ''}`}
-              onClick={() => setActiveTab('feedback-suggestions')}
-            >
-              <MessageSquare size={17} /> Feedback &amp; Suggestions
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'fees-dues' ? 'active' : ''}`}
-              onClick={() => setActiveTab('fees-dues')}
-            >
-              <CreditCard size={17} /> Hostel Fees &amp; Dues
-            </button>
-
-            {/* ── Category 5: Administration & Governance ── */}
-            <div className="hostel-nav-category">Administration &amp; Rules</div>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'staff-mgmt' ? 'active' : ''}`}
-              onClick={() => setActiveTab('staff-mgmt')}
-            >
-              <Shield size={17} /> Hostel Staff Management
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'notices-announcements' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notices-announcements')}
-            >
-              <Bell size={17} /> Hostel Notices &amp; Announcements
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reports')}
-            >
-              <FileText size={17} /> Occupancy Reports
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'documents' ? 'active' : ''}`}
-              onClick={() => setActiveTab('documents')}
-            >
-              <Download size={17} /> Student Documents
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'report-generation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('report-generation')}
-            >
-              <FileSpreadsheet size={17} /> Report Generation
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'emergency-contacts' ? 'active' : ''}`}
-              onClick={() => setActiveTab('emergency-contacts')}
-            >
-              <PhoneCall size={17} /> Emergency Contacts
-            </button>
-            <button
-              className={`hostel-nav-btn ${activeTab === 'settings-rules' ? 'active' : ''}`}
-              onClick={() => setActiveTab('settings-rules')}
-            >
-              <Settings size={17} /> Settings &amp; Hostel Rules
-            </button>
-          </aside>
-
-        )}
-
-        {/* Dynamic Content Pane */}
-        <main className="hostel-main">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Hostel Portal"
+        portalSubtitle="Residential Life & Warden Administration"
+        portalHomeTab="dashboard"
+        navSections={hostelNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={hostelHeading.title}
+        pageSubtitle={hostelHeading.subtitle}
+      >
+        <div className="hostel-portal-content-wrap">
           {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
           {activeTab === 'campus-connect' && (
             <div style={{ height: 'calc(100vh - 120px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>
@@ -2303,8 +2162,8 @@ export default function HostelPortal({ account, onLogout }) {
           {activeTab === 'settings-rules' && (
             <HostelSettingsRulesSection />
           )}
-        </main>
-      </div>
+        </div>
+      </AppLayout>
 
 
       {/* ── MODAL: ALLOCATE BED ── */}
@@ -3299,6 +3158,6 @@ export default function HostelPortal({ account, onLogout }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

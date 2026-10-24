@@ -1,4 +1,6 @@
+import { ArrowRightLeft } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
+import { AppLayout } from '../Navigation';
 import {
   Wrench,
   ShieldCheck,
@@ -403,8 +405,78 @@ export default function CampusOperationsPortal({ account, onLogout, onSwitchRole
     }
   }, [activeCategoryView, tasks]);
 
+  // Nav sections for AppLayout sidebar
+  const opsNavSections = [
+    {
+      title: 'OVERVIEW',
+      items: [
+        { label: 'Dashboard', icon: Home, id: 'dashboard' },
+      ]
+    },
+    {
+      title: 'WORKFORCE',
+      items: [
+        { label: 'Staff Directory', icon: Users, id: 'staff-directory' },
+        { label: 'Tasks & Work Orders', icon: ClipboardList, id: 'tasks-work-orders' },
+        { label: 'Attendance Roster', icon: CheckSquare, id: 'attendance-roster' },
+        { label: 'Leave & Shift Requests', icon: Calendar, id: 'leave-shift-requests' },
+      ]
+    },
+    {
+      title: 'MAINTENANCE',
+      items: [
+        { label: 'Maintenance Requests', icon: Wrench, id: 'maintenance-requests' },
+        { label: 'Preventive Maintenance', icon: Settings, id: 'preventive-maintenance' },
+        { label: 'Campus Facilities', icon: Building2, id: 'campus-facilities' },
+        { label: 'Inventory & Spare Parts', icon: Boxes, id: 'inventory-spare-parts' },
+      ]
+    },
+    {
+      title: 'OPERATIONS',
+      items: [
+        { label: 'Security & Gate', icon: ShieldCheck, id: 'security-gate' },
+        { label: 'Housekeeping', icon: Sparkles, id: 'housekeeping-cleaning' },
+        { label: 'Canteen Operations', icon: Utensils, id: 'canteen-operations' },
+        { label: 'Safety & Incidents', icon: ShieldAlert, id: 'safety-incidents' },
+        { label: 'Complaints & Grievances', icon: MessageSquare, id: 'complaints-grievances' },
+      ]
+    },
+    {
+      title: 'REPORTS',
+      items: [
+        { label: 'Notifications', icon: Bell, id: 'notifications-announcements' },
+        { label: 'Reports & Analytics', icon: FileText, id: 'reports-analytics' },
+        { label: 'Settings & Permissions', icon: Settings, id: 'settings-permissions' },
+      ]
+    }
+  ];
+
+  // Page heading for AppLayout
+  const opsHeading = (() => {
+    const tabLabels = {
+      dashboard: { title: 'Campus Operations Dashboard', subtitle: 'Facilities, estate & operations central command' },
+      'staff-directory': { title: 'Staff Directory', subtitle: 'Operations staff roster and category management' },
+      'tasks-work-orders': { title: 'Tasks & Work Orders', subtitle: 'Active work orders and task assignment management' },
+      'attendance-roster': { title: 'Attendance Roster', subtitle: 'Daily staff attendance tracking and records' },
+      'leave-shift-requests': { title: 'Leave & Shift Requests', subtitle: 'Staff leave approval and shift scheduling' },
+      'maintenance-requests': { title: 'Maintenance Requests', subtitle: 'Infrastructure defect reporting and repair tracking' },
+      'preventive-maintenance': { title: 'Preventive Maintenance', subtitle: 'Scheduled asset servicing and AMC management' },
+      'campus-facilities': { title: 'Campus Facilities', subtitle: 'Booking and facility utilization management' },
+      'inventory-spare-parts': { title: 'Inventory & Spare Parts', subtitle: 'Stock and material management for operations' },
+      'security-gate': { title: 'Security & Gate Control', subtitle: 'Visitor log, gate passes and security deployment' },
+      'housekeeping-cleaning': { title: 'Housekeeping & Cleaning', subtitle: 'Cleaning schedules and zone assignment management' },
+      'canteen-operations': { title: 'Canteen Operations', subtitle: 'Food safety compliance and canteen management' },
+      'safety-incidents': { title: 'Safety & Incidents', subtitle: 'Campus safety compliance and incident reporting' },
+      'complaints-grievances': { title: 'Complaints & Grievances', subtitle: 'Staff complaints and grievance redressal' },
+      'notifications-announcements': { title: 'Notifications & Announcements', subtitle: 'Broadcast messages to operations teams' },
+      'reports-analytics': { title: 'Reports & Analytics', subtitle: 'Operations performance metrics and reports' },
+      'settings-permissions': { title: 'Settings & Permissions', subtitle: 'Module configuration and access control' },
+    };
+    return tabLabels[activeTab] || { title: activeTab.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), subtitle: '' };
+  })();
+
   return (
-    <div className="ops-portal-layout">
+    <>
       {/* Toast Notification */}
       {toastMessage && (
         <div className="ops-toast">
@@ -413,306 +485,20 @@ export default function CampusOperationsPortal({ account, onLogout, onSwitchRole
         </div>
       )}
 
-      {/* =========================================================
-          LEFT SIDEBAR (17 SECTIONS IN 5 LOGICAL GROUPS)
-          ========================================================= */}
-      <aside className={`erp-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="erp-sidebar-brand">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div className="ops-sidebar-badge">
-              <HardHat size={22} />
-            </div>
-            <div className="erp-brand-text">
-              <h2>Apna Campus</h2>
-              <span style={{ color: '#38bdf8' }}>Campus Operations</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="role-notif-close"
-            onClick={() => setSidebarOpen(false)}
-            style={{ color: '#94a3b8', background: 'transparent', border: 'none', cursor: 'pointer' }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <nav className="erp-sidebar-nav">
-          {/* GROUP 1: CORE OPERATIONS */}
-          <div className="erp-nav-section-title">Core Operations</div>
-          <button
-            className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('dashboard'); setSidebarOpen(false); }}
-          >
-            <Activity size={17} />
-            <span>Operations Dashboard</span>
-            <span className="erp-nav-badge" style={{ background: '#0284c7', color: '#fff' }}>Live</span>
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'staff-directory' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('staff-directory'); setSidebarOpen(false); }}
-          >
-            <Users size={17} />
-            <span>Staff Directory</span>
-            <span className="erp-nav-badge" style={{ background: '#334155', color: '#fff' }}>{staffList.length}</span>
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'tasks-work-orders' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('tasks-work-orders'); setSidebarOpen(false); }}
-          >
-            <ClipboardList size={17} />
-            <span>Task &amp; Work Orders</span>
-            <span className="erp-nav-badge" style={{ background: '#f59e0b', color: '#fff' }}>
-              {tasks.filter(t => t.status !== 'Completed').length}
-            </span>
-          </button>
-
-          {/* GROUP 2: MAINTENANCE & FACILITIES */}
-          <div className="erp-nav-section-title">Maintenance &amp; Facilities</div>
-          <button
-            className={`erp-nav-item ${activeTab === 'maintenance-requests' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('maintenance-requests'); setSidebarOpen(false); }}
-          >
-            <Wrench size={17} />
-            <span>Maintenance Requests</span>
-            <span className="erp-nav-badge" style={{ background: '#ef4444', color: '#fff' }}>
-              {maintenance.filter(m => m.status !== 'Completed').length}
-            </span>
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'preventive-maintenance' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('preventive-maintenance'); setSidebarOpen(false); }}
-          >
-            <RefreshCw size={17} />
-            <span>Preventive Maintenance</span>
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'campus-facilities' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('campus-facilities'); setSidebarOpen(false); }}
-          >
-            <Building2 size={17} />
-            <span>Campus Facilities &amp; Rooms</span>
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'inventory-spare-parts' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('inventory-spare-parts'); setSidebarOpen(false); }}
-          >
-            <Boxes size={17} />
-            <span>Inventory &amp; Spare Parts</span>
-          </button>
-
-          {/* GROUP 3: FIELD & SPECIALIZED SERVICES */}
-          <div className="erp-nav-section-title">Field &amp; Specialist Services</div>
-          <button
-            className={`erp-nav-item ${activeTab === 'security-gate' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('security-gate'); setSidebarOpen(false); }}
-          >
-            <ShieldCheck size={17} />
-            <span>Security &amp; Gate Control</span>
-            <span className="erp-nav-badge" style={{ background: '#10b981', color: '#fff' }}>Gate 1</span>
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'housekeeping-cleaning' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('housekeeping-cleaning'); setSidebarOpen(false); }}
-          >
-            <CheckSquare size={17} />
-            <span>Housekeeping &amp; Cleaning</span>
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'canteen-operations' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('canteen-operations'); setSidebarOpen(false); }}
-          >
-            <Utensils size={17} />
-            <span>Canteen Operations</span>
-          </button>
-
-          {/* GROUP 4: WORKFORCE & GRIEVANCES */}
-          <div className="erp-nav-section-title">Workforce &amp; Safety</div>
-          <button
-            className={`erp-nav-item ${activeTab === 'attendance-roster' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('attendance-roster'); setSidebarOpen(false); }}
-          >
-            <UserCheck size={17} />
-            <span>Attendance &amp; Duty Roster</span>
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'leave-shift-requests' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('leave-shift-requests'); setSidebarOpen(false); }}
-          >
-            <Clock size={17} />
-            <span>Leave &amp; Shift Requests</span>
-            {leaveRequests.filter(l => l.supervisorStatus === 'Pending Review').length > 0 && (
-              <span className="erp-nav-badge" style={{ background: '#f59e0b', color: '#fff' }}>
-                {leaveRequests.filter(l => l.supervisorStatus === 'Pending Review').length}
-              </span>
-            )}
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'complaints-grievances' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('complaints-grievances'); setSidebarOpen(false); }}
-          >
-            <AlertTriangle size={17} />
-            <span>Complaints &amp; Grievances</span>
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'safety-incidents' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('safety-incidents'); setSidebarOpen(false); }}
-          >
-            <ShieldAlert size={17} />
-            <span>Safety &amp; Incidents</span>
-            {incidents.filter(i => i.resolutionStatus !== 'Closed').length > 0 && (
-              <span className="erp-nav-badge" style={{ background: '#ef4444', color: '#fff' }}>
-                {incidents.filter(i => i.resolutionStatus !== 'Closed').length}
-              </span>
-            )}
-          </button>
-
-          {/* GROUP 5: GOVERNANCE & CONFIG */}
-          <div className="erp-nav-section-title">Governance &amp; Config</div>
-          <button
-            className={`erp-nav-item ${activeTab === 'notifications-announcements' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('notifications-announcements'); setSidebarOpen(false); }}
-          >
-            <Bell size={17} />
-            <span>Notifications &amp; Alerts</span>
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'reports-analytics' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('reports-analytics'); setSidebarOpen(false); }}
-          >
-            <FileSpreadsheet size={17} />
-            <span>Reports &amp; Analytics</span>
-          </button>
-
-          <button
-            className={`erp-nav-item ${activeTab === 'settings-permissions' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('settings-permissions'); setSidebarOpen(false); }}
-          >
-            <Settings size={17} />
-            <span>Settings &amp; Permissions</span>
-          </button>
-        </nav>
-      </aside>
-
-      {/* =========================================================
-          MAIN CONTENT WRAPPER
-          ========================================================= */}
-      <main className="erp-main-content">
-        {/* Top Operational Header */}
-        <header className="erp-header">
-          <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button
-              className="campus-nav-toggle-btn"
-              type="button"
-              onClick={() => setSidebarOpen(o => !o)}
-              title="Toggle Menu"
-            >
-              <Menu size={20} />
-            </button>
-            <div>
-              <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <HardHat size={22} color="#0284c7" />
-                Campus Operations &amp; Facilities Console
-              </h1>
-              <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b' }}>
-                {timeGreetingWish}, {greetingName} • 24/7 Estate Maintenance, Security Gateways, Hygiene &amp; Utility Command
-              </p>
-            </div>
-          </div>
-
-          <div className="erp-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Live Clock Badge */}
-            <div style={{
-              background: '#f1f5f9',
-              border: '1px solid #cbd5e1',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              color: '#0f172a',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <Clock size={15} color="#0284c7" />
-              <span>{liveTimeString}</span>
-            </div>
-
-            {/* Notification Bell */}
-            <div style={{ position: 'relative' }}>
-              <button
-                className="role-icon-btn"
-                type="button"
-                onClick={() => setShowNotifications(!showNotifications)}
-                title="Notifications"
-              >
-                <Bell size={18} />
-                {notifications.filter(n => n.unread).length > 0 && (
-                  <span className="role-bell-dot" />
-                )}
-              </button>
-
-              {showNotifications && (
-                <div className="role-notif-popover" role="dialog" style={{ position: 'absolute', right: 0, top: '45px', width: '320px', zIndex: 9999 }}>
-                  <div className="role-notif-head">
-                    <strong>Operational Notifications</strong>
-                    <button className="role-notif-close" type="button" onClick={() => setShowNotifications(false)}>
-                      <X size={15} />
-                    </button>
-                  </div>
-                  <div className="role-notif-list">
-                    {notifications.map((n) => (
-                      <div key={n.id} className={`role-notif-item ${n.unread ? 'is-unread' : ''}`}>
-                        <div className="role-notif-item-top">
-                          <span className={`role-notif-tag tag-${n.type === 'URGENT' ? 'red' : 'blue'}`}>{n.type}</span>
-                          <span className="role-notif-time">{n.time}</span>
-                        </div>
-                        <h4 className="role-notif-title">{n.title}</h4>
-                        <p className="role-notif-desc">{n.message}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="role-notif-foot">
-                    <button type="button" onClick={() => {
-                      setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
-                      showToast('Marked all notifications as read');
-                    }}>
-                      Mark all as read
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* User Profile Pill */}
-            <div className="campus-user-pill" title={`${officerName} (Campus Operations)`}>
-              <div className="campus-user-avatar" style={{ background: '#0284c7' }}>OPS</div>
-              <div className="campus-user-details">
-                <strong>{officerName}</strong>
-                <small>{account?.identity || 'OPS-DIR-01'} • Estate Supt</small>
-              </div>
-              <button
-                className="campus-logout-btn"
-                type="button"
-                onClick={onLogout}
-                title="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Operations Portal"
+        portalSubtitle="Campus Facilities & Estate Operations"
+        portalHomeTab="dashboard"
+        navSections={opsNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={opsHeading.title}
+        pageSubtitle={opsHeading.subtitle}
+      >
+        <div className="ops-portal-content-wrap">
 
         {/* ROLE-SPECIFIC CATEGORY VIEW SWITCHER BAR */}
         <div className="ops-category-switcher-bar">
@@ -2409,7 +2195,8 @@ export default function CampusOperationsPortal({ account, onLogout, onSwitchRole
             </div>
           )}
         </div>
-      </main>
+        </div>
+      </AppLayout>
 
       {/* =========================================================
           MODALS & DIALOGS
@@ -3195,6 +2982,6 @@ export default function CampusOperationsPortal({ account, onLogout, onSwitchRole
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

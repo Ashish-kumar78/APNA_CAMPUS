@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { AppLayout } from './Navigation';
 import {
   BookOpen, Users, GraduationCap, Layers, BarChart2, FileText,
   AlertCircle, CheckCircle2, ArrowRight, LogOut, Download,
@@ -763,173 +764,93 @@ export default function FacultyPortal({ account, onLogout }) {
     triggerToast(`✓ Attendance submitted: ${presentCount}/${totalCount} students present (${pct}%) for ${currentAssignment.subjectCode}!`);
   };
 
+
+  const facultyNavSections = [
+    {
+      title: 'TEACHING & CLASSES',
+      items: [
+        { id: 'dashboard', label: 'Faculty Dashboard', icon: Layers },
+        { id: 'take-attendance', label: 'Take Attendance', icon: ClipboardCheck },
+        { id: 'subjects', label: 'My Subjects', icon: BookOpen },
+        { id: 'timetable', label: 'Teaching Timetable', icon: Calendar },
+        { id: 'students', label: `My Students (${scopedStudents.length})`, icon: GraduationCap },
+      ]
+    },
+    {
+      title: 'EVALUATION & ASSESSMENT',
+      items: [
+        { id: 'digital-evaluation', label: 'Answer Sheet Evaluation', icon: FileText },
+        { id: 'marks', label: 'Marks Management', icon: BarChart2 },
+        { id: 'performance', label: 'Class Performance', icon: Sparkles },
+        { id: 'quiz', label: 'Quiz Management', icon: ClipboardList },
+        { id: 'reports', label: 'Grade Reports', icon: FileText },
+        { id: 'report-generation', label: 'Report Generation', icon: FileSpreadsheet },
+      ]
+    },
+    {
+      title: 'CAMPUS CONNECT & RESOURCES',
+      items: [
+        { id: 'awaiting-verification', label: 'Resources Awaiting Verification', icon: ShieldCheck },
+        { id: 'notes-moderation', label: 'Notes Moderation', icon: ShieldCheck },
+        { id: 'complaints', label: 'Student Grievances', icon: ShieldAlert },
+        { id: 'notifications', label: 'Notifications & Broadcasts', icon: Megaphone },
+        { id: 'documents', label: 'Official Documents', icon: Download, badge: campusDocs.length },
+      ]
+    }
+  ];
+
+  const getFacultyHeading = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: `Welcome, ${getGreetingDisplayName(account?.name || 'Professor')}`,
+          subtitle: `Faculty Portal · ${account?.deptCode || 'CSE'} Department · Academic Session 2026`
+        };
+      case 'take-attendance':
+        return {
+          title: 'Daily Class Attendance Register',
+          subtitle: 'Mark attendance for assigned sections with real-time biometric and ERP sync.'
+        };
+      case 'digital-evaluation':
+        return {
+          title: 'Autonomous Digital Answer Sheet Evaluation',
+          subtitle: 'Secure on-screen marking with rubric scoring, step marking, and live audit.'
+        };
+      case 'marks':
+        return {
+          title: 'Continuous Assessment & Internal Marks',
+          subtitle: 'Record and submit internal exam, lab, and assignment scores.'
+        };
+      case 'timetable':
+        return {
+          title: 'Faculty Teaching Timetable',
+          subtitle: 'Weekly lecture schedule, lab sessions, and classroom allocations.'
+        };
+      default:
+        return {
+          title: (activeTab || 'Faculty Portal').replace(/-/g, ' ').toUpperCase(),
+          subtitle: `Faculty Teaching Operations · ${account?.deptCode || 'Engineering'}`
+        };
+    }
+  };
+
+  const facultyHeading = getFacultyHeading();
   return (
     <>
-    <div className="faculty-portal-root">
-      {/* Top Header */}
-      <header className="faculty-header">
-        <div className="faculty-brand" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {!sidebarOpen && (
-            <button
-              className="campus-nav-toggle-btn"
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              title="Show Navigation"
-              aria-label="Show Navigation"
-            >
-              <Menu size={20} />
-            </button>
-          )}
-          <div className="faculty-brand-icon" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-          </div>
-          <div className="faculty-brand-text">
-            <h1>APNA CAMPUS · FACULTY PORTAL</h1>
-            <p>Department of Computer Science &amp; Engineering</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {/* Top-Right Campus OS User Profile Pill with Sign Out */}
-          <div className="campus-user-pill">
-            <div className="campus-user-avatar">FAC</div>
-            <div className="campus-user-details">
-              <strong>{account?.name || 'Dr. S. Mohanty'}</strong>
-              <small>Faculty Evaluator · CSE Dept</small>
-            </div>
-            <button
-              className="campus-logout-btn"
-              type="button"
-              onClick={onLogout}
-              title="Sign out"
-              aria-label="Sign out"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
-      <div className={`faculty-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
-        {/* Sidebar */}
-        {sidebarOpen && (
-          <aside className="faculty-sidebar">
-            <div className="faculty-sidebar-header">
-              <span className="faculty-sidebar-title">Faculty Menu</span>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="faculty-sidebar-close"
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Layers size={17} /> Dashboard
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'take-attendance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('take-attendance')}
-            >
-              <ClipboardCheck size={17} /> Take Attendance
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'awaiting-verification' ? 'active' : ''}`}
-              onClick={() => setActiveTab('awaiting-verification')}
-            >
-              <ShieldCheck size={17} /> Resources Awaiting Verification
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'subjects' ? 'active' : ''}`}
-              onClick={() => setActiveTab('subjects')}
-            >
-              <BookOpen size={17} /> My Subjects
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'timetable' ? 'active' : ''}`}
-              onClick={() => setActiveTab('timetable')}
-            >
-              <Calendar size={17} color="#2563eb" /> Teaching Timetable
-            </button>
-            <button
-              className={`faculty-nav-btn evaluation-btn ${activeTab === 'digital-evaluation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('digital-evaluation')}
-            >
-              <FileText size={17} /> Answer Sheet Evaluation
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'marks' ? 'active' : ''}`}
-              onClick={() => setActiveTab('marks')}
-            >
-              <BarChart2 size={17} /> Marks Management
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'students' ? 'active' : ''}`}
-              onClick={() => setActiveTab('students')}
-            >
-              <GraduationCap size={17} /> My Students ({scopedStudents.length})
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'performance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('performance')}
-            >
-              <Sparkles size={17} /> Class Performance
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'report-generation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('report-generation')}
-            >
-              <FileSpreadsheet size={17} /> Report Generation
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reports')}
-            >
-              <FileText size={17} /> Grade Reports
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'notes-moderation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notes-moderation')}
-            >
-              <ShieldCheck size={17} /> Class Notes Moderation
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'quiz' ? 'active' : ''}`}
-              onClick={() => setActiveTab('quiz')}
-            >
-              <ClipboardList size={17} /> Quiz Management
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'complaints' ? 'active' : ''}`}
-              onClick={() => setActiveTab('complaints')}
-            >
-              <ShieldAlert size={17} /> Student Complaints
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'notifications' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notifications')}
-            >
-              <Megaphone size={17} /> Notifications &amp; Broadcasts
-            </button>
-            <button
-              className={`faculty-nav-btn ${activeTab === 'documents' ? 'active' : ''}`}
-              onClick={() => { setCampusDocs(getDocumentsForRole('faculty')); setActiveTab('documents'); }}
-            >
-              <Download size={17} /> Documents
-              <span className="faculty-sidebar-badge">
-                {campusDocs.length}
-              </span>
-            </button>
-          </aside>
-        )}
-
-        {/* Dynamic Content Pane */}
-        <main className="faculty-main">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Faculty Portal"
+        portalSubtitle={`${account?.deptCode || 'Academic'} Department · Faculty`}
+        portalHomeTab="dashboard"
+        navSections={facultyNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={facultyHeading.title}
+        pageSubtitle={facultyHeading.subtitle}
+      >
+        <div className="faculty-portal-content-wrap">
           {/* STUDENT COMPLAINTS TAB */}
           {activeTab === 'complaints' && (
             <div style={{ marginBottom: '24px' }}>
@@ -2789,8 +2710,8 @@ export default function FacultyPortal({ account, onLogout }) {
           {activeTab === 'report-generation' && (
             <ReportGenerationModule account={account} role="faculty" />
           )}
-        </main>
-      </div>
+        </div>
+      </AppLayout>
 
     {/* ── VIEW QUIZ QUESTIONS MODAL ── */}
     {viewQuiz && (
@@ -3585,7 +3506,6 @@ export default function FacultyPortal({ account, onLogout }) {
         </div>
       </div>
     )}
-    </div>
   </>
   );
 }

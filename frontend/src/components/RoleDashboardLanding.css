@@ -322,8 +322,15 @@
 }
 
 @keyframes notif-fade-in {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .role-notif-head {
@@ -406,11 +413,30 @@
   text-transform: uppercase;
 }
 
-.tag-blue { background: #dbeafe; color: #1e40af; }
-.tag-green { background: #dcfce7; color: #15803d; }
-.tag-amber { background: #fef3c7; color: #b45309; }
-.tag-violet { background: #ede9fe; color: #6d28d9; }
-.tag-rose { background: #ffe4e6; color: #be123c; }
+.tag-blue {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.tag-green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.tag-amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.tag-violet {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.tag-rose {
+  background: #ffe4e6;
+  color: #be123c;
+}
 
 .role-notif-time {
   font-size: 11px;
@@ -502,12 +528,35 @@
   white-space: nowrap;
 }
 
-.status-green { background: #dcfce7; color: #15803d; }
-.status-blue { background: #dbeafe; color: #1d4ed8; }
-.status-amber { background: #fef3c7; color: #b45309; }
-.status-red { background: #fee2e2; color: #b91c1c; }
-.status-violet { background: #ede9fe; color: #6d28d9; }
-.status-neutral { background: #f1f5f9; color: #475569; }
+.status-green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status-red {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-violet {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.status-neutral {
+  background: #f1f5f9;
+  color: #475569;
+}
 
 /* Announcements List */
 .role-announcement-list {
@@ -605,8 +654,13 @@
 }
 
 @keyframes modal-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .role-modal-card {
@@ -748,6 +802,7 @@
     border: 1px solid #cbd5e1 !important;
     margin: 0 !important;
   }
+
   .role-dossier-print-btn,
   .role-notif-close {
     display: none !important;
@@ -761,6 +816,7 @@
     gap: 4px;
     padding: 6px 12px 4px;
   }
+
   .dash-info-pill {
     font-size: 10.5px;
     padding: 5px 6px;

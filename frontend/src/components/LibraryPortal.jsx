@@ -1,4 +1,6 @@
+import { Globe } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
+import { AppLayout } from './Navigation';
 import {
   BookOpen,
   BookmarkCheck,
@@ -569,8 +571,64 @@ export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
   const overdueCount = circulationRecords.filter(c => c.status === 'Overdue' || (c.status === 'Issued' && c.fineAmount > 0)).length;
   const outstandingFinesSum = finesList.filter(f => f.status === 'Unpaid').reduce((s, f) => s + (Number(f.balance || f.fineAmount) || 0), 0);
 
+  // Nav sections for AppLayout sidebar
+  const libraryNavSections = [
+    {
+      title: 'OVERVIEW',
+      items: [
+        { label: 'Dashboard', icon: BookOpen, id: 'dashboard' },
+      ]
+    },
+    {
+      title: 'CIRCULATION',
+      items: [
+        { label: 'Issue & Return', icon: BookmarkCheck, id: 'circulation' },
+        { label: 'Book Catalog', icon: Layers, id: 'catalog' },
+        { label: 'Inventory', icon: Barcode, id: 'inventory' },
+        { label: 'Reservations', icon: Calendar, id: 'reservations' },
+        { label: 'Fines & Dues', icon: DollarSign, id: 'fines' },
+      ]
+    },
+    {
+      title: 'ACQUISITIONS',
+      items: [
+        { label: 'Acquisitions', icon: ShoppingBag, id: 'acquisitions' },
+        { label: 'Digital Resources', icon: Globe, id: 'digital' },
+      ]
+    },
+    {
+      title: 'REPORTS',
+      items: [
+        { label: 'Reports & Analytics', icon: FileSpreadsheet, id: 'reports' },
+      ]
+    },
+    {
+      title: 'COMMUNICATION',
+      items: [
+        { label: 'Campus Connect', icon: MessageSquare, id: 'campus-connect' },
+      ]
+    }
+  ];
+
+  // Page heading for AppLayout
+  const libraryHeading = (() => {
+    const tabLabels = {
+      dashboard: { title: 'Library Dashboard', subtitle: 'Central university library management system' },
+      circulation: { title: 'Issue & Return', subtitle: 'Book circulation and borrower management' },
+      catalog: { title: 'Book Catalog', subtitle: 'Search and manage the library collection' },
+      inventory: { title: 'Physical Inventory', subtitle: 'Track and manage library physical copies' },
+      reservations: { title: 'Reservations', subtitle: 'Book reservation queue and hold management' },
+      fines: { title: 'Fines & Dues', subtitle: 'Overdue fines collection and waiver management' },
+      acquisitions: { title: 'Acquisitions', subtitle: 'New book procurement and purchase orders' },
+      digital: { title: 'Digital Resources', subtitle: 'E-books, journals and online database access' },
+      reports: { title: 'Reports & Analytics', subtitle: 'Library usage statistics and performance reports' },
+      'campus-connect': { title: 'Campus Connect', subtitle: 'Library announcements and communication' },
+    };
+    return tabLabels[activeTab] || { title: activeTab.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), subtitle: '' };
+  })();
+
   return (
-    <div className="erp-library-layout">
+    <>
       {/* Toast Notification */}
       {toastMessage && (
         <div style={{
@@ -593,119 +651,20 @@ export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
-      {/* Sidebar Navigation */}
-      {sidebarOpen && (
-        <aside className="erp-sidebar">
-          <div className="erp-sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div className="erp-lib-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-              </div>
-              <div className="erp-brand-text">
-                <h2>Apna Campus</h2>
-                <span style={{ color: '#34d399' }}>Central Library</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <nav className="erp-sidebar-nav">
-            <button
-              className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Layers size={18} />
-              <span>Library Dashboard</span>
-              <span className="erp-nav-badge" style={{ background: '#10b981', color: '#ffffff' }}>Live</span>
-            </button>
-
-            <button
-              className={`erp-nav-item ${activeTab === 'circulation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('circulation')}
-            >
-              <BookmarkCheck size={18} />
-              <span>Circulation Counter</span>
-            </button>
-
-            <button
-              className={`erp-nav-item ${activeTab === 'catalog' ? 'active' : ''}`}
-              onClick={() => setActiveTab('catalog')}
-            >
-              <BookOpen size={18} />
-              <span>Books Catalog</span>
-            </button>
-
-            <button
-              className={`erp-nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
-              onClick={() => setActiveTab('inventory')}
-            >
-              <Barcode size={18} />
-              <span>Copies & Inventory</span>
-            </button>
-
-            <button
-              className={`erp-nav-item ${activeTab === 'reservations' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reservations')}
-            >
-              <BookMarked size={18} />
-              <span>Reservations & Waitlist</span>
-            </button>
-
-            <button
-              className={`erp-nav-item ${activeTab === 'fines' ? 'active' : ''}`}
-              onClick={() => setActiveTab('fines')}
-            >
-              <Clock size={18} />
-              <span>Overdue Fines</span>
-            </button>
-
-            <button
-              className={`erp-nav-item ${activeTab === 'acquisitions' ? 'active' : ''}`}
-              onClick={() => setActiveTab('acquisitions')}
-            >
-              <ShoppingBag size={18} />
-              <span>Acquisitions & Indents</span>
-            </button>
-
-            <button
-              className={`erp-nav-item ${activeTab === 'digital' ? 'active' : ''}`}
-              onClick={() => setActiveTab('digital')}
-            >
-              <Layers size={18} />
-              <span>Digital Library</span>
-            </button>
-
-            <button
-              className={`erp-nav-item ${activeTab === 'reports' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reports')}
-            >
-              <FileSpreadsheet size={18} />
-              <span>Reports & Policies</span>
-            </button>
-          </nav>
-        </aside>
-      )}
-
-      {/* Main Content Area */}
-      <main className="erp-main-content">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Library Portal"
+        portalSubtitle="Central University Library"
+        portalHomeTab="dashboard"
+        navSections={libraryNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={libraryHeading.title}
+        pageSubtitle={libraryHeading.subtitle}
+      >
+        <div className="library-portal-content-wrap">
         {activeTab === 'dashboard' ? (
           <RoleDashboardLanding
             roleKey="library"
@@ -722,48 +681,7 @@ export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
           />
         ) : (
           <>
-        <header className="erp-header">
-          <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {!sidebarOpen && (
-              <button
-                className="campus-nav-toggle-btn"
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                title="Show Navigation"
-                aria-label="Show Navigation"
-              >
-                <Menu size={20} />
-              </button>
-            )}
-            <div>
-              <h1>Central Library Information System</h1>
-              <p>Circulation Counter, Bibliographic Catalog & Electronic Holdings</p>
-            </div>
-          </div>
 
-          <div className="erp-header-actions">
-            <div className="erp-role-badge">
-              <ShieldCheck size={14} /> Library Staff In-Charge
-            </div>
-
-            <div className="campus-user-pill">
-              <div className="campus-user-avatar">LIB</div>
-              <div className="campus-user-details">
-                <strong>{account?.name || 'Chief Librarian'}</strong>
-                <small>Central Library Services</small>
-              </div>
-              <button
-                className="campus-logout-btn"
-                type="button"
-                onClick={onLogout}
-                title="Sign out"
-                aria-label="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
 
         <div className="erp-content-body">
           {/* STATS STRIP */}
@@ -1589,7 +1507,8 @@ export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
         </div>
           </>
         )}
-      </main>
+        </div>
+      </AppLayout>
 
       {/* MODAL 1: ADD CATALOG TITLE */}
       {showAddBookModal && (
@@ -2224,6 +2143,6 @@ export default function LibraryPortal({ account, onLogout, onSwitchRole }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AppLayout } from './Navigation';
 import {
   Users,
   UserCheck,
@@ -187,156 +188,64 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
     );
   });
 
+
+  const admissionsNavSections = [
+    {
+      title: 'ADMISSIONS PIPELINE',
+      items: [
+        { id: 'dashboard', label: 'Admissions Command', icon: GraduationCap },
+        { id: 'applicants', label: 'Applicant Registry', icon: Users },
+      ]
+    }
+  ];
+
+  const getAdmissionsHeading = () => {
+    switch (activeView) {
+      case 'dashboard':
+        return {
+          title: 'Admissions Cell & Enrollment Directorate',
+          subtitle: 'Prospective student intake, entrance rank verification, document scrutiny, and seat allotment.'
+        };
+      case 'applicants':
+        return {
+          title: 'Candidate Applications & Verification Registry',
+          subtitle: 'Applicant qualification documents, entrance percentiles, domicile status, and admission clearance.'
+        };
+      default:
+        return {
+          title: (activeView || 'Admissions Portal').toUpperCase(),
+          subtitle: 'Central Admissions Directorate'
+        };
+    }
+  };
+
+  const admissionsHeading = getAdmissionsHeading();
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      {activeView === 'dashboard' ? (
-        <RoleDashboardLanding
-          roleKey="admissions"
-          account={account}
-          onLogout={onLogout}
-          onSwitchRole={onSwitchRole}
-          onNavigate={(target) => setActiveView('applicants')}
-        />
-      ) : (
-        <>
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            background: '#0f172a',
-            color: '#ffffff',
-            padding: '14px 20px',
-            borderRadius: '10px',
-            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '0.88rem',
-            fontWeight: 500,
-          }}
-        >
-          <Sparkles size={18} color="#38bdf8" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
-      {/* Top Header */}
-      <header
-        style={{
-          backgroundColor: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
-          padding: '16px 28px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'sticky',
-          top: 0,
-          zIndex: 40,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <GraduationCap size={24} />
-          </div>
+    <AppLayout
+      account={account}
+      portalName="Admissions Portal"
+      portalSubtitle="Central Admissions & Enrollment Cell"
+      portalHomeTab="dashboard"
+      navSections={admissionsNavSections}
+      activeTab={activeView}
+      onTabChange={setActiveView}
+      onLogout={onLogout}
+      pageTitle={admissionsHeading.title}
+      pageSubtitle={admissionsHeading.subtitle}
+    >
+      <div className="admissions-portal-content-wrap">
+        {activeView === 'dashboard' ? (
+          <RoleDashboardLanding
+            roleKey="admissions"
+            account={account}
+            onLogout={onLogout}
+            onSwitchRole={onSwitchRole}
+            onNavigate={(target) => setActiveView('applicants')}
+          />
+        ) : (
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
-              Admissions & Intake Central
-            </h1>
-            <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
-              Autonomous Institutional Admissions, Eligibility Verification & Account Provisioning
-            </p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={() => setActiveView('dashboard')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: '#f8fafc',
-              color: '#334155',
-              border: '1px solid #cbd5e1',
-              padding: '9px 14px',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '0.84rem',
-              cursor: 'pointer',
-            }}
-          >
-            ← Overview Dashboard
-          </button>
-          <button
-            onClick={() => setIsRegisterModalOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: '#0284c7',
-              color: '#ffffff',
-              border: 'none',
-              padding: '9px 16px',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '0.84rem',
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)',
-            }}
-          >
-            <Plus size={16} /> Register New Applicant
-          </button>
-          <button
-            onClick={loadData}
-            title="Refresh Data"
-            style={{
-              background: '#f1f5f9',
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              padding: '9px 12px',
-              color: '#475569',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-          </button>
-          <button
-            onClick={onLogout}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: '#fff1f2',
-              border: '1px solid #fecdd3',
-              color: '#e11d48',
-              padding: '9px 14px',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '0.84rem',
-              cursor: 'pointer',
-            }}
-          >
-            <LogOut size={16} /> Logout
-          </button>
-        </div>
-      </header>
+  
 
       {/* Main Content Container */}
       <main style={{ maxWidth: '1440px', margin: '0 auto', padding: '24px 28px' }}>
@@ -617,8 +526,8 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
           </div>
         </div>
       </main>
-        </>
-      )}
+          </div>
+        )}
 
       {/* Register New Applicant Modal */}
       {isRegisterModalOpen && (
@@ -993,6 +902,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
           }}
         />
       )}
-    </div>
+      </div>
+    </AppLayout>
   );
 }

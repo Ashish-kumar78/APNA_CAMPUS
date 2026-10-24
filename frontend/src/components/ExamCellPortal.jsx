@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { AppLayout } from './Navigation';
 import {
+  CalendarDays,
+  CheckCircle2,
+  FileCheck,
+  Key,
+  Megaphone,
   FileCheck2,
   Calendar,
   Ticket,
@@ -546,8 +552,85 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
     });
   }, [gradeRoster, gradeSearch, gradeStatusFilter]);
 
+
+  const examNavSections = [
+    {
+      title: 'OPERATIONAL COMMAND',
+      items: [
+        { id: 'dashboard', label: 'Exam Cell Dashboard', icon: Layers },
+        { id: 'cycles', label: 'Exam Cycles & Schedule', icon: CalendarDays },
+        { id: 'registration', label: 'Candidate Registration', icon: Users },
+        { id: 'hall_tickets', label: 'Admit Cards & Hall Tickets', icon: Ticket },
+        { id: 'seating', label: 'Seating & Center Allocation', icon: Building2 },
+      ]
+    },
+    {
+      title: 'EVALUATION & DIGITAL GRADING',
+      items: [
+        { id: 'digital_evaluation', label: 'Digital Answer Evaluation', icon: FileText },
+        { id: 'moderation', label: 'Marks Moderation & Review', icon: CheckCircle2 },
+        { id: 'grading', label: 'Grading & Result Computation', icon: Award },
+        { id: 'scrutiny', label: 'Re-checking & Scrutiny', icon: RotateCcw },
+        { id: 'certificates', label: 'Grade Sheets & Transcripts', icon: FileCheck },
+      ]
+    },
+    {
+      title: 'CONFIDENTIAL & COMPLIANCE',
+      items: [
+        { id: 'question_papers', label: 'Question Paper Depository', icon: Key },
+        { id: 'booklets', label: 'Barcode Booklets & Bundles', icon: BookOpen },
+        { id: 'examiners', label: 'Examiners & Invigilators', icon: UserCheck },
+        { id: 'malpractice_grievances', label: 'Malpractice Committee', icon: AlertTriangle },
+        { id: 'circulars', label: 'Exam Notifications & Circulars', icon: Megaphone },
+        { id: 'report-generation', label: 'Report Generation', icon: FileSpreadsheet },
+        { id: 'exam_settings', label: 'Autonomous Rules & Config', icon: Sliders },
+      ]
+    }
+  ];
+
+  const getExamHeading = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: 'Autonomous Examination Operations & Evaluation',
+          subtitle: 'Confidential Controller of Examinations workspace, end-sem evaluations, and grading.'
+        };
+      case 'cycles':
+        return {
+          title: 'Autonomous Examination Cycles & Windows',
+          subtitle: 'Semester end, mid-term, and supplementary examination calendars.'
+        };
+      case 'digital_evaluation':
+        return {
+          title: 'Digital Answer Sheet On-Screen Evaluation',
+          subtitle: 'Encrypted script allocation, rubric-based evaluation, and live examiner audits.'
+        };
+      case 'hall_tickets':
+        return {
+          title: 'Hall Ticket & Admit Card Generation',
+          subtitle: 'Autonomous hall ticket distribution with QR validation and attendance verification.'
+        };
+      case 'grading':
+        return {
+          title: 'Result Computation & Grade Ledger',
+          subtitle: 'Relative and absolute grading engine, SGPA/CGPA calculation, and result tabulation sheets.'
+        };
+      case 'report-generation':
+        return {
+          title: 'Examination Audit Reports & Gazette Downloads',
+          subtitle: 'Accredited university reports, departmental gazettes, and grade ledgers.'
+        };
+      default:
+        return {
+          title: (activeTab || 'Examination Cell').replace(/_/g, ' ').toUpperCase(),
+          subtitle: 'Office of the Controller of Examinations'
+        };
+    }
+  };
+
+  const examHeading = getExamHeading();
   return (
-    <div className="erp-exam-layout">
+    <>
       {/* Toast Notification */}
       {toastMessage && (
         <div style={{
@@ -570,290 +653,21 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
-      {/* Sidebar */}
-      {sidebarOpen && (
-        <aside className="erp-sidebar">
-          <div className="erp-sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div className="erp-exam-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-              </div>
-              <div className="erp-brand-text">
-                <h2>Apna Campus</h2>
-                <span style={{ color: '#a78bfa' }}>Examination Cell</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Exam Cell Portal"
+        portalSubtitle="Office of the Controller of Examinations"
+        portalHomeTab="dashboard"
+        navSections={examNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={examHeading.title}
+        pageSubtitle={examHeading.subtitle}
+      >
+        <div className="exam-portal-content-wrap">
 
-          <nav className="erp-sidebar-nav">
-            <div className="erp-sidebar-heading">Core Examination</div>
-            <button
-              className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <FileCheck2 size={18} />
-              <span>CoE Dashboard</span>
-              <span className="erp-nav-badge" style={{ background: '#10b981', color: '#ffffff' }}>Live</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'cycles' ? 'active' : ''}`}
-              onClick={() => setActiveTab('cycles')}
-            >
-              <Calendar size={18} />
-              <span>Exam Cycles</span>
-              <span className="erp-nav-badge">{examCycles.length}</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'registration' ? 'active' : ''}`}
-              onClick={() => setActiveTab('registration')}
-            >
-              <UserCheck size={18} />
-              <span>Exam Registration &amp; Eligibility</span>
-              <span className="erp-nav-badge" style={{ background: '#3b82f6', color: '#ffffff' }}>New</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'timetable' ? 'active' : ''}`}
-              onClick={() => setActiveTab('timetable')}
-            >
-              <Clock size={18} />
-              <span>Timetable &amp; Schedule</span>
-              <span className="erp-nav-badge">{examTimetable.length}</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'seating' ? 'active' : ''}`}
-              onClick={() => setActiveTab('seating')}
-            >
-              <Users size={18} />
-              <span>Seating &amp; Door Charts</span>
-              <span className="erp-nav-badge">{seatingArrangements.length}</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'hall_tickets' ? 'active' : ''}`}
-              onClick={() => setActiveTab('hall_tickets')}
-            >
-              <Ticket size={18} />
-              <span>Hall Tickets Desk</span>
-              <span className="erp-nav-badge">{hallTickets.length}</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'question_papers' ? 'active' : ''}`}
-              onClick={() => setActiveTab('question_papers')}
-            >
-              <Lock size={18} />
-              <span>Question Paper Vault</span>
-              <span className="erp-nav-badge" style={{ background: '#7c3aed', color: '#ffffff' }}>Vault</span>
-            </button>
-
-            <div className="erp-sidebar-heading">Evaluation &amp; Marks</div>
-            <button
-              className={`erp-nav-item ${activeTab === 'booklets' ? 'active' : ''}`}
-              onClick={() => setActiveTab('booklets')}
-            >
-              <Layers size={18} />
-              <span>Answer Booklets &amp; Custody</span>
-              <span className="erp-nav-badge">New</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'practical_viva' ? 'active' : ''}`}
-              onClick={() => setActiveTab('practical_viva')}
-            >
-              <FileCheck2 size={18} />
-              <span>Practical &amp; Viva Exams</span>
-              <span className="erp-nav-badge">New</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'moderation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('moderation')}
-            >
-              <Layers size={18} />
-              <span>Marks Moderation (CIE)</span>
-              <span className="erp-nav-badge">Live</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'digital_evaluation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('digital_evaluation')}
-              style={{
-                background: activeTab === 'digital_evaluation' ? undefined : 'linear-gradient(90deg, rgba(124, 58, 237, 0.12), rgba(99, 102, 241, 0.12))',
-                border: '1px solid rgba(139, 92, 246, 0.3)'
-              }}
-            >
-              <FileCheck2 size={18} style={{ color: '#a78bfa' }} />
-              <span>Digital Evaluation System</span>
-              <span className="erp-nav-badge" style={{ background: '#7c3aed', color: '#ffffff' }}>Live</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'examiners' ? 'active' : ''}`}
-              onClick={() => setActiveTab('examiners')}
-            >
-              <Users size={18} />
-              <span>Examiners &amp; Evaluators</span>
-              <span className="erp-nav-badge">Panel</span>
-            </button>
-
-            <div className="erp-sidebar-heading">Results &amp; Records</div>
-            <button
-              className={`erp-nav-item ${activeTab === 'grading' ? 'active' : ''}`}
-              onClick={() => setActiveTab('grading')}
-            >
-              <Award size={18} />
-              <span>SGPA/CGPA Engine</span>
-              <span className="erp-nav-badge">{gradeRoster.length}</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'scrutiny' ? 'active' : ''}`}
-              onClick={() => setActiveTab('scrutiny')}
-            >
-              <RotateCcw size={18} />
-              <span>Re-Evaluation &amp; Scrutiny</span>
-              <span className="erp-nav-badge">{reevaluationRequests.length}</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'certificates' ? 'active' : ''}`}
-              onClick={() => setActiveTab('certificates')}
-            >
-              <Award size={18} />
-              <span>Certificates &amp; Degree Desk</span>
-              <span className="erp-nav-badge" style={{ background: '#f59e0b', color: '#000000' }}>Desk</span>
-            </button>
-
-            <div className="erp-sidebar-heading">Compliance &amp; Settings</div>
-            <button
-              className={`erp-nav-item ${activeTab === 'malpractice_grievances' ? 'active' : ''}`}
-              onClick={() => setActiveTab('malpractice_grievances')}
-            >
-              <ShieldAlert size={18} />
-              <span>Malpractice &amp; Grievances</span>
-              <span className="erp-nav-badge" style={{ background: '#ef4444', color: '#ffffff' }}>UFM</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'circulars' ? 'active' : ''}`}
-              onClick={() => setActiveTab('circulars')}
-            >
-              <BellRing size={18} />
-              <span>CoE Circulars</span>
-              <span className="erp-nav-badge">{examCirculars.length}</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'report-generation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('report-generation')}
-            >
-              <FileSpreadsheet size={18} />
-              <span>Report Generation</span>
-              <span className="erp-nav-badge" style={{ background: '#3b82f6', color: '#ffffff' }}>New</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'exam_settings' ? 'active' : ''}`}
-              onClick={() => setActiveTab('exam_settings')}
-            >
-              <Sliders size={18} />
-              <span>Examination Settings</span>
-              <span className="erp-nav-badge">Rules</span>
-            </button>
-          </nav>
-        </aside>
-      )}
-
-      {/* Main Content */}
-      <main className="erp-main-content">
-        <header className="erp-header">
-          <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {!sidebarOpen && (
-              <button
-                className="campus-nav-toggle-btn"
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                title="Show Navigation"
-                aria-label="Show Navigation"
-                style={{
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-              >
-                <Menu size={20} />
-              </button>
-            )}
-            <div>
-              <h1>Autonomous Examination Operations & Evaluation</h1>
-              <p>Office of the Controller of Examinations (CoE) · Autonomous Academic Wing</p>
-            </div>
-          </div>
-
-          <div className="erp-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div className="erp-role-badge">
-              <ShieldCheck size={14} /> Certified Controller Access
-            </div>
-
-            {/* Profile Pill with Sign Out */}
-            <div className="campus-user-pill" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              padding: '4px 12px',
-              borderRadius: '999px'
-            }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: '#7c3aed',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '0.78rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                COE
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <strong style={{ fontSize: '0.82rem', color: '#0f172a' }}>{account?.name || 'Dr. K. C. Patra'}</strong>
-                <small style={{ fontSize: '0.7rem', color: '#64748b' }}>Controller of Examinations</small>
-              </div>
-              <button
-                type="button"
-                onClick={onLogout}
-                title="Sign out"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#dc2626',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
 
         <div className="erp-content-body" style={{ padding: '1.75rem' }}>
           {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
@@ -3273,7 +3087,8 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
             <ReportGenerationModule account={account} role="exam_cell" />
           )}
         </div>
-      </main>
+      </div>
+      </AppLayout>
 
       {/* =========================================================================
           MODAL 1: CREATE EXAM CYCLE
@@ -4295,6 +4110,6 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -50,6 +50,7 @@ import {
   Radio
 } from 'lucide-react';
 import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
+import { AppLayout } from './Navigation';
 import '../DashboardHome.css';
 import './FacultyPortal.css';
 import './HodPortal.css';
@@ -776,14 +777,148 @@ export default function HodPortal({ account, onLogout }) {
     }
   };
 
+  const hodNavSections = [
+    {
+      title: 'OVERVIEW',
+      items: [
+        { id: 'dashboard', label: 'Department Dashboard', icon: Layers },
+      ]
+    },
+    {
+      title: 'ACADEMICS & EVALUATION',
+      items: [
+        { id: 'marks', label: 'Marks Management', icon: BarChart2 },
+        { id: 'approval', label: 'Marks Approval', icon: CheckCircle2, badge: pendingCount > 0 ? pendingCount : null, badgeType: 'warning' },
+        { id: 'digital-evaluation', label: 'Digital Evaluation & Approval', icon: FileCheck },
+        { id: 'subjects', label: 'Department Subjects', icon: BookOpen },
+        { id: 'take-attendance', label: 'Take Attendance', icon: ClipboardCheck },
+        { id: 'timetable', label: 'Timetable & Schedules', icon: Calendar },
+      ]
+    },
+    {
+      title: 'STUDENTS & FACULTY',
+      items: [
+        { id: 'students', label: 'Department Students', icon: GraduationCap },
+        { id: 'at-risk', label: 'At-Risk Students Alert', icon: AlertTriangle, badge: atRiskCount > 0 ? atRiskCount : null, badgeType: 'danger' },
+        { id: 'faculty', label: 'Department Faculty', icon: Users },
+        { id: 'complaints', label: 'Grievance Monitoring', icon: ShieldAlert, badge: pendingGrievancesCount > 0 ? pendingGrievancesCount : null, badgeType: 'warning' },
+        { id: 'notifications', label: 'Department Notifications', icon: Megaphone },
+      ]
+    },
+    {
+      title: 'RECORDS & REPORTS',
+      items: [
+        { id: 'report-generation', label: 'Report Generation', icon: FileSpreadsheet },
+        { id: 'reports', label: 'Department Gazette', icon: FileText },
+        { id: 'documents', label: 'Department Documents', icon: Download, badge: hodDocs.length > 0 ? hodDocs.length : null },
+      ]
+    }
+  ];
+
+  const getHodPageHeading = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: 'Head of Department Overview',
+          subtitle: 'Department of Computer Science & Engineering · Academic Governance & Compliance Monitoring'
+        };
+      case 'marks':
+        return {
+          title: 'Department Continuous Assessment & Marks Management',
+          subtitle: 'Comprehensive marks monitoring, grading compliance, and component verification across all CSE courses.',
+          actions: (
+            <button className="admin-action-btn-primary" onClick={() => setActiveTab('approval')}>
+              <CheckCircle2 size={15} /> Marks Approval Queue ({pendingCount})
+            </button>
+          )
+        };
+      case 'approval':
+        return {
+          title: `Internal Assessment Approval Queue (${pendingCount} Pending)`,
+          subtitle: 'Review, moderate, and approve continuous assessment marksheets submitted by department instructors.',
+          actions: (
+            <button className="admin-action-btn-secondary" onClick={() => setActiveTab('marks')}>
+              ← Back to Marks Register
+            </button>
+          )
+        };
+      case 'students':
+        return {
+          title: 'Department Enrolled Students',
+          subtitle: '540 Active Students Enrolled Across 6 Sections (CSE 2023-2027 Cohort).'
+        };
+      case 'at-risk':
+        return {
+          title: 'At-Risk Academic Early Warning System',
+          subtitle: 'Real-time identification of students falling below attendance and marks thresholds.'
+        };
+      case 'faculty':
+        return {
+          title: 'Department Faculty Directory & Workload',
+          subtitle: 'Faculty teaching allocations, lecture hours, and student feedback compliance.'
+        };
+      case 'complaints':
+        return {
+          title: 'Department Grievance & Complaint Redressal',
+          subtitle: 'Monitor, assign, and resolve student grievances submitted to the department.'
+        };
+      case 'notifications':
+        return {
+          title: 'Department Announcements & Broadcasts',
+          subtitle: 'Official departmental notices and circulars for students and faculty.'
+        };
+      case 'timetable':
+        return {
+          title: 'Department Timetable & Schedules',
+          subtitle: 'Weekly section schedules, lecture room allocations, and faculty load matrix.'
+        };
+      case 'report-generation':
+        return {
+          title: 'Institutional & Departmental Report Generator',
+          subtitle: 'Export comprehensive PDF/Excel reports for NAAC, NBA, and Academic Senate.'
+        };
+      case 'reports':
+        return {
+          title: 'Department Academic Gazette',
+          subtitle: 'Official compiled marksheets and performance gazettes.'
+        };
+      case 'subjects':
+        return {
+          title: 'Department Course Curriculum & Subjects',
+          subtitle: 'Affiliated B.Tech curriculum subjects, syllabi, and credit structure.'
+        };
+      case 'take-attendance':
+        return {
+          title: 'Classroom Attendance Verification',
+          subtitle: 'Live attendance entry and proxy prevention for departmental lectures.'
+        };
+      case 'digital-evaluation':
+        return {
+          title: 'Digital Answer Sheet Evaluation',
+          subtitle: 'Screen-based evaluation and moderation of semester exam scripts.'
+        };
+      case 'documents':
+        return {
+          title: 'Department Documents Repository',
+          subtitle: 'Official circulars, syllabus copies, and compliance documents.'
+        };
+      default:
+        return {
+          title: 'Department Workspace',
+          subtitle: 'Department of Computer Science & Engineering'
+        };
+    }
+  };
+
+  const hodHeading = getHodPageHeading();
 
   return (
-    <div className="hod-portal-root">
+    <>
       {/* Toast Alert */}
       {toastMessage && (
         <div style={{
           position: 'fixed',
-          top: '20px',
+          top: '70px',
           right: '20px',
           background: '#0f172a',
           color: '#ffffff',
@@ -802,173 +937,21 @@ export default function HodPortal({ account, onLogout }) {
         </div>
       )}
 
-      {/* Top Header */}
-      <header className="hod-header">
-        <div className="hod-brand" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {!sidebarOpen && (
-            <button
-              className="campus-nav-toggle-btn"
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              title="Show Navigation"
-              aria-label="Show Navigation"
-            >
-              <Menu size={20} />
-            </button>
-          )}
-          <div className="hod-brand-icon" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-          </div>
-          <div className="hod-brand-text">
-            <h1>APNA CAMPUS · DEPARTMENT OF CSE</h1>
-            <p>Head of Department Academic Governance Portal</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="campus-user-pill">
-            <div className="campus-user-avatar">HOD</div>
-            <div className="campus-user-details">
-              <strong>{account?.name || 'Dr. P. K. Pattnaik'}</strong>
-              <small>HOD · Computer Science &amp; Engg</small>
-            </div>
-            <button
-              className="campus-logout-btn"
-              type="button"
-              onClick={onLogout}
-              title="Sign out"
-              aria-label="Sign out"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
-      <div className={`hod-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
-        {/* Sidebar */}
-        {sidebarOpen && (
-          <aside className="hod-sidebar">
-            <div className="hod-sidebar-header">
-              <span className="hod-sidebar-title">HOD Governance</span>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="hod-sidebar-close"
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <button
-              className={`hod-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Layers size={17} /> Dashboard
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'marks' ? 'active' : ''}`}
-              onClick={() => setActiveTab('marks')}
-            >
-              <BarChart2 size={17} /> Marks Management
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'approval' ? 'active' : ''}`}
-              onClick={() => setActiveTab('approval')}
-            >
-              <CheckCircle2 size={17} /> Marks Approval ({pendingCount})
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'students' ? 'active' : ''}`}
-              onClick={() => setActiveTab('students')}
-            >
-              <GraduationCap size={17} /> Department Students
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'at-risk' ? 'active' : ''}`}
-              onClick={() => setActiveTab('at-risk')}
-            >
-              <AlertTriangle size={17} /> At-Risk Students Alert
-              {atRiskCount > 0 && (
-                <span style={{ marginLeft: 'auto', background: '#dc2626', color: '#fff', fontSize: '0.65rem', fontWeight: 800, padding: '1px 7px', borderRadius: '10px', boxShadow: '0 2px 6px rgba(220, 38, 38, 0.4)' }}>
-                  {atRiskCount}
-                </span>
-              )}
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'faculty' ? 'active' : ''}`}
-              onClick={() => setActiveTab('faculty')}
-            >
-              <Users size={17} /> Department Faculty
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'complaints' ? 'active' : ''}`}
-              onClick={() => setActiveTab('complaints')}
-            >
-              <ShieldAlert size={17} /> Grievance Monitoring
-              {pendingGrievancesCount > 0 && (
-                <span style={{ marginLeft: 'auto', background: '#d97706', color: '#fff', fontSize: '0.65rem', fontWeight: 800, padding: '1px 7px', borderRadius: '10px', boxShadow: '0 2px 6px rgba(217, 119, 6, 0.4)' }}>
-                  {pendingGrievancesCount}
-                </span>
-              )}
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'notifications' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notifications')}
-            >
-              <Megaphone size={17} /> Department Notifications
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'timetable' ? 'active' : ''}`}
-              onClick={() => setActiveTab('timetable')}
-            >
-              <Calendar size={17} color="#2563eb" /> Timetable &amp; Schedules
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'report-generation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('report-generation')}
-            >
-              <FileSpreadsheet size={17} /> Report Generation
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reports')}
-            >
-              <FileText size={17} /> Department Gazette
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'subjects' ? 'active' : ''}`}
-              onClick={() => setActiveTab('subjects')}
-            >
-              <BookOpen size={17} /> Department Subjects
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'take-attendance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('take-attendance')}
-            >
-              <ClipboardCheck size={17} /> Take Attendance
-            </button>
-            <button
-              className={`hod-nav-btn evaluation-btn ${activeTab === 'digital-evaluation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('digital-evaluation')}
-            >
-              <FileText size={17} /> Digital Evaluation &amp; Approval
-            </button>
-            <button
-              className={`hod-nav-btn ${activeTab === 'documents' ? 'active' : ''}`}
-              onClick={() => { setHodDocs(getDocumentsForRole('hod')); setActiveTab('documents'); }}
-            >
-              <Download size={17} /> Documents
-              <span className="hod-sidebar-badge">
-                {hodDocs.length}
-              </span>
-            </button>
-          </aside>
-        )}
-
-        {/* Content Pane */}
-        <main className="hod-main">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="HOD Portal"
+        portalSubtitle="Department of CSE · Academic Governance"
+        portalHomeTab="dashboard"
+        navSections={hodNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={hodHeading.title}
+        pageSubtitle={hodHeading.subtitle}
+        pageActions={hodHeading.actions}
+      >
+        <div className="hod-portal-content-wrap">
           {/* TAB: GRIEVANCE MONITORING */}
           {activeTab === 'complaints' && (
             <div style={{ marginBottom: '24px' }}>
@@ -3114,8 +3097,8 @@ export default function HodPortal({ account, onLogout }) {
           {activeTab === 'report-generation' && (
             <ReportGenerationModule account={account} role="hod" />
           )}
-        </main>
-      </div>
+        </div>
+      </AppLayout>
 
       {/* ── MODAL 1: DETAILED MARKS INSPECTION MODAL ── */}
       {inspectingMarksModal && (
@@ -4208,6 +4191,6 @@ export default function HodPortal({ account, onLogout }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

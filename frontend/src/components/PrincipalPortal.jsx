@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { AppLayout } from './Navigation';
 import {
+  MessageSquare,
   GraduationCap,
   Building2,
   CalendarCheck,
@@ -318,8 +320,70 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
     triggerToast('Academic Performance CSV exported successfully!');
   };
 
+
+  const principalNavSections = [
+    {
+      title: 'EXECUTIVE GOVERNANCE',
+      items: [
+        { id: 'governance', label: 'Campus Overview', icon: Building2 },
+        { id: 'academic_health', label: 'Academic Performance', icon: Award },
+        { id: 'timetable', label: 'Timetables & Approval', icon: CalendarDays },
+      ]
+    },
+    {
+      title: 'APPROVALS & DISPATCH',
+      items: [
+        { id: 'leaves', label: 'Leave Approvals', icon: CalendarCheck, badge: pendingLeavesCount || undefined },
+        { id: 'notices', label: 'Official Circulars', icon: Megaphone, badge: pendingNoticesCount || undefined },
+        { id: 'report-generation', label: 'Report Generation', icon: FileSpreadsheet },
+        { id: 'campus-connect', label: 'Campus Connect Broadcast', icon: MessageSquare },
+      ]
+    }
+  ];
+
+  const getPrincipalHeading = () => {
+    switch (activeTab) {
+      case 'governance':
+        return {
+          title: 'Executive Command · Office of the Principal',
+          subtitle: 'Academic Governance, Operational Health, and Autonomous Administration.'
+        };
+      case 'leaves':
+        return {
+          title: 'Institutional Leave Application Approvals',
+          subtitle: `${pendingLeavesCount} Pending Leave Requests across Faculty and Staff.`
+        };
+      case 'notices':
+        return {
+          title: 'Official Executive Circulars & Gazettes',
+          subtitle: 'Draft, approve, and sign institution-wide announcements and mandates.'
+        };
+      case 'academic_health':
+        return {
+          title: 'Autonomous Academic Performance & Health',
+          subtitle: 'Departmental syllabus progress, faculty attendance, and student performance indices.'
+        };
+      case 'timetable':
+        return {
+          title: 'Institutional Master Timetables',
+          subtitle: 'Review, validate, and give executive sign-off on department timetables.'
+        };
+      case 'report-generation':
+        return {
+          title: 'Master ERP Compliance & Accreditations',
+          subtitle: 'Generate accredited summaries for Senate, AICTE, and NAAC.'
+        };
+      default:
+        return {
+          title: (activeTab || 'Principal Portal').replace(/_/g, ' ').toUpperCase(),
+          subtitle: 'Institutional Executive Office'
+        };
+    }
+  };
+
+  const principalHeading = getPrincipalHeading();
   return (
-    <div className="erp-principal-layout">
+    <>
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -344,112 +408,20 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
-      {/* Sidebar Navigation */}
-      {sidebarOpen && (
-        <aside className="erp-sidebar erp-principal-sidebar">
-          <div
-            className="erp-sidebar-brand"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div
-                className="erp-director-badge"
-                style={{
-                  background: '#ffffff',
-                  padding: '3px',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <img
-                  src="/logo.png"
-                  alt="Apna Campus Logo"
-                  style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
-                />
-              </div>
-              <div className="erp-brand-text">
-                <h2>Apna Campus</h2>
-                <span style={{ color: '#38bdf8' }}>Office of Principal</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <nav className="erp-sidebar-nav">
-            <button
-              className={`erp-nav-item ${activeTab === 'governance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('governance')}
-            >
-              <Building2 size={18} />
-              <span>Campus Overview</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'leaves' ? 'active' : ''}`}
-              onClick={() => setActiveTab('leaves')}
-            >
-              <CalendarCheck size={18} />
-              <span>Leave Approvals</span>
-              {pendingLeavesCount > 0 && (
-                <span className="erp-nav-badge">{pendingLeavesCount}</span>
-              )}
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'notices' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notices')}
-            >
-              <Megaphone size={18} />
-              <span>Official Circulars</span>
-              {pendingNoticesCount > 0 && (
-                <span className="erp-nav-badge blue">{pendingNoticesCount}</span>
-              )}
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'academic_health' ? 'active' : ''}`}
-              onClick={() => setActiveTab('academic_health')}
-            >
-              <Award size={18} />
-              <span>Academic Performance</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'timetable' ? 'active' : ''}`}
-              onClick={() => setActiveTab('timetable')}
-            >
-              <CalendarDays size={18} />
-              <span>Timetables &amp; Approval</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'report-generation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('report-generation')}
-            >
-              <FileSpreadsheet size={18} />
-              <span>Report Generation</span>
-            </button>
-          </nav>
-        </aside>
-      )}
-
-      {/* Main Content Area */}
-      <main className="erp-main-content">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Principal Portal"
+        portalSubtitle="Office of Principal & Director"
+        portalHomeTab="governance"
+        navSections={principalNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={principalHeading.title}
+        pageSubtitle={principalHeading.subtitle}
+      >
+        <div className="principal-portal-content-wrap">
         {activeTab === 'governance' ? (
           <RoleDashboardLanding
             account={account}
@@ -465,59 +437,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
           />
         ) : (
           <>
-            <header className="erp-header">
-          <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {!sidebarOpen && (
-              <button
-                className="campus-nav-toggle-btn"
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                title="Show Navigation"
-                aria-label="Show Navigation"
-              >
-                <Menu size={20} />
-              </button>
-            )}
-            <div>
-              <h1>Principal / Director Command Center</h1>
-              <p>Institutional Academic Governance, Executive Clearances &amp; Analytics</p>
-            </div>
-          </div>
 
-          <div className="erp-header-actions">
-            <button
-              className="erp-btn erp-btn-secondary"
-              onClick={fetchAllData}
-              title="Refresh Dashboard Data"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.45rem 0.85rem' }}
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-              <span style={{ fontSize: '0.8rem' }}>Sync</span>
-            </button>
-
-            <div className="erp-role-badge">
-              <ShieldCheck size={14} /> Executive Clearance Authority
-            </div>
-
-            {/* User Profile Pill */}
-            <div className="campus-user-pill">
-              <div className="campus-user-avatar">PR</div>
-              <div className="campus-user-details">
-                <strong>{account?.name || 'Dr. Sujit Kumar Khuntia'}</strong>
-                <small>Principal &amp; Director</small>
-              </div>
-              <button
-                className="campus-logout-btn"
-                type="button"
-                onClick={onLogout}
-                title="Sign out"
-                aria-label="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
 
         <div className="erp-content-body">
           {/* Quick Action Navigation Buttons */}
@@ -1645,7 +1565,8 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
         </div>
           </>
         )}
-      </main>
+        </div>
+      </AppLayout>
 
       {/* ======================================================== */}
       {/* MODAL 1: CONFIRM LEAVE APPROVAL                          */}
@@ -1801,6 +1722,6 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

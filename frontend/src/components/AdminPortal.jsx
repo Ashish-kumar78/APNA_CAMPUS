@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { AppLayout } from './Navigation';
 import {
   Users,
   GraduationCap,
@@ -1284,8 +1285,111 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
     }
   };
 
+
+  const adminNavSections = [
+    {
+      title: 'INSTITUTIONAL OVERVIEW',
+      items: [
+        { id: 'dashboard', label: 'Executive Dashboard', icon: Layers },
+        { id: 'institutional-analytics', label: 'Institutional Analytics', icon: BarChart2 },
+        { id: 'report-generation', label: 'Compliance Reports', icon: FileSpreadsheet },
+        { id: 'notification-center', label: 'Broadcast Feeds', icon: Bell },
+      ]
+    },
+    {
+      title: 'ACADEMIC ADMINISTRATION',
+      items: [
+        { id: 'students', label: 'Student Directory', icon: GraduationCap },
+        { id: 'faculty', label: 'Faculty Directory', icon: Users },
+        { id: 'departments', label: 'Departments', icon: Building2 },
+        { id: 'programs', label: 'Degree Programs', icon: BookOpen },
+        { id: 'semesters', label: 'Academic Semesters', icon: Calendar },
+        { id: 'sections', label: 'Class Sections', icon: Layers },
+        { id: 'subjects', label: 'Course Catalog', icon: BookOpen },
+        { id: 'faculty-allocations', label: 'Faculty Allocations', icon: UserCheck },
+        { id: 'timetable', label: 'Timetables & Slots', icon: Calendar },
+        { id: 'attendance-monitoring', label: 'Attendance Tracking', icon: Clock },
+      ]
+    },
+    {
+      title: 'EXAMINATION & EVALUATION',
+      items: [
+        { id: 'exam-cell', label: 'Exam Schedules & Dates', icon: FileCheck },
+        { id: 'marking-scheme', label: 'Marking Schemes', icon: CheckCircle2 },
+        { id: 'marks', label: 'Continuous Assessment', icon: BarChart2 },
+        { id: 'academic-performance', label: 'Result Moderation', icon: Award },
+        { id: 'audit', label: 'Examination Audit Trail', icon: ShieldCheck },
+      ]
+    },
+    {
+      title: 'INSTITUTIONAL DIRECTORY',
+      items: [
+        { id: 'hod', label: 'Department HODs', icon: Shield },
+        { id: 'wardens', label: 'Hostel Wardens', icon: Home },
+        { id: 'security', label: 'Gate & Security', icon: ShieldCheck },
+        { id: 'canteen', label: 'Canteen Staff', icon: Utensils },
+        { id: 'other-members', label: 'Other Staff & Ops', icon: Wrench },
+      ]
+    },
+    {
+      title: 'FINANCE & SERVICES',
+      items: [
+        { id: 'accounts-fees', label: 'Accounts & Fees', icon: CreditCard },
+        { id: 'documents', label: 'Student Documents', icon: FileText },
+        { id: 'placements', label: 'Training & Placement', icon: TrendingUp },
+        { id: 'ai-complaints', label: 'Grievance Intelligence', icon: AlertCircle },
+      ]
+    },
+    {
+      title: 'COMMUNICATION & SYSTEM',
+      items: [
+        { id: 'campus-connect-admin', label: 'Campus Connect Broadcast', icon: Megaphone },
+        { id: 'user-accounts', label: 'User Accounts & Access', icon: UserCheck },
+        { id: 'settings', label: 'Institutional Config', icon: Settings },
+        { id: 'system-diagnostics', label: 'Diagnostics & Backups', icon: Activity },
+        { id: 'reports', label: 'Legacy Reports', icon: FileText },
+      ]
+    }
+  ];
+
+  const getAdminHeading = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: 'Institutional Administration & Executive Command',
+          subtitle: 'Holistic governance, enrollment monitoring, and autonomous college operations.'
+        };
+      case 'institutional-analytics':
+        return {
+          title: 'Institutional Analytics & Performance Intelligence',
+          subtitle: 'Cross-departmental trends, admission progression, and academic health.'
+        };
+      case 'report-generation':
+        return {
+          title: 'Master ERP Report Generation & Compliance Exports',
+          subtitle: 'Generate accredited institutional summaries for NAAC, AICTE, and University Senate.'
+        };
+      case 'students':
+        return {
+          title: 'Student Master Directory & Verification Registry',
+          subtitle: `${studentsList.length} Total Enrolled Students across all Departments and Sections.`
+        };
+      case 'faculty':
+        return {
+          title: 'Faculty Master Directory & Academic Staff',
+          subtitle: `${facultyList.length} Registered Teaching and Research Faculty.`
+        };
+      default:
+        return {
+          title: (activeTab || 'Administration').replace(/-/g, ' ').toUpperCase(),
+          subtitle: 'Institutional Administration and Operations Control'
+        };
+    }
+  };
+
+  const adminHeading = getAdminHeading();
   return (
-    <div className="admin-portal-root">
+    <>
 
       {/* ══════════════════════════════════════════════════════════
            ADMISSION CREDENTIAL CARD MODAL
@@ -1465,406 +1569,20 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
-      {/* Top Header */}
-      <header className="admin-header">
-        <div className="admin-brand" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {!sidebarOpen && (
-            <button
-              className="campus-nav-toggle-btn"
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              title="Show Navigation"
-              aria-label="Show Navigation"
-            >
-              <Menu size={20} />
-            </button>
-          )}
-          <div className="admin-brand-icon" style={{ background: '#ffffff', padding: '4px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '34px', width: 'auto', objectFit: 'contain' }} />
-          </div>
-          <div className="admin-brand-text">
-            <h1>APNA CAMPUS · ERP ADMIN</h1>
-            <p>Institutional Governance &amp; Academic Management</p>
-          </div>
-        </div>
-
-        <div className="admin-user-controls">
-          {/* Live Campus Time Pill */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '7px',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            padding: '5px 12px',
-            borderRadius: '20px',
-            fontSize: '0.78rem',
-            color: '#1e293b'
-          }} title="Current Live Campus Clock">
-            <span style={{
-              display: 'inline-block',
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: '#22c55e',
-              boxShadow: '0 0 0 2px rgba(34, 197, 94, 0.3)'
-            }} />
-            <Clock size={13} style={{ color: '#2563eb' }} />
-            <span style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.04em' }}>{formattedLiveTime}</span>
-          </div>
-
-          {/* Top-Right Campus OS User Profile Pill with Sign Out */}
-          <div className="campus-user-pill">
-            <div className="campus-user-avatar">AD</div>
-            <div className="campus-user-details">
-              <strong>{account?.name || 'Campus Administrator'}</strong>
-              <small>Administrator • {account?.identity || 'ADM-OPS-01'}</small>
-            </div>
-            <button
-              className="campus-logout-btn"
-              type="button"
-              onClick={onLogout}
-              title="Sign out"
-              aria-label="Sign out"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
-      <div className={`admin-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
-        {/* Sidebar */}
-        {sidebarOpen && (
-          <aside className="admin-sidebar">
-            <div className="admin-sidebar-header">
-              <span className="admin-sidebar-title">Menu</span>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="admin-sidebar-close"
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          {/* ── 1. INSTITUTIONAL OVERVIEW ── */}
-          <button
-            className="admin-nav-section-dropdown"
-            onClick={() => setOverviewOpen(o => !o)}
-            aria-expanded={overviewOpen}
-            type="button"
-          >
-            <span>Institutional Overview</span>
-            <ChevronDown size={14} className={`roster-chevron ${overviewOpen ? 'open' : ''}`} />
-          </button>
-          <div className={`roster-items ${overviewOpen ? 'expanded' : ''}`}>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Layers size={16} /> Dashboard
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'institutional-analytics' ? 'active' : ''}`}
-              onClick={() => setActiveTab('institutional-analytics')}
-            >
-              <BarChart2 size={16} /> Institutional Analytics
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'report-generation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('report-generation')}
-            >
-              <FileSpreadsheet size={16} /> Report Generation
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'notification-center' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notification-center')}
-            >
-              <Bell size={16} /> Notification Center
-            </button>
-          </div>
-
-          {/* ── 2. ACADEMIC ADMINISTRATION ── */}
-          <button
-            className="admin-nav-section-dropdown"
-            onClick={() => setAcademicAdminOpen(o => !o)}
-            aria-expanded={academicAdminOpen}
-            type="button"
-          >
-            <span>Academic Administration</span>
-            <ChevronDown size={14} className={`roster-chevron ${academicAdminOpen ? 'open' : ''}`} />
-          </button>
-          <div className={`roster-items ${academicAdminOpen ? 'expanded' : ''}`}>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'students' ? 'active' : ''}`}
-              onClick={() => setActiveTab('students')}
-            >
-              <GraduationCap size={16} /> Students &amp; Admissions
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'faculty' ? 'active' : ''}`}
-              onClick={() => setActiveTab('faculty')}
-            >
-              <Users size={16} /> Faculty &amp; Staff
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'departments' ? 'active' : ''}`}
-              onClick={() => setActiveTab('departments')}
-            >
-              <Building2 size={16} /> Departments
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'programs' ? 'active' : ''}`}
-              onClick={() => setActiveTab('programs')}
-            >
-              <GraduationCap size={16} /> Programs &amp; Degrees
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'semesters' ? 'active' : ''}`}
-              onClick={() => setActiveTab('semesters')}
-            >
-              <Calendar size={16} /> Semesters &amp; Batches
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'sections' ? 'active' : ''}`}
-              onClick={() => setActiveTab('sections')}
-            >
-              <Filter size={16} /> Sections
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'subjects' ? 'active' : ''}`}
-              onClick={() => setActiveTab('subjects')}
-            >
-              <BookOpen size={16} /> Subjects &amp; Curriculum
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'faculty-allocations' ? 'active' : ''}`}
-              onClick={() => setActiveTab('faculty-allocations')}
-            >
-              <UsersRound size={16} /> Faculty Allocations
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'timetable' ? 'active' : ''}`}
-              onClick={() => setActiveTab('timetable')}
-            >
-              <Calendar size={16} color="#2563eb" /> Timetables &amp; Scheduling
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'attendance-monitoring' ? 'active' : ''}`}
-              onClick={() => setActiveTab('attendance-monitoring')}
-            >
-              <CheckCircle2 size={16} /> Attendance Monitoring
-            </button>
-          </div>
-
-          {/* ── 3. EXAMINATION & EVALUATION ── */}
-          <button
-            className="admin-nav-section-dropdown"
-            onClick={() => setExaminationOpen(o => !o)}
-            aria-expanded={examinationOpen}
-            type="button"
-          >
-            <span>Examination &amp; Evaluation</span>
-            <ChevronDown size={14} className={`roster-chevron ${examinationOpen ? 'open' : ''}`} />
-          </button>
-          <div className={`roster-items ${examinationOpen ? 'expanded' : ''}`}>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'exam-cell' ? 'active' : ''}`}
-              onClick={() => setActiveTab('exam-cell')}
-            >
-              <FileCheck size={16} /> Examination Cell
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'marking-scheme' ? 'active' : ''}`}
-              onClick={() => setActiveTab('marking-scheme')}
-            >
-              <Sliders size={16} /> Marking Scheme
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'marks' ? 'active' : ''}`}
-              onClick={() => setActiveTab('marks')}
-            >
-              <BarChart2 size={16} /> Marks Module
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'academic-performance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('academic-performance')}
-            >
-              <Award size={16} /> Academic Performance
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'audit' ? 'active' : ''}`}
-              onClick={() => setActiveTab('audit')}
-            >
-              <Clock size={16} /> Examination Audit History
-            </button>
-          </div>
-
-          {/* ── 4. DEPARTMENT & INSTITUTIONAL OPERATIONS ── */}
-          <button
-            className="admin-nav-section-dropdown"
-            onClick={() => setOperationsOpen(o => !o)}
-            aria-expanded={operationsOpen}
-            type="button"
-          >
-            <span>Department Operations</span>
-            <ChevronDown size={14} className={`roster-chevron ${operationsOpen ? 'open' : ''}`} />
-          </button>
-          <div className={`roster-items ${operationsOpen ? 'expanded' : ''}`}>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'hod' ? 'active' : ''}`}
-              onClick={() => setActiveTab('hod')}
-            >
-              <ShieldCheck size={16} /> HOD Management
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'wardens' ? 'active' : ''}`}
-              onClick={() => setActiveTab('wardens')}
-            >
-              <Home size={16} /> Hostel Wardens
-              <span className="admin-badge boys" style={{ marginLeft: 'auto', fontSize: '0.62rem', padding: '1px 5px', borderRadius: '10px' }}>
-                Boys &amp; Girls
-              </span>
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'security' ? 'active' : ''}`}
-              onClick={() => setActiveTab('security')}
-            >
-              <ShieldAlert size={16} /> Security Guards
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'canteen' ? 'active' : ''}`}
-              onClick={() => setActiveTab('canteen')}
-            >
-              <Utensils size={16} /> Canteen Staff
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'other-members' ? 'active' : ''}`}
-              onClick={() => setActiveTab('other-members')}
-            >
-              <Wrench size={16} /> Other Staff &amp; Ops
-            </button>
-          </div>
-
-          {/* ── 5. FINANCE & ADMINISTRATION ── */}
-          <button
-            className="admin-nav-section-dropdown"
-            onClick={() => setFinanceOpen(o => !o)}
-            aria-expanded={financeOpen}
-            type="button"
-          >
-            <span>Finance &amp; Administration</span>
-            <ChevronDown size={14} className={`roster-chevron ${financeOpen ? 'open' : ''}`} />
-          </button>
-          <div className={`roster-items ${financeOpen ? 'expanded' : ''}`}>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'accounts-fees' ? 'active' : ''}`}
-              onClick={() => setActiveTab('accounts-fees')}
-            >
-              <CreditCard size={16} /> Accounts &amp; Fees
-            </button>
-          </div>
-
-          {/* ── 6. STUDENT SERVICES & CAREERS ── */}
-          <button
-            className="admin-nav-section-dropdown"
-            onClick={() => setStudentServicesOpen(o => !o)}
-            aria-expanded={studentServicesOpen}
-            type="button"
-          >
-            <span>Student Services</span>
-            <ChevronDown size={14} className={`roster-chevron ${studentServicesOpen ? 'open' : ''}`} />
-          </button>
-          <div className={`roster-items ${studentServicesOpen ? 'expanded' : ''}`}>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'documents' ? 'active' : ''}`}
-              onClick={() => setActiveTab('documents')}
-              style={{ position: 'relative' }}
-            >
-              <Download size={16} /> Documents Registry
-              <span style={{ marginLeft: 'auto', background: '#2563eb', color: '#fff', fontSize: '0.62rem', fontWeight: 700, padding: '1px 6px', borderRadius: '10px' }}>
-                {documents.length}
-              </span>
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'placements' ? 'active' : ''}`}
-              onClick={() => setActiveTab('placements')}
-            >
-              <Briefcase size={16} /> Placement &amp; Careers
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'ai-complaints' ? 'active' : ''}`}
-              onClick={() => setActiveTab('ai-complaints')}
-            >
-              <Wrench size={16} /> AI Complaints &amp; Assignment
-              <span className="admin-badge pending" style={{ marginLeft: 'auto', fontSize: '0.62rem', padding: '1px 5px', borderRadius: '10px' }}>
-                AI Smart
-              </span>
-            </button>
-          </div>
-
-          {/* ── 7. CAMPUS COMMUNICATION ── */}
-          <button
-            className="admin-nav-section-dropdown"
-            onClick={() => setCommunicationOpen(o => !o)}
-            aria-expanded={communicationOpen}
-            type="button"
-          >
-            <span>Campus Communication</span>
-            <ChevronDown size={14} className={`roster-chevron ${communicationOpen ? 'open' : ''}`} />
-          </button>
-          <div className={`roster-items ${communicationOpen ? 'expanded' : ''}`}>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'campus-connect-admin' ? 'active' : ''}`}
-              onClick={() => setActiveTab('campus-connect-admin')}
-            >
-              <Megaphone size={16} /> Campus Connect &amp; Broadcast
-            </button>
-          </div>
-
-          {/* ── 8. SYSTEM ADMINISTRATION ── */}
-          <button
-            className="admin-nav-section-dropdown"
-            onClick={() => setSystemAdminOpen(o => !o)}
-            aria-expanded={systemAdminOpen}
-            type="button"
-          >
-            <span>System Administration</span>
-            <ChevronDown size={14} className={`roster-chevron ${systemAdminOpen ? 'open' : ''}`} />
-          </button>
-          <div className={`roster-items ${systemAdminOpen ? 'expanded' : ''}`}>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'user-accounts' ? 'active' : ''}`}
-              onClick={() => setActiveTab('user-accounts')}
-            >
-              <UserCheck size={16} /> User Accounts &amp; Access
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'settings' ? 'active' : ''}`}
-              onClick={() => setActiveTab('settings')}
-            >
-              <Settings size={16} /> Institutional Settings
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'system-diagnostics' ? 'active' : ''}`}
-              onClick={() => setActiveTab('system-diagnostics')}
-            >
-              <Activity size={16} /> Diagnostics &amp; Backups
-            </button>
-            <button
-              className={`admin-nav-btn roster-child ${activeTab === 'reports' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reports')}
-            >
-              <FileText size={16} /> Legacy Reports
-            </button>
-          </div>
-        </aside>
-        )}
-
-        {/* Dynamic Content Pane */}
-        <main className="admin-main">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Admin Portal"
+        portalSubtitle="Institutional Governance & Operations"
+        portalHomeTab="dashboard"
+        navSections={adminNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={adminHeading.title}
+        pageSubtitle={adminHeading.subtitle}
+      >
+        <div className="admin-portal-content-wrap">
           {/* TAB: CAMPUS CONNECT ADMIN CONTROL */}
           {activeTab === 'campus-connect-admin' && (
             <div style={{ marginBottom: '20px' }}>
@@ -5068,8 +4786,8 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
               </div>
             </div>
           )}
-        </main>
-      </div>
+        </div>
+      </AppLayout>
 
       {/* MODAL: ADD / EDIT STUDENT (COMPREHENSIVE 5-STEP COMPULSORY ENROLLMENT) */}
       {isStudentModalOpen && (
@@ -7563,6 +7281,6 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AppLayout } from './components/Navigation'
 import {
   Building2,
   GraduationCap,
@@ -113,7 +114,7 @@ export const ChatBubbleIcon = ({ size = 18, className = '', ...props }) => (
   </svg>
 );
 
-const navSections = [
+const studentNavSections = [
   {
     title: 'OVERVIEW',
     items: [
@@ -145,7 +146,7 @@ const navSections = [
   }
 ];
 
-const navigation = navSections.flatMap(sec => sec.items);
+const navigation = studentNavSections.flatMap(sec => sec.items);
 
 const latestNotices = [
   { tag: 'SCHOLARSHIP', title: 'PRERANA Scholarship', detail: 'Eligible students can submit their application through the state scholarship portal.', date: '27 Sep 2026' },
@@ -555,6 +556,24 @@ function StudentPortal({ account, onLogout }) {
     setCurrentMonth((month) => new Date(month.getFullYear(), month.getMonth() + direction, 1))
   }
 
+  // Tab change handler for AppLayout sidebar
+  const handleStudentTabChange = (page) => {
+    setActivePage(page);
+    const match = navigation.find(n => n.page === page);
+    setActiveLink(match ? match.label : page);
+    setProfileTab('');
+    setProfileQuickView('');
+    window.location.hash = page;
+  };
+
+  // Compute page heading for AppLayout
+  const studentHeading = useMemo(() => {
+    if (activePage === 'dashboard') return { title: 'Dashboard', subtitle: `Welcome back, ${account?.name?.split(' ')[0] || 'Student'}` };
+    if (activePage === 'profile') return { title: 'Student Profile', subtitle: 'Personal & academic details' };
+    const match = navigation.find(n => n.page === activePage);
+    return { title: match?.label || activeLink || 'Student Portal', subtitle: '' };
+  }, [activePage, activeLink, account]);
+
   return (
     <div className="campus-os-shell">
       {/* WhatsApp Slide-out Drawer (Side of Notifications Panel Launcher) */}
@@ -613,243 +632,20 @@ function StudentPortal({ account, onLogout }) {
         </div>
       )}
 
-      <div className="campus-os-container">
-        {/* Floating Sidebar identical to Campus OS Dashboard */}
-        {sidebarOpen && (
-          <aside className="campus-os-sidebar">
-            <div className="campus-os-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div className="campus-brand-icon" style={{ background: '#ffffff', padding: '4px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-                </div>
-                <div>
-                  <p className="campus-brand-kicker">APNA CAMPUS</p>
-                  <h2 className="campus-brand-title">Student Portal</h2>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  color: '#ffffff',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <nav className="campus-os-nav">
-              {navSections.map((sec) => (
-                <div key={sec.title} className="campus-os-nav-section">
-                  <p className="campus-os-nav-section-title">{sec.title}</p>
-                  {sec.items.map(({ label, icon: Icon, page, badge }) => (
-                    <a
-                      className={activeLink === label ? 'active' : ''}
-                      href={`#${page}`}
-                      aria-current={activeLink === label ? 'page' : undefined}
-                      key={label}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        setActiveLink(label)
-                        setActivePage(page)
-                        window.location.hash = page
-                        setSidebarOpen(false)
-                      }}
-                    >
-                      <Icon size={18} />
-                      <span>{label}</span>
-                      {badge && <span className="cc-nav-badge">{badge}</span>}
-                    </a>
-                  ))}
-                </div>
-              ))}
-            </nav>
-
-            <div
-              className="campus-os-role-card"
-              onClick={() => {
-                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-                document.documentElement.scrollTop = 0;
-                document.body.scrollTop = 0;
-                setActivePage('profile');
-                setActiveLink('Student Profile');
-                setProfileTab('Personal');
-                setProfileQuickView('');
-                window.location.hash = 'profile';
-                setSidebarOpen(false);
-              }}
-              style={{ cursor: 'pointer' }}
-              title="View student profile"
-            >
-              <div>
-                <p className="campus-role-kicker" style={{ margin: 0 }}>CURRENT ROLE</p>
-                <p className="campus-role-val" style={{ margin: 0 }}>Student</p>
-              </div>
-              <small className="campus-role-sub" style={{ marginTop: '6px' }}>{account.name} • {account.registrationNumber}</small>
-            </div>
-          </aside>
-        )}
-
-        {/* Floating Main Content Card identical to Campus OS Dashboard */}
-        <main className="campus-os-main">
-          <header className="campus-os-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              {!sidebarOpen && (
-                <button
-                  className="campus-nav-toggle-btn"
-                  type="button"
-                  onClick={() => setSidebarOpen(true)}
-                  title="Show Navigation"
-                  aria-label="Show Navigation"
-                >
-                  <Menu size={20} />
-                </button>
-              )}
-              <div>
-                <p className="campus-header-kicker">OVERVIEW</p>
-                <h1 className="campus-header-title">{activeLink === 'Dashboard' ? 'Student dashboard' : activeLink}</h1>
-                <p className="campus-header-subtitle">{timeGreeting.wish}, {account?.name || 'Student'}</p>
-              </div>
-            </div>
-
-            <div className="campus-header-actions">
-              {/* Notification Bell */}
-              <div style={{ position: 'relative' }}>
-                <button
-                  className="campus-icon-btn"
-                  type="button"
-                  aria-label="Notifications"
-                  onClick={() => setShowNotifications((s) => !s)}
-                  title="Campus Notifications"
-                >
-                  <Bell size={18} />
-                  {unreadNotifCount > 0 && <span className="campus-bell-dot" />}
-                </button>
-                {showNotifications && (
-                  <div className="campus-notif-popover" role="dialog" aria-label="Notifications">
-                    <div className="notif-popover-head">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <strong>Notifications</strong>
-                        {unreadNotifCount > 0 && (
-                          <span className="notif-count-badge">{unreadNotifCount} new</span>
-                        )}
-                      </div>
-                      <button
-                        className="notif-close-btn"
-                        type="button"
-                        onClick={() => setShowNotifications(false)}
-                        aria-label="Close notifications"
-                      >
-                        <X size={15} />
-                      </button>
-                    </div>
-
-                    <div className="notif-popover-body">
-                      {notifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          className={`notif-item ${notif.unread ? 'is-unread' : ''}`}
-                          onClick={() => handleOpenNoticeDetail(notif)}
-                          role="button"
-                          tabIndex={0}
-                          title="Click to view full announcement details"
-                        >
-                          <div className="notif-item-top">
-                            <span className={`notif-tag-badge ${notif.tagClass}`}>{notif.tag}</span>
-                            <span className="notif-time">{notif.time}</span>
-                          </div>
-                          <h4 className="notif-title">{notif.title}</h4>
-                          {notif.facultyInfo && (
-                            <div style={{ fontSize: '10.5px', color: '#0f766e', fontWeight: 600, marginBottom: '3px' }}>
-                              👨‍🏫 {notif.facultyInfo}
-                            </div>
-                          )}
-                          <p className="notif-message" style={{ display: '-webkit-box', WebKitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                            {notif.message}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="notif-popover-footer">
-                      <button
-                        className="notif-mark-read-btn"
-                        type="button"
-                        onClick={handleMarkAllRead}
-                      >
-                        Mark all as read
-                      </button>
-                      <button
-                        className="notif-view-all-btn"
-                        type="button"
-                        onClick={() => {
-                          setShowNotifications(false)
-                          setActivePage('notices')
-                          setActiveLink('Campus Notices')
-                          window.location.hash = 'notices'
-                        }}
-                      >
-                        View all notices →
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div
-                className="campus-user-pill"
-                onClick={() => {
-                  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-                  document.documentElement.scrollTop = 0;
-                  document.body.scrollTop = 0;
-                  setActivePage('profile');
-                  setActiveLink('Student Profile');
-                  setProfileTab('Personal');
-                  setProfileQuickView('');
-                  window.location.hash = 'profile';
-                }}
-                style={{ cursor: 'pointer' }}
-                title="View student profile"
-              >
-                <div className="campus-user-passport" title={`${account.name} Passport Photo`}>
-                  <img src={studentPhoto} alt={account.name} className="campus-user-passport-img" />
-                </div>
-                <div className="campus-user-details">
-                  <strong>{account.name}</strong>
-                  <small>Student • {account.registrationNumber}</small>
-                </div>
-                <button
-                  className="campus-logout-btn"
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (typeof window !== 'undefined') {
-                      window.location.hash = '';
-                      if (window.history && window.history.replaceState) {
-                        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-                      }
-                    }
-                    onLogout();
-                  }}
-                  title="Log out"
-                  aria-label="Log out"
-                >
-                  <LogOut size={16} />
-                </button>
-              </div>
-            </div>
-          </header>
-
-          <div className="campus-os-body">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Student Portal"
+        portalSubtitle={`${account?.branch || account?.deptCode || 'B.Tech'} · ${account?.registrationNumber || 'Student'}`}
+        portalHomeTab="dashboard"
+        navSections={studentNavSections}
+        activeTab={activePage}
+        onTabChange={handleStudentTabChange}
+        onLogout={onLogout}
+        pageTitle={studentHeading.title}
+        pageSubtitle={studentHeading.subtitle}
+      >
+        <div className="campus-os-body">
           {activePage !== 'dashboard' && activePage !== 'profile' ? (
             <div className="portal-feature-page" id={activePage}>
               <div className="portal-breadcrumb">
@@ -916,7 +712,15 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'canteen' && <CanteenPage />}
               {activePage === 'attendance' && <AttendancePage />}
               {activePage === 'academics' && <AcademicsPage account={account} />}
-              {activePage === 'timetable' && <TimetablePage />}
+              {activePage === 'timetable' && (
+                <TimetablePage
+                  onClose={() => {
+                    setActivePage('dashboard')
+                    setActiveLink('Dashboard')
+                    window.location.hash = 'dashboard'
+                  }}
+                />
+              )}
               {activePage === 'notices' && <NoticesPage />}
               {activePage === 'idcard' && <IDCardPage />}
               {activePage === 'library' && <LibraryPage />}
@@ -1190,9 +994,8 @@ function StudentPortal({ account, onLogout }) {
           <footer className="dash-footer">Apna Campus <span>·</span> Student management portal <span>·</span> {today.getFullYear()}</footer>
             </div>
           )}
-          </div>
-        </main>
-      </div>
+        </div>
+      </AppLayout>
 
       {/* Broadcast Notice Inspection Modal */}
       {selectedBroadcastModal && (

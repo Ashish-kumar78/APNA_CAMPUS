@@ -368,6 +368,10 @@ function App() {
   async function handleLogin(event) {
     if (event) event.preventDefault()
     clearUrlHash()
+    try {
+      localStorage.removeItem('apna_sidebar_open')
+      localStorage.removeItem('apna_sidebar_collapsed')
+    } catch {}
     setError('')
     setResetRequested(false)
 
@@ -509,6 +513,10 @@ function App() {
 
   async function handleQuickLogin(roleKey) {
     clearUrlHash()
+    try {
+      localStorage.removeItem('apna_sidebar_open')
+      localStorage.removeItem('apna_sidebar_collapsed')
+    } catch {}
     setError('')
     setResetRequested(false)
     setIdentifier(roleKey)
@@ -544,6 +552,10 @@ function App() {
   function handleLogout() {
     api.logout()
     clearUrlHash()
+    try {
+      localStorage.removeItem('apna_sidebar_open')
+      localStorage.removeItem('apna_sidebar_collapsed')
+    } catch {}
     setAccount(null)
     setIdentifier('2305201001')
     setPassword('gift123')
@@ -658,11 +670,10 @@ function App() {
             <div className="erp-hero-body">
               <div className="erp-hero-kicker">
                 <span>LEARN</span>
-                <span className="erp-kicker-sep">|</span>
+                <span className="erp-kicker-sep">·</span>
                 <span>GROW</span>
-                <span className="erp-kicker-sep">|</span>
+                <span className="erp-kicker-sep">·</span>
                 <span>CONNECT</span>
-                <span className="erp-kicker-line"></span>
               </div>
 
               <h1 className="erp-hero-title">
@@ -680,37 +691,36 @@ function App() {
                 <span>Opportunities</span>
               </div>
 
-              <div className="erp-hero-divider-bar" />
-
-              {/* 4 Feature indicators with circular icon containers */}
+              {/* Feature indicators with clean glass styling */}
               <div className="erp-feature-indicators">
-                <div className="erp-feature-item">
+                <div
+                  className="erp-feature-item erp-feature-timetable-clickable"
+                  onClick={() => setShowPublicTimetable(true)}
+                  title="View Public Timetable (Direct Access)"
+                >
                   <div className="erp-feature-icon-circle">
-                    <Calendar size={16} />
+                    <Calendar size={15} />
                   </div>
                   <div className="erp-feature-text">
-                    <span>Smart</span>
-                    <span>Timetable</span>
+                    <span>Smart Timetable</span>
                   </div>
                 </div>
 
-                <div className="erp-feature-item">
+                <div className="erp-feature-item" title="Digital Evaluations">
                   <div className="erp-feature-icon-circle">
-                    <BarChart3 size={16} />
+                    <BarChart3 size={15} />
                   </div>
                   <div className="erp-feature-text">
-                    <span>Digital</span>
-                    <span>Evaluations</span>
+                    <span>Digital Evaluations</span>
                   </div>
                 </div>
 
-                <div className="erp-feature-item">
+                <div className="erp-feature-item" title="Smart Attendance">
                   <div className="erp-feature-icon-circle">
-                    <UsersRound size={16} />
+                    <UsersRound size={15} />
                   </div>
                   <div className="erp-feature-text">
-                    <span>Smart</span>
-                    <span>Attendance</span>
+                    <span>Smart Attendance</span>
                   </div>
                 </div>
               </div>
@@ -741,93 +751,17 @@ function App() {
                 </div>
               </div>
             </div>
-
-            {/* Public Timetable Hero CTA Button */}
-            <div style={{ marginTop: '22px' }}>
-              <button
-                type="button"
-                id="hero-view-timetable-btn"
-                onClick={() => setShowPublicTimetable(true)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '11px 18px',
-                  borderRadius: '12px',
-                  background: 'rgba(10, 25, 47, 0.65)',
-                  border: '1.5px solid rgba(255, 255, 255, 0.22)',
-                  color: '#fff',
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: '0.9rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  backdropFilter: 'blur(10px)',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.35)',
-                  textShadow: '0 1px 3px rgba(0, 0, 0, 0.85)'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(10, 25, 47, 0.85)';
-                  e.currentTarget.style.borderColor = '#38bdf8';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgba(10, 25, 47, 0.65)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.22)';
-                  e.currentTarget.style.transform = 'none';
-                }}
-              >
-                <CalendarDays size={18} color="#38bdf8" />
-                <span>View Public Timetable</span>
-                <span style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  background: 'rgba(56, 189, 248, 0.25)',
-                  color: '#7dd3fc',
-                  padding: '2px 8px',
-                  borderRadius: '20px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em'
-                }}>No login required</span>
-                <ArrowRight size={15} />
-              </button>
-            </div>
           </div>
         </div>
 
         {/* Right login panel: Clean White Floating Card */}
         <section className="erp-login-section" aria-label="Sign In">
           <div className="erp-login-card">
-            <div className="erp-card-brand-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+            <div className="erp-card-brand-header" style={{ marginBottom: '18px' }}>
               <div>
                 <h2 className="erp-card-title">Welcome Back</h2>
                 <p className="erp-card-subtitle">Sign in to your Apna Campus account</p>
               </div>
-              <button
-                type="button"
-                id="panel-view-timetable-btn"
-                onClick={() => setShowPublicTimetable(true)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 12px',
-                  borderRadius: '10px',
-                  border: '1.5px solid rgba(37, 99, 235, 0.25)',
-                  background: 'rgba(37, 99, 235, 0.08)',
-                  color: '#1d4ed8',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.18)' }}
-                onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(37, 99, 235, 0.08)' }}
-                title="View public timetable without login"
-              >
-                <CalendarDays size={15} color="#2563eb" />
-                <span>Timetable</span>
-              </button>
             </div>
 
             <form className="erp-login-form" onSubmit={handleLogin} noValidate>

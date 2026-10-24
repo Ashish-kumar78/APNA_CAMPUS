@@ -1,4 +1,6 @@
+import { Globe, CheckSquare, Plug } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
+import { AppLayout } from './Navigation';
 import {
   ShieldAlert,
   Users,
@@ -849,8 +851,74 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
     });
   }, [auditLogs, auditSearch, auditRoleFilter, auditModuleFilter, auditOutcomeFilter, auditDateRangeFilter]);
 
+  // Nav sections for AppLayout sidebar
+  const superAdminNavSections = [
+    {
+      title: 'OVERVIEW',
+      items: [
+        { label: 'Dashboard', icon: Sparkles, id: 'overview' },
+      ]
+    },
+    {
+      title: 'SYSTEM',
+      items: [
+        { label: 'System Health', icon: Server, id: 'health' },
+        { label: 'Security Incidents', icon: ShieldAlert, id: 'security-incidents' },
+        { label: 'System Logs', icon: Terminal, id: 'system-logs' },
+        { label: 'Active Sessions', icon: Radio, id: 'sessions' },
+      ]
+    },
+    {
+      title: 'ADMINISTRATION',
+      items: [
+        { label: 'User Management', icon: Users, id: 'users' },
+        { label: 'RBAC & Permissions', icon: KeyRound, id: 'rbac' },
+        { label: 'Audit Trail', icon: History, id: 'audit' },
+        { label: 'Pending Approvals', icon: FileCheck, id: 'approvals' },
+      ]
+    },
+    {
+      title: 'INFRASTRUCTURE',
+      items: [
+        { label: 'Integrations', icon: Plug, id: 'integrations' },
+        { label: 'Backup & Recovery', icon: Database, id: 'backup' },
+        { label: 'Timetable Manager', icon: CalendarDays, id: 'timetable' },
+        { label: 'Report Generation', icon: FileSpreadsheet, id: 'report-generation' },
+        { label: 'System Settings', icon: Settings, id: 'settings' },
+      ]
+    },
+    {
+      title: 'COMMUNICATION',
+      items: [
+        { label: 'Campus Connect', icon: MessageSquare, id: 'campus-connect' },
+      ]
+    }
+  ];
+
+  // Page heading for AppLayout
+  const superAdminHeading = (() => {
+    const tabLabels = {
+      overview: { title: 'Super Admin Dashboard', subtitle: 'Root enterprise infrastructure command' },
+      health: { title: 'System Health & Metrics', subtitle: 'Live subsystem diagnostics and performance monitoring' },
+      'security-incidents': { title: 'Security Incidents', subtitle: 'Active threat monitoring and incident response' },
+      'system-logs': { title: 'System Logs', subtitle: 'Application and infrastructure event log stream' },
+      sessions: { title: 'Active Sessions', subtitle: 'Live session monitoring and termination control' },
+      users: { title: 'User Management', subtitle: 'Account provisioning, roles, and access control' },
+      rbac: { title: 'RBAC & Permissions', subtitle: 'Role-based access control and policy management' },
+      audit: { title: 'Audit Trail', subtitle: 'Comprehensive enterprise audit and compliance log' },
+      approvals: { title: 'Pending Approvals', subtitle: 'Cross-portal escalated approval queue' },
+      integrations: { title: 'Integrations', subtitle: 'Third-party API and service connectivity management' },
+      backup: { title: 'Backup & Recovery', subtitle: 'Data backup schedules and disaster recovery status' },
+      timetable: { title: 'Timetable Manager', subtitle: 'Institutional academic timetable administration' },
+      'report-generation': { title: 'Report Generation', subtitle: 'Institutional analytics and export suite' },
+      settings: { title: 'System Settings', subtitle: 'Global ERP configuration and preferences' },
+      'campus-connect': { title: 'Campus Connect', subtitle: 'Institutional messaging and communication hub' },
+    };
+    return tabLabels[activeTab] || { title: activeTab.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), subtitle: '' };
+  })();
+
   return (
-    <div className="erp-super-admin-layout">
+    <>
       {/* Toast */}
       {toastMessage && (
         <div style={{
@@ -873,172 +941,20 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
-      {/* Sidebar */}
-      {sidebarOpen && (
-        <aside className="erp-sidebar">
-          <div className="erp-sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div className="erp-brand-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-              </div>
-              <div className="erp-brand-text">
-                <h2>Apna Campus ERP</h2>
-                <span>Super Admin Center</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <nav className="erp-sidebar-nav">
-            {/* GROUP A: OVERSIGHT */}
-            <div className="erp-nav-group-title">
-              <span /> Oversight
-            </div>
-            <button
-              className={`erp-nav-item ${activeTab === 'overview' ? 'active' : ''}`}
-              onClick={() => setActiveTab('overview')}
-            >
-              <Layers size={18} />
-              <span>Role Dashboard</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'health' ? 'active' : ''}`}
-              onClick={() => setActiveTab('health')}
-            >
-              <Server size={18} />
-              <span>System Health &amp; KPIs</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'security-incidents' ? 'active' : ''}`}
-              onClick={() => setActiveTab('security-incidents')}
-            >
-              <ShieldAlert size={18} />
-              <span>Security & Incidents</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'system-logs' ? 'active' : ''}`}
-              onClick={() => setActiveTab('system-logs')}
-            >
-              <Activity size={18} />
-              <span>System Logs & Monitoring</span>
-            </button>
-
-            {/* GROUP B: ACCESS & GOVERNANCE */}
-            <div className="erp-nav-group-title">
-              <span /> Access & Governance
-            </div>
-            <button
-              className={`erp-nav-item ${activeTab === 'rbac' ? 'active' : ''}`}
-              onClick={() => setActiveTab('rbac')}
-            >
-              <KeyRound size={18} />
-              <span>RBAC Permissions</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'users' ? 'active' : ''}`}
-              onClick={() => setActiveTab('users')}
-            >
-              <Users size={18} />
-              <span>User Directory</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'audit' ? 'active' : ''}`}
-              onClick={() => setActiveTab('audit')}
-            >
-              <History size={18} />
-              <span>Global Audit Trail</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'sessions' ? 'active' : ''}`}
-              onClick={() => setActiveTab('sessions')}
-            >
-              <Lock size={18} />
-              <span>Sessions & Login Security</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'approvals' ? 'active' : ''}`}
-              onClick={() => setActiveTab('approvals')}
-            >
-              <FileCheck size={18} />
-              <span>Administrative Approvals</span>
-              {approvalsList.filter(a => a.status === 'PENDING').length > 0 && (
-                <span style={{
-                  marginLeft: 'auto',
-                  background: '#ef4444',
-                  color: '#ffffff',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  borderRadius: '12px',
-                  padding: '2px 7px'
-                }}>
-                  {approvalsList.filter(a => a.status === 'PENDING').length}
-                </span>
-              )}
-            </button>
-
-            {/* GROUP C: SYSTEM OPERATIONS */}
-            <div className="erp-nav-group-title">
-              <span /> System Operations
-            </div>
-            <button
-              className={`erp-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-              onClick={() => setActiveTab('settings')}
-            >
-              <Settings size={18} />
-              <span>System Settings</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'integrations' ? 'active' : ''}`}
-              onClick={() => setActiveTab('integrations')}
-            >
-              <Sliders size={18} />
-              <span>Integrations & API Management</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'backup' ? 'active' : ''}`}
-              onClick={() => setActiveTab('backup')}
-            >
-              <Database size={18} />
-              <span>Backup & Recovery</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'timetable' ? 'active' : ''}`}
-              onClick={() => setActiveTab('timetable')}
-            >
-              <CalendarDays size={18} />
-              <span>Timetables &amp; Scheduling</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'report-generation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('report-generation')}
-            >
-              <FileSpreadsheet size={18} />
-              <span>Report Generation</span>
-            </button>
-          </nav>
-        </aside>
-      )}
-
-      {/* Main Content */}
-      <main className="erp-main-content">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Super Admin"
+        portalSubtitle="Root Enterprise Infrastructure Command"
+        portalHomeTab="overview"
+        navSections={superAdminNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={superAdminHeading.title}
+        pageSubtitle={superAdminHeading.subtitle}
+      >
+        <div className="superadmin-portal-content-wrap">
         {activeTab === 'overview' ? (
           <RoleDashboardLanding
             account={account}
@@ -1056,85 +972,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
           />
         ) : (
           <>
-            <header className="erp-header">
-              <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                {!sidebarOpen && (
-                  <button
-                    className="campus-nav-toggle-btn"
-                    type="button"
-                    onClick={() => setSidebarOpen(true)}
-                    title="Show Navigation"
-                    aria-label="Show Navigation"
-                  >
-                    <Menu size={20} />
-                  </button>
-                )}
-                <div>
-                  <h1>Enterprise Governance & Security Console</h1>
-                  <p>Super Administrator · Complete System-Level Control</p>
-                </div>
-              </div>
 
-              <div className="erp-header-actions">
-                {onSwitchRole && (
-                  <div className="erp-preview-container" title="Role Preview (Sandbox simulation mode for governance review)">
-                    <span className="erp-preview-label">
-                      <Sparkles size={13} color="#b45309" />
-                      Role Preview:
-                    </span>
-                    <span className="erp-preview-pill-badge">Simulation</span>
-                    <select
-                      className="erp-role-switcher-select"
-                      value="super_admin"
-                      onChange={(e) => onSwitchRole(e.target.value)}
-                      aria-label="Role Preview Selector (Simulation Mode)"
-                    >
-                      <option value="super_admin">Super Administrator</option>
-                      <option value="management">Management / Trustee</option>
-                      <option value="principal">Principal / Director</option>
-                      <option value="admin">Admin Operations</option>
-                      <option value="hod">HOD</option>
-                      <option value="faculty">Faculty Portal</option>
-                      <option value="student">Student Portal</option>
-                      <option value="accounts">Accounts & Finance</option>
-                      <option value="exam_cell">Examination Cell</option>
-                      <option value="library">Library Staff</option>
-                      <option value="warden">Hostel Warden</option>
-                      <option value="transport">Transport Fleet</option>
-                      <option value="placement">Placement Cell</option>
-                      <option value="staff">Non-Teaching Staff</option>
-                    </select>
-                  </div>
-                )}
-                
-                <button
-                  type="button"
-                  className="erp-access-privileges-btn"
-                  onClick={() => setActiveTab('rbac')}
-                  title="Open Role-Based Access Control and Granular Permissions Matrix"
-                >
-                  <ShieldCheck size={14} /> Access & Privileges
-                </button>
-
-                {/* Top Right Campus OS User Profile Pill with Sign Out */}
-                <div className="campus-user-pill">
-                  <div className="campus-user-avatar">SA</div>
-                  <div className="campus-user-details">
-                    <strong>{account?.name || 'Chief Systems Architect'}</strong>
-                    <small>Super Admin • {account?.identity || 'SYS-SUPER-01'}</small>
-                  </div>
-                  <button
-                    className="campus-logout-btn"
-                    type="button"
-                    onClick={onLogout}
-                    title="Sign out"
-                    aria-label="Sign out"
-                  >
-                    <LogOut size={16} />
-                  </button>
-                </div>
-              </div>
-            </header>
 
             <div className="erp-content-body">
               {/* TAB 1: SYSTEM HEALTH & METRICS */}
@@ -3288,7 +3126,8 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
         </div>
       </>
     )}
-  </main>
+        </div>
+      </AppLayout>
 
       {/* MODAL 1: Security Incident Investigation & Resolution Modal */}
       {selectedIncidentModal && (
@@ -4017,6 +3856,6 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

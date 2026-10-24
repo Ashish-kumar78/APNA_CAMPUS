@@ -1,4 +1,6 @@
+import { BarChart2 } from 'lucide-react';
 import React, { useState } from 'react';
+import { AppLayout } from './Navigation';
 import {
   Utensils,
   ShoppingBag,
@@ -107,8 +109,52 @@ export default function CanteenPortal({ account, onLogout }) {
   const readyOrders = orders.filter(o => o.status === 'Ready').length;
   const totalRevenue = orders.reduce((acc, curr) => acc + curr.totalAmount, 0) + 8450;
 
+
+  const canteenNavSections = [
+    {
+      title: 'FOOD SERVICES',
+      items: [
+        { id: 'dashboard', label: 'Canteen Dashboard', icon: Utensils },
+        { id: 'orders', label: 'Live Order Queue', icon: ShoppingBag, badge: (pendingOrders + preparingOrders) || undefined, badgeType: 'urgent' },
+        { id: 'menu', label: 'Food Menu & Pricing', icon: Coffee },
+        { id: 'reports', label: 'Daily Sales Reports', icon: BarChart2 },
+      ]
+    }
+  ];
+
+  const getCanteenHeading = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: 'Campus Canteen & Dining Services',
+          subtitle: 'Daily meals, student meal card billing, menu availability, and sales ledger.'
+        };
+      case 'orders':
+        return {
+          title: 'Live POS & Kitchen Order Tickets',
+          subtitle: `${pendingOrders + preparingOrders} Active student orders in kitchen preparation queue.`
+        };
+      case 'menu':
+        return {
+          title: 'Food Menu & Daily Tariffs',
+          subtitle: 'Manage breakfast, lunch, snacks, and beverage pricing with real-time stock toggles.'
+        };
+      case 'reports':
+        return {
+          title: 'Daily Sales & Revenue Ledger',
+          subtitle: 'RFID tap sales, UPI collections, cash audit, and departmental billings.'
+        };
+      default:
+        return {
+          title: (activeTab || 'Canteen Portal').replace(/-/g, ' ').toUpperCase(),
+          subtitle: 'Campus Food Court & Culinary Services'
+        };
+    }
+  };
+
+  const canteenHeading = getCanteenHeading();
   return (
-    <div className="canteen-portal-root">
+    <>
       {/* Toast Alert */}
       {toastMessage && (
         <div style={{
@@ -132,95 +178,20 @@ export default function CanteenPortal({ account, onLogout }) {
         </div>
       )}
 
-      {/* Top Header */}
-      <header className="canteen-header">
-        <div className="canteen-brand" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {!sidebarOpen && (
-            <button
-              className="campus-nav-toggle-btn"
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              title="Show Navigation"
-              aria-label="Show Navigation"
-            >
-              <Menu size={20} />
-            </button>
-          )}
-          <div className="canteen-brand-icon" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-          </div>
-          <div className="canteen-brand-text">
-            <h1>APNA CAMPUS · SMART MESS &amp; CANTEEN</h1>
-            <p>Food Services &amp; Kitchen Management Terminal</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {/* Top-Right Campus OS User Profile Pill with Sign Out */}
-          <div className="campus-user-pill">
-            <div className="campus-user-avatar">CAN</div>
-            <div className="campus-user-details">
-              <strong>{account?.name || 'Canteen Staff'}</strong>
-              <small>Smart Mess &amp; Canteen Operations</small>
-            </div>
-            <button
-              className="campus-logout-btn"
-              type="button"
-              onClick={onLogout}
-              title="Sign out"
-              aria-label="Sign out"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
-      <div className={`canteen-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
-        {/* Sidebar */}
-        {sidebarOpen && (
-          <aside className="canteen-sidebar">
-            <div className="canteen-sidebar-header">
-              <span className="canteen-sidebar-title">Canteen Menu</span>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(false)}
-                className="canteen-sidebar-close"
-                title="Close Navigation"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <button
-              className={`canteen-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Layers size={17} /> Dashboard
-            </button>
-            <button
-              className={`canteen-nav-btn ${activeTab === 'orders' ? 'active' : ''}`}
-              onClick={() => setActiveTab('orders')}
-            >
-              <ShoppingBag size={17} /> Live Order Queue ({pendingOrders + preparingOrders})
-            </button>
-            <button
-              className={`canteen-nav-btn ${activeTab === 'menu' ? 'active' : ''}`}
-              onClick={() => setActiveTab('menu')}
-            >
-              <Utensils size={17} /> Food Menu & Pricing
-            </button>
-            <button
-              className={`canteen-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reports')}
-            >
-              <FileText size={17} /> Daily Sales Reports
-            </button>
-          </aside>
-        )}
-
-        {/* Dynamic Content Pane */}
-        <main className="canteen-main">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Canteen Portal"
+        portalSubtitle="Campus Dining & Food Services"
+        portalHomeTab="dashboard"
+        navSections={canteenNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={canteenHeading.title}
+        pageSubtitle={canteenHeading.subtitle}
+      >
+        <div className="canteen-portal-content-wrap">
           {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
           {activeTab === 'campus-connect' && (
             <div style={{ height: 'calc(100vh - 120px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>
@@ -539,8 +510,8 @@ export default function CanteenPortal({ account, onLogout }) {
               </div>
             </div>
           )}
-        </main>
-      </div>
+        </div>
+      </AppLayout>
 
       {/* MODAL: ADD FOOD ITEM */}
       {isAddItemModalOpen && (
@@ -627,6 +598,6 @@ export default function CanteenPortal({ account, onLogout }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

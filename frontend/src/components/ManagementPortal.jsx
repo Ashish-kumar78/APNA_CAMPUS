@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { AppLayout } from './Navigation';
 import {
   TrendingUp, Users, GraduationCap, DollarSign, Briefcase,
   Building, BookOpen, BarChart2, Calendar, CheckCircle,
@@ -394,8 +395,93 @@ export default function ManagementPortal({ account, onLogout }) {
     }
   };
 
+
+  const managementNavSections = [
+    {
+      title: 'STRATEGIC OVERSIGHT',
+      items: [
+        { id: 'executive', label: 'Executive Overview', icon: PieChart },
+        { id: 'departments', label: 'Department Analytics', icon: Building },
+        { id: 'financials', label: 'Fee & Finance', icon: DollarSign },
+        { id: 'budget', label: 'Institutional Budget', icon: Layers },
+        { id: 'placements', label: 'Placement & Careers', icon: Briefcase },
+      ]
+    },
+    {
+      title: 'GOVERNANCE & APPROVALS',
+      items: [
+        { id: 'approvals', label: 'Strategic Approvals', icon: FileCheck, badge: pendingApprovalsCount || undefined },
+        { id: 'governance', label: 'Governance & Notices', icon: Shield },
+        { id: 'exceptions', label: 'Risk & Exceptions', icon: AlertTriangle, badge: criticalExceptionsCount || undefined, badgeType: 'urgent' },
+        { id: 'audit-trail', label: 'Audit Trail', icon: ClipboardList },
+        { id: 'report-generation', label: 'Report Generation', icon: FileSpreadsheet },
+      ]
+    }
+  ];
+
+  const getManagementHeading = () => {
+    switch (activeTab) {
+      case 'executive':
+        return {
+          title: 'Institutional Governance & Strategic Intelligence',
+          subtitle: `Governing Body / Board of Trustees · Autonomous College Oversight · ${academicYear}`
+        };
+      case 'departments':
+        return {
+          title: 'Departmental Academic & Financial Analytics',
+          subtitle: 'Student intake, faculty ratios, syllabus completion, and pass percentages across schools.'
+        };
+      case 'financials':
+        return {
+          title: 'Institutional Revenue & Fee Realization',
+          subtitle: 'Fee demand, collections, outstanding dues, and scholarship concessions.'
+        };
+      case 'budget':
+        return {
+          title: 'Capital & Operational Budget Allocations',
+          subtitle: 'Departmental budget utilization, capital expenditure, and reserve funds.'
+        };
+      case 'placements':
+        return {
+          title: 'Campus Recruitment & Industry Placement Health',
+          subtitle: 'Corporate drives, package distributions, median CTC, and institutional hiring partners.'
+        };
+      case 'approvals':
+        return {
+          title: 'Executive Approvals & Capital Clearances',
+          subtitle: `${pendingApprovalsCount} High-value proposals requiring Governing Body sanction.`
+        };
+      case 'governance':
+        return {
+          title: 'Board Resolutions & Executive Directives',
+          subtitle: 'Formal trustee decisions, regulatory compliance filings, and statutory approvals.'
+        };
+      case 'exceptions':
+        return {
+          title: 'Risk Radar & Critical ERP Exceptions',
+          subtitle: `${criticalExceptionsCount} Active operational alerts flagged for board scrutiny.`
+        };
+      case 'audit-trail':
+        return {
+          title: 'Immutable Institutional Audit Ledger',
+          subtitle: 'Cryptographic log of marks modifications, fee adjustments, and administrative overrides.'
+        };
+      case 'report-generation':
+        return {
+          title: 'Master ERP Report Generation & Senate Dossiers',
+          subtitle: 'Generate verified institutional packs for statutory bodies and trustees.'
+        };
+      default:
+        return {
+          title: (activeTab || 'Management Portal').replace(/-/g, ' ').toUpperCase(),
+          subtitle: 'Governing Body Control System'
+        };
+    }
+  };
+
+  const managementHeading = getManagementHeading();
   return (
-    <div className="mgmt-layout">
+    <>
 
       {/* Floating Notification Toast */}
       {toast && (
@@ -404,86 +490,20 @@ export default function ManagementPortal({ account, onLogout }) {
         </div>
       )}
 
-      {/* ─── Sidebar ────────────────────────────────────────────────────────── */}
-      {sidebarOpen && (
-        <aside className="mgmt-sidebar">
-          <div className="mgmt-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div className="mgmt-brand-icon" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-              </div>
-              <div className="mgmt-brand-text">
-                <h2>Apna Campus</h2>
-                <span>Governing Body Portal</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#cbd5e1',
-                width: '30px',
-                height: '30px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="mgmt-user-card" style={{ margin: '0.85rem 0.85rem 0' }}>
-            <div className="mgmt-user-info">
-              <div className="mgmt-user-avatar">GP</div>
-              <div>
-                <span className="mgmt-user-name">{account?.name || 'Shri Patitapaban Panda'}</span>
-                <span className="mgmt-user-role">Managing Trustee · Governing Body</span>
-              </div>
-            </div>
-          </div>
-
-          <nav className="mgmt-nav">
-            <div className="mgmt-nav-section">Institutional Oversight</div>
-            {navItems.map(item => (
-              <button
-                key={item.id}
-                className={`mgmt-nav-item ${activeTab === item.id ? 'active' : ''}`}
-                onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
-              >
-                {item.icon}
-                <span style={{ flex: 1 }}>{item.label}</span>
-                {item.badge > 0 && (
-                  <span style={{
-                    background: item.badgeColor || '#ef4444',
-                    color: '#fff',
-                    borderRadius: '999px',
-                    padding: '1px 7px',
-                    fontSize: '0.68rem',
-                    fontWeight: 800,
-                  }}>
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-
-          <div className="mgmt-sidebar-footer">
-            <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-              Autonomous ERP v2.4 · NAAC A+
-            </div>
-          </div>
-        </aside>
-      )}
-
-      {/* ─── Main Content Container ─────────────────────────────────────────── */}
-      <main className="mgmt-main">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Management Portal"
+        portalSubtitle="Governing Body & Board of Trustees"
+        portalHomeTab="executive"
+        navSections={managementNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={managementHeading.title}
+        pageSubtitle={managementHeading.subtitle}
+      >
+        <div className="mgmt-portal-content-wrap">
         {activeTab === 'executive' ? (
           <RoleDashboardLanding
             account={account}
@@ -499,66 +519,7 @@ export default function ManagementPortal({ account, onLogout }) {
           />
         ) : (
           <>
-            <header className="mgmt-header">
-          <div className="mgmt-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {!sidebarOpen && (
-              <button
-                className="campus-nav-toggle-btn"
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                title="Show Navigation"
-                aria-label="Show Navigation"
-              >
-                <Menu size={20} />
-              </button>
-            )}
-            <div>
-              <h1>Institutional Governance & Strategic Intelligence</h1>
-              <p>Apna Campus · Governing Body / Board of Trustees · {academicYear}</p>
-            </div>
-          </div>
 
-          <div className="mgmt-header-right">
-            <span className="mgmt-badge">
-              <Shield size={12} /> Governing Body Oversight
-            </span>
-            {pendingApprovalsCount > 0 && (
-              <button
-                className="mgmt-badge mgmt-badge-warning"
-                onClick={() => setActiveTab('approvals')}
-                style={{ border: 'none', cursor: 'pointer' }}
-              >
-                <Bell size={12} /> {pendingApprovalsCount} Approvals Pending
-              </button>
-            )}
-
-            <button
-              className="mgmt-btn mgmt-btn-secondary"
-              onClick={handleExportActiveTab}
-              title="Export report for active view"
-            >
-              <Download size={14} /> Export Report
-            </button>
-
-            {/* Profile Pill with Sign Out */}
-            <div className="campus-user-pill">
-              <div className="campus-user-avatar">GP</div>
-              <div className="campus-user-details">
-                <strong>{account?.name || 'Shri Patitapaban Panda'}</strong>
-                <small>Management • Governing Body</small>
-              </div>
-              <button
-                className="campus-logout-btn"
-                type="button"
-                onClick={onLogout}
-                title="Sign out"
-                aria-label="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
 
         {/* Body Area */}
         <div className="mgmt-body">
@@ -1629,7 +1590,8 @@ export default function ManagementPortal({ account, onLogout }) {
         </div>
           </>
         )}
-      </main>
+        </div>
+      </AppLayout>
 
       {/* ─── Proposal Dossier Modal ─────────────────────────────────────────── */}
       {selectedProposal && (
@@ -1857,6 +1819,6 @@ export default function ManagementPortal({ account, onLogout }) {
         </div>
       )}
 
-    </div>
+    </>
   );
 }

@@ -1,4 +1,6 @@
+import { FlaskConical, Users } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+import { AppLayout } from './Navigation';
 import {
   Wrench,
   FileText,
@@ -133,8 +135,55 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
     triggerToast(`Ticket #${id} updated to "${newStatus}"!`);
   };
 
+
+  const staffNavSections = [
+    {
+      title: 'DUTIES & ACADEMICS',
+      items: [
+        { id: 'dashboard', label: 'Staff Dashboard', icon: Wrench },
+        { id: 'take-attendance', label: 'Lab & Practical Attendance', icon: ClipboardCheck },
+        { id: 'lab-evaluation', label: 'Lab Experiment Evaluation', icon: FlaskConical },
+      ]
+    },
+    {
+      title: 'OPERATIONS & VISITS',
+      items: [
+        { id: 'tickets', label: 'Maintenance Work Orders', icon: AlertTriangle },
+        { id: 'visitors', label: 'Campus Visitor Logs', icon: Users },
+        { id: 'clerical', label: 'Office Dispatch & Records', icon: FileText },
+        { id: 'report-generation', label: 'Operational Reports', icon: FileSpreadsheet },
+      ]
+    }
+  ];
+
+  const getStaffHeading = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: 'Campus Support & Maintenance Operations',
+          subtitle: 'Duty assignments, laboratory assistance, technical tickets, and facility logs.'
+        };
+      case 'take-attendance':
+        return {
+          title: 'Laboratory Session Attendance',
+          subtitle: 'Record student attendance for assigned practical sessions and software labs.'
+        };
+      case 'tickets':
+        return {
+          title: 'Maintenance & Facility Work Orders',
+          subtitle: 'Active support tickets, equipment repairs, and laboratory infrastructure status.'
+        };
+      default:
+        return {
+          title: (activeTab || 'Staff Portal').replace(/-/g, ' ').toUpperCase(),
+          subtitle: 'Campus Operations & Staff Management'
+        };
+    }
+  };
+
+  const staffHeading = getStaffHeading();
   return (
-    <div className="erp-staff-layout">
+    <>
       {toastMessage && (
         <div style={{
           position: 'fixed',
@@ -156,102 +205,20 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
-      {/* Sidebar */}
-      {sidebarOpen && (
-        <aside className="erp-sidebar">
-          <div className="erp-sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div className="erp-staff-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-              </div>
-              <div className="erp-brand-text">
-                <h2>Apna Campus</h2>
-                <span style={{ color: '#2dd4bf' }}>Operations & Staff</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <nav className="erp-sidebar-nav">
-            <button
-              className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Monitor size={18} />
-              <span>Staff &amp; Lab Dashboard</span>
-              <span className="erp-nav-badge" style={{ background: '#14b8a6', color: '#ffffff' }}>Live</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'take-attendance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('take-attendance')}
-            >
-              <ClipboardCheck size={18} />
-              <span>Take Attendance</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'lab-evaluation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('lab-evaluation')}
-              style={{
-                background: activeTab === 'lab-evaluation' ? undefined : 'linear-gradient(90deg, rgba(20, 184, 166, 0.12), rgba(59, 130, 246, 0.12))',
-                border: '1px solid rgba(20, 184, 166, 0.35)'
-              }}
-            >
-              <FileText size={18} style={{ color: '#2dd4bf' }} />
-              <span>Practical &amp; Lab Evaluation</span>
-              <span className="erp-nav-badge" style={{ background: '#14b8a6', color: '#ffffff' }}>New</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'tickets' ? 'active' : ''}`}
-              onClick={() => setActiveTab('tickets')}
-            >
-              <Wrench size={18} />
-              <span>Support & Lab Tickets</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'visitors' ? 'active' : ''}`}
-              onClick={() => setActiveTab('visitors')}
-            >
-              <UserCheck size={18} />
-              <span>Visitor Gate Passes</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'clerical' ? 'active' : ''}`}
-              onClick={() => setActiveTab('clerical')}
-            >
-              <FileText size={18} />
-              <span>Office Inward/Outward</span>
-            </button>
-            <button
-              className={`erp-nav-item ${activeTab === 'report-generation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('report-generation')}
-            >
-              <FileSpreadsheet size={18} />
-              <span>Report Generation</span>
-            </button>
-          </nav>
-        </aside>
-      )}
-
-      {/* Main Content */}
-      <main className="erp-main-content">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Staff Portal"
+        portalSubtitle="Campus Technical & Operational Support"
+        portalHomeTab="dashboard"
+        navSections={staffNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={staffHeading.title}
+        pageSubtitle={staffHeading.subtitle}
+      >
+        <div className="staff-portal-content-wrap">
         {activeTab === 'dashboard' ? (
           <RoleDashboardLanding
             roleKey="staff"
@@ -268,49 +235,7 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
           />
         ) : (
           <>
-        <header className="erp-header">
-          <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {!sidebarOpen && (
-              <button
-                className="campus-nav-toggle-btn"
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                title="Show Navigation"
-                aria-label="Show Navigation"
-              >
-                <Menu size={20} />
-              </button>
-            )}
-            <div>
-              <h1>Non-Teaching Staff Operational Console</h1>
-              <p>Lab Assistants, Office Clerks, Reception Desk & Technical Maintenance</p>
-            </div>
-          </div>
 
-          <div className="erp-header-actions">
-            <div className="erp-role-badge">
-              <ShieldCheck size={14} /> Operations Staff Active
-            </div>
-
-            {/* Top-Right Campus OS User Profile Pill with Sign Out */}
-            <div className="campus-user-pill">
-              <div className="campus-user-avatar">OPS</div>
-              <div className="campus-user-details">
-                <strong>{account?.name || 'Support & Operations Staff'}</strong>
-                <small>Technical &amp; Lab Support</small>
-              </div>
-              <button
-                className="campus-logout-btn"
-                type="button"
-                onClick={onLogout}
-                title="Sign out"
-                aria-label="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
 
         <div className="erp-content-body">
           {/* TAB: TAKE ATTENDANCE */}
@@ -658,7 +583,8 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
         </div>
           </>
         )}
-      </main>
-    </div>
+        </div>
+      </AppLayout>
+    </>
   );
 }

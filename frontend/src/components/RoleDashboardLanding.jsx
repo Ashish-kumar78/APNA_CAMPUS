@@ -1205,135 +1205,7 @@ export default function RoleDashboardLanding({
     <div className="role-dash-wrapper dash">
       <div className="role-dash-container">
         {/* ==========================================================
-            A. DASHBOARD HEADER (Matching Student Dashboard Header)
-            ========================================================== */}
-        <header className="role-dash-header">
-          <div className="role-header-left">
-            {onToggleSidebar && (
-              <button
-                className="role-nav-toggle-btn"
-                type="button"
-                onClick={onToggleSidebar}
-                title="Toggle Navigation Menu"
-                aria-label="Toggle Navigation Menu"
-              >
-                <Menu size={20} />
-              </button>
-            )}
-            <div>
-              <p className="role-header-kicker">OVERVIEW</p>
-              <h1 className="role-header-title">{config.dashboardTitle}</h1>
-              <p className="role-header-subtitle">
-                {timeGreeting.wish}, {officerDisplayName}
-              </p>
-            </div>
-          </div>
-
-          <div className="role-header-actions">
-            {/* WhatsApp / Campus Connect Button */}
-            <div style={{ position: 'relative' }}>
-              <button
-                className="role-icon-btn role-whatsapp-header-btn"
-                type="button"
-                title="Campus Connect • College Academic WhatsApp"
-                aria-label="Campus Connect"
-                onClick={() => {
-                  if (onNavigateTab) onNavigateTab('campus-connect');
-                  else alert('Campus Connect WhatsApp Launcher active in bottom dock.');
-                }}
-              >
-                <MessageSquare size={18} />
-              </button>
-            </div>
-
-            {/* Notification Bell */}
-            <div style={{ position: 'relative' }}>
-              <button
-                className="role-icon-btn"
-                type="button"
-                aria-label="Notifications"
-                onClick={() => setShowNotifications((s) => !s)}
-                title="Campus Notifications"
-              >
-                <Bell size={18} />
-                {unreadCount > 0 && <span className="role-bell-dot" />}
-              </button>
-
-              {showNotifications && (
-                <div className="role-notif-popover" role="dialog" aria-label="Notifications">
-                  <div className="role-notif-head">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <strong>Notifications</strong>
-                      {unreadCount > 0 && (
-                        <span className="role-notif-badge">{unreadCount} new</span>
-                      )}
-                    </div>
-                    <button
-                      className="role-notif-close"
-                      type="button"
-                      onClick={() => setShowNotifications(false)}
-                      aria-label="Close notifications"
-                    >
-                      <X size={15} />
-                    </button>
-                  </div>
-
-                  <div className="role-notif-list">
-                    {notifications.map((notif) => (
-                      <div
-                        key={notif.id}
-                        className={`role-notif-item ${notif.unread ? 'is-unread' : ''}`}
-                        onClick={() => handleToggleNotif(notif.id)}
-                        role="button"
-                        tabIndex={0}
-                        title={notif.unread ? 'Click to mark as read' : 'Click to mark as unread'}
-                      >
-                        <div className="role-notif-item-top">
-                          <span className={`role-notif-tag ${notif.tagClass}`}>{notif.tag}</span>
-                          <span className="role-notif-time">{notif.time}</span>
-                        </div>
-                        <h4 className="role-notif-title">{notif.title}</h4>
-                        <p className="role-notif-desc">{notif.message}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="role-notif-foot">
-                    <button type="button" onClick={handleMarkAllRead}>
-                      Mark all as read
-                    </button>
-                    <button type="button" onClick={() => setShowNotifications(false)}>
-                      Close
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* User Profile Pill with Sign Out */}
-            <div className="role-user-pill" title={`${officerDisplayName} (${config.roleTitle})`}>
-              <div className="role-user-avatar-frame">
-                <img src={officer.photo} alt={officerDisplayName} />
-              </div>
-              <div className="role-user-details">
-                <strong>{officerDisplayName}</strong>
-                <small>{config.roleTitle} • {account?.identity || officer.id}</small>
-              </div>
-              <button
-                className="role-logout-btn"
-                type="button"
-                onClick={onLogout}
-                title="Sign out of portal"
-                aria-label="Sign out"
-              >
-                <LogOut size={15} />
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* ==========================================================
-            B. WELCOME BANNER (Purple-to-Blue Gradient with Live Clock)
+            A. WELCOME BANNER (Purple-to-Blue Gradient with Live Clock)
             ========================================================== */}
         <section className={`dash-hero ${timeGreeting.themeClass}`} aria-label="Welcome Banner">
           <div className="dash-hero-glow" aria-hidden="true" />
@@ -1728,11 +1600,11 @@ export default function RoleDashboardLanding({
                     style={
                       isToday
                         ? {
-                            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                            color: '#ffffff',
-                            fontWeight: 800,
-                            boxShadow: '0 6px 14px -4px rgba(37, 99, 235, 0.75)',
-                          }
+                          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                          color: '#ffffff',
+                          fontWeight: 800,
+                          boxShadow: '0 6px 14px -4px rgba(37, 99, 235, 0.75)',
+                        }
                         : undefined
                     }
                     title={holidayName || undefined}

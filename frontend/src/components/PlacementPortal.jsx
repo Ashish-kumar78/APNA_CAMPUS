@@ -1,4 +1,6 @@
+import { CalendarDays, Building2 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+import { AppLayout } from './Navigation';
 import {
   Briefcase,
   Building,
@@ -483,8 +485,60 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
     return matchesSearch && (a.stage || a.status || '').toLowerCase().includes(applicantStageFilter.toLowerCase());
   });
 
+
+  const placementNavSections = [
+    {
+      title: 'RECRUITMENT & DRIVES',
+      items: [
+        { id: 'dashboard', label: 'T&P Dashboard', icon: Briefcase },
+        { id: 'drives', label: 'Placement Drives', icon: CalendarDays },
+        { id: 'companies', label: 'Corporate Partners', icon: Building2 },
+      ]
+    },
+    {
+      title: 'STUDENTS & OUTCOMES',
+      items: [
+        { id: 'applicants', label: 'Eligible Candidates', icon: Users },
+        { id: 'offers', label: 'Job Offers & Packages', icon: Award },
+        { id: 'stats', label: 'Salary & CTC Distribution', icon: TrendingUp },
+        { id: 'report-generation', label: 'NAAC Placement Reports', icon: FileSpreadsheet },
+      ]
+    }
+  ];
+
+  const getPlacementHeading = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: 'Training & Corporate Placement Cell',
+          subtitle: 'Campus recruitment drives, offer letters, hiring partner MoUs, and compensation metrics.'
+        };
+      case 'drives':
+        return {
+          title: 'On-Campus & Virtual Recruitment Drives',
+          subtitle: 'Online tests, interview shortlists, eligibility criteria, and offer tracking.'
+        };
+      case 'companies':
+        return {
+          title: 'Corporate Partners & Recruiter Directory',
+          subtitle: 'Tier-1 tech companies, core engineering firms, and institutional recruiting relationships.'
+        };
+      case 'offers':
+        return {
+          title: 'Official Job Offers & Compensation Verification',
+          subtitle: 'Letters of Intent, signing bonuses, dual offer clearances, and joining compliance.'
+        };
+      default:
+        return {
+          title: (activeTab || 'Placement Portal').replace(/-/g, ' ').toUpperCase(),
+          subtitle: 'Training & Placement Directorate'
+        };
+    }
+  };
+
+  const placementHeading = getPlacementHeading();
   return (
-    <div className="erp-placement-layout">
+    <>
       {/* Toast Notification */}
       {toastMessage && (
         <div style={{
@@ -507,119 +561,20 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
-      {/* Sidebar Navigation */}
-      <aside className={`erp-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="erp-sidebar-brand">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div className="erp-place-badge" style={{ background: '#ffffff', padding: '3px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-            </div>
-            <div className="erp-brand-text">
-              <h2>Apna Campus</h2>
-              <span>Training &amp; Placement Cell</span>
-            </div>
-          </div>
-          {sidebarOpen && (
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#ffffff',
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Close Navigation"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
-
-        <nav className="erp-sidebar-nav">
-          <button
-            className={`erp-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <TrendingUp size={18} />
-            <span>Placement Dashboard</span>
-            <span style={{ marginLeft: 'auto', background: '#db2777', color: '#fff', fontSize: '0.68rem', padding: '1px 6px', borderRadius: '10px' }}>Live</span>
-          </button>
-          <button
-            className={`erp-nav-item ${activeTab === 'drives' ? 'active' : ''}`}
-            onClick={() => setActiveTab('drives')}
-          >
-            <Briefcase size={18} />
-            <span>Campus Drives</span>
-          </button>
-          <button
-            className={`erp-nav-item ${activeTab === 'companies' ? 'active' : ''}`}
-            onClick={() => setActiveTab('companies')}
-          >
-            <Building size={18} />
-            <span>Recruiting Partners CRM</span>
-          </button>
-          <button
-            className={`erp-nav-item ${activeTab === 'applicants' ? 'active' : ''}`}
-            onClick={() => setActiveTab('applicants')}
-          >
-            <Users size={18} />
-            <span>Applicant ATS Pipeline</span>
-            <span style={{
-              marginLeft: 'auto',
-              background: '#db2777',
-              color: '#ffffff',
-              fontSize: '0.7rem',
-              padding: '2px 7px',
-              borderRadius: '9999px',
-              fontWeight: 700,
-            }}>
-              {applicantPipeline.length}
-            </span>
-          </button>
-          <button
-            className={`erp-nav-item ${activeTab === 'offers' ? 'active' : ''}`}
-            onClick={() => setActiveTab('offers')}
-          >
-            <Award size={18} />
-            <span>Offer Letters &amp; Outcomes</span>
-            <span style={{
-              marginLeft: 'auto',
-              background: '#10b981',
-              color: '#ffffff',
-              fontSize: '0.7rem',
-              padding: '2px 7px',
-              borderRadius: '9999px',
-              fontWeight: 700,
-            }}>
-              {offersList.length}
-            </span>
-          </button>
-          <button
-            className={`erp-nav-item ${activeTab === 'stats' ? 'active' : ''}`}
-            onClick={() => setActiveTab('stats')}
-          >
-            <TrendingUp size={18} />
-            <span>Placement Analytics</span>
-          </button>
-          <button
-            className={`erp-nav-item ${activeTab === 'report-generation' ? 'active' : ''}`}
-            onClick={() => setActiveTab('report-generation')}
-          >
-            <FileSpreadsheet size={18} />
-            <span>Report Generation</span>
-          </button>
-        </nav>
-      </aside>
-
-      {/* Main Content */}
-      <main className="erp-main-content">
+      {/* Standard Universal AppLayout */}
+      <AppLayout
+        account={account}
+        portalName="Placement Portal"
+        portalSubtitle="Training & Corporate Relations Cell"
+        portalHomeTab="dashboard"
+        navSections={placementNavSections}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={onLogout}
+        pageTitle={placementHeading.title}
+        pageSubtitle={placementHeading.subtitle}
+      >
+        <div className="placement-portal-content-wrap">
         {activeTab === 'dashboard' ? (
           <RoleDashboardLanding
             roleKey="placement"
@@ -636,56 +591,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
           />
         ) : (
           <>
-        <header className="erp-header">
-          <div className="erp-header-title" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {!sidebarOpen && (
-              <button
-                className="campus-nav-toggle-btn"
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                title="Show Navigation"
-                aria-label="Show Navigation"
-                style={{
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                }}
-              >
-                <Menu size={20} color="#0f172a" />
-              </button>
-            )}
-            <div>
-              <h1>Training &amp; Placement Cell Operations (T&amp;P)</h1>
-              <p>Corporate Relations, Campus Recruitment, Deterministic Eligibility &amp; Offer Lifecycle</p>
-            </div>
-          </div>
 
-          <div className="erp-header-actions">
-            <div className="erp-role-badge">
-              <ShieldCheck size={14} /> Placement Officer Access
-            </div>
-
-            <div className="campus-user-pill">
-              <div className="campus-user-avatar">TNP</div>
-              <div className="campus-user-details">
-                <strong>{account?.name || 'Head - Training & Placement'}</strong>
-                <small>Corporate Relations &amp; T&amp;P Cell</small>
-              </div>
-              <button
-                className="campus-logout-btn"
-                type="button"
-                onClick={onLogout}
-                title="Sign out"
-                aria-label="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
 
         <div className="erp-content-body">
           {/* STATS ROW (CLICKABLE TO OPEN FILTERED VIEWS) */}
@@ -1326,7 +1232,8 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
         </div>
           </>
         )}
-      </main>
+        </div>
+      </AppLayout>
 
       {/* MODAL 1: SCHEDULE RECRUITMENT DRIVE */}
       {showAddDriveModal && (
@@ -1879,6 +1786,6 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

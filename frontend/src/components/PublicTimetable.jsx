@@ -197,7 +197,7 @@ export default function PublicTimetable({ onClose }) {
   
   // Currently displayed detailed routine
   const [selectedRoutineTitle, setSelectedRoutineTitle] = useState('BTECH 2028-P/5 TH SEM/CSE (AI) - Genius\'s Timetable');
-  const [showRoutineGrid, setShowRoutineGrid] = useState(true);
+  const [showRoutineGrid, setShowRoutineGrid] = useState(false);
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -301,16 +301,20 @@ export default function PublicTimetable({ onClose }) {
             <Download size={13} /> Download PDF
           </button>
 
-          {onClose && (
-            <button
-              type="button"
-              className="apna-tt-action-btn close-btn"
-              onClick={onClose}
-              title="Return to Apna Campus Portal Login"
-            >
-              <X size={14} /> Close
-            </button>
-          )}
+          <button
+            type="button"
+            className="apna-tt-action-btn close-btn"
+            onClick={onClose || (() => {
+              if (window.history.length > 1) {
+                window.history.back();
+              } else {
+                window.location.hash = '';
+              }
+            })}
+            title="Close Timetable"
+          >
+            <X size={14} /> Close
+          </button>
         </div>
       </nav>
 
@@ -319,11 +323,11 @@ export default function PublicTimetable({ onClose }) {
         {/* Centered Crest Header */}
         <header className="apna-tt-header-box">
           <div className="apna-tt-logo-center">
-            <CollegeGearLogo size={74} />
+            <img src="/logo.png" alt="Apna Campus Logo" style={{ height: '74px', width: 'auto', objectFit: 'contain' }} />
           </div>
 
           <h1 className="apna-tt-college-title">
-            Apna Campus Autonomous, Bhubaneswar
+            Apna Campus
           </h1>
 
           {/* Subtitle: Either the exact Routine Title or Category Heading */}
@@ -679,7 +683,7 @@ export default function PublicTimetable({ onClose }) {
                 ← Back to Class List
               </button>
               <span className="routine-footnote">
-                Note: 75% minimum physical attendance is mandatory across all listed sessions as per Apna Campus Autonomous Regulations.
+                Note: 75% minimum physical attendance is mandatory across all listed sessions as per Apna Campus Regulations.
               </span>
             </div>
           </div>
@@ -888,7 +892,7 @@ export default function PublicTimetable({ onClose }) {
 
       {/* Page Footer */}
       <footer className="apna-tt-bottom-footer">
-        <p>© 2026 Apna Campus Autonomous College, Bhubaneswar. All Academic Routines & Room Allocations Certified.</p>
+        <p>© 2026 Apna Campus. All Academic Routines & Room Allocations Certified.</p>
       </footer>
     </div>
   );

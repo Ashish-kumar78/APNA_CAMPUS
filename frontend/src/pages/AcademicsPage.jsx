@@ -30,7 +30,7 @@ export const defaultAdmitCardExams = [
     id: 'exam-4',
     num: 1,
     name: '4th Semester End Semester Examination 2025-26',
-    venue: 'Apna Campus Autonomous, Bhubaneswar',
+    venue: 'Apna Campus',
     batch: 'BTECH 2028-P',
     semesterLabel: '4th Semester',
     subjects: [
@@ -47,7 +47,7 @@ export const defaultAdmitCardExams = [
     id: 'exam-3',
     num: 2,
     name: '3rd Semester End Semester Examination 2025-26',
-    venue: 'Apna Campus Autonomous, Bhubaneswar',
+    venue: 'Apna Campus',
     batch: 'BTECH 2028-P',
     semesterLabel: '3rd Semester',
     subjects: [
@@ -62,7 +62,7 @@ export const defaultAdmitCardExams = [
     id: 'exam-2',
     num: 3,
     name: '2nd Semester End Semester Examination (Regular), 2024-25',
-    venue: 'Apna Campus Autonomous, Bhubaneswar',
+    venue: 'Apna Campus',
     batch: 'BTECH 2028-P',
     semesterLabel: '2nd Semester',
     subjects: [
@@ -76,7 +76,7 @@ export const defaultAdmitCardExams = [
     id: 'exam-1',
     num: 4,
     name: 'End Semester Examination of 1st Semester B. Tech: 2024-25',
-    venue: 'Apna Campus Autonomous, Bhubaneswar',
+    venue: 'Apna Campus',
     batch: 'BTECH 2028-P',
     semesterLabel: '1st Semester',
     subjects: [
@@ -1271,7 +1271,7 @@ export default function AcademicsPage({ account }) {
 
                 {/* Footer Divider & Text */}
                 <div className="admit-paper-footer">
-                  <span>Apna Campus Autonomous Institution, Bhubaneswar</span>
+                  <span>Apna Campus</span>
                   <span>Printed @ 18-10-2026</span>
                 </div>
               </div>

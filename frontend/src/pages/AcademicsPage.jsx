@@ -23,6 +23,7 @@ import {
 import { downloadSyllabusPdf, downloadGiftAdmitCardPdf, openGiftAdmitCardPdf } from '../utils/pdfGenerator'
 import { notesApi } from '../services/notesApi'
 import { api } from '../services/api'
+import ClassNotesPage from './ClassNotesPage.jsx'
 import './AcademicsPage.css'
 
 export const defaultAdmitCardExams = [
@@ -284,7 +285,7 @@ export default function AcademicsPage({ account }) {
         {[
           { id: 'subjects', label: 'Enrolled Subjects' },
           { id: 'progression', label: 'Programme & Term History' },
-          { id: 'syllabus', label: 'Syllabus' },
+          { id: 'notes', label: 'Class Notes Sharing', count: classNotes.length },
           { id: 'admit-card', label: 'Download Admit Card' }
         ].map((tab) => (
           <button
@@ -295,6 +296,9 @@ export default function AcademicsPage({ account }) {
             onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
+            {tab.count !== undefined && tab.count > 0 && (
+              <span className="tab-pill-badge">{tab.count}</span>
+            )}
           </button>
         ))}
       </div>
@@ -351,13 +355,29 @@ export default function AcademicsPage({ account }) {
                               <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   {verifiedCount > 0 ? (
-                                    <span style={{ fontSize: '0.72rem', background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '10px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    <button
+                                      type="button"
+                                      className="btn-sub-notes-badge verified"
+                                      title="View verified class notes for this subject"
+                                      onClick={() => {
+                                        setSelectedSubjectName(sub.name)
+                                        setActiveTab('notes')
+                                      }}
+                                    >
                                       <ShieldCheck size={12} /> {verifiedCount} Verified
-                                    </span>
+                                    </button>
                                   ) : matchingNotes.length > 0 ? (
-                                    <span style={{ fontSize: '0.72rem', background: '#e0e7ff', color: '#3730a3', padding: '2px 6px', borderRadius: '10px', fontWeight: 600 }}>
+                                    <button
+                                      type="button"
+                                      className="btn-sub-notes-badge"
+                                      title="View class notes for this subject"
+                                      onClick={() => {
+                                        setSelectedSubjectName(sub.name)
+                                        setActiveTab('notes')
+                                      }}
+                                    >
                                       {matchingNotes.length} Notes
-                                    </span>
+                                    </button>
                                   ) : (
                                     <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 500 }}>No notes</span>
                                   )}
@@ -432,108 +452,14 @@ export default function AcademicsPage({ account }) {
         </div>
       )}
 
-      {/* TAB 4: CLASS NOTES & VERIFIED MATERIALS */}
+      {/* TAB 4: CLASS NOTES SHARING (Full Interactive Portal) */}
       {activeTab === 'notes' && (
-        <div className="academics-notes-container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Class Notes & Verified Peer Study Materials</h3>
-              <p style={{ margin: '2px 0 0', fontSize: '0.84rem', color: '#64748b' }}>
-                Handwritten notes, lecture diagrams & board photos shared by students. Verified by course faculty.
-              </p>
-            </div>
-            <button 
-              type="button"
-              className="btn-academic-upload-notes"
-              onClick={() => {
-                setSelectedSubjectName('Operating Systems')
-                setShowUploadModal(true)
-              }}
-            >
-              <UploadCloud size={16} /> Upload Notes
-            </button>
-          </div>
-
-          {/* Verified Notes appear first with a banner */}
-          {classNotes.some((n) => n.isFacultyVerified) && (
-            <div style={{ background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', border: '1.5px solid #6ee7b7', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <ShieldCheck size={20} color="#059669" />
-              <div>
-                <strong style={{ fontSize: '0.88rem', color: '#065f46' }}>Faculty Verified Notes Available</strong>
-                <div style={{ fontSize: '0.78rem', color: '#047857' }}>Notes marked with ✓ have been reviewed and approved by your subject faculty.</div>
-              </div>
-            </div>
-          )}
-
-          <div className="academic-notes-grid">
-            {/* Sort: verified notes appear first */}
-            {[...classNotes]
-              .sort((a, b) => (b.isFacultyVerified ? 1 : 0) - (a.isFacultyVerified ? 1 : 0))
-              .map((note) => {
-                const isImage = note.fileType && note.fileType.startsWith('image/')
-                const isBase64Image = note.fileUrl && note.fileUrl.startsWith('data:image')
-                const showThumbnail = isImage || isBase64Image
-
-                return (
-                  <div key={note.id} className={`academic-note-card ${note.isFacultyVerified ? 'note-card-verified' : ''}`}>
-                    {/* Image Thumbnail Preview */}
-                    {showThumbnail && (
-                      <div style={{ borderRadius: '8px', overflow: 'hidden', marginBottom: '10px', background: '#0f172a', maxHeight: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img
-                          src={note.fileUrl}
-                          alt={note.topic}
-                          style={{ width: '100%', maxHeight: '130px', objectFit: 'cover', display: 'block', opacity: 0.95 }}
-                          onError={(e) => { e.target.style.display = 'none' }}
-                        />
-                      </div>
-                    )}
-                    {!showThumbnail && note.fileType === 'application/pdf' && (
-                      <div style={{ background: '#e0e7ff', borderRadius: '8px', padding: '14px', textAlign: 'center', marginBottom: '10px', color: '#4338ca' }}>
-                        <FileText size={32} />
-                        <div style={{ fontSize: '0.75rem', marginTop: '4px', fontWeight: 600 }}>{note.fileName || 'PDF Document'}</div>
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                      <span className="note-subject-tag">{note.subject}</span>
-                      {note.isFacultyVerified ? (
-                        <span className="academic-badge-verified">
-                          <ShieldCheck size={13} /> ✓ Faculty Verified
-                        </span>
-                      ) : (
-                        <span className="academic-badge-pending">Student Uploaded</span>
-                      )}
-                    </div>
-
-                    <h4 style={{ margin: '4px 0', fontSize: '1rem', color: '#0f172a' }}>{note.topic}</h4>
-                    <p style={{ fontSize: '0.84rem', color: '#475569', margin: '0 0 12px', lineHeight: 1.4 }}>{note.description}</p>
-
-                    <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#64748b' }}>
-                      <div>
-                        <span><Calendar size={12} /> {note.date}</span> · 
-                        <span> By: <strong>{note.uploadedBy?.name}</strong></span>
-                      </div>
-                      <button 
-                        type="button" 
-                        className="btn-view-academic-note"
-                        onClick={() => setViewingNote(note)}
-                      >
-                        <Eye size={13} /> View Note
-                      </button>
-                    </div>
-                  </div>
-                )
-              })
-            }
-          </div>
-
-          {classNotes.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
-              <BookOpen size={40} style={{ marginBottom: '12px', opacity: 0.4 }} />
-              <h4 style={{ margin: '0 0 6px', color: '#64748b' }}>No class notes yet</h4>
-              <p style={{ margin: 0, fontSize: '0.84rem' }}>Be the first to share handwritten notes for your class!</p>
-            </div>
-          )}
+        <div className="academics-notes-portal-wrap">
+          <ClassNotesPage
+            account={account}
+            initialSubject={selectedSubjectName}
+            onNotesUpdated={loadClassNotes}
+          />
         </div>
       )}
 
@@ -701,28 +627,6 @@ export default function AcademicsPage({ account }) {
         </div>
       )}
 
-      {/* TAB 3: SYLLABUS */}
-      {activeTab === 'syllabus' && (
-        <div className="syllabus-grid">
-          {[
-            { code: 'CS501', name: 'Artificial Intelligence', size: '2.4 MB' },
-            { code: 'CS502', name: 'Machine Learning', size: '1.8 MB' },
-            { code: 'CS503', name: 'Cloud Computing', size: '3.1 MB' },
-            { code: 'CS504', name: 'Compiler Design', size: '2.0 MB' },
-          ].map((item) => (
-            <div className="syllabus-card" key={item.code}>
-              <div className="syllabus-card-icon"><FileText size={22} /></div>
-              <div className="syllabus-card-copy">
-                <strong>{item.name}</strong>
-                <small>{item.code} · {item.size}</small>
-              </div>
-              <button className="syllabus-download-btn" onClick={() => downloadSyllabusPdf(item)}>
-                <Download size={14} />Download
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* TAB 5: DOWNLOAD ADMIT CARD (Matches User Images 2 & 3) */}
       {activeTab === 'admit-card' && (

@@ -72,6 +72,80 @@
 
 .academics-tabs button:hover { color: #2563eb; }
 
+.tab-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 12px;
+  transition: all 0.15s ease;
+}
+
+.academics-tabs button.active .tab-pill-badge {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.btn-sub-notes-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid #c7d2fe;
+  background: #e0e7ff;
+  color: #3730a3;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sub-notes-badge:hover {
+  background: #c7d2fe;
+  transform: translateY(-1px);
+}
+
+.btn-sub-notes-badge.verified {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.btn-sub-notes-badge.verified:hover {
+  background: #bbf7d0;
+}
+
+.btn-sub-notes-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px dashed #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sub-notes-upload:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.academics-notes-portal-wrap {
+  margin-top: 6px;
+}
+
 /* Semester Accordion */
 .semester-accordion {
   margin-bottom: 8px;

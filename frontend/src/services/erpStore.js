@@ -31,21 +31,31 @@ export const initialSystemSettings = {
 };
 
 export const initialRolesList = [
-  { key: 'super_admin', label: 'Super Administrator', category: 'System', usersCount: 2, description: 'Unrestricted institutional configuration & security' },
-  { key: 'management', label: 'Management & Trustees', category: 'Executive', usersCount: 4, description: 'Governing board analytics, strategic review & approvals' },
-  { key: 'principal', label: 'Principal / Director', category: 'Executive', usersCount: 2, description: 'Campus academic administration & institutional clearances' },
-  { key: 'admin', label: 'Academic Administrator', category: 'Administration', usersCount: 6, description: 'Day-to-day admissions, courses, sections & timetables' },
-  { key: 'hod', label: 'Head of Department (HOD)', category: 'Academic', usersCount: 8, description: 'Department-specific academic governance & workload' },
-  { key: 'faculty', label: 'Faculty / Professor', category: 'Academic', usersCount: 146, description: 'Continuous assessment, attendance marking & classes' },
-  { key: 'student', label: 'Enrolled Student', category: 'Student', usersCount: 2480, description: 'Self-service academics, payments & campus requests' },
-  { key: 'accounts', label: 'Finance & Accounts Officer', category: 'Finance', usersCount: 7, description: 'Fee management, collections, reconciliations & receipts' },
-  { key: 'exam_cell', label: 'Examination Controller', category: 'Operations', usersCount: 5, description: 'Exam cycles, hall tickets, seating plans & grade calculation' },
-  { key: 'library', label: 'Chief Librarian', category: 'Operations', usersCount: 6, description: 'Circulation, book catalogue, reservations & fines' },
-  { key: 'warden', label: 'Hostel Resident Warden', category: 'Operations', usersCount: 8, description: 'Hostel residences, room allocations & gate passes' },
-  { key: 'transport', label: 'Transport Fleet Manager', category: 'Operations', usersCount: 4, description: 'Bus fleet, routes, stops, bus passes & drivers' },
-  { key: 'placement', label: 'Placement & Training Officer', category: 'Career', usersCount: 5, description: 'Corporate recruitment drives, eligibility & training' },
-  { key: 'staff', label: 'Non-Teaching Staff', category: 'Support', usersCount: 38, description: 'Labs, office clerical, reception & facility maintenance' },
-  { key: 'campus_operations', label: 'Campus Operations', category: 'Operations', usersCount: 15, description: 'Maintenance, security, housekeeping, canteen, facilities & field crews' },
+  // A. Administration
+  { key: 'super_admin', label: 'Super Admin', category: 'Administration', usersCount: 2, description: 'Unrestricted institutional configuration & security' },
+  { key: 'management', label: 'Management', category: 'Administration', usersCount: 4, description: 'Governing board analytics, strategic review & approvals' },
+  { key: 'principal', label: 'Principal', category: 'Administration', usersCount: 2, description: 'Campus academic administration & institutional clearances' },
+  { key: 'admin', label: 'Admin Office', category: 'Administration', usersCount: 6, description: 'Day-to-day admissions, courses, sections & timetables' },
+
+  // B. Academics
+  { key: 'admissions', label: 'Admission', category: 'Academics', usersCount: 5, description: 'Student intake, admissions counseling & seat allocations' },
+  { key: 'hod', label: 'HOD', category: 'Academics', usersCount: 8, description: 'Department-specific academic governance & workload' },
+  { key: 'faculty', label: 'Faculty', category: 'Academics', usersCount: 146, description: 'Continuous assessment, attendance marking & classes' },
+  { key: 'student', label: 'Students', category: 'Academics', usersCount: 2480, description: 'Self-service academics, payments & campus requests' },
+  { key: 'exam_cell', label: 'Examination', category: 'Academics', usersCount: 5, description: 'Exam cycles, hall tickets, seating plans & grade calculation' },
+  { key: 'staff', label: 'Staff Lab', category: 'Academics', usersCount: 38, description: 'Labs, equipment maintenance, technical demonstrations' },
+  { key: 'library', label: 'Library', category: 'Academics', usersCount: 6, description: 'Circulation, book catalogue, reservations & fines' },
+  { key: 'placement', label: 'Placement', category: 'Academics', usersCount: 5, description: 'Corporate recruitment drives, eligibility & training' },
+  { key: 'accounts', label: 'Accounts', category: 'Academics', usersCount: 7, description: 'Fee management, collections, reconciliations & receipts' },
+  { key: 'scholarship', label: 'Scholarship', category: 'Academics', usersCount: 4, description: 'State & merit scholarship concessions and waiver audits' },
+
+  // C. Campus Services
+  { key: 'hostel', label: 'Hostel', category: 'Campus Services', usersCount: 8, description: 'Hostel residences, room allocations & student welfare' },
+  { key: 'warden', label: 'Warden', category: 'Campus Services', usersCount: 8, description: 'Hostel residences, curfew enforcement & gate passes' },
+  { key: 'hostel_admin', label: 'Hostel Admin', category: 'Campus Services', usersCount: 4, description: 'Hostel facilities, infrastructure maintenance & occupancy' },
+  { key: 'transport', label: 'Transport', category: 'Campus Services', usersCount: 4, description: 'Bus fleet, routes, stops, bus passes & drivers' },
+  { key: 'campus_operations', label: 'Campus Operations', category: 'Campus Services', usersCount: 15, description: 'Maintenance, security, housekeeping, canteen, facilities & field crews' },
+  { key: 'canteen', label: 'Canteen', category: 'Campus Services', usersCount: 6, description: 'Dining services, menu management & cafeteria accounts' },
 ];
 
 export const permissionDefinitions = [

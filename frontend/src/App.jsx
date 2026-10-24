@@ -189,6 +189,28 @@ const accounts = {
     department: 'Hostel Administration',
     detail: 'Chief Resident Warden',
   },
+  'hostel': {
+    role: 'warden',
+    name: 'Mrs. Nibedita Das',
+    identity: 'WRD-004',
+    department: 'Hostel Administration',
+    detail: 'Hostel Administration & Resident Welfare',
+  },
+  'hostel_admin': {
+    role: 'warden',
+    name: 'Mr. Rajesh Jena',
+    identity: 'WRD-ADM-01',
+    department: 'Hostel Administration Office',
+    detail: 'Hostel Chief Administrator & Housing Ops',
+  },
+  'scholarship': {
+    role: 'accounts',
+    initialTab: 'scholarships',
+    name: 'Dr. M. K. Mohapatra',
+    identity: 'SCH-OFF-01',
+    department: 'Scholarship & Financial Aid Cell',
+    detail: 'Scholarship & Concessions Officer',
+  },
   'transport': {
     role: 'transport',
     name: 'Mr. Jagannath Sahoo',
@@ -218,6 +240,13 @@ const accounts = {
     detail: 'Smart Canteen Supervisor',
   },
   'admissions': {
+    role: 'admissions',
+    name: 'Ms. Sasmita Mohapatra',
+    identity: 'ADM-OFF-01',
+    department: 'Admissions & Student Intake Office',
+    detail: 'Senior Admissions Officer · Admissions & Counseling',
+  },
+  'admission': {
     role: 'admissions',
     name: 'Ms. Sasmita Mohapatra',
     identity: 'ADM-OFF-01',
@@ -255,28 +284,32 @@ const accounts = {
 }
 
 const roleCopy = {
-  super_admin: { label: 'Super Admin console', icon: ShieldCheck },
-  management: { label: 'Governing board', icon: ShieldCheck },
-  principal: { label: 'Principal office', icon: GraduationCap },
-  admissions: { label: 'Admissions & intake', icon: GraduationCap },
-  student: { label: 'Student portal', icon: GraduationCap },
-  faculty: { label: 'Faculty portal', icon: BookOpen },
-  hod: { label: 'HOD portal', icon: ShieldCheck },
-  admin: { label: 'Administration', icon: ShieldCheck },
-  accounts: { label: 'Accounts portal', icon: CreditCard },
-  exam_cell: { label: 'Examination cell', icon: ShieldCheck },
-  library: { label: 'Library portal', icon: BookOpen },
-  warden: { label: 'Hostel portal', icon: Home },
-  transport: { label: 'Transport fleet', icon: ShieldCheck },
-  placement: { label: 'Placement cell', icon: ShieldCheck },
-  staff: { label: 'Staff operations', icon: ShieldCheck },
-  canteen: { label: 'Canteen portal', icon: Utensils },
+  super_admin: { label: 'Super Admin', icon: ShieldCheck },
+  management: { label: 'Management', icon: ShieldCheck },
+  principal: { label: 'Principal', icon: GraduationCap },
+  admin: { label: 'Admin Office', icon: ShieldCheck },
+  admissions: { label: 'Admission', icon: GraduationCap },
+  hod: { label: 'HOD', icon: ShieldCheck },
+  faculty: { label: 'Faculty', icon: BookOpen },
+  student: { label: 'Students', icon: GraduationCap },
+  exam_cell: { label: 'Examination', icon: ShieldCheck },
+  staff: { label: 'Staff Lab', icon: ShieldCheck },
+  library: { label: 'Library', icon: BookOpen },
+  placement: { label: 'Placement', icon: ShieldCheck },
+  accounts: { label: 'Accounts', icon: CreditCard },
+  scholarship: { label: 'Scholarship', icon: CreditCard },
+  hostel: { label: 'Hostel', icon: Home },
+  warden: { label: 'Warden', icon: Home },
+  hostel_admin: { label: 'Hostel Admin', icon: Home },
+  transport: { label: 'Transport', icon: ShieldCheck },
   campus_operations: { label: 'Campus Operations', icon: HardHat },
+  canteen: { label: 'Canteen', icon: Utensils },
 }
 
 const demoCategories = [
   {
     id: 'admin',
+    categoryCode: 'A',
     title: 'Administration',
     count: '4 Roles',
     color: '#2563eb',
@@ -287,41 +320,47 @@ const demoCategories = [
       { key: 'super_admin', label: 'Super Admin' },
       { key: 'management', label: 'Management' },
       { key: 'principal', label: 'Principal' },
-      { key: 'admin', label: 'Admin Ops' },
+      { key: 'admin', label: 'Admin Office' },
     ],
   },
   {
     id: 'academics',
+    categoryCode: 'B',
     title: 'Academics',
-    count: '5 Roles',
+    count: '10 Roles',
     color: '#16a34a',
     bg: '#f0fdf4',
     border: '#dcfce7',
     icon: GraduationCap,
     roles: [
-      { key: 'admissions', label: 'Admissions' },
+      { key: 'admissions', label: 'Admission' },
       { key: 'hod', label: 'HOD' },
       { key: 'faculty', label: 'Faculty' },
-      { key: 'student', label: 'Student' },
-      { key: 'exam_cell', label: 'Exam Cell' },
+      { key: 'student', label: 'Students' },
+      { key: 'exam_cell', label: 'Examination' },
+      { key: 'staff', label: 'Staff Lab' },
+      { key: 'library', label: 'Library' },
+      { key: 'placement', label: 'Placement' },
+      { key: 'accounts', label: 'Accounts' },
+      { key: 'scholarship', label: 'Scholarship' },
     ],
   },
   {
     id: 'services',
+    categoryCode: 'C',
     title: 'Campus Services',
-    count: '7 Roles',
+    count: '6 Roles',
     color: '#ea580c',
     bg: '#fff7ed',
     border: '#ffedd5',
     icon: Home,
     roles: [
-      { key: 'accounts', label: 'Accounts' },
-      { key: 'library', label: 'Library' },
-      { key: 'placement', label: 'Placement' },
+      { key: 'hostel', label: 'Hostel' },
+      { key: 'warden', label: 'Warden' },
+      { key: 'hostel_admin', label: 'Hostel Admin' },
       { key: 'transport', label: 'Transport' },
-      { key: 'warden', label: 'Hostel' },
-      { key: 'staff', label: 'Staff (Labs)' },
       { key: 'campus_operations', label: 'Campus Operations' },
+      { key: 'canteen', label: 'Canteen' },
     ],
   },
 ]
@@ -471,12 +510,28 @@ function App() {
       setAccount(accounts['hod'])
       return
     }
+    if (key.startsWith('admission')) {
+      setAccount(accounts['admissions'])
+      return
+    }
     if (key.startsWith('adm')) {
       setAccount(accounts['admin'])
       return
     }
+    if (key.startsWith('sch') || key.includes('scholarship')) {
+      setAccount(accounts['scholarship'])
+      return
+    }
     if (key.startsWith('acc') || key.includes('account')) {
       setAccount(accounts['accounts'])
+      return
+    }
+    if (key.startsWith('hostel_admin') || key.includes('hosteladmin')) {
+      setAccount(accounts['hostel_admin'])
+      return
+    }
+    if (key.startsWith('hostel')) {
+      setAccount(accounts['hostel'])
       return
     }
     if (key.startsWith('wrd') || key.includes('warden')) {
@@ -603,13 +658,13 @@ function App() {
       portal = <HodPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'faculty') {
       portal = <FacultyPortal account={account} onLogout={handleLogout} />
-    } else if (account.role === 'accounts') {
+    } else if (account.role === 'accounts' || account.role === 'scholarship') {
       portal = <AccountsPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'exam_cell') {
       portal = <ExamCellPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'library') {
       portal = <LibraryPortal account={account} onLogout={handleLogout} />
-    } else if (account.role === 'warden') {
+    } else if (account.role === 'warden' || account.role === 'hostel' || account.role === 'hostel_admin') {
       portal = <HostelPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'transport') {
       portal = <TransportPortal account={account} onLogout={handleLogout} />
@@ -910,7 +965,7 @@ function App() {
                           <ArrowRight size={13} className="erp-cat-arrow" />
                         </div>
                         <div className="erp-cat-bottom">
-                          <strong className="erp-cat-name">{cat.title}</strong>
+                          <strong className="erp-cat-name">{cat.categoryCode ? `${cat.categoryCode}. ` : ''}{cat.title}</strong>
                           <span className="erp-cat-count">{cat.count}</span>
                         </div>
                       </div>
@@ -922,7 +977,9 @@ function App() {
                 {expandedCategory && (
                   <div className="erp-expanded-roles-drawer">
                     <div className="erp-drawer-header">
-                      <span>Select {demoCategories.find((c) => c.id === expandedCategory)?.title} Role:</span>
+                      <span>
+                        Select {demoCategories.find((c) => c.id === expandedCategory)?.categoryCode ? `${demoCategories.find((c) => c.id === expandedCategory)?.categoryCode}. ` : ''}{demoCategories.find((c) => c.id === expandedCategory)?.title} Role:
+                      </span>
                       <button
                         type="button"
                         className="erp-drawer-close"

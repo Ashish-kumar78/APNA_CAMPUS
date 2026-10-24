@@ -19,22 +19,43 @@ import {
   Info,
   Flag,
   Share2,
-  MessageSquare
+  MessageSquare,
+  ThumbsUp,
+  Check
 } from 'lucide-react'
 import { notesApi } from '../services/notesApi'
 import './ClassNotesPage.css'
 
-export default function ClassNotesPage({ account }) {
+export const CLASS_NOTE_SUBJECTS = [
+  'Artificial Intelligence',
+  'Machine Learning',
+  'Cloud Computing',
+  'Compiler Design',
+  'Operating Systems',
+  'Algorithms',
+  'Data Structures',
+  'Computer Networks',
+  'Database Systems',
+  'Theory of Computation',
+  'Web Technologies',
+  'Discrete Mathematics',
+  'Engineering Economics',
+  'Digital Electronics'
+]
+
+export default function ClassNotesPage({ account, initialSubject = 'ALL', onNotesUpdated }) {
   const [notesList, setNotesList] = useState([])
-  const [subjectFilter, setSubjectFilter] = useState('ALL')
+  const [subjectFilter, setSubjectFilter] = useState(initialSubject || 'ALL')
   const [dateFilter, setDateFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [missedClasses, setMissedClasses] = useState([])
+  const [likedNotes, setLikedNotes] = useState({})
   
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [uploadStep, setUploadStep] = useState('form') // 'form' | 'preview'
   const [uploadForm, setUploadForm] = useState({
-    subject: 'Operating Systems',
+    subject: initialSubject && initialSubject !== 'ALL' ? initialSubject : 'Operating Systems',
     date: new Date().toISOString().split('T')[0],
     topic: '',
     description: '',
@@ -62,8 +83,28 @@ export default function ClassNotesPage({ account }) {
   }
 
   useEffect(() => {
+    if (initialSubject && initialSubject !== 'ALL') {
+      setSubjectFilter(initialSubject)
+      setUploadForm(prev => ({ ...prev, subject: initialSubject }))
+    }
+  }, [initialSubject])
+
+  useEffect(() => {
     loadNotes()
   }, [subjectFilter, dateFilter, searchQuery])
+
+  useEffect(() => {
+    loadMissedClasses()
+  }, [])
+
+  const loadMissedClasses = async () => {
+    try {
+      const data = await notesApi.getMissedClasses()
+      if (Array.isArray(data)) setMissedClasses(data)
+    } catch {
+      // ignore
+    }
+  }
 
   const loadNotes = async () => {
     const data = await notesApi.getClassNotes({
@@ -72,6 +113,24 @@ export default function ClassNotesPage({ account }) {
       search: searchQuery
     })
     if (data) setNotesList(data)
+  }
+
+  const toggleLikeNote = (noteId) => {
+    setLikedNotes(prev => {
+      const isLiked = !prev[noteId]
+      triggerToast(isLiked ? 'Marked note as helpful! 👍' : 'Removed from helpful notes')
+      return { ...prev, [noteId]: isLiked }
+    })
+  }
+
+  const handleShareNote = (note) => {
+    const url = `${window.location.origin}${window.location.pathname}#notes-${note.id}`
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(url)
+      triggerToast('Direct link to note copied to clipboard! 📋')
+    } else {
+      triggerToast(`Note link: ${note.topic} (${note.subject})`)
+    }
   }
 
   // Handle file select
@@ -139,8 +198,9 @@ export default function ClassNotesPage({ account }) {
     try {
       const res = await notesApi.uploadClassNotes(payload)
       if (res && res.success) {
-        triggerToast('Class notes shared successfully!')
+        triggerToast('Class notes shared successfully! Available for classmates.')
         await loadNotes()
+        if (onNotesUpdated) onNotesUpdated()
         setShowUploadModal(false)
         resetUploadForm()
       }
@@ -154,7 +214,7 @@ export default function ClassNotesPage({ account }) {
   const resetUploadForm = () => {
     setUploadStep('form')
     setUploadForm({
-      subject: 'Operating Systems',
+      subject: initialSubject && initialSubject !== 'ALL' ? initialSubject : 'Operating Systems',
       date: new Date().toISOString().split('T')[0],
       topic: '',
       description: ''
@@ -236,6 +296,41 @@ export default function ClassNotesPage({ account }) {
         </button>
       </div>
 
+      {/* Missed Lecture Catch-up Banner */}
+      {missedClasses.some(m => m.notesAvailable) && (
+        <div className="missed-notes-banner">
+          <div className="missed-banner-content">
+            <div className="missed-badge-icon">
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.88rem', color: '#854d0e', display: 'block' }}>
+                Missed Lecture Notes Available
+              </strong>
+              <span style={{ fontSize: '0.78rem', color: '#a16207' }}>
+                You have peer study materials available for classes you missed recently.
+              </span>
+            </div>
+          </div>
+          <div className="missed-actions-row">
+            {missedClasses.filter(m => m.notesAvailable).map(mc => (
+              <button
+                key={mc.id}
+                type="button"
+                className="btn-missed-quick-pill"
+                onClick={() => {
+                  setSubjectFilter(mc.subject)
+                  setDateFilter(mc.date)
+                  triggerToast(`Filtered notes for missed ${mc.subject} on ${mc.date}`)
+                }}
+              >
+                {mc.subject} ({mc.date}) →
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* FEATURE 2 — REQUIREMENT 4: USER-GENERATED CONTENT DISCLAIMER BANNER */}
       <div className="ugc-disclaimer-banner">
         <div className="ugc-icon"><Info size={20} /></div>
@@ -254,13 +349,10 @@ export default function ClassNotesPage({ account }) {
             value={subjectFilter}
             onChange={(e) => setSubjectFilter(e.target.value)}
           >
-            <option value="ALL">All Subjects</option>
-            <option value="Operating Systems">Operating Systems</option>
-            <option value="Data Structures">Data Structures</option>
-            <option value="Computer Networks">Computer Networks</option>
-            <option value="Database Systems">Database Systems</option>
-            <option value="Web Technology">Web Technology</option>
-            <option value="AI & Machine Learning">AI & Machine Learning</option>
+            <option value="ALL">All Enrolled Subjects</option>
+            {CLASS_NOTE_SUBJECTS.map((sub) => (
+              <option key={sub} value={sub}>{sub}</option>
+            ))}
           </select>
         </div>
 
@@ -323,9 +415,33 @@ export default function ClassNotesPage({ account }) {
           Object.entries(duplicateGroupedNotes).map(([groupKey, groupNotes]) => {
             const primaryNote = groupNotes[0]
             const hasMultipleSets = groupNotes.length > 1
+            const isImage = (primaryNote.fileType && primaryNote.fileType.startsWith('image/')) || (primaryNote.fileUrl && primaryNote.fileUrl.startsWith('data:image'))
+            const isLiked = likedNotes[primaryNote.id]
 
             return (
               <div key={groupKey} className="note-card">
+                {/* Visual Preview Thumbnail */}
+                {isImage && primaryNote.fileUrl && (
+                  <div className="note-thumbnail-wrap">
+                    <img
+                      src={primaryNote.fileUrl}
+                      alt={primaryNote.topic}
+                      className="note-thumbnail-img"
+                      onError={(e) => { e.target.style.display = 'none' }}
+                    />
+                    <span className="note-type-badge">Image / Handwritten</span>
+                  </div>
+                )}
+                {!isImage && primaryNote.fileType === 'application/pdf' && (
+                  <div className="note-pdf-wrap">
+                    <FileText size={26} color="#4338ca" />
+                    <div>
+                      <strong style={{ fontSize: '0.82rem', color: '#312e81', display: 'block' }}>{primaryNote.fileName || 'PDF Document'}</strong>
+                      <small style={{ color: '#6366f1', fontSize: '0.72rem' }}>Class Lecture PDF</small>
+                    </div>
+                  </div>
+                )}
+
                 <div className="note-card-header">
                   <div>
                     <span className="note-subject-pill">{primaryNote.subject}</span>
@@ -367,9 +483,41 @@ export default function ClassNotesPage({ account }) {
                 <div className="note-card-meta">
                   <div className="meta-left">
                     <span><Calendar size={13} /> {primaryNote.date}</span>
-                    <span><User size={13} /> Uploaded by: <strong>{primaryNote.uploadedBy?.name}</strong></span>
+                    <span><User size={13} /> By: <strong>{primaryNote.uploadedBy?.name}</strong></span>
                   </div>
-                  <div className="meta-right">
+                  <div className="meta-actions">
+                    <button
+                      type="button"
+                      className={`btn-note-action-icon ${isLiked ? 'liked' : ''}`}
+                      title={isLiked ? 'You found this helpful' : 'Mark as helpful'}
+                      onClick={() => toggleLikeNote(primaryNote.id)}
+                    >
+                      <ThumbsUp size={13} /> {isLiked ? 'Helpful (1)' : 'Helpful'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-note-action-icon"
+                      title="Share / Copy Link"
+                      onClick={() => handleShareNote(primaryNote)}
+                    >
+                      <Share2 size={13} />
+                    </button>
+                    {primaryNote.fileUrl && (
+                      <a
+                        href={primaryNote.fileUrl}
+                        download={primaryNote.fileName}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-note-action-icon"
+                        title="Download Note"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          triggerToast(`Downloading ${primaryNote.fileName || 'note'}...`)
+                        }}
+                      >
+                        <Download size={13} />
+                      </a>
+                    )}
                     <button 
                       type="button" 
                       className="btn-view-notes"
@@ -378,7 +526,7 @@ export default function ClassNotesPage({ account }) {
                         setActiveVersionIndex(1)
                       }}
                     >
-                      <Eye size={14} /> View Notes
+                      <Eye size={14} /> View
                     </button>
                   </div>
                 </div>
@@ -413,12 +561,9 @@ export default function ClassNotesPage({ account }) {
                       onChange={(e) => setUploadForm({ ...uploadForm, subject: e.target.value })}
                       required
                     >
-                      <option value="Operating Systems">Operating Systems</option>
-                      <option value="Data Structures">Data Structures</option>
-                      <option value="Computer Networks">Computer Networks</option>
-                      <option value="Database Systems">Database Systems</option>
-                      <option value="Web Technology">Web Technology</option>
-                      <option value="AI & Machine Learning">AI & Machine Learning</option>
+                      {CLASS_NOTE_SUBJECTS.map((sub) => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
                     </select>
                   </div>
 

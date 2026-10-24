@@ -96,7 +96,11 @@ function exportToCsv(filename, rows) {
 export default function AccountsPortal({ account, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const greeting = useTimeGreeting();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (account?.initialTab) return account.initialTab;
+    if (account?.role === 'scholarship' || account?.identity === 'SCH-OFF-01') return 'scholarships';
+    return 'dashboard';
+  });
 
   // Core Data States
   const [feeStructures, setFeeStructures] = useState(initialFeeStructures);

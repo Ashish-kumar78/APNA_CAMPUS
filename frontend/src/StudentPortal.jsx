@@ -432,7 +432,7 @@ function StudentPortal({ account, onLogout }) {
     const roll = account?.rollNumber || '01';
     notifications.forEach((n) => {
       if (n.isFacultyNotice && n.unread) {
-        notificationsApi.markAsRead(n.id, roll).catch(() => {});
+        notificationsApi.markAsRead(n.id, roll).catch(() => { });
       }
     });
   };
@@ -443,7 +443,7 @@ function StudentPortal({ account, onLogout }) {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: newUnread } : n)));
     if (notif.isFacultyNotice && !newUnread) {
       const roll = account?.rollNumber || '01';
-      notificationsApi.markAsRead(id, roll).catch(() => {});
+      notificationsApi.markAsRead(id, roll).catch(() => { });
     }
   };
 
@@ -687,23 +687,23 @@ function StudentPortal({ account, onLogout }) {
                 activePage === 'shared-resources' ||
                 activePage === 'leadership' ||
                 activePage === 'anonymous-complaints') && (
-                <CampusConnect
-                  account={account}
-                  initialConversationId={initialConvId}
-                  initialCategory={activePage === 'class-groups' ? 'Classes' : 'All'}
-                  initialView={campusSubView}
-                  onBack={() => {
-                    setActivePage('dashboard')
-                    setActiveLink('Dashboard')
-                    window.location.hash = 'dashboard'
-                  }}
-                  onNavigateToModule={(mod) => {
-                    setActivePage(mod);
-                    setActiveLink(mod);
-                    window.location.hash = mod;
-                  }}
-                />
-              )}
+                  <CampusConnect
+                    account={account}
+                    initialConversationId={initialConvId}
+                    initialCategory={activePage === 'class-groups' ? 'Classes' : 'All'}
+                    initialView={campusSubView}
+                    onBack={() => {
+                      setActivePage('dashboard')
+                      setActiveLink('Dashboard')
+                      window.location.hash = 'dashboard'
+                    }}
+                    onNavigateToModule={(mod) => {
+                      setActivePage(mod);
+                      setActiveLink(mod);
+                      window.location.hash = mod;
+                    }}
+                  />
+                )}
               {activePage === 'class-notes' && <ClassNotesPage account={account} />}
               {activePage === 'marks' && <MarksPage initialRole="student" />}
               {activePage === 'hostel' && <StudentHostelPage defaultTab="overview" />}
@@ -756,242 +756,273 @@ function StudentPortal({ account, onLogout }) {
             />
           ) : (
             <div className="dash">
-          {/* 3rd Image: Hero greeting that dynamically changes according to time and wishes */}
-          <section className={`dash-hero ${timeGreeting.themeClass}`} aria-label="Welcome">
-            <div className="dash-hero-glow" aria-hidden="true" />
-            <div className="dash-hero-main">
-              <p className="dash-hero-kicker"><Sparkles size={13} /> Student workspace · Semester 5</p>
-              <h2 className="dash-hero-title">{timeGreeting.wish}, {getGreetingDisplayName(account?.name || 'Student')}</h2>
-              <p className="dash-hero-caption">{timeGreeting.caption}</p>
-              <div className="dash-motd" role="note" aria-label="Message of the day">
-                <span className="dash-motd-icon"><Megaphone size={14} /></span>
-                <strong>Message of the day</strong>
-                <span>{timeGreeting.motd}</span>
-              </div>
-            </div>
-            <div className="dash-hero-meta">
-              <span className="dash-chip">Academic year <strong>2026–27</strong></span>
-              <time className="dash-date"><CalendarDays size={14} /> {todayLabel}</time>
-              <span className="dash-chip" style={{ background: 'rgba(0,0,0,0.22)' }}>
-                <Clock size={11} /> {formattedLiveTime}
-              </span>
-            </div>
-          </section>
-
-
-          {/* Top Hero Split: 1st Image (Student Profile) on LEFT + 2nd Image (2x2 Stats) on RIGHT (50% each) */}
-          <div className="dash-hero-split">
-            {/* 1st Image: Student Profile Card placed on LEFT SIDE with strict Passport Size Photo */}
-            <aside className="dash-card dash-info dash-info-hero" id="student-information" aria-label="Student account information">
-              <div className="dash-info-cover">
-                <div className="dash-passport-photo-frame" title={`${account?.name || 'Student'} Passport Photograph (Official 35mm x 45mm)`}>
-                  <img src={studentPhoto} alt={account?.name || 'Student'} className="dash-passport-img" />
-                </div>
-                <div>
-                  <strong>{account?.name || 'Student'}</strong>
-                  <small>{account?.registrationNumber || '—'}</small>
-                </div>
-                <span className="dash-status"><i /> Active</span>
-              </div>
-              <dl className="dash-info-list">
-                <DetailRow label="Registration No." value={account?.registrationNumber || account?.rollNumber || '—'} />
-                <DetailRow label="Name" value={account?.name || 'Student'} />
-                <DetailRow label="Program" value={account?.program || account?.course || 'B.Tech'} />
-                <DetailRow label="Batch" value={account?.batch || '2023–2027'} />
-                <DetailRow label="Department" value={account?.department || 'Computer Science & Engineering'} />
-                <DetailRow
-                  label="Section"
-                  value={(() => {
-                    const sec = account?.section || account?.sectionName || 'A';
-                    return String(sec).startsWith('Section') ? sec : `Section ${sec}`;
-                  })()}
-                />
-                <DetailRow label="Email ID" value={account?.email || `${(account?.name || 'student').toLowerCase().replace(/\s+/g, '.')}@student.apnacampus.edu.in`} />
-                <DetailRow label="Mobile No." value={account?.phone || '+91 98610 23010'} />
-              </dl>
-              <button className="dash-btn dash-btn-primary dash-info-btn" type="button" onClick={() => {
-                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-                document.documentElement.scrollTop = 0;
-                document.body.scrollTop = 0;
-                setActivePage('profile');
-                setActiveLink('Student Profile');
-                setProfileTab('Personal');
-                setProfileQuickView('');
-                window.location.hash = 'profile';
-              }}>View profile <ChevronRight size={15} /></button>
-            </aside>
-
-            {/* 2nd Image: 2x2 Stats Grid placed on RIGHT SIDE - Content covering the whole box */}
-            <section className="dash-stats-2x2" aria-label="Semester snapshot">
-              {/* Card 1: Enrolled Courses */}
-              <article className="dash-stat tone-blue">
-                {(() => {
-                  const sem = account?.currentSemester || account?.semester || 5;
-                  const semLabel = String(sem).startsWith('Semester') ? sem : `Semester ${sem}`;
-                  return (
-                    <>
-                      <div className="dash-stat-head">
-                        <div className="dash-stat-head-left">
-                          <span className="dash-stat-icon"><BookOpen size={18} /></span>
-                          <span className="dash-stat-label">Enrolled courses</span>
-                        </div>
-                        <span className="dash-stat-badge tone-blue-badge">{semLabel}</span>
-                      </div>
-                      <div className="dash-stat-body">
-                        <strong className="dash-stat-value">{account?.enrolledSubjects ? String(account.enrolledSubjects.length).padStart(2, '0') : '06'}</strong>
-                        <p className="dash-stat-desc">{semLabel} · 22 total credits</p>
-                      </div>
-                    </>
-                  );
-                })()}
-                <div className="dash-stat-foot">
-                  <span className="dash-stat-pill">4 Core Theory</span>
-                  <span className="dash-stat-pill">2 Practical Labs</span>
-                  <span className="dash-stat-pill tone-green-pill">Registered</span>
-                </div>
-              </article>
-
-              {/* Card 2: Attendance */}
-              <article className="dash-stat tone-green">
-                <div className="dash-stat-head">
-                  <div className="dash-stat-head-left">
-                    <span className="dash-stat-icon"><CheckCircle2 size={18} /></span>
-                    <span className="dash-stat-label">Attendance</span>
-                  </div>
-                  <span className="dash-stat-badge tone-green-badge">Eligible</span>
-                </div>
-                <div className="dash-stat-body">
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <strong className="dash-stat-value">92%</strong>
-                    <span className="dash-stat-ratio">138 / 150 Lectures</span>
-                  </div>
-                  <div className="dash-progress" aria-hidden="true">
-                    <i style={{ width: '92%' }} />
+              {/* 3rd Image: Hero greeting that dynamically changes according to time and wishes */}
+              <section className={`dash-hero ${timeGreeting.themeClass}`} aria-label="Welcome">
+                <div className="dash-hero-glow" aria-hidden="true" />
+                <div className="dash-hero-main">
+                  <p className="dash-hero-kicker"><Sparkles size={13} /> Student workspace · Semester 5</p>
+                  <h2 className="dash-hero-title">{timeGreeting.wish}, {getGreetingDisplayName(account?.name || 'Student')}</h2>
+                  <p className="dash-hero-caption">{timeGreeting.caption}</p>
+                  <div className="dash-motd" role="note" aria-label="Message of the day">
+                    <span className="dash-motd-icon"><Megaphone size={14} /></span>
+                    <strong>Message of the day</strong>
+                    <span>{timeGreeting.motd}</span>
                   </div>
                 </div>
-                <div className="dash-stat-foot">
-                  <small className="dash-stat-sub text-green">
-                    <Check size={13} /> 17% above required 75% examination threshold
-                  </small>
-                </div>
-              </article>
-
-              {/* Card 3: Next Class */}
-              <article className="dash-stat tone-violet">
-                <div className="dash-stat-head">
-                  <div className="dash-stat-head-left">
-                    <span className="dash-stat-icon"><Clock size={18} /></span>
-                    <span className="dash-stat-label">Next class</span>
-                  </div>
-                  <span className="dash-stat-badge tone-violet-badge">Starts 10:30 AM</span>
-                </div>
-                <div className="dash-stat-body">
-                  <strong className="dash-stat-value">10:30 <em>AM</em></strong>
-                  <p className="dash-stat-desc">Data Structures &amp; Algorithms</p>
-                </div>
-                <div className="dash-stat-foot">
-                  <span className="dash-stat-sub">
-                    <MapPin size={13} /> Room 204 · Block B (Dr. S. K. Nayak)
+                <div className="dash-hero-meta">
+                  <span className="dash-chip">Academic year <strong>2026–27</strong></span>
+                  <time className="dash-date"><CalendarDays size={14} /> {todayLabel}</time>
+                  <span className="dash-chip" style={{ background: 'rgba(0,0,0,0.22)' }}>
+                    <Clock size={11} /> {formattedLiveTime}
                   </span>
                 </div>
-              </article>
+              </section>
 
-              {/* Card 4: Next Holiday */}
-              <article className="dash-stat tone-amber">
-                <div className="dash-stat-head">
-                  <div className="dash-stat-head-left">
-                    <span className="dash-stat-icon"><PartyPopper size={18} /></span>
-                    <span className="dash-stat-label">Next holiday</span>
+
+              {/* Top Hero Split: 1st Image (Student Profile) on LEFT + 2nd Image (2x2 Stats) on RIGHT (50% each) */}
+              <div className="dash-hero-split">
+                {/* 1st Image: Student Profile Card placed on LEFT SIDE with strict Passport Size Photo */}
+                <aside className="dash-card dash-info dash-info-hero" id="student-information" aria-label="Student account information">
+                  <div className="dash-info-cover">
+                    <div className="dash-passport-photo-frame" title={`${account?.name || 'Student'} Passport Photograph (Official 35mm x 45mm)`}>
+                      <img src={studentPhoto} alt={account?.name || 'Student'} className="dash-passport-img" />
+                    </div>
+                    <div>
+                      <strong>{account?.name || 'Student'}</strong>
+                      <small>{account?.registrationNumber || '—'}</small>
+                    </div>
+                    <span className="dash-status"><i /> Active</span>
                   </div>
-                  <span className="dash-stat-badge tone-amber-badge">Govt Gazetted</span>
-                </div>
-                <div className="dash-stat-body">
-                  <strong className="dash-stat-value">{nextHoliday ? (nextHoliday.daysLeft === 0 ? 'Today' : nextHoliday.daysLeft === 1 ? 'Tomorrow' : `${nextHoliday.daysLeft} days`) : '5 days'}</strong>
-                  <p className="dash-stat-desc">{nextHoliday ? nextHoliday.name : 'Mahalaya'}</p>
-                </div>
-                <div className="dash-stat-foot">
-                  <span className="dash-stat-sub">
-                    {nextHoliday?.date ? nextHoliday.date.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : 'Sat, 10 Oct, 2026'} · Campus closed
-                  </span>
-                </div>
-              </article>
-            </section>
-          </div>
+                  <dl className="dash-info-list">
+                    <DetailRow label="Registration No." value={account?.registrationNumber || account?.rollNumber || '—'} />
+                    <DetailRow label="Name" value={account?.name || 'Student'} />
+                    <DetailRow label="Program" value={account?.program || account?.course || 'B.Tech'} />
+                    <DetailRow label="Batch" value={account?.batch || '2023–2027'} />
+                    <DetailRow label="Department" value={account?.department || 'Computer Science & Engineering'} />
+                    <DetailRow
+                      label="Section"
+                      value={(() => {
+                        const sec = account?.section || account?.sectionName || 'A';
+                        return String(sec).startsWith('Section') ? sec : `Section ${sec}`;
+                      })()}
+                    />
+                    <DetailRow label="Email ID" value={account?.email || `${(account?.name || 'student').toLowerCase().replace(/\s+/g, '.')}@student.apnacampus.edu.in`} />
+                    <DetailRow label="Mobile No." value={account?.phone || '+91 98610 23010'} />
+                  </dl>
+                  <button className="dash-btn dash-btn-primary dash-info-btn" type="button" onClick={() => {
+                    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                    document.documentElement.scrollTop = 0;
+                    document.body.scrollTop = 0;
+                    setActivePage('profile');
+                    setActiveLink('Student Profile');
+                    setProfileTab('Personal');
+                    setProfileQuickView('');
+                    window.location.hash = 'profile';
+                  }}>View profile <ChevronRight size={15} /></button>
+                </aside>
 
-          {/* Bottom Grid: Calendar & Holiday List Side-by-Side */}
-          <div className="dash-grid-duo">
-            <section className="dash-card dash-calendar" id="calendar">
-              <header className="dash-card-head">
-                <h3><span className="dash-head-icon"><CalendarDays size={15} /></span>Calendar</h3>
-                <div className="dash-cal-controls">
-                  <button type="button" onClick={() => updateMonth(-1)} aria-label="Previous month"><ChevronLeft size={15} /></button>
-                  <strong>{monthLabel}</strong>
-                  <button type="button" onClick={() => updateMonth(1)} aria-label="Next month"><ChevronRight size={15} /></button>
-                </div>
-              </header>
-              <div className="dash-cal-weekdays">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}</div>
-              <div className="dash-cal-days">
-                {calendarDays.map(({ key, day, inMonth, isToday, isSunday }) => {
-                  const holidayName = holidayMap[key]
-                  return (
-                    <span
-                      className={['dash-day', inMonth ? '' : 'is-outside', isToday ? 'is-today' : '', holidayName ? 'is-holiday' : '', isSunday ? 'is-sunday' : ''].join(' ')}
-                      title={holidayName || undefined}
-                      key={key}
-                    >{day}</span>
-                  )
-                })}
-              </div>
-              <div className="dash-legend">
-                <span><i className="lg-holiday" />Holiday</span>
-                <span><i className="lg-sunday" />Sunday</span>
-                <span><i className="lg-today" />Today</span>
-              </div>
-            </section>
+                {/* 2nd Image: 2x2 Stats Grid placed on RIGHT SIDE - Content covering the whole box */}
+                <section className="dash-stats-2x2" aria-label="Semester snapshot">
+                  {/* Card 1: Enrolled Courses */}
+                  <article
+                    className="dash-stat tone-blue"
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => handleStudentTabChange('academics')}
+                    title="Open Academics & Enrolled Courses"
+                  >
+                    {(() => {
+                      const sem = account?.currentSemester || account?.semester || 5;
+                      const semLabel = String(sem).startsWith('Semester') ? sem : `Semester ${sem}`;
+                      return (
+                        <>
+                          <div className="dash-stat-head">
+                            <div className="dash-stat-head-left">
+                              <span className="dash-stat-icon"><BookOpen size={18} /></span>
+                              <span className="dash-stat-label">Enrolled courses</span>
+                            </div>
+                            <span className="dash-stat-badge tone-blue-badge">{semLabel}</span>
+                          </div>
+                          <div className="dash-stat-body">
+                            <strong className="dash-stat-value">{account?.enrolledSubjects ? String(account.enrolledSubjects.length).padStart(2, '0') : '06'}</strong>
+                            <p className="dash-stat-desc">{semLabel} · 22 total credits</p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                    <div className="dash-stat-foot">
+                      <span className="dash-stat-pill">4 Core Theory</span>
+                      <span className="dash-stat-pill">2 Practical Labs</span>
+                      <span className="dash-stat-pill tone-green-pill">Registered</span>
+                    </div>
+                  </article>
 
-            <section className="dash-card dash-holidays" id="holidays">
-              <header className="dash-card-head">
-                <h3><span className="dash-head-icon tone-amber"><PartyPopper size={15} /></span>Holiday List</h3>
-                <div className="dash-holiday-controls">
-                  <div className="dash-holiday-filter-pills">
-                    <button
-                      type="button"
-                      className={`dash-filter-pill ${holidayView === 'all' ? 'active' : ''}`}
-                      onClick={() => setHolidayView('all')}
-                    >
-                      All 2026 ({holidayItems.length})
-                    </button>
-                    <button
-                      type="button"
-                      className={`dash-filter-pill ${holidayView === 'upcoming' ? 'active' : ''}`}
-                      onClick={() => setHolidayView('upcoming')}
-                    >
-                      Upcoming ({holidayItems.filter((h) => h.daysLeft >= 0).length})
-                    </button>
+                  {/* Card 2: Attendance */}
+                  <article
+                    className="dash-stat tone-green"
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => handleStudentTabChange('attendance')}
+                    title="Open Attendance Record"
+                  >
+                    <div className="dash-stat-head">
+                      <div className="dash-stat-head-left">
+                        <span className="dash-stat-icon"><CheckCircle2 size={18} /></span>
+                        <span className="dash-stat-label">Attendance</span>
+                      </div>
+                      <span className="dash-stat-badge tone-green-badge">Eligible</span>
+                    </div>
+                    <div className="dash-stat-body">
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <strong className="dash-stat-value">92%</strong>
+                        <span className="dash-stat-ratio">138 / 150 Lectures</span>
+                      </div>
+                      <div className="dash-progress" aria-hidden="true">
+                        <i style={{ width: '92%' }} />
+                      </div>
+                    </div>
+                    <div className="dash-stat-foot">
+                      <small className="dash-stat-sub text-green">
+                        <Check size={13} /> 17% above required 75% examination threshold
+                      </small>
+                    </div>
+                  </article>
+
+                  {/* Card 3: Next Class */}
+                  <article
+                    className="dash-stat tone-violet"
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => handleStudentTabChange('timetable')}
+                    title="Open Class Timetable"
+                  >
+                    <div className="dash-stat-head">
+                      <div className="dash-stat-head-left">
+                        <span className="dash-stat-icon"><Clock size={18} /></span>
+                        <span className="dash-stat-label">Next class</span>
+                      </div>
+                      <span className="dash-stat-badge tone-violet-badge">Starts 10:30 AM</span>
+                    </div>
+                    <div className="dash-stat-body">
+                      <strong className="dash-stat-value">10:30 <em>AM</em></strong>
+                      <p className="dash-stat-desc">Data Structures &amp; Algorithms</p>
+                    </div>
+                    <div className="dash-stat-foot">
+                      <span className="dash-stat-sub">
+                        <MapPin size={13} /> Room 204 · Block B (Dr. S. K. Nayak)
+                      </span>
+                    </div>
+                  </article>
+
+                  {/* Card 4: Next Holiday */}
+                  <article
+                    className="dash-stat tone-amber"
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      const el = document.getElementById('holidays');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    title="View Holiday Schedule"
+                  >
+                    <div className="dash-stat-head">
+                      <div className="dash-stat-head-left">
+                        <span className="dash-stat-icon"><PartyPopper size={18} /></span>
+                        <span className="dash-stat-label">Next holiday</span>
+                      </div>
+                      <span className="dash-stat-badge tone-amber-badge">Govt Gazetted</span>
+                    </div>
+                    <div className="dash-stat-body">
+                      <strong className="dash-stat-value">{nextHoliday ? (nextHoliday.daysLeft === 0 ? 'Today' : nextHoliday.daysLeft === 1 ? 'Tomorrow' : `${nextHoliday.daysLeft} days`) : '5 days'}</strong>
+                      <p className="dash-stat-desc">{nextHoliday ? nextHoliday.name : 'Mahalaya'}</p>
+                    </div>
+                    <div className="dash-stat-foot">
+                      <span className="dash-stat-sub">
+                        {nextHoliday?.date ? nextHoliday.date.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : 'Sat, 10 Oct, 2026'} · Campus closed
+                      </span>
+                    </div>
+                  </article>
+                </section>
+              </div>
+
+              {/* Bottom Grid: Calendar & Holiday List Side-by-Side */}
+              <div className="dash-grid-duo">
+                <section className="dash-card dash-calendar" id="calendar">
+                  <header className="dash-card-head">
+                    <h3><span className="dash-head-icon"><CalendarDays size={15} /></span>Calendar</h3>
+                    <div className="dash-cal-controls">
+                      <button type="button" onClick={() => updateMonth(-1)} aria-label="Previous month"><ChevronLeft size={15} /></button>
+                      <strong>{monthLabel}</strong>
+                      <button type="button" onClick={() => updateMonth(1)} aria-label="Next month"><ChevronRight size={15} /></button>
+                    </div>
+                  </header>
+                  <div className="dash-cal-weekdays">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}</div>
+                  <div className="dash-cal-days">
+                    {calendarDays.map(({ key, day, inMonth, isToday, isSunday }) => {
+                      const holidayName = holidayMap[key]
+                      return (
+                        <span
+                          className={['dash-day', inMonth ? '' : 'is-outside', isToday ? 'is-today' : '', holidayName ? 'is-holiday' : '', isSunday ? 'is-sunday' : ''].join(' ')}
+                          title={holidayName || undefined}
+                          key={key}
+                        >{day}</span>
+                      )
+                    })}
                   </div>
-                </div>
-              </header>
-              <ul className="dash-holiday-list dash-holiday-scroll" aria-label="Government holidays 2026">
-                {displayedHolidays.map((h) => (
-                  <li className={`dash-holiday ${h.daysLeft < 0 ? 'is-past' : ''} ${nextHoliday && nextHoliday.raw === h.raw ? 'is-next' : ''}`} key={h.raw}>
-                    <span className="dash-holiday-date">
-                      <strong>{h.date.getDate()}</strong>
-                      <small>{h.date.toLocaleString('en-IN', { month: 'short' })}</small>
-                    </span>
-                    <span className="dash-holiday-info">
-                      <strong>{h.name}</strong>
-                      <small>{h.date.toLocaleString('en-IN', { weekday: 'long' })} · {h.raw}</small>
-                    </span>
-                    <span className="dash-holiday-badge">
-                      {h.daysLeft < 0 ? 'Passed' : h.daysLeft === 0 ? 'Today' : h.daysLeft === 1 ? 'Tomorrow' : `in ${h.daysLeft}d`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </div>
+                  <div className="dash-legend">
+                    <span><i className="lg-holiday" />Holiday</span>
+                    <span><i className="lg-sunday" />Sunday</span>
+                    <span><i className="lg-today" />Today</span>
+                  </div>
+                </section>
 
-          <footer className="dash-footer">Apna Campus <span>·</span> Student management portal <span>·</span> {today.getFullYear()}</footer>
+                <section className="dash-card dash-holidays" id="holidays">
+                  <header className="dash-card-head">
+                    <h3><span className="dash-head-icon tone-amber"><PartyPopper size={15} /></span>Holiday List</h3>
+                    <div className="dash-holiday-controls">
+                      <div className="dash-holiday-filter-pills">
+                        <button
+                          type="button"
+                          className={`dash-filter-pill ${holidayView === 'all' ? 'active' : ''}`}
+                          onClick={() => setHolidayView('all')}
+                        >
+                          All 2026 ({holidayItems.length})
+                        </button>
+                        <button
+                          type="button"
+                          className={`dash-filter-pill ${holidayView === 'upcoming' ? 'active' : ''}`}
+                          onClick={() => setHolidayView('upcoming')}
+                        >
+                          Upcoming ({holidayItems.filter((h) => h.daysLeft >= 0).length})
+                        </button>
+                      </div>
+                    </div>
+                  </header>
+                  <ul className="dash-holiday-list dash-holiday-scroll" aria-label="Government holidays 2026">
+                    {displayedHolidays.map((h) => (
+                      <li className={`dash-holiday ${h.daysLeft < 0 ? 'is-past' : ''} ${nextHoliday && nextHoliday.raw === h.raw ? 'is-next' : ''}`} key={h.raw}>
+                        <span className="dash-holiday-date">
+                          <strong>{h.date.getDate()}</strong>
+                          <small>{h.date.toLocaleString('en-IN', { month: 'short' })}</small>
+                        </span>
+                        <span className="dash-holiday-info">
+                          <strong>{h.name}</strong>
+                          <small>{h.date.toLocaleString('en-IN', { weekday: 'long' })} · {h.raw}</small>
+                        </span>
+                        <span className="dash-holiday-badge">
+                          {h.daysLeft < 0 ? 'Passed' : h.daysLeft === 0 ? 'Today' : h.daysLeft === 1 ? 'Tomorrow' : `in ${h.daysLeft}d`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+
+              <footer className="dash-footer">Apna Campus <span>·</span> Student management portal <span>·</span> {today.getFullYear()}</footer>
             </div>
           )}
         </div>

@@ -229,3 +229,126 @@
   z-index: 10000;
   animation: slide-in 0.3s ease;
 }
+
+/* Missed Notes Catch-up Banner */
+.missed-notes-banner {
+  background: linear-gradient(135deg, #fefce8, #fef9c3);
+  border: 1.5px solid #fde047;
+  border-radius: 12px;
+  padding: 12px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.missed-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.missed-badge-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fef08a;
+  color: #ca8a04;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.missed-actions-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn-missed-quick-pill {
+  background: #ffffff;
+  border: 1px solid #eab308;
+  color: #a16207;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-missed-quick-pill:hover {
+  background: #fef08a;
+  color: #713f12;
+}
+
+/* Note Card Thumbnail & Preview */
+.note-thumbnail-wrap {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  max-height: 140px;
+  background: #0f172a;
+  margin-bottom: 12px;
+}
+.note-thumbnail-img {
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+.note-card:hover .note-thumbnail-img {
+  transform: scale(1.03);
+}
+.note-type-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  color: #f8fafc;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.note-pdf-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+/* Meta Actions */
+.meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-note-action-icon {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 6px 9px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.btn-note-action-icon:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+.btn-note-action-icon.liked {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #059669;
+}

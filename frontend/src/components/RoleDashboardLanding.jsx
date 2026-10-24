@@ -1031,7 +1031,13 @@ export default function RoleDashboardLanding({
   onToggleSidebar,
 }) {
   // Resolve configuration from prop or account
-  const resolvedKey = roleKey || account?.role || 'super_admin';
+  const rawKey = roleKey || account?.role || 'super_admin';
+  const roleAliases = {
+    hostel: 'warden',
+    hostel_admin: 'warden',
+    scholarship: 'accounts',
+  };
+  const resolvedKey = roleAliases[rawKey] || rawKey;
   const config = ROLE_CONFIGS[resolvedKey] || ROLE_CONFIGS['super_admin'];
 
   // Current live time & date matching Student Dashboard

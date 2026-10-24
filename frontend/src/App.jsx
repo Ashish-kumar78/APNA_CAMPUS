@@ -382,6 +382,26 @@ function App() {
   const [showPublicTimetable, setShowPublicTimetable] = useState(false)
 
   useEffect(() => {
+    // Session restoration across refreshes
+    const savedToken = typeof localStorage !== 'undefined' ? localStorage.getItem('collegeflow_token') : null
+    const savedUser = typeof localStorage !== 'undefined' ? localStorage.getItem('collegeflow_user') : null
+    if (savedToken && savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser)
+        setAccount(parsed)
+        // Verify with backend
+        api.getMe().then((res) => {
+          if (res && res.user) {
+            setAccount(res.user)
+            localStorage.setItem('collegeflow_user', JSON.stringify(res.user))
+          }
+        }).catch(() => {
+          api.logout()
+          setAccount(null)
+        })
+      } catch {}
+    }
+
     if (typeof window !== 'undefined') {
       const hash = window.location.hash || ''
       const search = window.location.search || ''
@@ -413,148 +433,21 @@ function App() {
     } catch {}
     setError('')
     setResetRequested(false)
+    setIsSubmitting(true)
 
     try {
       const res = await api.login(identifier, password)
       if (res && res.success && res.user) {
         setAccount(res.user)
         return
+      } else {
+        setError(res?.message || 'We could not verify those sign-in details. Please check your College ID and password.')
       }
     } catch (apiErr) {
-      // Fallback to local accounts dictionary if server is not reached
-      console.info('Attempting fallback authentication:', apiErr.message)
+      setError(apiErr?.message || 'We could not verify those sign-in details. Please check your College ID and password.')
+    } finally {
+      setIsSubmitting(false)
     }
-
-    const key = identifier.trim().toLowerCase()
-
-    // Accepted passwords: gift123, password123, or Gift@YEAR (auto-generated for admitted students)
-    const isValidPassword = (pwd) =>
-      pwd === 'gift123' ||
-      pwd === 'password123' ||
-      /^Gift@\d{4}$/.test(pwd) // e.g. Gift@2023, Gift@2026
-
-    if (!isValidPassword(password)) {
-      setError('We could not verify those sign-in details. Please check your College ID and password.')
-      return
-    }
-
-    // 1. Check if entered identifier matches any registered student in the store
-    //    (covers both original roll numbers AND auto-generated reg numbers like 23CSE0092)
-    const studentMatch = findStudentByQuery(key)
-    if (studentMatch) {
-      // Accept if password matches their stored defaultPassword OR any accepted password
-      const storedDefaultPwd = studentMatch.defaultPassword
-      if (
-        isValidPassword(password) ||
-        (storedDefaultPwd && password === storedDefaultPwd)
-      ) {
-        setActiveStudent(studentMatch.id)
-        setAccount({
-          role: 'student',
-          ...studentMatch,
-        })
-        return
-      }
-    }
-
-    // 2. Match exact account dictionary (staff / demo accounts)
-    const matchedAccount = accounts[key]
-    if (matchedAccount) {
-      if (matchedAccount.role === 'student') {
-        const activeStd = findStudentByQuery(matchedAccount.registrationNumber) || getActiveStudent()
-        setAccount({ ...matchedAccount, ...(activeStd || {}) })
-      } else {
-        setAccount(matchedAccount)
-      }
-      return
-    }
-
-    // 3. Role-prefix automatic routing for any valid institutional ID
-    if (key.startsWith('super')) {
-      setAccount(accounts['super_admin'])
-      return
-    }
-    if (key.startsWith('mgmt') || key.includes('management') || key.includes('director') || key.includes('trustee')) {
-      setAccount(accounts['management'])
-      return
-    }
-    if (key.startsWith('prin')) {
-      setAccount(accounts['principal'])
-      return
-    }
-    if (key.startsWith('exam') || key.includes('coe')) {
-      setAccount(accounts['exam_cell'])
-      return
-    }
-    if (key.startsWith('lib')) {
-      setAccount(accounts['library'])
-      return
-    }
-    if (key.startsWith('trans') || key.includes('bus')) {
-      setAccount(accounts['transport'])
-      return
-    }
-    if (key.startsWith('place') || key.includes('tpo')) {
-      setAccount(accounts['placement'])
-      return
-    }
-    if (key.startsWith('staff') || key.includes('tech') || key.includes('lab')) {
-      setAccount(accounts['staff'])
-      return
-    }
-    if (key.startsWith('fac') || key.includes('faculty')) {
-      setAccount(accounts['faculty'])
-      return
-    }
-    if (key.startsWith('hod')) {
-      setAccount(accounts['hod'])
-      return
-    }
-    if (key.startsWith('admission')) {
-      setAccount(accounts['admissions'])
-      return
-    }
-    if (key.startsWith('adm')) {
-      setAccount(accounts['admin'])
-      return
-    }
-    if (key.startsWith('sch') || key.includes('scholarship')) {
-      setAccount(accounts['scholarship'])
-      return
-    }
-    if (key.startsWith('acc') || key.includes('account')) {
-      setAccount(accounts['accounts'])
-      return
-    }
-    if (key.startsWith('hostel_admin') || key.includes('hosteladmin')) {
-      setAccount(accounts['hostel_admin'])
-      return
-    }
-    if (key.startsWith('hostel')) {
-      setAccount(accounts['hostel'])
-      return
-    }
-    if (key.startsWith('wrd') || key.includes('warden')) {
-      setAccount(accounts['warden'])
-      return
-    }
-    if (key.startsWith('can') || key.includes('canteen')) {
-      setAccount(accounts['canteen'])
-      return
-    }
-    // 4. Numeric reg number fallback (6-12 digits) — treat as student
-    if (/^\d{6,12}$/.test(key)) {
-      const demoStd = getActiveStudent() || {}
-      setAccount({
-        role: 'student',
-        ...demoStd,
-        registrationNumber: identifier,
-        rollNumber: identifier.slice(-2) || '01',
-      })
-      return
-    }
-
-    setError('We could not verify those sign-in details. Please check your College ID and password.')
   }
 
   const clearUrlHash = () => {
@@ -577,17 +470,6 @@ function App() {
     setIdentifier(roleKey)
     setPassword('gift123')
 
-    if (roleKey === 'student') {
-      const activeStd = getActiveStudent()
-      if (activeStd) {
-        setAccount({
-          role: 'student',
-          ...activeStd
-        })
-        return
-      }
-    }
-
     try {
       const res = await api.login(roleKey, 'gift123')
       if (res && res.success && res.user) {
@@ -595,12 +477,15 @@ function App() {
         return
       }
     } catch (apiErr) {
-      // Fallback
-    }
-
-    const acc = accounts[roleKey]
-    if (acc) {
-      setAccount(acc)
+      // In local development, if backend server is not running, provide demo fallback
+      if (import.meta.env.DEV) {
+        const acc = accounts[roleKey]
+        if (acc) {
+          setAccount(acc)
+          return
+        }
+      }
+      setError('Backend service unavailable. Please ensure the backend server is running.')
     }
   }
 

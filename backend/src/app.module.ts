@@ -19,6 +19,9 @@ import { ReportsModule } from './reports/reports.module';
 import { AdmissionModule } from './admission/admission.module';
 import { ComplaintsModule } from './complaints/complaints.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ManagementModule } from './management/management.module';
+import { PrincipalModule } from './principal/principal.module';
+import { TimetablesModule } from './timetables/timetables.module';
 import { AppController } from './app.controller';
 
 import * as path from 'path';
@@ -53,6 +56,9 @@ import * as path from 'path';
     ReportsModule,
     ComplaintsModule,
     NotificationsModule,
+    ManagementModule,
+    PrincipalModule,
+    TimetablesModule,
   ],
   controllers: [AppController],
 })

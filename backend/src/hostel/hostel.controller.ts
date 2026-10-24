@@ -169,6 +169,13 @@ export class HostelController {
     return { success: true, data: visionResult };
   }
 
+  @Get('complaints/ai-metrics')
+  @ApiOperation({ summary: 'Get AI complaint classifier model training provenance and accuracy metrics' })
+  async getAiMetrics() {
+    const data = await this.hostelService.aiAssignmentService.getAiMetrics();
+    return { success: true, data };
+  }
+
   @Post('complaints')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

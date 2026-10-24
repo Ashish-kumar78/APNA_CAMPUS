@@ -148,10 +148,12 @@ export default function AdminComplaintsConsole() {
 
   useEffect(() => {
     loadData();
-    // Load AI metrics from microservice
-    fetch('http://localhost:8000/metrics')
-      .then(r => r.json())
-      .then(d => setAiMetrics(d))
+    // Load AI metrics from backend proxy
+    api.getAiMetrics()
+      .then(res => {
+        if (res?.data) setAiMetrics(res.data);
+        else if (res) setAiMetrics(res);
+      })
       .catch(() => {});
   }, []);
 

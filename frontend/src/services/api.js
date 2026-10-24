@@ -1,10 +1,13 @@
-// Central API Client connecting Frontend to NestJS Backend (http://localhost:4000/api)
+// Central API Client connecting Frontend to NestJS Backend
 
-export const API_BASE_URL =
+const rawBase =
   import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
   (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
     ? 'https://apna-campus-12lt.onrender.com/api'
     : 'http://localhost:4000/api');
+
+export const API_BASE_URL = rawBase.replace(/\/+$/, '');
 
 function getAuthHeader() {
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('collegeflow_token') : null;
@@ -12,19 +15,48 @@ function getAuthHeader() {
 }
 
 async function request(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
+  // Normalize path to prevent duplicate /api prefixes e.g. /api/api
+  let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (API_BASE_URL.endsWith('/api') && cleanEndpoint.startsWith('/api/')) {
+    cleanEndpoint = cleanEndpoint.replace(/^\/api/, '');
+  }
+  const url = `${API_BASE_URL}${cleanEndpoint}`;
+
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...getAuthHeader(),
     ...options.headers,
   };
 
   try {
     const response = await fetch(url, { ...options, headers });
-    const data = await response.json();
+    
+    // Parse response
+    let data;
+    const contentType = (response.headers && typeof response.headers.get === 'function' ? response.headers.get('content-type') : '') || '';
+    if (contentType.includes('application/json') || (!contentType && typeof response.json === 'function')) {
+      data = await response.json();
+    } else {
+      const text = typeof response.text === 'function' ? await response.text() : '';
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: text };
+      }
+    }
+
+    if (!response.ok) {
+      const errorMsg = data?.message || data?.error || `HTTP error ${response.status}: ${response.statusText}`;
+      const err = new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+      err.status = response.status;
+      err.data = data;
+      throw err;
+    }
+
     return data;
   } catch (error) {
-    console.warn(`API call to ${endpoint} failed:`, error.message);
+    console.warn(`API call to ${cleanEndpoint} failed:`, error.message);
     throw error;
   }
 }
@@ -181,6 +213,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  getAiMetrics: () => request('/hostel/complaints/ai-metrics'),
   getTriageComplaints: () => request('/hostel/complaints/triage'),
   updateComplaintStatus: (id, statusOrPayload, assignedStaff, resolutionNotes) => {
     const body = typeof statusOrPayload === 'object'

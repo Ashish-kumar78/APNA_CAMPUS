@@ -30,8 +30,8 @@ export class AuthService {
       throw new UnauthorizedException('We could not verify those sign-in details. Please check your College ID and password.');
     }
 
-    // Support both the hashed password check and common dev demo fallback (gift123 / password123)
-    const isValid = await bcrypt.compare(dto.password, user.passwordHash) || dto.password === 'gift123' || dto.password === 'password123';
+    // Verify submitted password against securely stored password hash
+    const isValid = await bcrypt.compare(dto.password, user.passwordHash);
 
     if (!isValid) {
       throw new UnauthorizedException('We could not verify those sign-in details. Invalid password.');
@@ -223,11 +223,11 @@ export class AuthService {
       data: { resetToken, tokenExpiresAt },
     });
 
+    const isProduction = process.env.NODE_ENV === 'production';
     return {
       success: true,
-      message: 'Password reset link and security token generated.',
-      resetToken, // Included for easy offline/demo evaluation
-      expiresAt: tokenExpiresAt,
+      message: 'If an account exists with those details, a reset token has been issued to the registered channel.',
+      ...(isProduction ? {} : { debugToken: resetToken, expiresAt: tokenExpiresAt }),
     };
   }
 

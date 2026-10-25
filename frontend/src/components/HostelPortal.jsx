@@ -839,17 +839,26 @@ export default function HostelPortal({ account, onLogout }) {
               roleKey="warden"
               account={account}
               onLogout={onLogout}
-              onNavigate={(target) => {
+              onNavigateTab={(target) => {
                 if (target === 'rooms') setActiveTab('rooms');
                 else if (target === 'complaints') setActiveTab('complaints');
-                else if (target === 'maintenance') setActiveTab('maintenance-repairs');
+                else if (target === 'maintenance') setActiveTab('complaints');
                 else if (target === 'attendance') setActiveTab('attendance');
                 else if (target === 'leave') setActiveTab('leave-mgmt');
                 else if (target === 'mess') setActiveTab('mess-dining');
                 else if (target) setActiveTab(target);
                 else setActiveTab('rooms');
               }}
-
+              onNavigate={(target) => {
+                if (target === 'rooms') setActiveTab('rooms');
+                else if (target === 'complaints') setActiveTab('complaints');
+                else if (target === 'maintenance') setActiveTab('complaints');
+                else if (target === 'attendance') setActiveTab('attendance');
+                else if (target === 'leave') setActiveTab('leave-mgmt');
+                else if (target === 'mess') setActiveTab('mess-dining');
+                else if (target) setActiveTab(target);
+                else setActiveTab('rooms');
+              }}
             />
           )}
 

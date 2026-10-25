@@ -93,13 +93,17 @@ export default function AppHeader({
         {/* Notification Bell */}
         <button
           type="button"
-          className="apna-topbar-icon-btn"
-          onClick={onNotificationClick || (() => setUserMenuOpen(prev => !prev))}
-          title="Campus Notifications"
-          aria-label="Campus Notifications"
+          className={`apna-topbar-icon-btn ${unreadCount > 0 ? 'has-unread' : ''}`}
+          onClick={onNotificationClick}
+          title={unreadCount > 0 ? `Campus Notifications (${unreadCount} unread)` : 'Campus Notifications'}
+          aria-label={unreadCount > 0 ? `Campus Notifications, ${unreadCount} unread items` : 'Campus Notifications'}
         >
           <Bell size={18} />
-          {unreadCount > 0 && <span className="apna-notif-dot" />}
+          {unreadCount > 0 && (
+            <span className="apna-notif-pill">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </button>
 
         {/* User Pill Button */}

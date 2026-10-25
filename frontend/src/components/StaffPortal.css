@@ -1,19 +1,136 @@
-/* Non-Teaching Staff Portal Stylesheet */
-.erp-staff-layout {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f8fafc;
+/* ==============================================================================
+   Apna Campus ERP — Laboratory Staff Portal Professional Stylesheet
+   NAAC A++ Autonomous College Management ERP
+   ============================================================================== */
+
+.staff-portal-content-wrap {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #0f172a;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-.erp-staff-badge {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #14b8a6, #0d9488);
-  display: flex;
+/* Badge classes */
+.apna-badge-danger {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.apna-badge-warning {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+}
+
+.apna-badge-info {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+.apna-badge-success {
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+/* Enterprise status badges */
+.erp-status-badge {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.4);
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.erp-status-operational {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.erp-status-warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.erp-status-critical {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.erp-status-in-progress {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+/* Table styling helpers */
+.staff-table-wrap {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.staff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.staff-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.staff-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.staff-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* Modal and Drawers */
+@keyframes apna-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.staff-modal-fade {
+  animation: apna-fade-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Print optimizations */
+@media print {
+  .apna-sidebar,
+  .apna-topbar,
+  .apna-breadcrumb-bar,
+  button,
+  .apna-sidebar-footer {
+    display: none !important;
+  }
+  .staff-portal-content-wrap {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  body {
+    background: #ffffff !important;
+  }
 }

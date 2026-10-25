@@ -4,6 +4,8 @@ import AppHeader from './AppHeader.jsx';
 import AppSidebar from './AppSidebar.jsx';
 import BreadcrumbRow from './BreadcrumbRow.jsx';
 import PageHeader from './PageHeader.jsx';
+import NotificationDrawer from './NotificationDrawer.jsx';
+import { notificationsStore } from '../../services/notificationsStore.js';
 
 export default function AppLayout({
   account,
@@ -19,23 +21,46 @@ export default function AppLayout({
   breadcrumbs,
   pageTitle,
   pageSubtitle,
-  pageActions,
+  pageActions = null,
+  defaultSidebarOpen,
   children
 }) {
-  // Sidebar state: Completely hidden by default on login.
-  // Persists only if explicitly opened by the user.
+  // Sidebar state: open by default on desktop if not explicitly set
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
-      return localStorage.getItem('apna_sidebar_open') === 'true';
+      const stored = localStorage.getItem('apna_sidebar_open');
+      if (stored !== null) return stored === 'true';
+      if (defaultSidebarOpen !== undefined) return Boolean(defaultSidebarOpen);
+      return typeof window !== 'undefined' ? window.innerWidth > 1024 : true;
     } catch {
-      return false;
+      return true;
     }
   });
 
   // Mobile drawer open state
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Global Notification Drawer state & Store synchronization for all roles
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+  const [storeUnreadCount, setStoreUnreadCount] = useState(() => {
+    return account ? notificationsStore.getUnreadCount(account) : 0;
+  });
 
+  useEffect(() => {
+    if (!account) return;
+    const updateUnread = () => {
+      setStoreUnreadCount(notificationsStore.getUnreadCount(account));
+    };
+    updateUnread();
+    const unsubscribe = notificationsStore.subscribe(updateUnread);
+    return () => unsubscribe();
+  }, [account]);
+
+  useEffect(() => {
+    const handleOpenNotifs = () => setNotificationDrawerOpen(true);
+    window.addEventListener('open_notifications_drawer', handleOpenNotifs);
+    return () => window.removeEventListener('open_notifications_drawer', handleOpenNotifs);
+  }, []);
 
   // Close mobile drawer on navigation / activeTab change
   useEffect(() => {
@@ -134,6 +159,9 @@ export default function AppLayout({
     !isDashboardTab &&
     Boolean(resolvedPageTitle || resolvedPageSubtitle || pageActions);
 
+  const effectiveUnreadCount = unreadCount !== undefined && unreadCount > 0 ? unreadCount : storeUnreadCount;
+  const handleBellClick = onNotificationClick || (() => setNotificationDrawerOpen(prev => !prev));
+
   return (
     <div className={`apna-app-layout ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
       {/* 1. Global Top Navigation Bar */}
@@ -142,8 +170,8 @@ export default function AppLayout({
         onToggleSidebar={handleToggleSidebar}
         sidebarOpen={sidebarOpen}
         onLogout={onLogout}
-        unreadCount={unreadCount}
-        onNotificationClick={onNotificationClick}
+        unreadCount={effectiveUnreadCount}
+        onNotificationClick={handleBellClick}
         portalName={portalName}
       />
 
@@ -189,6 +217,13 @@ export default function AppLayout({
         </main>
       </div>
 
+      {/* Universal Institutional Notification Drawer for all roles */}
+      <NotificationDrawer
+        isOpen={notificationDrawerOpen}
+        onClose={() => setNotificationDrawerOpen(false)}
+        account={account}
+        onNavigateTab={onTabChange}
+      />
     </div>
   );
 }

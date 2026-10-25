@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Award,
   Bell,
@@ -30,6 +30,7 @@ import {
 } from 'lucide-react'
 import InternshipStudentProfile from '../components/InternshipStudentProfile.jsx'
 import './InternshipPage.css'
+import placementStore from '../services/placementStore.js'
 
 const internships = [
   {
@@ -137,9 +138,10 @@ const ListIcon = ({ size = 20, className = '' }) => (
   </svg>
 )
 
-// ── The 6 Sections matching User Screenshot ──
+// ── The 7 Sections with Published Drives matching User Requirements ──
 const INTERNSHIP_SECTIONS = [
   { id: 'dashboard', label: 'Dashboard', prefix: '»' },
+  { id: 'opportunities', label: 'Internship Drives', prefix: '»' },
   { id: 'enrollment', label: 'Enrollment', prefix: '»' },
   { id: 'bonafide', label: 'Apply Internship Bonafide', prefix: '»' },
   { id: 'feedback', label: 'Feedback', prefix: '»' },
@@ -152,6 +154,27 @@ export default function InternshipPage({ account }) {
   const [search, setSearch] = useState('')
   const [applied, setApplied] = useState({ APP001: true, APP002: true })
   const [toastMsg, setToastMsg] = useState('')
+  const [selectedInternDetail, setSelectedInternDetail] = useState(null)
+  const [internshipsList, setInternshipsList] = useState(() => {
+    const published = placementStore.getPublishedInternships()
+    return published.length > 0 ? published : internships
+  })
+
+  // Synchronize live with Placement Cell published internships
+  useEffect(() => {
+    const syncInternships = () => {
+      const published = placementStore.getPublishedInternships()
+      if (published.length > 0) {
+        setInternshipsList(published)
+      }
+    }
+    const unsub = placementStore.subscribe(syncInternships)
+    window.addEventListener('cms_placement_updated', syncInternships)
+    return () => {
+      unsub()
+      window.removeEventListener('cms_placement_updated', syncInternships)
+    }
+  }, [])
 
   const showToast = (msg) => {
     setToastMsg(msg)
@@ -508,14 +531,27 @@ export default function InternshipPage({ account }) {
   // ── Online Examination State ──
   const [examLaunched, setExamLaunched] = useState(false)
 
-  const filteredInternships = internships.filter((i) => {
+  const filteredInternships = internshipsList.filter((i) => {
     const q = search.toLowerCase()
-    return !q || i.company.toLowerCase().includes(q) || i.role.toLowerCase().includes(q) || i.skills.some((s) => s.toLowerCase().includes(q))
+    return !q || (i.company || '').toLowerCase().includes(q) || (i.role || i.title || '').toLowerCase().includes(q) || (i.requiredSkills || i.skills || []).some((s) => s.toLowerCase().includes(q))
   })
 
   function applyFor(intern) {
+    const internRole = intern.role || intern.title || 'Intern'
     setApplied((prev) => ({ ...prev, [intern.id]: true }))
-    showToast(`Application submitted for "${intern.role}" at ${intern.company}. You will receive updates at your registered email.`)
+    placementStore.addStudentApplication({
+      studentName: studentDisplayName,
+      regNo: studentRoll,
+      rollNo: studentRoll,
+      branch: studentBranch,
+      deptCode: 'CSE',
+      cgpa: 8.42,
+      company: intern.company,
+      jobRole: internRole,
+      ctcOffered: intern.stipend || 'Stipend based',
+      notes: 'Applied via student Internship Portal section.',
+    })
+    showToast(`Application submitted for "${internRole}" at ${intern.company}. You will receive updates at your registered email.`)
   }
 
   return (
@@ -593,6 +629,159 @@ export default function InternshipPage({ account }) {
         <div className="internship-dashboard-section">
           {/* Exact match to User Screenshots: Info, Attendance, Evaluation & Marks, ID Card */}
           <InternshipStudentProfile account={account} />
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION: INTERNSHIP OPPORTUNITIES (MANAGED & PUBLISHED BY T&P CELL)
+          ───────────────────────────────────────────────────────────── */}
+      {activeSection === 'opportunities' && (
+        <div className="internship-opportunities-section" style={{ padding: '0 0 24px 0' }}>
+          <div className="erp-section-header-row" style={{ marginBottom: '16px' }}>
+            <div className="erp-section-title">
+              <Briefcase size={20} className="erp-list-icon" color="#2563eb" />
+              <span>Published Corporate Internship Drives ({filteredInternships.length})</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="Search by company, role, skill..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  width: '260px',
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+            {filteredInternships.map((intern) => {
+              const isClosed = (intern.status || '').toLowerCase() === 'closed'
+              const isApplied = applied[intern.id]
+              const skills = intern.requiredSkills || intern.skills || []
+
+              return (
+                <div
+                  key={intern.id}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '10px',
+                          background: intern.color || '#2563eb',
+                          color: '#fff',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {intern.logo || (intern.company ? intern.company.slice(0, 2).toUpperCase() : 'IN')}
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
+                            {intern.role || intern.title}
+                          </h4>
+                          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+                            {intern.company}
+                          </span>
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: '10.5px',
+                        fontWeight: 700,
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        background: isClosed ? '#f1f5f9' : '#ecfdf5',
+                        color: isClosed ? '#64748b' : '#059669',
+                        border: `1px solid ${isClosed ? '#cbd5e1' : '#a7f3d0'}`
+                      }}>
+                        {isClosed ? 'Closed' : intern.workMode || 'Active'}
+                      </span>
+                    </div>
+
+                    <p style={{ margin: '8px 0 12px', fontSize: '12px', color: '#475569', lineHeight: 1.5 }}>
+                      {intern.description}
+                    </p>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', fontSize: '11px', color: '#334155' }}>
+                      <span style={{ background: '#f8fafc', padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ color: '#059669', fontWeight: 700 }}>💰</span> {intern.stipend || 'Stipend'}
+                      </span>
+                      <span style={{ background: '#f8fafc', padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={11} color="#64748b" /> {intern.duration || '2 Months'}
+                      </span>
+                      <span style={{ background: '#f8fafc', padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <CalendarDays size={11} color="#64748b" /> Deadline: {intern.deadline}
+                      </span>
+                      {intern.minCgpa && (
+                        <span style={{ background: '#f8fafc', padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <CheckCircle2 size={11} color="#2563eb" /> Min CGPA: {intern.minCgpa}
+                        </span>
+                      )}
+                    </div>
+
+                    {skills.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '14px' }}>
+                        {skills.map((s, idx) => (
+                          <span key={idx} style={{ background: '#f1f5f9', color: '#475569', fontSize: '10.5px', padding: '2px 7px', borderRadius: '4px', fontWeight: 500 }}>
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="erp-btn-secondary"
+                      style={{ fontSize: '11px', padding: '5px 10px' }}
+                      onClick={() => setSelectedInternDetail(intern)}
+                    >
+                      View Details
+                    </button>
+                    {isClosed ? (
+                      <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>Closed</span>
+                    ) : isApplied ? (
+                      <span style={{ fontSize: '11.5px', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Check size={14} /> Applied
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-primary-internship"
+                        style={{ fontSize: '11.5px', padding: '6px 14px' }}
+                        onClick={() => applyFor(intern)}
+                      >
+                        Apply for Internship →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
@@ -1803,6 +1992,105 @@ export default function InternshipPage({ account }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Opportunity Full Details View */}
+      {selectedInternDetail && (
+        <div className="erp-modal-overlay" onClick={() => setSelectedInternDetail(null)}>
+          <div className="erp-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className="erp-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: selectedInternDetail.color || '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                  {selectedInternDetail.logo || 'IN'}
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', color: '#0f172a' }}>
+                    {selectedInternDetail.role || selectedInternDetail.title}
+                  </h4>
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+                    {selectedInternDetail.company} · {selectedInternDetail.location}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="erp-modal-close"
+                onClick={() => setSelectedInternDetail(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12.5px', color: '#334155' }}>
+              <div>
+                <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Role Description:</strong>
+                <p style={{ margin: 0, lineHeight: 1.6, color: '#475569' }}>
+                  {selectedInternDetail.description}
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div><strong>Stipend:</strong> {selectedInternDetail.stipend || 'Unpaid / Training'}</div>
+                <div><strong>Duration:</strong> {selectedInternDetail.duration || '2 Months'}</div>
+                <div><strong>Work Mode:</strong> {selectedInternDetail.workMode || 'On-site'}</div>
+                <div><strong>Application Deadline:</strong> {selectedInternDetail.deadline}</div>
+                <div><strong>Minimum CGPA:</strong> {selectedInternDetail.minCgpa || 'No minimum'}</div>
+                <div><strong>Vacancies:</strong> {selectedInternDetail.openings || 'Limited'} Openings</div>
+              </div>
+
+              <div>
+                <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Eligible Branches:</strong>
+                <span>
+                  {Array.isArray(selectedInternDetail.eligibleBranches)
+                    ? selectedInternDetail.eligibleBranches.join(', ')
+                    : selectedInternDetail.eligibleBranches || 'All Branches'}
+                </span>
+              </div>
+
+              <div>
+                <strong style={{ display: 'block', color: '#0f172a', marginBottom: '4px' }}>Application Instructions &amp; Required Documents:</strong>
+                <p style={{ margin: 0, color: '#475569' }}>
+                  {selectedInternDetail.applicationInstructions || 'Apply through student portal with updated profile.'}
+                </p>
+                <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                  Required: {selectedInternDetail.requiredDocs || 'Resume, College Bonafide/NOC'}
+                </small>
+              </div>
+
+              {selectedInternDetail.contactInfo && (
+                <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                  <strong>HR / Cell Contact:</strong> {selectedInternDetail.contactInfo}
+                </div>
+              )}
+            </div>
+
+            <div className="erp-modal-footer">
+              <button
+                type="button"
+                className="erp-btn-secondary"
+                onClick={() => setSelectedInternDetail(null)}
+              >
+                Close
+              </button>
+              {applied[selectedInternDetail.id] ? (
+                <span style={{ fontSize: '12px', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Check size={16} /> Application Already Submitted
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-primary-internship"
+                  onClick={() => {
+                    applyFor(selectedInternDetail)
+                    setSelectedInternDetail(null)
+                  }}
+                >
+                  <CheckCircle2 size={14} /> Submit Application
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

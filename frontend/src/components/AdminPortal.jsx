@@ -325,7 +325,7 @@ const sampleAutofillStudent = {
   class12Board: 'CHSE Odisha',
 };
 
-export default function AdminPortal({ account, onLogout, onSwitchRole }) {
+export default function AdminPortal({ account, onLogout, onSwitchRole, initialTab }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const greeting = useTimeGreeting();
   const [currentLiveTime, setCurrentLiveTime] = useState(() => new Date());
@@ -355,7 +355,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
     year: 'numeric'
   });
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(initialTab || account?.initialTab || 'dashboard');
   const [overviewOpen, setOverviewOpen] = useState(true);
   const [academicAdminOpen, setAcademicAdminOpen] = useState(true);
   const [examinationOpen, setExaminationOpen] = useState(true);
@@ -1372,7 +1372,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole }) {
       case 'students':
         return {
           title: 'Student Master Directory & Verification Registry',
-          subtitle: `${studentsList.length} Total Enrolled Students across all Departments and Sections.`
+          subtitle: `${(students || []).length} Total Enrolled Students across all Departments and Sections.`
         };
       case 'faculty':
         return {

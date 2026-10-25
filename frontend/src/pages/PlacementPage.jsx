@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Award,
   BookOpen,
@@ -15,8 +15,9 @@ import {
   Video,
 } from 'lucide-react'
 import './PlacementPage.css'
+import placementStore from '../services/placementStore.js'
 
-const companies = [
+const DEFAULT_COMPANIES = [
   { name: 'TCS', logo: 'TCS', color: '#1a5276', package: '3.6 LPA', positions: ['Software Engineer', 'Data Analyst'], deadline: '25 Oct 2026' },
   { name: 'Infosys', logo: 'IF', color: '#007DC6', package: '3.4 LPA', positions: ['Systems Engineer'], deadline: '28 Oct 2026' },
   { name: 'Wipro', logo: 'WP', color: '#521472', package: '3.5 LPA', positions: ['Project Engineer'], deadline: '01 Nov 2026' },
@@ -25,7 +26,7 @@ const companies = [
   { name: 'Tech Mahindra', logo: 'TM', color: '#d9272e', package: '3.25 LPA', positions: ['Software Engineer'], deadline: '15 Nov 2026' },
 ]
 
-const courses = [
+const DEFAULT_COURSES = [
   { title: 'Aptitude & Reasoning Bootcamp', provider: 'T&P Cell', duration: '20 hours', enrolled: true, progress: 65 },
   { title: 'Resume Writing Workshop', provider: 'T&P Cell', duration: '3 hours', enrolled: true, progress: 100 },
   { title: 'Data Structures for Interviews', provider: 'Self-paced', duration: '15 hours', enrolled: false, progress: 0 },
@@ -46,12 +47,86 @@ export default function PlacementPage() {
   const [activeTab, setActiveTab] = useState('drive')
   const [registered, setRegistered] = useState({})
   const [registerMsg, setRegisterMsg] = useState('')
+  const [drivesList, setDrivesList] = useState(() => {
+    const published = placementStore.getPublishedDrives()
+    return published.length > 0 ? published : DEFAULT_COMPANIES
+  })
+  const [coursesList, setCoursesList] = useState(() => {
+    const list = placementStore.getTrainingPrograms()
+    return list.length > 0 ? list : DEFAULT_COURSES
+  })
+
+  // Synchronize in real time with Placement Cell actions
+  useEffect(() => {
+    const syncData = () => {
+      const published = placementStore.getPublishedDrives()
+      if (published.length > 0) {
+        setDrivesList(published)
+      }
+      const trn = placementStore.getTrainingPrograms()
+      if (trn.length > 0) {
+        setCoursesList(trn)
+      }
+    }
+
+    const unsub = placementStore.subscribe(syncData)
+    window.addEventListener('cms_placement_updated', syncData)
+    return () => {
+      unsub()
+      window.removeEventListener('cms_placement_updated', syncData)
+    }
+  }, [])
 
   function register(company) {
-    setRegistered((prev) => ({ ...prev, [company.name]: true }))
-    setRegisterMsg(`Registered for ${company.name} placement drive. Check your email for further details.`)
+    const compName = company.company || company.name
+    const compRole = company.role || (company.positions && company.positions[0]) || 'Engineer'
+    setRegistered((prev) => ({ ...prev, [compName]: true }))
+
+    // Sync to centralized ATS application pipeline
+    placementStore.addStudentApplication({
+      studentName: 'BISHNU PRASAD SAHOO',
+      regNo: '2401432265',
+      rollNo: '2401432265',
+      branch: 'Computer Science & Engineering',
+      deptCode: 'CSE',
+      cgpa: 8.42,
+      company: compName,
+      jobRole: compRole,
+      ctcOffered: company.packageOffered || company.package || 'As per drive specifications',
+      notes: 'Registered through student Self Development & Placement module.',
+    })
+
+    setRegisterMsg(`Registered for ${compName} placement drive. Check your email for further details.`)
     setTimeout(() => setRegisterMsg(''), 5000)
   }
+
+  // Map drives to uniform card representation
+  const displayCompanies = drivesList.map((d) => {
+    return {
+      name: d.company || d.name,
+      logo: d.companyLogo || d.logo || (d.company || d.name || '').slice(0, 3).toUpperCase(),
+      color: d.companyColor || d.color || '#1a5276',
+      package: d.packageOffered || d.package || 'Competitive',
+      positions: d.positions || [d.role || 'Software Engineer'],
+      deadline: d.recruitmentProcess?.applicationDeadline || d.deadline || d.driveDate || 'Upcoming',
+      isClosed: (d.status || '').toLowerCase() === 'closed',
+      minCgpa: d.eligibilityCriteria?.minCgpa,
+      branches: Array.isArray(d.eligibilityCriteria?.allowedBranches)
+        ? d.eligibilityCriteria.allowedBranches.join(', ')
+        : d.eligibilityCriteria?.allowedBranches,
+      raw: d,
+    }
+  })
+
+  // Map courses to uniform representation
+  const displayCourses = coursesList.map((c) => ({
+    title: c.title,
+    provider: c.trainer || c.provider || 'T&P Cell',
+    duration: c.duration || '10 hours',
+    enrolled: c.enrolled !== undefined ? c.enrolled : (c.enrolledCount > 0),
+    progress: c.progress !== undefined ? c.progress : 0,
+    status: c.status || 'Active',
+  }))
 
   return (
     <div className="placement-page">
@@ -121,7 +196,7 @@ export default function PlacementPage() {
 
       {activeTab === 'drive' && (
         <div className="placement-drive-list">
-          {companies.map((company) => (
+          {displayCompanies.map((company) => (
             <div key={company.name} className="company-card">
               <div className="company-logo" style={{ background: company.color }}>{company.logo}</div>
               <div className="company-body">
@@ -130,10 +205,17 @@ export default function PlacementPage() {
                   <span><Star size={11} />Package: {company.package}</span>
                   <span><Briefcase size={11} />Roles: {company.positions.join(', ')}</span>
                   <span><FileText size={11} />Deadline: {company.deadline}</span>
+                  {company.minCgpa && (
+                    <span style={{ color: '#0284c7' }}><Target size={11} />Min CGPA: {company.minCgpa}</span>
+                  )}
                 </div>
               </div>
               <div className="company-action">
-                {registered[company.name] ? (
+                {company.isClosed ? (
+                  <span className="badge-status" style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 600 }}>
+                    Applications Closed
+                  </span>
+                ) : registered[company.name] ? (
                   <span className="company-registered"><Check size={13} />Registered</span>
                 ) : (
                   <button className="company-register-btn" onClick={() => register(company)}>
@@ -148,7 +230,7 @@ export default function PlacementPage() {
 
       {activeTab === 'courses' && (
         <div className="skill-courses-list">
-          {courses.map((course, i) => (
+          {displayCourses.map((course, i) => (
             <div key={i} className={`skill-course-card ${course.enrolled ? 'enrolled' : ''}`}>
               <div className="skill-course-icon">
                 {course.progress === 100 ? <Award size={20} /> : course.enrolled ? <Video size={20} /> : <BookOpen size={20} />}

@@ -157,6 +157,38 @@
   border: 2px solid #ffffff;
 }
 
+.apna-notif-pill {
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(220, 38, 38, 0.4);
+  line-height: 1;
+}
+
+.apna-topbar-icon-btn.has-unread {
+  color: #1e40af;
+  border-color: #bfdbfe;
+  background: #f0f7ff;
+}
+
+.apna-topbar-icon-btn.has-unread:hover {
+  background: #e0f0fe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
 .apna-user-pill-btn {
   display: flex;
   align-items: center;
@@ -465,6 +497,35 @@ button.apna-breadcrumb-item:hover {
   padding: 6px 10px;
   margin: 0;
   transition: opacity 0.15s ease;
+}
+
+.apna-sidebar-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+}
+
+.apna-sidebar-section-toggle:hover .apna-sidebar-section-title {
+  color: #94a3b8;
+}
+
+.apna-sidebar-section-chevron {
+  color: #64748b;
+  padding-right: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.apna-sidebar-section-toggle:hover .apna-sidebar-section-chevron {
+  color: #cbd5e1;
 }
 
 .apna-sidebar-item {

@@ -34,12 +34,24 @@ import {
   Sparkles,
   Printer,
   UserCheck,
-  Info
+  Info,
+  Wrench,
+  History,
+  CreditCard
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import PrincipalDepartmentModule from './PrincipalModules/PrincipalDepartmentModule.jsx';
+import PrincipalExamOversightModule from './PrincipalModules/PrincipalExamOversightModule.jsx';
+import PrincipalFinanceModule from './PrincipalModules/PrincipalFinanceModule.jsx';
+import PrincipalFacultyStaffModule from './PrincipalModules/PrincipalFacultyStaffModule.jsx';
+import PrincipalInfrastructureModule from './PrincipalModules/PrincipalInfrastructureModule.jsx';
+import PrincipalAccreditationModule from './PrincipalModules/PrincipalAccreditationModule.jsx';
+import PrincipalGrievanceModule from './PrincipalModules/PrincipalGrievanceModule.jsx';
+import PrincipalCalendarModule from './PrincipalModules/PrincipalCalendarModule.jsx';
+import PrincipalAuditModule from './PrincipalModules/PrincipalAuditModule.jsx';
 import './PrincipalPortal.css';
 import './SuperAdminPortal.css';
 import { api } from '../services/api.js';
@@ -331,12 +343,36 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
       ]
     },
     {
-      title: 'APPROVALS & DISPATCH',
+      title: 'ACADEMIC & DEPARTMENT MANAGEMENT',
+      items: [
+        { id: 'departments', label: 'Department & HOD Management', icon: GraduationCap },
+        { id: 'examinations', label: 'Examination & Results Oversight', icon: FileText },
+      ]
+    },
+    {
+      title: 'FINANCE & INSTITUTIONAL RESOURCES',
+      items: [
+        { id: 'finance', label: 'Finance & Budget Oversight', icon: TrendingUp },
+        { id: 'faculty_staff', label: 'Faculty & Staff Overview', icon: Users },
+        { id: 'infrastructure', label: 'Infrastructure & Facilities', icon: Wrench },
+      ]
+    },
+    {
+      title: 'APPROVALS & COMMUNICATION',
       items: [
         { id: 'leaves', label: 'Leave Approvals', icon: CalendarCheck, badge: pendingLeavesCount || undefined },
         { id: 'notices', label: 'Official Circulars', icon: Megaphone, badge: pendingNoticesCount || undefined },
         { id: 'report-generation', label: 'Report Generation', icon: FileSpreadsheet },
         { id: 'campus-connect', label: 'Campus Connect Broadcast', icon: MessageSquare },
+      ]
+    },
+    {
+      title: 'COMPLIANCE & ADMINISTRATION',
+      items: [
+        { id: 'accreditation', label: 'Accreditation & Compliance', icon: ShieldCheck },
+        { id: 'grievances', label: 'Grievance & Disciplinary Oversight', icon: AlertTriangle },
+        { id: 'calendar_events', label: 'Institutional Calendar & Events', icon: CalendarDays },
+        { id: 'audit_trail', label: 'Audit Trail & Activity Logs', icon: History },
       ]
     }
   ];
@@ -372,6 +408,56 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
         return {
           title: 'Master ERP Compliance & Accreditations',
           subtitle: 'Generate accredited summaries for Senate, AICTE, and NAAC.'
+        };
+      case 'campus-connect':
+        return {
+          title: 'Campus Connect Broadcast',
+          subtitle: 'Institutional announcements, department channels, and faculty messaging.'
+        };
+      case 'departments':
+        return {
+          title: 'Department & HOD Management',
+          subtitle: 'Academic units, HOD leadership roster, syllabus pace, and departmental reports.'
+        };
+      case 'examinations':
+        return {
+          title: 'Examination & Results Oversight',
+          subtitle: 'Autonomous exam schedules, moderation status, and official gazette clearance.'
+        };
+      case 'finance':
+        return {
+          title: 'Finance & Budget Oversight',
+          subtitle: 'Simulated budget allocation, fee realization, and capital expenditure queues.'
+        };
+      case 'faculty_staff':
+        return {
+          title: 'Faculty & Staff Overview',
+          subtitle: 'Cadre distribution, AICTE cadre ratios, attendance, and administrative grant approvals.'
+        };
+      case 'infrastructure':
+        return {
+          title: 'Infrastructure & Facilities Oversight',
+          subtitle: 'Smart lecture halls, research laboratories, campus energy, and maintenance tickets.'
+        };
+      case 'accreditation':
+        return {
+          title: 'Accreditation & Compliance Monitoring',
+          subtitle: 'NAAC A++, NBA Tier-1 accreditation, SSR criteria metrics, and evidence dossiers.'
+        };
+      case 'grievances':
+        return {
+          title: 'Grievance & Disciplinary Oversight',
+          subtitle: 'Confidential executive grievance redressal chamber and remedial directives.'
+        };
+      case 'calendar_events':
+        return {
+          title: 'Institutional Academic Calendar & Events',
+          subtitle: 'Autonomous milestones, exam dates, Senate sessions, symposiums, and holidays.'
+        };
+      case 'audit_trail':
+        return {
+          title: 'Administrative Audit Trail & Activity Logs',
+          subtitle: 'Tamper-evident simulated audit records of executive clearances and transactions.'
         };
       default:
         return {
@@ -422,63 +508,82 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
         pageSubtitle={principalHeading.subtitle}
       >
         <div className="principal-portal-content-wrap">
-        {activeTab === 'governance' ? (
-          <RoleDashboardLanding
-            account={account}
-            roleKey="principal"
-            onLogout={onLogout}
-            onSwitchRole={onSwitchRole}
-            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-            onNavigateTab={(tabId) => {
-              if (tabId === 'academic') setActiveTab('academic_health');
-              else if (tabId === 'approvals') setActiveTab('leaves');
-              else if (tabId === 'reports') setActiveTab('report-generation');
-            }}
-          />
-        ) : (
-          <>
-
-
-        <div className="erp-content-body">
-          {/* Quick Action Navigation Buttons */}
-          <div className="principal-quick-actions">
-            <button
-              className={`principal-quick-btn ${activeTab === 'governance' ? 'active' : ''}`}
-              onClick={() => setActiveTab('governance')}
-            >
-              <Building2 size={15} /> Campus Overview
-            </button>
-            <button
-              className={`principal-quick-btn ${activeTab === 'leaves' ? 'active' : ''}`}
-              onClick={() => setActiveTab('leaves')}
-            >
-              <CalendarCheck size={15} /> Leave Queue ({pendingLeavesCount} Pending)
-            </button>
-            <button
-              className={`principal-quick-btn ${activeTab === 'notices' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notices')}
-            >
-              <Megaphone size={15} /> Publish Circular
-            </button>
-            <button
-              className={`principal-quick-btn ${activeTab === 'academic_health' ? 'active' : ''}`}
-              onClick={() => setActiveTab('academic_health')}
-            >
-              <Award size={15} /> Academic Analytics
-            </button>
-            <button
-              className={`principal-quick-btn ${activeTab === 'timetable' ? 'active' : ''}`}
-              onClick={() => setActiveTab('timetable')}
-            >
-              <CalendarDays size={15} /> Review Timetables
-            </button>
-            <button
-              className={`principal-quick-btn ${activeTab === 'report-generation' ? 'active' : ''}`}
-              onClick={() => setActiveTab('report-generation')}
-            >
-              <FileSpreadsheet size={15} /> Official Reports
-            </button>
-          </div>
+          <div className="erp-content-body">
+            {/* Quick Action Navigation Buttons */}
+            <div className="principal-quick-actions">
+              <button
+                className={`principal-quick-btn ${activeTab === 'governance' ? 'active' : ''}`}
+                onClick={() => setActiveTab('governance')}
+              >
+                <Building2 size={15} /> Campus Overview
+              </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'departments' ? 'active' : ''}`}
+                onClick={() => setActiveTab('departments')}
+              >
+                <GraduationCap size={15} /> Departments &amp; HODs
+              </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'examinations' ? 'active' : ''}`}
+                onClick={() => setActiveTab('examinations')}
+              >
+                <FileText size={15} /> Exam Oversight
+              </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'finance' ? 'active' : ''}`}
+                onClick={() => setActiveTab('finance')}
+              >
+                <TrendingUp size={15} /> Finance &amp; Budget
+              </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'leaves' ? 'active' : ''}`}
+                onClick={() => setActiveTab('leaves')}
+              >
+                <CalendarCheck size={15} /> Leave Queue ({pendingLeavesCount} Pending)
+              </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'notices' ? 'active' : ''}`}
+                onClick={() => setActiveTab('notices')}
+              >
+                <Megaphone size={15} /> Publish Circular
+              </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'academic_health' ? 'active' : ''}`}
+                onClick={() => setActiveTab('academic_health')}
+              >
+                <Award size={15} /> Academic Analytics
+              </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'infrastructure' ? 'active' : ''}`}
+                onClick={() => setActiveTab('infrastructure')}
+              >
+                <Wrench size={15} /> Infrastructure
+              </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'accreditation' ? 'active' : ''}`}
+                onClick={() => setActiveTab('accreditation')}
+              >
+                <ShieldCheck size={15} /> NAAC / NBA
+              </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'grievances' ? 'active' : ''}`}
+                onClick={() => setActiveTab('grievances')}
+              >
+                <AlertTriangle size={15} /> Grievances
+              </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'calendar_events' ? 'active' : ''}`}
+                onClick={() => setActiveTab('calendar_events')}
+              >
+                <CalendarDays size={15} /> Calendar &amp; Events
+              </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'audit_trail' ? 'active' : ''}`}
+                onClick={() => setActiveTab('audit_trail')}
+              >
+                <History size={15} /> Audit Trail
+              </button>
+            </div>
 
           {/* ======================================================== */}
           {/* TAB 1: CAMPUS GOVERNANCE OVERVIEW                       */}
@@ -558,6 +663,24 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                     Autumn 2026 Autonomous Session
                   </div>
                 </div>
+
+                <div
+                  className="erp-stat-card"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setActiveTab('finance')}
+                  title="Click to inspect Financial Oversight"
+                >
+                  <div className="erp-stat-card-header">
+                    <span className="erp-stat-card-title">Fee Realization</span>
+                    <TrendingUp size={18} color="#059669" />
+                  </div>
+                  <div className="erp-stat-val" style={{ color: '#059669' }}>
+                    ₹24.60 Cr
+                  </div>
+                  <div className="erp-stat-note">
+                    92.5% of ₹26.60 Cr Target · ₹2.00 Cr Balance
+                  </div>
+                </div>
               </div>
 
               {/* Secondary Campus Vital Rates */}
@@ -592,6 +715,24 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
                   </div>
                   <div className="principal-kpi-mini-note" style={{ color: '#d97706' }}>
                     Ready for Principal sign-off
+                  </div>
+                </div>
+                <div className="principal-kpi-mini" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('accreditation')}>
+                  <div className="principal-kpi-mini-title">Accreditation Standing</div>
+                  <div className="principal-kpi-mini-val" style={{ color: '#0284c7' }}>
+                    NAAC A++
+                  </div>
+                  <div className="principal-kpi-mini-note" style={{ color: '#0369a1' }}>
+                    CGPA 3.62 / 4.00 · Autonomous
+                  </div>
+                </div>
+                <div className="principal-kpi-mini" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('infrastructure')}>
+                  <div className="principal-kpi-mini-title">Active Facilities</div>
+                  <div className="principal-kpi-mini-val" style={{ color: '#15803d' }}>
+                    100% OK
+                  </div>
+                  <div className="principal-kpi-mini-note" style={{ color: '#15803d' }}>
+                    48 Lecture Halls · 24 Laboratories
                   </div>
                 </div>
               </div>
@@ -1562,9 +1703,70 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
               <CampusConnect account={account} />
             </div>
           )}
+
+          {/* ======================================================== */}
+          {/* TAB 8: DEPARTMENT & HOD MANAGEMENT                      */}
+          {/* ======================================================== */}
+          {activeTab === 'departments' && (
+            <PrincipalDepartmentModule onToast={triggerToast} />
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 9: EXAMINATION & RESULTS OVERSIGHT                  */}
+          {/* ======================================================== */}
+          {activeTab === 'examinations' && (
+            <PrincipalExamOversightModule onToast={triggerToast} />
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 10: FINANCE & BUDGET OVERSIGHT                      */}
+          {/* ======================================================== */}
+          {activeTab === 'finance' && (
+            <PrincipalFinanceModule onToast={triggerToast} />
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 11: FACULTY & STAFF OVERVIEW                        */}
+          {/* ======================================================== */}
+          {activeTab === 'faculty_staff' && (
+            <PrincipalFacultyStaffModule onToast={triggerToast} />
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 12: INFRASTRUCTURE & FACILITIES                     */}
+          {/* ======================================================== */}
+          {activeTab === 'infrastructure' && (
+            <PrincipalInfrastructureModule onToast={triggerToast} />
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 13: ACCREDITATION & COMPLIANCE                      */}
+          {/* ======================================================== */}
+          {activeTab === 'accreditation' && (
+            <PrincipalAccreditationModule onToast={triggerToast} />
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 14: GRIEVANCE & DISCIPLINARY OVERSIGHT              */}
+          {/* ======================================================== */}
+          {activeTab === 'grievances' && (
+            <PrincipalGrievanceModule onToast={triggerToast} />
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 15: INSTITUTIONAL CALENDAR & EVENTS                 */}
+          {/* ======================================================== */}
+          {activeTab === 'calendar_events' && (
+            <PrincipalCalendarModule onToast={triggerToast} />
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 16: AUDIT TRAIL & ACTIVITY LOGS                     */}
+          {/* ======================================================== */}
+          {activeTab === 'audit_trail' && (
+            <PrincipalAuditModule onToast={triggerToast} />
+          )}
         </div>
-          </>
-        )}
         </div>
       </AppLayout>
 

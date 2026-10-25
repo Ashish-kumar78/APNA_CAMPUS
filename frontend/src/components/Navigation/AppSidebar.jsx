@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { X, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ShieldCheck, ChevronDown, ChevronRight } from 'lucide-react';
 
 export default function AppSidebar({
   portalName = 'Apna Campus',
@@ -13,6 +13,25 @@ export default function AppSidebar({
   onCloseMobile,
   account
 }) {
+  // Section collapse state (keyed by section title or index)
+  const [collapsedMap, setCollapsedMap] = useState({});
+
+  // Auto-expand section containing the activeTab
+  useEffect(() => {
+    if (!activeTab) return;
+    navSections.forEach((sec, idx) => {
+      const key = sec.title || `sec-${idx}`;
+      const hasActive = sec.items?.some(it => it.id === activeTab || it.page === activeTab);
+      if (hasActive) {
+        setCollapsedMap(prev => ({ ...prev, [key]: false }));
+      }
+    });
+  }, [activeTab, navSections]);
+
+  const toggleSection = (key) => {
+    setCollapsedMap(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   // Close drawer or sidebar on ESC key
   useEffect(() => {
     function handleKeyDown(e) {
@@ -75,41 +94,62 @@ export default function AppSidebar({
 
         {/* Scrollable Navigation List */}
         <nav className="apna-sidebar-nav">
-          {navSections.map((sec, secIdx) => (
-            <div key={sec.title || `sec-${secIdx}`} className="apna-sidebar-section">
-              {sec.title && (
-                <p className="apna-sidebar-section-title">{sec.title}</p>
-              )}
-              {sec.items?.map((item) => {
-                const Icon = item.icon || ShieldCheck;
-                const isActive = activeTab === item.id || activeTab === item.page;
-                const badgeText = item.badge !== undefined && item.badge !== null ? String(item.badge) : null;
+          {navSections.map((sec, secIdx) => {
+            const key = sec.title || `sec-${secIdx}`;
+            const isCollapsible = Boolean(sec.collapsible);
+            const isCollapsed = isCollapsible && (collapsedMap[key] ?? sec.defaultCollapsed ?? false);
 
-                return (
-                  <button
-                    key={item.id || item.page || item.label}
-                    type="button"
-                    className={`apna-sidebar-item ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      if (onTabChange) onTabChange(item.id || item.page);
-                      if (mobileOpen && onCloseMobile) onCloseMobile();
-                    }}
-                    aria-current={isActive ? 'page' : undefined}
-                  >
-                    <div className="apna-sidebar-item-icon">
-                      <Icon size={18} />
-                    </div>
-                    <span className="apna-sidebar-item-label">{item.label}</span>
-                    {badgeText && (
-                      <span className={`apna-sidebar-badge ${item.badgeType || ''}`}>
-                        {badgeText}
+            return (
+              <div key={key} className={`apna-sidebar-section ${isCollapsible ? 'is-collapsible' : ''}`}>
+                {sec.title && (
+                  isCollapsible ? (
+                    <button
+                      type="button"
+                      className="apna-sidebar-section-toggle"
+                      onClick={() => toggleSection(key)}
+                      aria-expanded={!isCollapsed}
+                    >
+                      <span className="apna-sidebar-section-title">{sec.title}</span>
+                      <span className="apna-sidebar-section-chevron">
+                        {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
                       </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+                    </button>
+                  ) : (
+                    <p className="apna-sidebar-section-title">{sec.title}</p>
+                  )
+                )}
+
+                {!isCollapsed && sec.items?.map((item) => {
+                  const Icon = item.icon || ShieldCheck;
+                  const isActive = activeTab === item.id || activeTab === item.page;
+                  const badgeText = item.badge !== undefined && item.badge !== null ? String(item.badge) : null;
+
+                  return (
+                    <button
+                      key={item.id || item.page || item.label}
+                      type="button"
+                      className={`apna-sidebar-item ${isActive ? 'active' : ''}`}
+                      onClick={() => {
+                        if (onTabChange) onTabChange(item.id || item.page);
+                        if (mobileOpen && onCloseMobile) onCloseMobile();
+                      }}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      <div className="apna-sidebar-item-icon">
+                        <Icon size={18} />
+                      </div>
+                      <span className="apna-sidebar-item-label">{item.label}</span>
+                      {badgeText && (
+                        <span className={`apna-sidebar-badge ${item.badgeType || ''}`}>
+                          {badgeText}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
         </nav>
 
         {/* Sidebar Footer Role Card */}

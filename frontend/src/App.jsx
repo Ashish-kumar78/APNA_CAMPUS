@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   GraduationCap,
+  Award,
   LockKeyhole,
   LogOut,
   Mail,
@@ -43,6 +44,7 @@ import TransportPortal from './components/TransportPortal.jsx'
 import PlacementPortal from './components/PlacementPortal.jsx'
 import StaffPortal from './components/StaffPortal.jsx'
 import AdmissionsPortal from './components/AdmissionsPortal.jsx'
+import ScholarshipPortal from './components/ScholarshipPortal.jsx'
 import CampusOperationsPortal from './components/CampusOperations/CampusOperationsPortal.jsx'
 import AccountActivationModal from './components/AccountActivationModal.jsx'
 import UniversalWhatsAppLauncher from './components/CampusConnect/UniversalWhatsAppLauncher.jsx'
@@ -189,13 +191,6 @@ const accounts = {
     department: 'Hostel Administration',
     detail: 'Chief Resident Warden',
   },
-  'hostel': {
-    role: 'warden',
-    name: 'Mrs. Nibedita Das',
-    identity: 'WRD-004',
-    department: 'Hostel Administration',
-    detail: 'Hostel Administration & Resident Welfare',
-  },
   'hostel_admin': {
     role: 'warden',
     name: 'Mr. Rajesh Jena',
@@ -204,12 +199,18 @@ const accounts = {
     detail: 'Hostel Chief Administrator & Housing Ops',
   },
   'scholarship': {
-    role: 'accounts',
-    initialTab: 'scholarships',
+    role: 'scholarship',
     name: 'Dr. M. K. Mohapatra',
     identity: 'SCH-OFF-01',
-    department: 'Scholarship & Financial Aid Cell',
-    detail: 'Scholarship & Concessions Officer',
+    department: 'Scholarship & Student Financial Aid Directorate',
+    detail: 'Director & Chief Scholarship Officer',
+  },
+  'sch-off-01': {
+    role: 'scholarship',
+    name: 'Dr. M. K. Mohapatra',
+    identity: 'SCH-OFF-01',
+    department: 'Scholarship & Student Financial Aid Directorate',
+    detail: 'Director & Chief Scholarship Officer',
   },
   'transport': {
     role: 'transport',
@@ -297,8 +298,7 @@ const roleCopy = {
   library: { label: 'Library', icon: BookOpen },
   placement: { label: 'Placement', icon: ShieldCheck },
   accounts: { label: 'Accounts', icon: CreditCard },
-  scholarship: { label: 'Scholarship', icon: CreditCard },
-  hostel: { label: 'Hostel', icon: Home },
+  scholarship: { label: 'Scholarship', icon: Award },
   warden: { label: 'Warden', icon: Home },
   hostel_admin: { label: 'Hostel Admin', icon: Home },
   transport: { label: 'Transport', icon: ShieldCheck },
@@ -349,13 +349,12 @@ const demoCategories = [
     id: 'services',
     categoryCode: 'C',
     title: 'Campus Services',
-    count: '6 Roles',
+    count: '5 Roles',
     color: '#ea580c',
     bg: '#fff7ed',
     border: '#ffedd5',
     icon: Home,
     roles: [
-      { key: 'hostel', label: 'Hostel' },
       { key: 'warden', label: 'Warden' },
       { key: 'hostel_admin', label: 'Hostel Admin' },
       { key: 'transport', label: 'Transport' },
@@ -543,8 +542,10 @@ function App() {
       portal = <HodPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'faculty') {
       portal = <FacultyPortal account={account} onLogout={handleLogout} />
-    } else if (account.role === 'accounts' || account.role === 'scholarship') {
+    } else if (account.role === 'accounts') {
       portal = <AccountsPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'scholarship') {
+      portal = <ScholarshipPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'exam_cell') {
       portal = <ExamCellPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'library') {

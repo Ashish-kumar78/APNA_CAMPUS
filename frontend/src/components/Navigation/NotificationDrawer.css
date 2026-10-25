@@ -1,0 +1,1002 @@
+/* =========================================================================
+   APNA CAMPUS ENTERPRISE NOTIFICATION CENTER CSS
+   Ultra-modern, glassmorphic slide-out drawer with responsive layouts
+   ========================================================================= */
+
+/* Backdrop Overlay */
+.apna-notif-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 99990;
+  animation: apnaBackdropFade 0.25s ease-out forwards;
+}
+
+@keyframes apnaBackdropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Slide-out Drawer */
+.apna-notif-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  z-index: 99995;
+  box-shadow: -8px 0 32px rgba(15, 23, 42, 0.16);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+  color: #0f172a;
+}
+
+.apna-notif-drawer.open {
+  transform: translateX(0);
+}
+
+/* Toast Notice */
+.apna-notif-toast {
+  position: fixed;
+  top: 24px;
+  right: 500px;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 999px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  z-index: 100010;
+  animation: apnaToastSlide 0.25s ease forwards;
+}
+
+@keyframes apnaToastSlide {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Drawer Header */
+.apna-notif-drawer-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+}
+
+.apna-notif-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.apna-notif-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.apna-notif-bell-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.apna-bell-pulse {
+  animation: apnaBellRing 2s infinite ease-in-out;
+  transform-origin: top center;
+}
+
+@keyframes apnaBellRing {
+  0%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(14deg); }
+  20%, 40% { transform: rotate(-14deg); }
+  50% { transform: rotate(0); }
+}
+
+.apna-notif-title {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.apna-notif-sub-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.apna-notif-sub-badge .role-tag {
+  color: #2563eb;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.apna-unread-counter-pill {
+  align-self: flex-start;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #ef4444;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.apna-notif-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.apna-notif-close-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+/* Quick Toolbar */
+.apna-notif-toolbar {
+  padding: 10px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.apna-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.apna-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.apna-toolbar-btn:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+.apna-toolbar-btn.test-btn {
+  background: linear-gradient(135deg, #eff6ff 0%, #ede9fe 100%);
+  color: #4f46e5;
+  border-color: #c7d2fe;
+}
+
+.apna-toolbar-btn.test-btn:hover {
+  background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%);
+  border-color: #a5b4fc;
+}
+
+.apna-toolbar-btn.muted {
+  color: #64748b;
+}
+
+/* Tabs Bar */
+.apna-notif-tabs-bar {
+  padding: 8px 16px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+}
+
+.apna-notif-tabs-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.apna-tab-pill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.apna-tab-pill:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.apna-tab-pill.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+/* Search Wrap */
+.apna-notif-search-wrap {
+  padding: 8px 16px;
+  position: relative;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.apna-search-icon {
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.apna-notif-search-input {
+  width: 100%;
+  padding: 7px 32px 7px 34px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.apna-notif-search-input:focus {
+  background: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.apna-search-clear-btn {
+  position: absolute;
+  right: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+}
+
+.apna-search-clear-btn:hover {
+  color: #0f172a;
+}
+
+/* Notification List Body */
+.apna-notif-list-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f8fafc;
+}
+
+.apna-notif-list-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.apna-notif-list-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+/* Empty State */
+.apna-notif-empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  margin: auto;
+}
+
+.apna-empty-icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.apna-notif-empty-state h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.apna-notif-empty-state p {
+  margin: 0 0 20px;
+  font-size: 0.82rem;
+  color: #64748b;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.apna-empty-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  transition: all 0.15s ease;
+}
+
+.apna-empty-action-btn:hover {
+  background: #1d4ed8;
+}
+
+/* Card Styling */
+.apna-notif-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.apna-notif-card:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.apna-notif-card.unread {
+  background: #ffffff;
+  border-left: 3.5px solid #2563eb;
+}
+
+.apna-notif-card.read {
+  opacity: 0.82;
+  background: #fafbfc;
+}
+
+.apna-notif-card.read:hover {
+  opacity: 1;
+}
+
+.apna-notif-card.priority-urgent.unread {
+  border-left-color: #ef4444;
+  background: #fffafa;
+}
+
+.apna-notif-card.priority-important.unread {
+  border-left-color: #f59e0b;
+}
+
+/* Card Top Row */
+.apna-card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.apna-card-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Category Badges */
+.apna-cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.apna-cat-badge.examination,
+.apna-cat-badge.evaluation,
+.apna-cat-badge.scrutiny,
+.apna-cat-badge.hall_tickets {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.apna-cat-badge.academic,
+.apna-cat-badge.assignment,
+.apna-cat-badge.faculty {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.apna-cat-badge.fees,
+.apna-cat-badge.collection,
+.apna-cat-badge.payroll,
+.apna-cat-badge.budget,
+.apna-cat-badge.finance {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.apna-cat-badge.library,
+.apna-cat-badge.e-resources,
+.apna-cat-badge.overdue,
+.apna-cat-badge.no_dues {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.apna-cat-badge.placement,
+.apna-cat-badge.drives,
+.apna-cat-badge.shortlists {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.apna-cat-badge.hostel,
+.apna-cat-badge.curfew,
+.apna-cat-badge.gate_pass,
+.apna-cat-badge.mess {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.apna-cat-badge.security,
+.apna-cat-badge.system,
+.apna-cat-badge.backup,
+.apna-cat-badge.rbac,
+.apna-cat-badge.electrical,
+.apna-cat-badge.water {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.apna-cat-badge.general,
+.apna-cat-badge.compliance,
+.apna-cat-badge.governance,
+.apna-cat-badge.accreditation,
+.apna-cat-badge.operations {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* Priority Pills */
+.apna-priority-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.apna-priority-pill.urgent {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.apna-priority-pill .pulse-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: apnaPulseDot 1.4s infinite;
+}
+
+@keyframes apnaPulseDot {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+.apna-priority-pill.important {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+/* Card Actions Quick */
+.apna-card-actions-quick {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.apna-card-action-icon-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.apna-card-action-icon-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.apna-card-action-icon-btn.is-unread {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.apna-card-action-icon-btn.delete:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+/* Card Title */
+.apna-card-title {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.apna-notif-card.unread .apna-card-title {
+  color: #020617;
+}
+
+/* Card Excerpt */
+.apna-card-excerpt {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  line-height: 1.48;
+  color: #475569;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Attachment Pill */
+.apna-card-attachment-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #0f766e;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+/* Card Footer */
+.apna-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.73rem;
+  color: #64748b;
+  border-top: 1px dashed #f1f5f9;
+  padding-top: 8px;
+}
+
+.apna-card-sender-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apna-sender-name {
+  font-weight: 600;
+  color: #334155;
+}
+
+.apna-sender-dept {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.apna-card-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.apna-card-unread-dot {
+  position: absolute;
+  top: 14px;
+  left: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2563eb;
+}
+
+.apna-notif-card.priority-urgent .apna-card-unread-dot {
+  background: #ef4444;
+}
+
+/* Drawer Footer */
+.apna-notif-drawer-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.apna-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.apna-footer-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.apna-footer-brand strong {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.04em;
+}
+
+.apna-footer-brand small {
+  display: block;
+  font-size: 0.65rem;
+  color: #64748b;
+}
+
+/* =========================================================================
+   DETAIL MODAL STYLING
+   ========================================================================= */
+.apna-notif-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: apnaModalFadeIn 0.2s ease-out forwards;
+}
+
+@keyframes apnaModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.apna-notif-modal-dialog {
+  width: 100%;
+  max-width: 600px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22);
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  animation: apnaModalScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes apnaModalScaleUp {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.apna-modal-header {
+  padding: 18px 20px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.apna-modal-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.apna-modal-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.apna-modal-close-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.apna-modal-title {
+  margin: 0;
+  padding: 14px 20px 10px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+/* Sender Ledger Box */
+.apna-modal-sender-ledger {
+  margin: 0 20px 16px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.apna-ledger-icon {
+  font-size: 1.4rem;
+}
+
+.apna-ledger-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.apna-ledger-author strong {
+  font-size: 0.86rem;
+  color: #0f172a;
+}
+
+.apna-ledger-role {
+  font-size: 0.78rem;
+  color: #2563eb;
+  margin-left: 6px;
+  font-weight: 600;
+}
+
+.apna-ledger-dept {
+  font-size: 0.74rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Body Content */
+.apna-modal-body-content {
+  padding: 0 20px 20px;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: #334155;
+  white-space: pre-wrap;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+/* Attachment Box */
+.apna-modal-attachment-box {
+  margin: 0 20px 20px;
+  padding: 12px 14px;
+  background: #f0fdf4;
+  border-radius: 10px;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.apna-attachment-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.apna-file-icon {
+  color: #16a34a;
+}
+
+.apna-filename {
+  display: block;
+  font-size: 0.85rem;
+  color: #065f46;
+}
+
+.apna-attachment-info small {
+  display: block;
+  font-size: 0.72rem;
+  color: #047857;
+}
+
+.apna-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #16a34a;
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.apna-download-btn:hover {
+  background: #15803d;
+}
+
+/* Modal Footer */
+.apna-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.apna-toggle-read-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.apna-toggle-read-btn:hover {
+  color: #0f172a;
+  text-decoration: underline;
+}
+
+.apna-modal-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.apna-action-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  transition: all 0.15s ease;
+}
+
+.apna-action-primary-btn:hover {
+  background: #1d4ed8;
+}
+
+.apna-modal-ack-btn {
+  padding: 8px 16px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.apna-modal-ack-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* Responsive Rules */
+@media (max-width: 640px) {
+  .apna-notif-drawer {
+    max-width: 100%;
+  }
+
+  .apna-notif-modal-dialog {
+    max-width: 95%;
+  }
+
+  .apna-notif-toast {
+    right: 20px;
+    left: 20px;
+    justify-content: center;
+  }
+}

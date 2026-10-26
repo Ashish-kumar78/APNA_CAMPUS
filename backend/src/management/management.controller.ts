@@ -115,6 +115,69 @@ export class ManagementController {
     return this.managementService.getExceptions();
   }
 
+  @Post('approvals')
+  @ApiOperation({ summary: 'Submit a new strategic proposal into the approval pipeline' })
+  async createProposal(
+    @CurrentUser() user: any,
+    @Body() body: any,
+  ) {
+    this.checkManagementAccess(user);
+    return this.managementService.createProposal(body, user);
+  }
+
+  @Get('strategy-targets')
+  @ApiOperation({ summary: 'Get institutional 5-year strategy plan & annual KPI targets' })
+  async getStrategyTargets(@CurrentUser() user: any) {
+    this.checkManagementAccess(user);
+    return this.managementService.getStrategyTargets();
+  }
+
+  @Get('board-meetings')
+  @ApiOperation({ summary: 'Get Board of Trustees meetings schedule, documents, and resolutions register' })
+  async getBoardMeetings(@CurrentUser() user: any) {
+    this.checkManagementAccess(user);
+    return this.managementService.getBoardMeetings();
+  }
+
+  @Get('accreditation-evidence')
+  @ApiOperation({ summary: 'Get institutional accreditation evidence register and regulatory dossiers' })
+  async getAccreditationEvidence(@CurrentUser() user: any) {
+    this.checkManagementAccess(user);
+    return this.managementService.getAccreditationEvidence();
+  }
+
+  @Get('capital-projects')
+  @ApiOperation({ summary: 'Get capital works, infrastructure projects, and procurement tracking' })
+  async getCapitalProjects(@CurrentUser() user: any) {
+    this.checkManagementAccess(user);
+    return this.managementService.getCapitalProjects();
+  }
+
+  @Get('corrective-actions')
+  @ApiOperation({ summary: 'Get Corrective and Preventive Action (CAPA) tracking register' })
+  async getCorrectiveActions(@CurrentUser() user: any) {
+    this.checkManagementAccess(user);
+    return this.managementService.getCorrectiveActions();
+  }
+
+  @Post('corrective-actions/:id/resolve')
+  @ApiOperation({ summary: 'Resolve and close a Corrective Action with evidence' })
+  async resolveCorrectiveAction(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: { resolutionNotes: string; evidenceUrl?: string },
+  ) {
+    this.checkManagementAccess(user);
+    return this.managementService.resolveCorrectiveAction(id, dto, user);
+  }
+
+  @Get('integration-health')
+  @ApiOperation({ summary: 'Run comprehensive ERP cross-module integration and data quality health diagnostic' })
+  async getIntegrationHealth(@CurrentUser() user: any) {
+    this.checkManagementAccess(user);
+    return this.managementService.getIntegrationHealth();
+  }
+
   @Get('audit-trail')
   @ApiOperation({ summary: 'Get audit logs for management decisions and governance activities' })
   async getAuditTrail(

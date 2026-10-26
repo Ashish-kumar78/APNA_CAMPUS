@@ -22,6 +22,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ManagementModule } from './management/management.module';
 import { PrincipalModule } from './principal/principal.module';
 import { TimetablesModule } from './timetables/timetables.module';
+import { DocumentWorkflowModule } from './document-workflow/document-workflow.module';
 import { AppController } from './app.controller';
 
 import * as path from 'path';
@@ -59,6 +60,7 @@ import * as path from 'path';
     ManagementModule,
     PrincipalModule,
     TimetablesModule,
+    DocumentWorkflowModule,
   ],
   controllers: [AppController],
 })

@@ -726,7 +726,7 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'hostel' && <StudentHostelPage defaultTab="overview" />}
               {activePage === 'gate-pass' && <StudentHostelPage defaultTab="gate-pass" />}
               {activePage === 'fees' && <FeesPage />}
-              {activePage === 'canteen' && <CanteenPage />}
+              {activePage === 'canteen' && <CanteenPage account={account} />}
               {activePage === 'attendance' && <AttendancePage />}
               {activePage === 'academics' && <AcademicsPage account={account} />}
               {activePage === 'timetable' && (

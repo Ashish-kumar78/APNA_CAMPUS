@@ -39,6 +39,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
+import './AccountsDashboardTab.css';
 
 export default function AccountsDashboardTab({
   feeStructures,
@@ -118,10 +119,10 @@ export default function AccountsDashboardTab({
   ];
 
   return (
-    <div className="accounts-module-wrap">
+    <div className="accounts-module-wrap accounts-dashboard">
       {/* Strategic Fiscal Header Banner */}
-      <div className="accounts-banner">
-        <div className="accounts-banner-left">
+      <div className="accounts-banner accounts-dashboard__banner">
+        <div className="accounts-banner-left accounts-dashboard__banner-copy">
           <Landmark size={20} className="text-blue-600" />
           <div>
             <span className="font-bold text-slate-900 text-sm">
@@ -134,11 +135,11 @@ export default function AccountsDashboardTab({
           <span className="accounts-cycle-tag">{selectedFY} Active Fiscal Year</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="accounts-dashboard__actions">
           <select
             value={selectedFY}
             onChange={(e) => setSelectedFY(e.target.value)}
-            className="text-xs font-semibold px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-slate-700 shadow-xs outline-none focus:border-blue-500"
+            className="accounts-dashboard__year-select text-xs font-semibold px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-slate-700 shadow-xs outline-none focus:border-blue-500"
           >
             <option value="FY 2026-27">Financial Year 2026–2027 (Active)</option>
             <option value="FY 2025-26">Financial Year 2025–2026 (Audited)</option>
@@ -146,14 +147,14 @@ export default function AccountsDashboardTab({
 
           <button
             onClick={() => onNavigateTab('rep_audit_trail')}
-            className="text-xs flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 rounded-md text-slate-700 font-medium shadow-xs transition"
+            className="accounts-dashboard__action accounts-dashboard__audit-action text-xs flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 rounded-md text-slate-700 font-medium shadow-xs transition"
           >
             <ShieldCheck size={14} /> Audit Trail
           </button>
 
           <button
             onClick={onOpenRecordPayment}
-            className="text-xs flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold shadow-xs transition"
+            className="accounts-dashboard__action accounts-dashboard__record-action text-xs flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold shadow-xs transition"
           >
             <Receipt size={14} /> Record Fee Payment
           </button>
@@ -161,11 +162,11 @@ export default function AccountsDashboardTab({
       </div>
 
       {/* 10 Executive Summary Cards */}
-      <div className="accounts-kpi-grid">
+      <div className="accounts-kpi-grid accounts-dashboard__kpi-grid">
         {/* 1. Total Fees Assessed */}
         <div
           onClick={() => onNavigateTab('fee_management')}
-          className="accounts-kpi-card cursor-pointer group hover:border-blue-300"
+          className="accounts-kpi-card accounts-dashboard__kpi-card cursor-pointer group hover:border-blue-300"
         >
           <div className="accounts-kpi-card-header">
             <span className="accounts-kpi-title">Total Fees Assessed</span>
@@ -174,7 +175,7 @@ export default function AccountsDashboardTab({
             </div>
           </div>
           <div className="accounts-kpi-val">₹{(totalAssessed / 100000).toFixed(2)} L</div>
-          <div className="text-xs text-slate-500 flex items-center justify-between mt-1">
+          <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>Tuition, Hostel &amp; Bus</span>
             <span className="text-blue-600 font-semibold flex items-center">Tariffs <ChevronRight size={13} /></span>
           </div>
@@ -183,7 +184,7 @@ export default function AccountsDashboardTab({
         {/* 2. Total Fees Collected */}
         <div
           onClick={() => onNavigateTab('fee_collection')}
-          className="accounts-kpi-card bg-emerald-950 text-white border-emerald-900 cursor-pointer"
+          className="accounts-kpi-card accounts-dashboard__kpi-card accounts-dashboard__kpi-card--income bg-emerald-950 text-white border-emerald-900 cursor-pointer"
         >
           <div className="accounts-kpi-card-header">
             <span className="text-emerald-300 font-semibold text-xs tracking-wider uppercase">Total Realized Fees</span>
@@ -192,7 +193,7 @@ export default function AccountsDashboardTab({
             </div>
           </div>
           <div className="text-2xl font-black text-emerald-200">₹{(totalCollected / 100000).toFixed(2)} L</div>
-          <div className="text-xs text-emerald-400 mt-1">
+          <div className="accounts-dashboard__kpi-note accounts-dashboard__kpi-note--income text-xs text-emerald-400 mt-1">
             Reconciled bank &amp; counter credits
           </div>
         </div>
@@ -200,7 +201,7 @@ export default function AccountsDashboardTab({
         {/* 3. Outstanding Student Dues */}
         <div
           onClick={() => onNavigateTab('fee_outstanding')}
-          className="accounts-kpi-card cursor-pointer group hover:border-rose-300"
+          className="accounts-kpi-card accounts-dashboard__kpi-card cursor-pointer group hover:border-rose-300"
         >
           <div className="accounts-kpi-card-header">
             <span className="accounts-kpi-title">Outstanding Student Dues</span>
@@ -209,14 +210,14 @@ export default function AccountsDashboardTab({
             </div>
           </div>
           <div className="accounts-kpi-val text-rose-600">₹{(totalOutstanding / 100000).toFixed(2)} L</div>
-          <div className="text-xs text-slate-500 flex items-center justify-between mt-1">
+          <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>Autumn Term Arrears</span>
             <span className="text-rose-600 font-semibold flex items-center">Defaulters <ChevronRight size={13} /></span>
           </div>
         </div>
 
         {/* 4. Collection Rate */}
-        <div className="accounts-kpi-card">
+        <div className="accounts-kpi-card accounts-dashboard__kpi-card">
           <div className="accounts-kpi-card-header">
             <span className="accounts-kpi-title">Collection Rate</span>
             <div className="p-2 rounded-lg bg-sky-50 text-sky-600">
@@ -224,7 +225,7 @@ export default function AccountsDashboardTab({
             </div>
           </div>
           <div className="accounts-kpi-val text-sky-700">{collectionRate}%</div>
-          <div className="text-xs text-slate-500 mt-1">
+          <div className="accounts-dashboard__kpi-note text-xs text-slate-500 mt-1">
             Exceeding 85% fiscal milestone
           </div>
         </div>
@@ -232,7 +233,7 @@ export default function AccountsDashboardTab({
         {/* 5. Total Monthly Payroll */}
         <div
           onClick={() => onNavigateTab('payroll_staff')}
-          className="accounts-kpi-card cursor-pointer group hover:border-purple-300"
+          className="accounts-kpi-card accounts-dashboard__kpi-card cursor-pointer group hover:border-purple-300"
         >
           <div className="accounts-kpi-card-header">
             <span className="accounts-kpi-title">Monthly Payroll (Net)</span>
@@ -241,7 +242,7 @@ export default function AccountsDashboardTab({
             </div>
           </div>
           <div className="accounts-kpi-val text-purple-700">₹{(totalMonthlyPayroll / 100000).toFixed(2)} L</div>
-          <div className="text-xs text-slate-500 flex items-center justify-between mt-1">
+          <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>222 Faculty &amp; Staff</span>
             <span className="text-purple-600 font-semibold flex items-center">Salary <ChevronRight size={13} /></span>
           </div>
@@ -250,7 +251,7 @@ export default function AccountsDashboardTab({
         {/* 6. Total Operating Expenses */}
         <div
           onClick={() => onNavigateTab('expense_register')}
-          className="accounts-kpi-card cursor-pointer group hover:border-amber-300"
+          className="accounts-kpi-card accounts-dashboard__kpi-card cursor-pointer group hover:border-amber-300"
         >
           <div className="accounts-kpi-card-header">
             <span className="accounts-kpi-title">Operating Expenses</span>
@@ -259,7 +260,7 @@ export default function AccountsDashboardTab({
             </div>
           </div>
           <div className="accounts-kpi-val text-amber-600">₹{(totalOperatingExpenses / 100000).toFixed(2)} L</div>
-          <div className="text-xs text-slate-500 flex items-center justify-between mt-1">
+          <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>Power, Labs, Leased Lines</span>
             <span className="text-amber-600 font-semibold flex items-center">Bills <ChevronRight size={13} /></span>
           </div>
@@ -268,7 +269,7 @@ export default function AccountsDashboardTab({
         {/* 7. Pending Approvals */}
         <div
           onClick={() => onNavigateTab('expense_approvals')}
-          className="accounts-kpi-card cursor-pointer group hover:border-indigo-300"
+          className="accounts-kpi-card accounts-dashboard__kpi-card cursor-pointer group hover:border-indigo-300"
         >
           <div className="accounts-kpi-card-header">
             <span className="accounts-kpi-title">Pending Vouchers</span>
@@ -277,14 +278,14 @@ export default function AccountsDashboardTab({
             </div>
           </div>
           <div className="accounts-kpi-val text-indigo-700">{pendingApprovalsCount} Items</div>
-          <div className="text-xs text-slate-500 flex items-center justify-between mt-1">
+          <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>Bursar clearance queue</span>
             <span className="text-indigo-600 font-semibold flex items-center">Queue <ChevronRight size={13} /></span>
           </div>
         </div>
 
         {/* 8. Available Liquid Cash & Bank */}
-        <div className="accounts-kpi-card bg-slate-900 text-white border-slate-800">
+        <div className="accounts-kpi-card accounts-dashboard__kpi-card accounts-dashboard__kpi-card--liquidity bg-slate-900 text-white border-slate-800">
           <div className="accounts-kpi-card-header">
             <span className="text-slate-400 font-semibold text-xs tracking-wider uppercase">Liquid Cash &amp; Bank</span>
             <div className="p-2 rounded-lg bg-slate-800 text-amber-400">
@@ -292,7 +293,7 @@ export default function AccountsDashboardTab({
             </div>
           </div>
           <div className="text-2xl font-black text-amber-300">₹{(availableBankBalance / 100000).toFixed(2)} L</div>
-          <div className="text-xs text-slate-400 mt-1">
+          <div className="accounts-dashboard__kpi-note accounts-dashboard__kpi-note--liquidity text-xs text-slate-400 mt-1">
             SBI Treasury + HDFC Collection
           </div>
         </div>
@@ -300,7 +301,7 @@ export default function AccountsDashboardTab({
         {/* 9. Overdue Vendor Payables */}
         <div
           onClick={() => onNavigateTab('vendor_bills')}
-          className="accounts-kpi-card cursor-pointer group hover:border-orange-300"
+          className="accounts-kpi-card accounts-dashboard__kpi-card cursor-pointer group hover:border-orange-300"
         >
           <div className="accounts-kpi-card-header">
             <span className="accounts-kpi-title">Vendor Accounts Payable</span>
@@ -309,7 +310,7 @@ export default function AccountsDashboardTab({
             </div>
           </div>
           <div className="accounts-kpi-val text-orange-700">₹{(overdueVendorPayments / 100000).toFixed(2)} L</div>
-          <div className="text-xs text-slate-500 flex items-center justify-between mt-1">
+          <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>Suppliers &amp; Hardware AMCs</span>
             <span className="text-orange-600 font-semibold flex items-center">Payables <ChevronRight size={13} /></span>
           </div>
@@ -318,7 +319,7 @@ export default function AccountsDashboardTab({
         {/* 10. Scholarships & Concessions */}
         <div
           onClick={() => onNavigateTab('fee_scholarships')}
-          className="accounts-kpi-card cursor-pointer group hover:border-teal-300"
+          className="accounts-kpi-card accounts-dashboard__kpi-card cursor-pointer group hover:border-teal-300"
         >
           <div className="accounts-kpi-card-header">
             <span className="accounts-kpi-title">Fee Waivers &amp; Aid</span>
@@ -327,7 +328,7 @@ export default function AccountsDashboardTab({
             </div>
           </div>
           <div className="accounts-kpi-val text-teal-700">₹{(totalConcessions / 100000).toFixed(2)} L</div>
-          <div className="text-xs text-slate-500 flex items-center justify-between mt-1">
+          <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>State DBT &amp; Chairman Trust</span>
             <span className="text-teal-600 font-semibold flex items-center">Grants <ChevronRight size={13} /></span>
           </div>
@@ -335,10 +336,10 @@ export default function AccountsDashboardTab({
       </div>
 
       {/* Main Charts & Analytics Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 accounts-dashboard__chart-grid">
         {/* Left Chart: Monthly Trends (2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between accounts-dashboard__panel accounts-dashboard__trend-panel">
+          <div className="accounts-dashboard__chart-header flex items-center justify-between mb-4 flex-wrap gap-2">
             <div>
               <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                 <BarChart2 size={16} className="text-blue-600" />
@@ -348,27 +349,23 @@ export default function AccountsDashboardTab({
                 Monthly assessment realizations versus institutional cash outflows
               </p>
             </div>
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+            <div className="accounts-dashboard__chart-toggles flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
               <button
                 onClick={() => setChartView('trends')}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition ${
-                  chartView === 'trends' ? 'bg-white shadow-xs text-blue-600' : 'text-slate-600 hover:text-slate-900'
-                }`}
+                className={`accounts-dashboard__chart-toggle ${chartView === 'trends' ? 'is-active' : ''}`}
               >
                 Inflow vs Outflow
               </button>
               <button
                 onClick={() => setChartView('deptdues')}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition ${
-                  chartView === 'deptdues' ? 'bg-white shadow-xs text-blue-600' : 'text-slate-600 hover:text-slate-900'
-                }`}
+                className={`accounts-dashboard__chart-toggle ${chartView === 'deptdues' ? 'is-active' : ''}`}
               >
                 Dept Arrears
               </button>
             </div>
           </div>
 
-          <div style={{ width: '100%', height: 260 }}>
+          <div className="accounts-dashboard__trend-chart" style={{ width: '100%', height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               {chartView === 'trends' ? (
                 <AreaChart data={monthlyTrends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -410,7 +407,7 @@ export default function AccountsDashboardTab({
         </div>
 
         {/* Right Chart: Fee Head Breakdown */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between accounts-dashboard__panel accounts-dashboard__breakdown">
           <div>
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               <PieIcon size={16} className="text-purple-600" />
@@ -419,7 +416,7 @@ export default function AccountsDashboardTab({
             <p className="text-xs text-slate-500 mb-2">Tuition, infrastructure, and auxiliary services</p>
           </div>
 
-          <div style={{ width: '100%', height: 180 }} className="relative flex items-center justify-center">
+          <div style={{ width: '100%', height: 180 }} className="accounts-dashboard__donut relative flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -447,7 +444,7 @@ export default function AccountsDashboardTab({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-1.5 text-xs pt-2 border-t border-slate-100">
+          <div className="accounts-dashboard__breakdown-list grid grid-cols-1 gap-1.5 text-xs pt-2 border-t border-slate-100">
             {feeHeadDistribution.map(f => (
               <div key={f.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 truncate">
@@ -462,25 +459,25 @@ export default function AccountsDashboardTab({
       </div>
 
       {/* Operational Widgets Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 accounts-dashboard__operations">
         {/* Widget 1: Recent Fee Transactions & Counter Receipts */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs accounts-dashboard__panel">
+          <div className="accounts-dashboard__widget-header flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
             <span className="font-bold text-slate-800 text-xs flex items-center gap-2">
               <Receipt size={14} className="text-blue-600" />
               Latest Fee Receipts Issued
             </span>
             <button
               onClick={() => onNavigateTab('receipt_register')}
-              className="text-[11px] text-blue-600 font-semibold hover:underline"
+              className="accounts-dashboard__inline-action text-[11px] text-blue-600 font-semibold hover:underline"
             >
               All Receipts
             </button>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="accounts-dashboard__receipts space-y-2.5">
             {transactions.slice(0, 3).map(txn => (
-              <div key={txn.id} className="p-2.5 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition">
+              <div key={txn.id} className="accounts-dashboard__receipt-row p-2.5 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-bold text-xs text-slate-900">{txn.studentName}</div>
@@ -500,8 +497,8 @@ export default function AccountsDashboardTab({
         </div>
 
         {/* Widget 2: Overdue Arrears & Payables Alert */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs accounts-dashboard__panel">
+          <div className="accounts-dashboard__widget-header flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
             <span className="font-bold text-slate-800 text-xs flex items-center gap-2">
               <AlertTriangle size={14} className="text-amber-500" />
               Immediate Financial Action Alerts
@@ -515,7 +512,7 @@ export default function AccountsDashboardTab({
           </div>
 
           <div className="space-y-2">
-            <div className="p-2.5 rounded-lg border border-rose-100 bg-rose-50/60 flex items-start gap-2.5">
+            <div className="accounts-dashboard__alert-item accounts-dashboard__alert-item--risk p-2.5 rounded-lg border border-rose-100 bg-rose-50/60 flex items-start gap-2.5">
               <AlertTriangle size={15} className="text-rose-600 shrink-0 mt-0.5" />
               <div className="text-xs">
                 <div className="font-bold text-rose-900">Alok Kumar Jena (MECH Sem 5)</div>
@@ -523,7 +520,7 @@ export default function AccountsDashboardTab({
               </div>
             </div>
 
-            <div className="p-2.5 rounded-lg border border-amber-100 bg-amber-50/60 flex items-start gap-2.5">
+            <div className="accounts-dashboard__alert-item accounts-dashboard__alert-item--due p-2.5 rounded-lg border border-amber-100 bg-amber-50/60 flex items-start gap-2.5">
               <Clock size={15} className="text-amber-600 shrink-0 mt-0.5" />
               <div className="text-xs">
                 <div className="font-bold text-amber-900">TechCore AI Server GPU Invoice</div>
@@ -531,7 +528,7 @@ export default function AccountsDashboardTab({
               </div>
             </div>
 
-            <div className="p-2.5 rounded-lg border border-blue-100 bg-blue-50/60 flex items-start gap-2.5">
+            <div className="accounts-dashboard__alert-item accounts-dashboard__alert-item--schedule p-2.5 rounded-lg border border-blue-100 bg-blue-50/60 flex items-start gap-2.5">
               <Calendar size={15} className="text-blue-600 shrink-0 mt-0.5" />
               <div className="text-xs">
                 <div className="font-bold text-blue-900">November Faculty Salary Disbursement</div>
@@ -542,7 +539,7 @@ export default function AccountsDashboardTab({
         </div>
 
         {/* Widget 3: Statutory Treasury & Audit Gateway */}
-        <div className="bg-gradient-to-br from-slate-900 to-blue-950 rounded-xl p-5 text-white shadow-xs flex flex-col justify-between">
+        <div className="accounts-dashboard__panel accounts-dashboard__treasury-panel bg-gradient-to-br from-slate-900 to-blue-950 rounded-xl p-5 text-white shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <span className="font-bold text-xs uppercase tracking-wider text-blue-300 flex items-center gap-1.5">

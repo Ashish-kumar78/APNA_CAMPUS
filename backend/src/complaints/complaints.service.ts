@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationCategory, NotificationEventType, NotificationPriority } from '../notifications/notification-events';
+import { Role } from '@prisma/client';
 
 export interface ComplaintFilter {
   facultyName?: string;
@@ -17,7 +20,11 @@ export interface ComplaintFilter {
 
 @Injectable()
 export class ComplaintsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
+
 
   // In-memory canonical complaint repository for robust, immediate zero-downtime execution
   private inMemoryComplaints: any[] = [
@@ -439,6 +446,28 @@ export class ComplaintsService {
 
     this.inMemoryComplaints.unshift(newComplaint);
 
+    // Dispatch notification to HOD and concerned faculty without exposing student identity
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.COMPLAINT_ASSIGNED,
+        title: `New Grievance Submitted: ${newComplaint.trackingId}`,
+        message: `A student submitted a grievance regarding ${newComplaint.subject} (${newComplaint.facultyName}). Response required within 7 days.`,
+        category: NotificationCategory.SUPPORT,
+        priority: NotificationPriority.HIGH,
+        sourceModule: 'Complaints & Grievances',
+        actionUrl: '/complaints',
+        actionTab: 'inbox',
+        actionLabel: 'Review Grievance',
+        target: {
+          roles: [Role.HOD, Role.FACULTY],
+          department: newComplaint.department,
+        },
+        dedupKey: `complaint-submitted-${trackingId}`,
+      });
+    } catch {
+      // Non-blocking
+    }
+
     return {
       success: true,
       trackingId,
@@ -446,6 +475,7 @@ export class ComplaintsService {
       message: 'Your complaint has been submitted anonymously. Please save your Tracking ID to monitor responses and status updates.',
       submittedAt: newComplaint.submittedAt
     };
+
   }
 
   // 2. Track Anonymous Complaint by Tracking ID (Student Action)
@@ -626,12 +656,35 @@ export class ComplaintsService {
       // Fallback
     }
 
+    // Dispatch notification to HOD
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.COMPLAINT_STATUS_CHANGED,
+        title: `Faculty Response Submitted: ${complaint.trackingId}`,
+        message: `${facultyUser.name} submitted a formal response and proposed action for grievance "${complaint.subject}".`,
+        category: NotificationCategory.SUPPORT,
+        priority: NotificationPriority.NORMAL,
+        sourceModule: 'Complaints & Grievances',
+        actionUrl: '/complaints',
+        actionTab: 'reviews',
+        actionLabel: 'Review Response',
+        target: {
+          roles: [Role.HOD, Role.PRINCIPAL],
+          department: complaint.department,
+        },
+        dedupKey: `complaint-resp-${complaint.trackingId}`,
+      });
+    } catch {
+      // Non-blocking
+    }
+
     return {
       success: true,
       message: 'Formal response and corrective action recorded successfully.',
       complaint: this.sanitizeForStaff(complaint)
     };
   }
+
 
   // 6. Faculty: Update Status (Auditable Status Transition)
   async updateComplaintStatus(
@@ -687,12 +740,35 @@ export class ComplaintsService {
       // Fallback
     }
 
+    // Dispatch status update notification to responsible academic supervisor & HOD
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.COMPLAINT_STATUS_CHANGED,
+        title: `Grievance Status: ${newStatus} (${complaint.trackingId})`,
+        message: `Status updated to ${newStatus} by ${facultyUser.name}: ${remarks || 'Review in progress.'}`,
+        category: NotificationCategory.SUPPORT,
+        priority: newStatus === 'ESCALATED' ? NotificationPriority.URGENT : NotificationPriority.NORMAL,
+        sourceModule: 'Complaints & Grievances',
+        actionUrl: '/complaints',
+        actionTab: 'history',
+        actionLabel: 'Check Status',
+        target: {
+          roles: [Role.HOD, Role.PRINCIPAL],
+          department: complaint.department,
+        },
+        dedupKey: `complaint-status-${complaint.trackingId}-${newStatus}`,
+      });
+    } catch {
+      // Non-blocking
+    }
+
     return {
       success: true,
       message: `Complaint status updated to "${newStatus}".`,
       complaint: this.sanitizeForStaff(complaint)
     };
   }
+
 
   // 7. HOD: Get Department Complaints with Advanced Filtering
   async getHodComplaints(deptCode: string = 'CSE', filters: ComplaintFilter = {}) {

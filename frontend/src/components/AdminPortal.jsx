@@ -385,11 +385,13 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
   useEffect(() => {
     const fetchAdminBackendData = async () => {
       try {
-        const [metricsRes, diagRes, usersRes, auditRes] = await Promise.allSettled([
+        const [metricsRes, diagRes, usersRes, auditRes, studentsRes, staffRes] = await Promise.allSettled([
           api.getAdminMetrics(),
           api.getAdminDiagnostics(),
           api.getAdminUsers(),
           api.getAdminAuditLogs(),
+          api.getStudents(),
+          api.getAdminStaff(),
         ]);
         if (metricsRes.status === 'fulfilled' && metricsRes.value?.data) {
           setAdminMetrics(metricsRes.value.data);
@@ -402,6 +404,20 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
         }
         if (auditRes.status === 'fulfilled' && Array.isArray(auditRes.value?.data)) {
           setAuditLogs(auditRes.value.data);
+        }
+        if (studentsRes.status === 'fulfilled' && Array.isArray(studentsRes.value?.data) && studentsRes.value.data.length > 0) {
+          setStudents(studentsRes.value.data);
+        }
+        if (staffRes.status === 'fulfilled' && Array.isArray(staffRes.value?.data) && staffRes.value.data.length > 0) {
+          const fetchedStaff = staffRes.value.data;
+          const wardens = fetchedStaff.filter(s => s.type === 'WARDEN' || s.role === 'WARDEN');
+          const security = fetchedStaff.filter(s => s.type === 'SECURITY' || s.role === 'SECURITY');
+          const canteen = fetchedStaff.filter(s => s.type === 'CANTEEN' || s.role === 'CANTEEN');
+          const other = fetchedStaff.filter(s => s.type === 'SUPPORT' || s.type === 'OTHER' || s.role === 'STAFF');
+          if (wardens.length > 0) setWardenList(wardens);
+          if (security.length > 0) setSecurityGuards(security);
+          if (canteen.length > 0) setCanteenStaff(canteen);
+          if (other.length > 0) setOtherStaff(other);
         }
       } catch (err) {
         console.error('Error fetching admin live data:', err);
@@ -891,6 +907,38 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
     const saved = saveStudent(payload);
     setStudents(getAllStudents());
     setActiveStudent(saved.id);
+
+    // Asynchronously synchronize with backend PostgreSQL via NestJS API
+    try {
+      if (isNew) {
+        api.createStudent({
+          name: saved.name,
+          rollNumber: saved.rollNumber || autoRegNo,
+          studentId: saved.studentId || autoRegNo,
+          email: saved.email || `${saved.rollNumber || autoRegNo}@apnacampus.edu.in`,
+          phone: saved.phone || null,
+          department: saved.department,
+          deptCode: saved.deptCode || 'CSE',
+          semester: saved.semester,
+          section: saved.section,
+          gender: saved.gender || 'General',
+          bloodGroup: saved.bloodGroup || 'O+',
+          category: saved.category || saved.caste || 'General',
+          academicYear: saved.academicYear || '2026-27',
+          status: saved.status || 'Active',
+        }).catch(e => console.warn('Backend student creation sync:', e.message));
+      } else {
+        api.updateStudent(saved.id, {
+          name: saved.name,
+          department: saved.department,
+          semester: saved.semester,
+          section: saved.section,
+          status: saved.status,
+        }).catch(e => console.warn('Backend student update sync:', e.message));
+      }
+    } catch (err) {
+      console.warn('Backend student sync error:', err);
+    }
 
     setIsStudentModalOpen(false);
 
@@ -1617,239 +1665,6 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
               }}
             />
           )}
-          {false && activeTab === 'dashboard' && (
-            <div>
-              <div className="admin-view-header">
-                <div>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, marginBottom: '6px' }}>
-                    <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 2px rgba(34, 197, 94, 0.3)' }} />
-                    Live Time: {formattedLiveTime} · {formattedLiveDate}
-                  </div>
-                  <h2>{timeWishDetails.greeting}, {account?.name || 'Campus Administrator'}</h2>
-                  <p>{timeWishDetails.wish}</p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  {/* Live Clock Card Widget */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    padding: '0.55rem 1rem',
-                    borderRadius: '12px',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-                  }}>
-                    <div style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-                      color: '#2563eb',
-                      display: 'grid',
-                      placeItems: 'center',
-                      flexShrink: 0
-                    }}>
-                      <Clock size={18} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#0f172a', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-                        {formattedLiveTime}
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-                        {formattedLiveDate} (IST)
-                      </div>
-                    </div>
-                  </div>
-
-                  <button className="admin-action-btn-secondary" onClick={() => setActiveTab('reports')}>
-                    <Download size={15} /> Export Summary
-                  </button>
-                  <button className="admin-action-btn-primary" onClick={handleOpenAddStudent}>
-                    <Plus size={15} /> Quick Add Student
-                  </button>
-                </div>
-              </div>
-
-              {/* KPI Grid */}
-              <div className="admin-kpi-grid">
-                <div
-                  className="admin-kpi-card"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setActiveTab('students')}
-                  title="Click to view Students Directory"
-                >
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Active Enrolled Students</span>
-                    <div className="admin-kpi-card-icon blue"><GraduationCap size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">{adminMetrics?.totalStudents || students.length || 2480}</div>
-                  <small style={{ color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
-                    <TrendingUp size={13} /> Synchronized with Autonomous DB
-                  </small>
-                </div>
-
-                <div
-                  className="admin-kpi-card"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setActiveTab('faculty')}
-                  title="Click to view Faculty & Staff"
-                >
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Faculty &amp; Staff</span>
-                    <div className="admin-kpi-card-icon emerald"><Users size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">
-                    {adminMetrics?.totalFaculty ? `${adminMetrics.totalFaculty + (adminMetrics.totalStaff || 72)}` : '218'}
-                  </div>
-                  <small style={{ color: '#64748b' }}>
-                    {adminMetrics?.totalFaculty || 146} Faculty · {adminMetrics?.totalStaff || 72} Operational Staff
-                  </small>
-                </div>
-
-                <div
-                  className="admin-kpi-card"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setActiveTab('programs')}
-                  title="Click to view Programs & Departments"
-                >
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Departments &amp; Programs</span>
-                    <div className="admin-kpi-card-icon purple"><Building2 size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">{departments.length} Depts</div>
-                  <small style={{ color: '#64748b' }}>
-                    {adminMetrics?.programsCount || 18} Autonomous Degrees &amp; Programs
-                  </small>
-                </div>
-
-                <div
-                  className="admin-kpi-card"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setActiveTab('attendance-monitoring')}
-                  title="Click to view Attendance Monitoring"
-                >
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Institutional Attendance</span>
-                    <div className="admin-kpi-card-icon amber"><CheckCircle2 size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">{adminMetrics?.attendancePercentage || '91.8%'}</div>
-                  <small style={{ color: '#059669', fontWeight: 600 }}>
-                    Above UGC mandatory 75% threshold
-                  </small>
-                </div>
-
-                <div
-                  className="admin-kpi-card"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setActiveTab('accounts-fees')}
-                  title="Click to view Accounts & Fee Management"
-                >
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Fee Collections &amp; Dues</span>
-                    <div className="admin-kpi-card-icon rose"><CreditCard size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">{adminMetrics?.feesCollected || '₹7.4 Cr'}</div>
-                  <small style={{ color: '#d97706', fontWeight: 600 }}>
-                    Pending Dues: {adminMetrics?.pendingDues || '₹29.5 Lakh'}
-                  </small>
-                </div>
-
-                <div
-                  className="admin-kpi-card"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setActiveTab('system-diagnostics')}
-                  title="Click to view Diagnostics & System Status"
-                >
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">System Architecture</span>
-                    <div className="admin-kpi-card-icon blue"><Activity size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val" style={{ color: '#059669', fontSize: '1.25rem' }}>
-                    {adminMetrics?.systemStatus || 'Operational'}
-                  </div>
-                  <small style={{ color: '#0284c7', fontWeight: 600 }}>
-                    PostgreSQL Latency: {adminDiagnostics?.subsystems?.[0]?.latency || '1ms'}
-                  </small>
-                </div>
-              </div>
-
-              {/* Recent Activities & Quick Navigation */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
-                <div className="admin-card">
-                  <div className="admin-card-header">
-                    <h3 className="admin-card-title">Recent System Activities</h3>
-                    <span className="admin-badge active">Live Feed</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                      <CheckCircle2 size={18} color="#059669" style={{ marginTop: '2px', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>Faculty Dr. S. Mohanty updated Data Structures marks</div>
-                        <div style={{ fontSize: '0.775rem', color: '#64748b' }}>Quiz 3 marks verified for 91 students in Section A · 15 mins ago</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                      <CheckCircle2 size={18} color="#2563eb" style={{ marginTop: '2px', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>HOD Dr. P. K. Pattnaik approved OS internal marks</div>
-                        <div style={{ fontSize: '0.775rem', color: '#64748b' }}>CSE Dept · 86 students marked finalized · 1 hour ago</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                      <CheckCircle2 size={18} color="#9333ea" style={{ marginTop: '2px', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>New student registration verified</div>
-                        <div style={{ fontSize: '0.775rem', color: '#64748b' }}>Rakesh Das (Roll 01) assigned to Sem 5 Sec A · 2 hours ago</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                      <CheckCircle2 size={18} color="#d97706" style={{ marginTop: '2px', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>New autonomous course added: CS506</div>
-                        <div style={{ fontSize: '0.775rem', color: '#64748b' }}>Software Engineering curriculum updated · Yesterday</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                      <CheckCircle2 size={18} color="#059669" style={{ marginTop: '2px', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>Semester 5 Academic Session Activated</div>
-                        <div style={{ fontSize: '0.775rem', color: '#64748b' }}>Sections A, B, and C active for 2026-27 session</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="admin-card">
-                  <div className="admin-card-header">
-                    <h3 className="admin-card-title">Department Health & Marks Submission</h3>
-                    <button className="admin-action-btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.775rem' }} onClick={() => setActiveTab('departments')}>
-                      View Details
-                    </button>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {departments.map(dept => (
-                      <div key={dept.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                          <span style={{ fontWeight: 600, color: '#1e293b' }}>{dept.code} - {dept.name}</span>
-                          <span style={{ color: '#2563eb', fontWeight: 600 }}>{dept.studentsCount} Students · {dept.facultyCount} Faculty</span>
-                        </div>
-                        <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
-                          <div style={{
-                            width: dept.code === 'CSE' ? '92%' : dept.code === 'ECE' ? '84%' : dept.code === 'EEE' ? '78%' : '72%',
-                            height: '100%',
-                            background: '#2563eb',
-                            borderRadius: '9999px'
-                          }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* TAB 2: STUDENTS MANAGEMENT */}
           {activeTab === 'students' && (
             <div>

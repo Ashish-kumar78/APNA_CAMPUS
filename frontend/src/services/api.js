@@ -31,7 +31,7 @@ async function request(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, { ...options, headers });
-    
+
     // Parse response
     let data;
     const contentType = (response.headers && typeof response.headers.get === 'function' ? response.headers.get('content-type') : '') || '';
@@ -95,6 +95,23 @@ export const api = {
     request('/students/transfer-preference', {
       method: 'POST',
       body: JSON.stringify({ campus, city, confirmed }),
+    }),
+
+  createStudent: (data) =>
+    request('/students', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateStudent: (id, data) =>
+    request(`/students/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteStudent: (id) =>
+    request(`/students/${id}`, {
+      method: 'DELETE',
     }),
 
   // 3. Marks & Continuous Assessment
@@ -1021,6 +1038,7 @@ export const api = {
     const q = new URLSearchParams(params).toString();
     return request(`/management/overview${q ? '?' + q : ''}`);
   },
+  getManagementActionCenter: () => request('/management/action-center'),
   getManagementInsights: () => request('/management/executive-insights'),
   getManagementDepartments: (params = {}) => {
     const q = new URLSearchParams(params).toString();
@@ -1032,11 +1050,27 @@ export const api = {
   },
   getManagementPlacements: () => request('/management/placements'),
   getManagementApprovals: () => request('/management/approvals'),
+  createManagementProposal: (data) =>
+    request('/management/approvals', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   decideManagementApproval: (id, action, comments = '') =>
     request(`/management/approvals/${id}/decision`, {
       method: 'POST',
       body: JSON.stringify({ action, comments }),
     }),
+  getManagementStrategyTargets: () => request('/management/strategy-targets'),
+  getManagementBoardMeetings: () => request('/management/board-meetings'),
+  getManagementAccreditationEvidence: () => request('/management/accreditation-evidence'),
+  getManagementCapitalProjects: () => request('/management/capital-projects'),
+  getManagementCorrectiveActions: () => request('/management/corrective-actions'),
+  resolveManagementCorrectiveAction: (id, data) =>
+    request(`/management/corrective-actions/${id}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getManagementIntegrationHealth: () => request('/management/integration-health'),
   getManagementGovernance: () => request('/management/governance'),
   getManagementExceptions: () => request('/management/exceptions'),
   getManagementAuditTrail: (search = '') => {
@@ -1370,6 +1404,48 @@ export const api = {
     window.open(blobUrl, '_blank');
     return true;
   },
+
+  // Central Role-Based Notification Engine APIs
+  getMyNotifications: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/notifications${q ? `?${q}` : ''}`);
+  },
+  getUnreadNotificationsCount: () => request('/notifications/unread-count'),
+  markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: 'POST' }),
+  markAllNotificationsRead: (filter = {}) =>
+    request('/notifications/mark-all-read', { method: 'POST', body: JSON.stringify(filter) }),
+  clearReadNotifications: () => request('/notifications/clear-read', { method: 'POST' }),
+  getNotificationPreferences: () => request('/notifications/preferences'),
+  updateNotificationPreferences: (prefs) =>
+    request('/notifications/preferences', { method: 'PUT', body: JSON.stringify(prefs) }),
+  dispatchNotification: (payload) =>
+    request('/notifications/dispatch', { method: 'POST', body: JSON.stringify(payload) }),
+
+
+  // 32. Principal & Director Command Center
+  getPrincipalOverview: (academicYear) =>
+    request(`/principal/overview${academicYear ? `?academicYear=${encodeURIComponent(academicYear)}` : ''}`),
+  getPrincipalAcademicAnalytics: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/principal/academic-analytics${q ? `?${q}` : ''}`);
+  },
+  getPrincipalLeaves: () => request('/principal/leaves'),
+  decidePrincipalLeave: (id, action, remarks) =>
+    request(`/principal/leaves/${id}/decision`, {
+      method: 'POST',
+      body: JSON.stringify({ action, remarks }),
+    }),
+  getPrincipalCirculars: () => request('/principal/circulars'),
+  createPrincipalCircular: (data) =>
+    request('/principal/circulars', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  decidePrincipalCircular: (id, action, remarks) =>
+    request(`/principal/circulars/${id}/clearance`, {
+      method: 'POST',
+      body: JSON.stringify({ action, remarks }),
+    }),
 };
 
 

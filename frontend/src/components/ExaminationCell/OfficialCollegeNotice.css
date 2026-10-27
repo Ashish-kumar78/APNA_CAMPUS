@@ -1,0 +1,690 @@
+/* ==========================================================================
+   OFFICIAL COLLEGE EXAMINATION CIRCULAR & TIMETABLE STYLES
+   Exact reproduction of autonomous college notification letterhead
+   ========================================================================== */
+
+.gift-notice-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow-y: auto;
+  animation: giftFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes giftFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.gift-notice-dialog {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 1100px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.8);
+  overflow: hidden;
+}
+
+/* Control Topbar */
+.gift-notice-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.5rem;
+  background: #0f172a;
+  color: #ffffff;
+  border-bottom: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+
+.gift-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gift-official-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.gift-ref-pill {
+  font-size: 0.76rem;
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.gift-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gift-btn-secondary,
+.gift-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.gift-btn-secondary {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+}
+
+.gift-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.gift-btn-primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.gift-btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.gift-modal-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gift-modal-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Notice Sheet (Document Container) */
+.gift-notice-sheet {
+  padding: 2rem 2.25rem;
+  overflow-y: auto;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+/* Email Meta Header (Recreating exact gmail dispatch line) */
+.gift-email-meta-strip {
+  display: flex;
+  gap: 16px;
+  background: #ffffff;
+  padding: 1.25rem 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.gift-email-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #bfdbfe;
+}
+
+.gift-email-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gift-email-subject {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.gift-email-subject h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.gift-inbox-tag {
+  font-size: 0.72rem;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.gift-email-sender-line {
+  font-size: 0.86rem;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.gift-email-address {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.gift-email-date {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.gift-email-to-line {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.gift-email-to-line code {
+  color: #475569;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+/* Official Letterhead */
+.gift-letterhead {
+  text-align: center;
+  padding: 1.25rem 0 1rem;
+}
+
+.gift-crest-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.gift-crest-emblem {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
+}
+
+.gift-institution-title h1 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #1e3a8a;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.gift-subtitle {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin: 0 0 4px;
+}
+
+.gift-coe-office {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #b91c1c;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.gift-letterhead-rule {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #2563eb, transparent);
+  margin-top: 1rem;
+}
+
+/* Circular Text */
+.gift-circular-body {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin: 1.25rem 0;
+  line-height: 1.6;
+}
+
+.gift-greeting {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 8px;
+}
+
+.gift-lead-text {
+  font-size: 0.92rem;
+  color: #334155;
+  margin: 0 0 8px;
+}
+
+.gift-date-highlight {
+  font-weight: 700;
+  color: #1e3a8a;
+  background: #dbeafe;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.gift-advisory-note {
+  font-size: 0.88rem;
+  color: #475569;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Schedule Header Banner */
+.gift-schedule-banner {
+  background: #0f172a;
+  color: #ffffff;
+  border-radius: 8px 8px 0 0;
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.25rem;
+}
+
+.gift-schedule-banner h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.gift-slot-badge {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
+/* Branch Filter Navigation */
+.gift-branch-nav {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-top: none;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gift-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gift-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.gift-search-wrap {
+  flex: 1;
+  max-width: 320px;
+}
+
+.gift-search-input {
+  width: 100%;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  outline: none;
+}
+
+.gift-search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.gift-branch-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gift-branch-btn {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gift-branch-btn:hover {
+  background: #e2e8f0;
+}
+
+.gift-branch-btn.active {
+  background: #1e3a8a;
+  color: #ffffff;
+  border-color: #1e3a8a;
+}
+
+.gift-branch-btn.my-branch {
+  border-color: #f59e0b;
+}
+
+.gift-my-tag {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.65rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+/* Examination Timetable Table */
+.gift-table-container {
+  background: #ffffff;
+  border: 2px solid #000000;
+  overflow-x: auto;
+}
+
+.gift-exam-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.gift-exam-table th {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  padding: 9px 12px;
+  border: 1px solid #000000;
+  text-align: center;
+}
+
+.gift-exam-table td {
+  padding: 8px 12px;
+  border: 1px solid #000000;
+  vertical-align: middle;
+}
+
+.gift-branch-col {
+  background: #f8fafc;
+  font-weight: 800;
+  text-align: center;
+  border-left-width: 4px !important;
+  color: #0f172a;
+}
+
+.gift-branch-sticky strong {
+  display: block;
+  font-size: 0.86rem;
+  margin-bottom: 2px;
+}
+
+.gift-branch-badge {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.gift-code-col {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.gift-name-col {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.gift-date-col {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.gift-date-val {
+  display: block;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.gift-day-val {
+  display: block;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.gift-time-col {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.gift-time-pill {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.8rem;
+}
+
+.gift-row-focused {
+  background: #fefce8;
+}
+
+.gift-empty-cell {
+  text-align: center;
+  padding: 2rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Lab Notice Box */
+.gift-lab-notice-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.gift-lab-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1e40af;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.gift-lab-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #334155;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.gift-lab-list li {
+  margin-bottom: 4px;
+}
+
+/* Official Signatory Strip */
+.gift-signatory-strip {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px dashed #cbd5e1;
+  gap: 2rem;
+}
+
+.gift-signatory-copy-info {
+  flex: 1;
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.gift-signature-block {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.gift-seal-stamp {
+  width: 80px;
+  height: 80px;
+  border: 2px dashed #b91c1c;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  transform: rotate(-10deg);
+  opacity: 0.85;
+}
+
+.gift-seal-inner {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #b91c1c;
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.gift-sign-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gift-thanks {
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.gift-sign-name {
+  font-size: 1rem;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.gift-sign-desig {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.gift-sign-inst {
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.gift-sign-contact {
+  font-size: 0.78rem;
+  color: #64748b;
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.gift-sign-contact a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .gift-notice-overlay {
+    position: static;
+    background: transparent;
+    padding: 0;
+  }
+  .gift-notice-dialog {
+    max-width: 100%;
+    max-height: none;
+    box-shadow: none;
+    border: none;
+  }
+  .gift-notice-sheet {
+    padding: 0;
+    background: #ffffff;
+  }
+  .gift-exam-table {
+    border: 2px solid #000000;
+  }
+  .gift-exam-table th,
+  .gift-exam-table td {
+    border: 1px solid #000000 !important;
+  }
+}

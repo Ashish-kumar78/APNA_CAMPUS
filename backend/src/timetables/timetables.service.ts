@@ -8,6 +8,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TimetableSolverService, SolverProblemInput } from './timetables.solver.service';
 import { TimetableValidationService } from './timetables.validation.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationCategory, NotificationEventType, NotificationPriority } from '../notifications/notification-events';
+import { Role } from '@prisma/client';
 import * as XLSX from 'xlsx';
 
 @Injectable()
@@ -18,6 +21,7 @@ export class TimetablesService {
     private readonly prisma: PrismaService,
     private readonly solverService: TimetableSolverService,
     private readonly validationService: TimetableValidationService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ==========================================
@@ -679,15 +683,28 @@ export class TimetablesService {
       },
     });
 
-    // Notify Principal and Management
-    await this.prisma.notification.create({
-      data: {
-        role: 'PRINCIPAL',
-        title: `Draft Timetable Pending Approval`,
+    // Notify Principal and Management with proper targeting
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.CLASS_SCHEDULE_UPDATED,
+        title: 'Draft Timetable Pending Approval',
         message: `${tt.title} submitted by ${user.name || user.identifier} is waiting for formal review and approval.`,
-        time: 'Just now',
-      },
-    });
+        category: NotificationCategory.ACADEMIC,
+        priority: NotificationPriority.HIGH,
+        sourceModule: 'Timetables',
+        senderName: user.name || user.identifier,
+        senderRole: 'HOD',
+        actionUrl: '/timetable',
+        actionTab: 'approvals',
+        actionLabel: 'Review Timetable',
+        target: {
+          roles: [Role.PRINCIPAL, Role.MANAGEMENT],
+        },
+        dedupKey: `tt-submit-${id}`,
+      });
+    } catch {
+      // Non-blocking
+    }
 
     return {
       success: true,
@@ -707,15 +724,29 @@ export class TimetablesService {
       },
     });
 
-    // Notify HOD
-    await this.prisma.notification.create({
-      data: {
-        role: 'HOD',
-        title: `Timetable Approved by Principal`,
+    // Notify Department HOD
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.CLASS_SCHEDULE_UPDATED,
+        title: 'Timetable Approved by Principal',
         message: `${tt.title} has been officially approved. You can now publish it to students & faculty.`,
-        time: 'Just now',
-      },
-    });
+        category: NotificationCategory.ACADEMIC,
+        priority: NotificationPriority.NORMAL,
+        sourceModule: 'Principal Office',
+        senderName: user.name || 'Principal',
+        senderRole: 'PRINCIPAL',
+        actionUrl: '/timetable',
+        actionTab: 'timetables',
+        actionLabel: 'Publish Timetable',
+        target: {
+          roles: [Role.HOD],
+          department: tt.department,
+        },
+        dedupKey: `tt-approved-${id}`,
+      });
+    } catch {
+      // Non-blocking
+    }
 
     return {
       success: true,
@@ -754,25 +785,34 @@ export class TimetablesService {
       },
     });
 
-    // Broadcast Notifications to Students & Faculty
-    await this.prisma.notification.createMany({
-      data: [
-        {
-          role: 'STUDENT',
-          title: `Official Timetable Published`,
-          message: `Official weekly academic schedule for ${tt.department} ${tt.semester} (${tt.section}) is now active. View your updated slots.`,
-          time: 'Just now',
+    // Broadcast Targeted Notifications to enrolled Students & teaching Faculty only
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.CLASS_SCHEDULE_UPDATED,
+        title: 'Official Timetable Published',
+        message: `Official weekly academic schedule for ${tt.department} ${tt.semester} (${tt.section}) is now active. View your updated slots.`,
+        category: NotificationCategory.ACADEMIC,
+        priority: NotificationPriority.HIGH,
+        sourceModule: 'Timetables',
+        senderName: user.name || 'System Administrator',
+        senderRole: 'HOD',
+        actionUrl: '/timetable',
+        actionTab: 'view',
+        actionLabel: 'View Schedule',
+        target: {
+          roles: [Role.STUDENT, Role.FACULTY],
+          department: tt.department,
+          semester: tt.semester,
+          section: tt.section,
         },
-        {
-          role: 'FACULTY',
-          title: `Academic Schedule Published`,
-          message: `New official teaching schedule published for ${tt.department}. Check assigned periods in your faculty console.`,
-          time: 'Just now',
-        },
-      ],
-    });
+        dedupKey: `tt-published-${id}-v${updated.version}`,
+      });
+    } catch {
+      // Non-blocking
+    }
 
     return {
+
       success: true,
       message: `Official Timetable v${updated.version} published college-wide!`,
       timetable: updated,

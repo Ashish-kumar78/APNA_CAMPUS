@@ -30,6 +30,26 @@ enum Role {
   NON_TEACHING
 }
 
+enum DocumentStatus {
+  UPLOADED
+  PENDING_VERIFICATION
+  UNDER_REVIEW
+  CORRECTION_REQUESTED
+  VERIFIED
+  REJECTED
+  SUPERSEDED
+  EXPIRED
+}
+
+enum WorkflowStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  CORRECTION_REQUESTED
+  ESCALATED
+}
+
 model User {
   id              String     @id @default(cuid())
   email           String     @unique
@@ -51,13 +71,127 @@ model User {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  student         Student?
-  faculty         Faculty?
-  hod             Hod?
-  userRoles       UserRole[]
+  student                  Student?
+  faculty                  Faculty?
+  hod                     Hod?
+  userRoles               UserRole[]
+  documentRecords         DocumentRecord[] @relation("DocumentOwner")
+  documentVerifierQueues  DocumentRecord[] @relation("DocumentVerifier")
+  uploadedDocumentVersions DocumentVersion[] @relation("DocumentVersionUploader")
+  documentAuditEntries    DocumentAuditEntry[] @relation("DocumentAuditActor")
+  approvalOwnerships      ApprovalWorkflow[] @relation("WorkflowOwner")
+  approvalEvents          ApprovalWorkflowEvent[] @relation("ApprovalActor")
 
   @@index([identifier])
   @@index([email])
+}
+
+model DocumentRecord {
+  id                    String            @id @default(cuid())
+  documentId            String            @unique
+  ownerUserId           String
+  ownerUser             User              @relation("DocumentOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  title                 String
+  category              String
+  purpose               String?
+  relatedEntityType     String
+  relatedEntityId       String
+  storageReference      String
+  originalFileName      String
+  version               Int               @default(1)
+  status                DocumentStatus    @default(PENDING_VERIFICATION)
+  currentVerifierId     String?
+  currentVerifier       User?             @relation("DocumentVerifier", fields: [currentVerifierId], references: [id], onDelete: SetNull)
+  reviewerDecision      String?
+  reason               String?
+  decisionAt           DateTime?
+  expiryDate          DateTime?
+  accessPolicy        String            @default("ROLE_BASED")
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  versions            DocumentVersion[]
+  auditEntries        DocumentAuditEntry[]
+  approvalWorkflows   ApprovalWorkflow[]
+
+  @@index([ownerUserId])
+  @@index([status])
+  @@index([category])
+}
+
+model DocumentVersion {
+  id                String          @id @default(cuid())
+  documentId        String
+  document          DocumentRecord  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version           Int
+  fileName          String
+  storageReference  String
+  uploadedByUserId  String
+  uploadedByUser    User            @relation("DocumentVersionUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+  status            DocumentStatus  @default(PENDING_VERIFICATION)
+  reviewerDecision   String?
+  reason            String?
+  createdAt         DateTime        @default(now())
+
+  @@unique([documentId, version])
+  @@index([documentId])
+}
+
+model DocumentAuditEntry {
+  id             String          @id @default(cuid())
+  documentId     String
+  document       DocumentRecord  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  actorUserId    String
+  actorUser      User            @relation("DocumentAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  action         String
+  note           String?
+  previousStatus String?
+  newStatus      String?
+  createdAt      DateTime        @default(now())
+
+  @@index([documentId])
+}
+
+model ApprovalWorkflow {
+  id                    String                 @id @default(cuid())
+  workflowType          String
+  linkedEntityType      String
+  linkedEntityId        String
+  currentStep           String                 @default("SUBMISSION")
+  currentApproverUserId String?
+  currentApproverRole   String?
+  status                WorkflowStatus         @default(PENDING)
+  submissionAt          DateTime               @default(now())
+  decisionAt            DateTime?
+  decision              String?
+  reason               String?
+  threshold            Int                    @default(1)
+  escalationRequired   Boolean               @default(false)
+  dueAt                DateTime?
+  ownerUserId          String
+  ownerUser            User                  @relation("WorkflowOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  documentId           String?
+  document             DocumentRecord?       @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  events               ApprovalWorkflowEvent[]
+
+  @@index([ownerUserId])
+  @@index([status])
+}
+
+model ApprovalWorkflowEvent {
+  id               String           @id @default(cuid())
+  workflowId       String
+  workflow         ApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  actorUserId      String
+  actorUser        User             @relation("ApprovalActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  action           String
+  note             String?
+  createdAt        DateTime         @default(now())
+
+  @@index([workflowId])
 }
 
 model Student {
@@ -528,13 +662,75 @@ model FeedbackSurvey {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  role      String
-  title     String
-  message   String
-  time      String
-  unread    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id              String                  @id @default(cuid())
+  title           String
+  message         String                  @db.Text
+  category        String                  @default("GENERAL")
+  priority        String                  @default("NORMAL")
+  sourceModule    String                  @default("system")
+  eventType       String?
+  actionTab       String?
+  actionLabel     String?
+  senderId        String?
+  senderName      String?
+  senderRole      String?
+  senderDept      String?
+  attachmentUrl   String?                 @db.Text
+  attachmentName  String?
+  targetScope     String?
+  dedupKey        String?                 @unique
+  metadata        Json?
+  createdAt       DateTime                @default(now())
+  expiresAt       DateTime?
+
+  // Legacy backwards compatibility fields
+  role            String?
+  time            String?
+  unread          Boolean                 @default(true)
+
+  recipients      NotificationRecipient[]
+
+  @@index([sourceModule])
+  @@index([category])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model NotificationRecipient {
+  id                  String        @id @default(cuid())
+  notificationId      String
+  notification        Notification  @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  
+  userId              String?
+  recipientRole       String        @default("STUDENT")
+  recipientIdentifier String
+  recipientName       String?
+  
+  isRead              Boolean       @default(false)
+  readAt              DateTime?
+  isDismissed         Boolean       @default(false)
+  dismissedAt         DateTime?
+  createdAt           DateTime      @default(now())
+
+  @@unique([notificationId, recipientIdentifier])
+  @@index([recipientIdentifier, isRead])
+  @@index([recipientRole, isRead])
+  @@index([userId, isRead])
+  @@index([recipientIdentifier, isDismissed])
+}
+
+model NotificationPreference {
+  id                  String        @id @default(cuid())
+  userId              String?
+  userIdentifier      String        @unique
+  emailAlerts         Boolean       @default(true)
+  smsAlerts           Boolean       @default(false)
+  academicAlerts      Boolean       @default(true)
+  financialAlerts     Boolean       @default(true)
+  placementAlerts     Boolean       @default(true)
+  urgentAlerts        Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 }
 
 model Holiday {

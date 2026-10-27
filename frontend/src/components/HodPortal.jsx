@@ -1488,7 +1488,7 @@ export default function HodPortal({ account, onLogout }) {
                 </section>
               </div>
 
-              {/* 3. Department Quick Actions Strip */}
+              {/* 3. Department Scope & Reports Strip */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', background: '#ffffff', border: '1px solid var(--d-line)', borderRadius: '14px', padding: '12px 18px', boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)', marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -1499,18 +1499,6 @@ export default function HodPortal({ account, onLogout }) {
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <button className="admin-action-btn-primary" onClick={() => setActiveTab('approval')} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px' }}>
-                    <CheckCircle2 size={15} /> Marks Queue ({pendingCount})
-                  </button>
-                  <button className="admin-action-btn-primary" onClick={() => setActiveTab('marks')} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px' }}>
-                    <BarChart2 size={15} /> Marks Management
-                  </button>
-                  <button className="admin-action-btn-primary" onClick={() => setActiveTab('notifications')} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px', background: '#0f766e' }}>
-                    <Megaphone size={15} /> Broadcast Circular
-                  </button>
-                  <button className="admin-action-btn-secondary" onClick={() => setActiveTab('complaints')} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px' }}>
-                    <ShieldAlert size={15} /> Grievances ({pendingGrievancesCount})
-                  </button>
                   <button className="admin-action-btn-secondary" onClick={() => downloadDepartmentGazettePdf(reportSemFilter, reportSectionFilter, students)} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px' }}>
                     <Download size={15} /> Gazette PDF
                   </button>

@@ -1,9 +1,15 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationCategory, NotificationEventType, NotificationPriority } from '../notifications/notification-events';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class FeesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   // =========================================================================
   // 1. FINANCIAL DASHBOARD METRICS & COMMAND CENTER
@@ -257,6 +263,35 @@ export class FeesService {
       referenceNumber: details.transactionId,
     });
 
+    // Dispatch official verified receipt notification to student
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.FEE_PAYMENT_CONFIRMED,
+        title: 'Fee Payment Verified & Confirmed',
+        message: `Your payment of ₹${details.amount} has been verified and posted to your ledger. Receipt Ref: ${details.transactionId || details.referenceNumber}.`,
+        category: NotificationCategory.FINANCE,
+        priority: NotificationPriority.HIGH,
+        sourceModule: 'Accounts & Finance',
+        senderName: reviewerName,
+        senderRole: 'ACCOUNTS',
+        actionUrl: '/accounts',
+        actionTab: 'receipts',
+        actionLabel: 'View Receipt',
+        target: {
+          studentRollNumbers: [details.rollNumber],
+          roles: [Role.STUDENT],
+        },
+        metadata: {
+          amount: details.amount,
+          transactionId: details.transactionId,
+          referenceNumber: details.referenceNumber,
+        },
+        dedupKey: `fee-payment-approved-${id}`,
+      });
+    } catch {
+      // Non-blocking notification delivery
+    }
+
     return { success: true, message: 'Payment proof verified and posted to student ledger.', data: details };
   }
 
@@ -280,8 +315,33 @@ export class FeesService {
       },
     });
 
+    // Dispatch rejection explanation notification to student
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.FEE_PAYMENT_REJECTED,
+        title: 'Fee Payment Proof Verification Discrepancy',
+        message: `Your payment proof of ₹${details.amount} was returned: ${rejectionReason}. Please re-submit your receipt slip.`,
+        category: NotificationCategory.FINANCE,
+        priority: NotificationPriority.HIGH,
+        sourceModule: 'Accounts & Finance',
+        senderName: reviewerName,
+        senderRole: 'ACCOUNTS',
+        actionUrl: '/accounts',
+        actionTab: 'payment-proof',
+        actionLabel: 'Review & Re-submit',
+        target: {
+          studentRollNumbers: [details.rollNumber],
+          roles: [Role.STUDENT],
+        },
+        dedupKey: `fee-payment-rejected-${id}`,
+      });
+    } catch {
+      // Non-blocking
+    }
+
     return { success: true, message: 'Payment proof rejected and feedback dispatched to student.', data: details };
   }
+
 
   // =========================================================================
   // 3. STUDENT FEE LEDGER & INVOICES

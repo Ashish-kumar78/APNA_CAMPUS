@@ -12,13 +12,16 @@ import {
   X,
 } from 'lucide-react'
 import { downloadGradeCardPdf, downloadAdmitCardPdf } from '../utils/pdfGenerator'
+import OfficialCollegeNoticeModal, { GIFT_MODULAR_TEST_2_NOTICE } from '../components/ExaminationCell/OfficialCollegeNoticeModal.jsx'
 import './ExaminationPage.css'
 
 const internalSchedule = [
-  { date: '15 Oct 2026', subject: 'Artificial Intelligence', code: 'CS501', time: '10:00 AM', room: 'Hall-A', duration: '90 min', status: 'upcoming' },
-  { date: '17 Oct 2026', subject: 'Machine Learning', code: 'CS502', time: '10:00 AM', room: 'Hall-B', duration: '90 min', status: 'upcoming' },
-  { date: '20 Oct 2026', subject: 'Cloud Computing', code: 'CS503', time: '02:00 PM', room: 'Hall-A', duration: '90 min', status: 'upcoming' },
-  { date: '22 Oct 2026', subject: 'Compiler Design', code: 'CS504', time: '10:00 AM', room: 'Hall-C', duration: '90 min', status: 'upcoming' },
+  { date: '05 Nov 2026', subject: 'Artificial Intelligence and Computational Foundations', code: 'BTCS-T-PC-505', time: '8:30 AM - 9:30 AM', room: 'Block B - Hall 301', duration: '60 min', status: 'upcoming' },
+  { date: '06 Nov 2026', subject: 'Software Engineering', code: 'BTCS-T-PC-502', time: '8:30 AM - 9:30 AM', room: 'Block B - Hall 301', duration: '60 min', status: 'upcoming' },
+  { date: '07 Nov 2026', subject: 'Operating System', code: 'BTCS-T-PC-503', time: '8:30 AM - 9:30 AM', room: 'Block B - Hall 301', duration: '60 min', status: 'upcoming' },
+  { date: '09 Nov 2026', subject: 'Formal Language and Automata Theory', code: 'BTCS-T-PC-504', time: '8:30 AM - 9:30 AM', room: 'Block B - Hall 301', duration: '60 min', status: 'upcoming' },
+  { date: '10 Nov 2026', subject: 'Web Design and Development', code: 'BTCS-T-PC-501', time: '8:30 AM - 9:30 AM', room: 'Block B - Hall 301', duration: '60 min', status: 'upcoming' },
+  { date: '11 Nov 2026', subject: 'Essence of Indian Knowledge & Tradition-II', code: 'BTBS-T-MC-501', time: '8:30 AM - 9:30 AM', room: 'Block B - Hall 301', duration: '60 min', status: 'upcoming' },
 ]
 
 const universityResults = [
@@ -54,6 +57,7 @@ export default function ExaminationPage() {
   const [activeTab, setActiveTab] = useState('schedule')
   const [selectedSemester, setSelectedSemester] = useState(0)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [showModularNotice, setShowModularNotice] = useState(false)
 
   const sem = universityResults[selectedSemester]
 
@@ -92,9 +96,30 @@ export default function ExaminationPage() {
 
       {activeTab === 'schedule' && (
         <div className="exam-schedule-view">
-          <div className="exam-alert">
-            <AlertCircle size={14} />
-            <span>Internal Assessment 2 is scheduled from <strong>15 Oct – 22 Oct 2026</strong>. Admit cards will be issued through this portal.</span>
+          <div className="exam-alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertCircle size={15} />
+              <span>
+                <strong>B.Tech 5th Semester Modular Test-II</strong> is scheduled from <strong>05 Nov – 12 Nov 2026</strong> (8:30 AM – 9:30 AM).
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowModularNotice(true)}
+              style={{
+                background: '#1e3a8a',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              🏛 View Official College Notice (All Branches)
+            </button>
           </div>
           <div className="exam-table-wrap">
             <table className="exam-table">
@@ -261,6 +286,14 @@ export default function ExaminationPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showModularNotice && (
+        <OfficialCollegeNoticeModal
+          notice={GIFT_MODULAR_TEST_2_NOTICE}
+          userBranch="CSE"
+          onClose={() => setShowModularNotice(false)}
+        />
       )}
     </div>
   )

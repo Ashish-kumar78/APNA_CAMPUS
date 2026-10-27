@@ -68,6 +68,7 @@ import CertificatesDegreeModule from './ExaminationCell/CertificatesDegreeModule
 import MalpracticeGrievancesModule from './ExaminationCell/MalpracticeGrievancesModule.jsx';
 import ExaminerManagementModule from './ExaminationCell/ExaminerManagementModule.jsx';
 import ExamSettingsModule from './ExaminationCell/ExamSettingsModule.jsx';
+import OfficialCollegeNoticeModal, { GIFT_MODULAR_TEST_2_NOTICE } from './ExaminationCell/OfficialCollegeNoticeModal.jsx';
 import { examinationStore } from '../services/examinationStore.js';
 import { erpStore } from '../services/erpStore.js';
 import { examsApi } from '../services/examsApi.js';
@@ -127,7 +128,6 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
   const [examCirculars, setExamCirculars] = useState(() => erpStore.getExamCirculars());
 
   // Sub-tabs State for extended modules
-  const [dashboardView, setDashboardView] = useState('command_center'); // 'command_center' | 'profile'
   const [timetableSubTab, setTimetableSubTab] = useState('schedule'); // 'schedule' | 'centres'
   const [seatingSubTab, setSeatingSubTab] = useState('seating'); // 'seating' | 'invigilation'
   const [moderationSubTab, setModerationSubTab] = useState('cie'); // 'cie' | 'external' | 'ia_breakdown' | 'audit'
@@ -183,6 +183,7 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
   const [marksheetPreviewModal, setMarksheetPreviewModal] = useState(null); // student object
   const [scrutinyEditModal, setScrutinyEditModal] = useState(null); // scrutiny request object
   const [newCircularModal, setNewCircularModal] = useState(false);
+  const [previewOfficialNotice, setPreviewOfficialNotice] = useState(false);
   const [isGradingRunning, setIsGradingRunning] = useState(false);
 
   // Form states for New Exam Cycle
@@ -246,6 +247,70 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
   const triggerToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  const handleDashboardNavigate = (target) => {
+    switch (target) {
+      case 'schedule':
+      case 'timetable':
+      case 'exam-sched':
+        setActiveTab('timetable');
+        break;
+      case 'progress':
+      case 'exam-eval':
+      case 'digital_evaluation':
+        setActiveTab('digital_evaluation');
+        break;
+      case 'submissions':
+      case 'moderation':
+      case 'exam-subs':
+        setActiveTab('moderation');
+        break;
+      case 'cycles':
+        setActiveTab('cycles');
+        break;
+      case 'registration':
+        setActiveTab('registration');
+        break;
+      case 'hall_tickets':
+        setActiveTab('hall_tickets');
+        break;
+      case 'seating':
+        setActiveTab('seating');
+        break;
+      case 'grading':
+        setActiveTab('grading');
+        break;
+      case 'scrutiny':
+        setActiveTab('scrutiny');
+        break;
+      case 'circulars':
+        setActiveTab('circulars');
+        break;
+      case 'question_papers':
+        setActiveTab('question_papers');
+        break;
+      case 'booklets':
+        setActiveTab('booklets');
+        break;
+      case 'examiners':
+        setActiveTab('examiners');
+        break;
+      case 'malpractice_grievances':
+        setActiveTab('malpractice_grievances');
+        break;
+      case 'certificates':
+        setActiveTab('certificates');
+        break;
+      case 'report-generation':
+        setActiveTab('report-generation');
+        break;
+      case 'exam_settings':
+        setActiveTab('exam_settings');
+        break;
+      default:
+        setActiveTab(target || 'dashboard');
+    }
   };
 
   // --- Handlers: Exam Cycles ---
@@ -685,274 +750,18 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
           )}
 
           {/* =========================================================================
-              TAB 0: CoE OPERATIONS DASHBOARD
+              TAB 0: CoE AUTONOMOUS EXAMINATION DASHBOARD
              ========================================================================= */}
           {activeTab === 'dashboard' && (
-            <div>
-              <div className="coe-subtabs-bar" style={{ marginBottom: '1.25rem' }}>
-                <button
-                  type="button"
-                  className={`coe-subtab-btn ${dashboardView === 'command_center' ? 'active' : ''}`}
-                  onClick={() => setDashboardView('command_center')}
-                >
-                  <ShieldCheck size={16} />
-                  <span>CoE Operational Command Center</span>
-                  <span className="coe-subtab-badge" style={{ background: '#dcfce7', color: '#16a34a' }}>Live</span>
-                </button>
-                <button
-                  type="button"
-                  className={`coe-subtab-btn ${dashboardView === 'profile' ? 'active' : ''}`}
-                  onClick={() => setDashboardView('profile')}
-                >
-                  <GraduationCap size={16} />
-                  <span>Officer Profile &amp; Governance Bulletins</span>
-                </button>
-              </div>
-
-              {dashboardView === 'profile' ? (
-                <RoleDashboardLanding
-                  roleKey="exam_cell"
-                  account={account}
-                  onLogout={onLogout}
-                  onSwitchRole={onSwitchRole}
-                  onNavigate={(target) => {
-                    if (target === 'exam-sched') setActiveTab('timetable');
-                    else if (target === 'exam-eval') setActiveTab('digital_evaluation');
-                    else if (target === 'exam-subs') setActiveTab('moderation');
-                    else setActiveTab('timetable');
-                  }}
-                />
-              ) : (
-                <div>
-                  {/* Top Operational KPI Grid */}
-                  <div className="erp-stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
-                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('cycles')}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Active Cycles</span>
-                        <Calendar size={18} color="#7c3aed" />
-                      </div>
-                      <div className="erp-stat-val">{examCycles.filter(c => c.status !== 'Closed').length} Cycles</div>
-                      <div className="erp-stat-note">Autumn 2026 &amp; Backlog Series</div>
-                      <div className="kpi-hover-hint">View Cycles <ArrowUpRight size={13} /></div>
-                    </div>
-
-                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('registration')}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Registered Examinees</span>
-                        <Users size={18} color="#0284c7" />
-                      </div>
-                      <div className="erp-stat-val">2,480</div>
-                      <div className="erp-stat-note">Regular &amp; Arrear examinees</div>
-                      <div className="kpi-hover-hint">View Registrations <ArrowUpRight size={13} /></div>
-                    </div>
-
-                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('registration')}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Pending Applications</span>
-                        <Clock size={18} color="#f59e0b" />
-                      </div>
-                      <div className="erp-stat-val" style={{ color: '#d97706' }}>18 Pending</div>
-                      <div className="erp-stat-note">Clearance verification queue</div>
-                      <div className="kpi-hover-hint">Review Applications <ArrowUpRight size={13} /></div>
-                    </div>
-
-                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('timetable')}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Scheduled Papers</span>
-                        <BookOpen size={18} color="#10b981" />
-                      </div>
-                      <div className="erp-stat-val">{examTimetable.length} Papers</div>
-                      <div className="erp-stat-note">0 Timetable Conflicts Detected</div>
-                      <div className="kpi-hover-hint">View Timetable <ArrowUpRight size={13} /></div>
-                    </div>
-
-                    <div className="erp-stat-card clickable-kpi" onClick={() => { setActiveTab('timetable'); setTimetableSubTab('centres'); }}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Centres in Use</span>
-                        <Building2 size={18} color="#0284c7" />
-                      </div>
-                      <div className="erp-stat-val">{centres.length} Centres</div>
-                      <div className="erp-stat-note">14 Examination Halls Active</div>
-                      <div className="kpi-hover-hint">View Centres <ArrowUpRight size={13} /></div>
-                    </div>
-
-                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('examiners')}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Evaluator Assignments</span>
-                        <UserCheck size={18} color="#7c3aed" />
-                      </div>
-                      <div className="erp-stat-val">4 Panelists</div>
-                      <div className="erp-stat-note">2 Bundles Pending Assignment</div>
-                      <div className="kpi-hover-hint">Manage Examiners <ArrowUpRight size={13} /></div>
-                    </div>
-
-                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('booklets')}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Booklets for Evaluation</span>
-                        <Layers size={18} color="#f59e0b" />
-                      </div>
-                      <div className="erp-stat-val">120 Booklets</div>
-                      <div className="erp-stat-note">4 Bundles in Vault Custody</div>
-                      <div className="kpi-hover-hint">Track Booklets <ArrowUpRight size={13} /></div>
-                    </div>
-
-                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('moderation')}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Marks Moderation</span>
-                        <FileCheck2 size={18} color="#7c3aed" />
-                      </div>
-                      <div className="erp-stat-val">Live</div>
-                      <div className="erp-stat-note">Continuous Internal Evaluation</div>
-                      <div className="kpi-hover-hint">Moderate Marks <ArrowUpRight size={13} /></div>
-                    </div>
-
-                    <div className="erp-stat-card clickable-kpi" onClick={() => { setActiveTab('grading'); setGradingSubTab('gazette'); }}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Results Approval</span>
-                        <Award size={18} color="#10b981" />
-                      </div>
-                      <div className="erp-stat-val" style={{ color: '#16a34a' }}>Gazette Ready</div>
-                      <div className="erp-stat-note">95.1% Pass Percentage</div>
-                      <div className="kpi-hover-hint">Preview Gazette <ArrowUpRight size={13} /></div>
-                    </div>
-
-                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('scrutiny')}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Re-Eval &amp; Scrutiny</span>
-                        <RotateCcw size={18} color="#f59e0b" />
-                      </div>
-                      <div className="erp-stat-val">{reevaluationRequests.length} Cases</div>
-                      <div className="erp-stat-note">Committee assigned</div>
-                      <div className="kpi-hover-hint">Process Scrutiny <ArrowUpRight size={13} /></div>
-                    </div>
-
-                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('malpractice_grievances')}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Malpractice (UFM)</span>
-                        <ShieldAlert size={18} color="#dc2626" />
-                      </div>
-                      <div className="erp-stat-val" style={{ color: '#dc2626' }}>2 Cases</div>
-                      <div className="erp-stat-note">Disciplinary hearings scheduled</div>
-                      <div className="kpi-hover-hint">View UFM Cases <ArrowUpRight size={13} /></div>
-                    </div>
-
-                    <div className="erp-stat-card clickable-kpi" onClick={() => setActiveTab('certificates')}>
-                      <div className="erp-stat-card-header">
-                        <span className="erp-stat-card-title">Certificates Desk</span>
-                        <Award size={18} color="#0284c7" />
-                      </div>
-                      <div className="erp-stat-val">4 Requests</div>
-                      <div className="erp-stat-note">Degree &amp; Transcripts</div>
-                      <div className="kpi-hover-hint">Process Requests <ArrowUpRight size={13} /></div>
-                    </div>
-                  </div>
-
-                  {/* Operational Widgets: Agenda & Readiness Checklist */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem', marginBottom: '1.75rem' }}>
-                    {/* Upcoming Papers Schedule */}
-                    <div className="erp-panel" style={{ marginBottom: 0 }}>
-                      <div className="erp-panel-header">
-                        <div className="erp-panel-title">
-                          <h3>Upcoming Examination Sessions</h3>
-                          <p>Paper schedule, session timings, halls assigned, and invigilator squad deployment</p>
-                        </div>
-                        <button className="erp-btn erp-btn-secondary" onClick={() => setActiveTab('timetable')}>
-                          Full Schedule
-                        </button>
-                      </div>
-
-                      <div className="erp-table-responsive">
-                        <table className="erp-table">
-                          <thead>
-                            <tr>
-                              <th>Date &amp; Session</th>
-                              <th>Course / Paper</th>
-                              <th>Halls Assigned</th>
-                              <th>Examinees</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {examTimetable.slice(0, 4).map(item => (
-                              <tr key={item.id}>
-                                <td>
-                                  <strong>{item.date}</strong>
-                                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{item.time}</div>
-                                </td>
-                                <td>
-                                  <strong>{item.code}</strong>
-                                  <div style={{ fontSize: '0.75rem', color: '#475569' }}>{item.subject}</div>
-                                </td>
-                                <td>
-                                  <span style={{ background: '#f3e8ff', color: '#7c3aed', padding: '2px 8px', borderRadius: '4px', fontSize: '0.74rem', fontWeight: 700 }}>
-                                    {item.roomCount} Halls Assigned
-                                  </span>
-                                </td>
-                                <td><strong>{item.roomCount * 22} Candidates</strong></td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Examination Readiness Checklist */}
-                    <div className="erp-panel" style={{ marginBottom: 0 }}>
-                      <div className="erp-panel-header">
-                        <div className="erp-panel-title">
-                          <h3>Autonomous Readiness &amp; Governance</h3>
-                          <p>Regulatory prerequisite compliance audit</p>
-                        </div>
-                        <span className="erp-role-badge">
-                          <ShieldCheck size={14} /> 100% Compliant
-                        </span>
-                      </div>
-
-                      <div className="exam-readiness-checklist">
-                        <div className="exam-readiness-item complete">
-                          <div>
-                            <strong>1. Autonomous Exam Cycles Configured</strong>
-                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>End-Sem Autumn 2026 session initialized with academic dates</div>
-                          </div>
-                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Done</span>
-                        </div>
-
-                        <div className="exam-readiness-item complete">
-                          <div>
-                            <strong>2. Timetable Conflict Validation</strong>
-                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Zero room double-bookings, invigilator clashes, or paper overlaps</div>
-                          </div>
-                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Passed</span>
-                        </div>
-
-                        <div className="exam-readiness-item complete">
-                          <div>
-                            <strong>3. Seating Plan &amp; Door Charts Staggering</strong>
-                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Anti-cheating branch separation across 5 examination halls</div>
-                          </div>
-                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Optimized</span>
-                        </div>
-
-                        <div className="exam-readiness-item complete">
-                          <div>
-                            <strong>4. Student Clearance &amp; Admit Card Generation</strong>
-                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Attendance vetted (&ge;75%) and accounts fee verified</div>
-                          </div>
-                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Live</span>
-                        </div>
-
-                        <div className="exam-readiness-item complete">
-                          <div>
-                            <strong>5. Question Paper Vault Sealed</strong>
-                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>AES-256 hardware encryption with dual keycards active</div>
-                          </div>
-                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Protected</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <RoleDashboardLanding
+              roleKey="exam_cell"
+              account={account}
+              onLogout={onLogout}
+              onSwitchRole={onSwitchRole}
+              onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+              onNavigateTab={handleDashboardNavigate}
+              onNavigate={handleDashboardNavigate}
+            />
           )}
 
           {/* =========================================================================
@@ -2953,6 +2762,15 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
                         <p style={{ margin: 0, fontSize: '0.84rem', color: '#475569', lineHeight: 1.5 }}>
                           {circ.content}
                         </p>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                          <button
+                            type="button"
+                            className="erp-btn erp-btn-primary erp-btn-sm"
+                            onClick={() => setPreviewOfficialNotice(true)}
+                          >
+                            <Eye size={13} /> View Official College Notice Sheet (All Branches)
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -4109,6 +3927,15 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Official GIFT Examination Circular Full View */}
+      {previewOfficialNotice && (
+        <OfficialCollegeNoticeModal
+          notice={GIFT_MODULAR_TEST_2_NOTICE}
+          userBranch="CSE"
+          onClose={() => setPreviewOfficialNotice(false)}
+        />
       )}
     </>
   );

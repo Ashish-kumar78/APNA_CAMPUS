@@ -17,6 +17,11 @@ export default function AppSidebar({
   // Section collapse state (keyed by section title or index)
   const [collapsedMap, setCollapsedMap] = useState({});
 
+  // Reset collapse state whenever switching portals
+  useEffect(() => {
+    setCollapsedMap({});
+  }, [portalName]);
+
   // Auto-expand section containing the activeTab
   useEffect(() => {
     if (!activeTab) return;
@@ -29,8 +34,11 @@ export default function AppSidebar({
     });
   }, [activeTab, navSections]);
 
-  const toggleSection = (key) => {
-    setCollapsedMap(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleSection = (key, currentlyCollapsed) => {
+    setCollapsedMap(prev => {
+      const current = prev[key] !== undefined ? prev[key] : currentlyCollapsed;
+      return { ...prev, [key]: !current };
+    });
   };
 
   // Close drawer or sidebar on ESC key
@@ -97,8 +105,11 @@ export default function AppSidebar({
         <nav className="apna-sidebar-nav">
           {navSections.map((sec, secIdx) => {
             const key = sec.title || `sec-${secIdx}`;
-            const isCollapsible = Boolean(sec.collapsible);
-            const isCollapsed = isCollapsible && (collapsedMap[key] ?? sec.defaultCollapsed ?? false);
+            // Every section with a title is collapsible as a dropdown box across all roles unless explicitly set to false
+            const isCollapsible = Boolean(sec.title) && sec.collapsible !== false;
+            const hasActive = sec.items?.some(it => it.id === activeTab || it.page === activeTab);
+            const defaultCollapsed = sec.defaultCollapsed !== undefined ? sec.defaultCollapsed : !hasActive;
+            const isCollapsed = isCollapsible && (collapsedMap[key] !== undefined ? collapsedMap[key] : defaultCollapsed);
 
             return (
               <div key={key} className={`apna-sidebar-section ${isCollapsible ? 'is-collapsible' : ''}`}>
@@ -107,7 +118,7 @@ export default function AppSidebar({
                     <button
                       type="button"
                       className="apna-sidebar-section-toggle"
-                      onClick={() => toggleSection(key)}
+                      onClick={() => toggleSection(key, isCollapsed)}
                       aria-expanded={!isCollapsed}
                     >
                       <span className="apna-sidebar-section-title">{sec.title}</span>

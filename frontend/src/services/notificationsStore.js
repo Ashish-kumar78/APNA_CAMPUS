@@ -3,9 +3,11 @@
 // Fully reactive with real-time audio chimes and localStorage persistence
 
 import { playReceivedSound } from './soundEffects.js';
+import { api, API_BASE_URL } from './api.js';
 
 const NOTIFICATIONS_STORE_KEY_PREFIX = 'apna_campus_role_notifs_v3_';
 const FACULTY_NOTIFS_STORAGE_KEY = 'apna_campus_faculty_notifications_v2';
+
 
 export function normalizeRole(rawRole) {
   if (!rawRole) return 'student';
@@ -35,19 +37,20 @@ export function normalizeRole(rawRole) {
 export const ROLE_DEFAULT_NOTIFICATIONS = {
   student: [
     {
-      id: 'notif-stu-101',
-      title: 'Continuous Internal Assessment (CIA-2) Timetable Released',
-      message: 'Modular 2 Theory & Practical examinations commence on 15 Oct 2026. Data Structures (CS501) paper will be held from 10:00 AM - 12:00 PM in Block B examination halls. Syllabus covers Binary Search Trees, AVL rotations, Heap sort, and Graph Traversals. Hall tickets issued only to candidates having >= 75% aggregate attendance.',
+      id: 'notif-stu-gift-mod2',
+      title: 'B.Tech 5th Semester Modular test-II schedule, 2026',
+      message: 'Dear Students, The Modular Test -II for B.Tech 5th Semester will be conducted from 05 November 2026 to 12 November 2026 as per the schedule given below. All students are advised to take note of the schedule and prepare accordingly.\n\nTiming: 8:30 am to 9:30 am across all B.Tech branches (AGRIL, CIVIL, CSE, CSE-AI, CS & IOT, EEE, ECE, MECH). Lab examinations will be conducted per respective HoD timetables.',
       category: 'EXAMINATION',
       priority: 'URGENT',
-      senderName: 'Controller of Examinations',
-      senderRole: 'Autonomous Examination Cell',
-      senderDept: 'Office of the CoE',
-      timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+      senderName: 'CONTROLLER OF EXAMINATION (GIFT)',
+      senderRole: 'Dr. Pallab Kumar Kar (CoE)',
+      senderDept: 'Office of the CoE · GIFT Autonomous, Bhubaneswar',
+      timestamp: new Date().toISOString(),
       unread: true,
       actionTab: 'examination',
       actionLabel: 'View Exam Timetable',
-      attachmentName: 'CS501_Modular2_Blueprint_and_RoomAllocation.pdf',
+      attachmentName: 'BTech_5th_Sem_Modular_Test_II_Schedule_2026.pdf',
+      isOfficialModularTestNotice: true,
     },
     {
       id: 'notif-stu-102',
@@ -837,6 +840,9 @@ class InstitutionalNotificationStore {
   constructor() {
     this.storagePrefix = NOTIFICATIONS_STORE_KEY_PREFIX;
     this.listeners = new Set();
+    this.sseSource = null;
+    this.isSyncing = false;
+    this.lastAccountKey = null;
     this._setupCrossTabListener();
   }
 
@@ -850,6 +856,134 @@ class InstitutionalNotificationStore {
     window.addEventListener('apna_campus_notifications_updated', () => {
       this._notify();
     });
+  }
+
+  /**
+   * Connect to real-time Server-Sent Events (SSE) notification stream
+   */
+  connectRealtimeStream() {
+    if (typeof window === 'undefined' || typeof EventSource === 'undefined') return;
+    const token = localStorage.getItem('collegeflow_token');
+    if (!token) return;
+
+    if (this.sseSource) {
+      try {
+        this.sseSource.close();
+      } catch {}
+      this.sseSource = null;
+    }
+
+    try {
+      const url = `${API_BASE_URL}/notifications/stream?token=${encodeURIComponent(token)}`;
+      const sse = new EventSource(url);
+
+      sse.addEventListener('notification.new', (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          this._onRealtimeNotificationReceived(payload);
+        } catch (e) {
+          console.warn('Failed to parse incoming real-time notification event:', e);
+        }
+      });
+
+      sse.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload && payload.title) {
+            this._onRealtimeNotificationReceived(payload);
+          }
+        } catch {}
+      };
+
+      sse.onerror = () => {
+        // EventSource automatically attempts reconnection per SSE protocol
+      };
+
+      this.sseSource = sse;
+    } catch (e) {
+      console.warn('Real-time SSE stream connection error:', e);
+    }
+  }
+
+  _onRealtimeNotificationReceived(item) {
+    if (!item || !item.title) return;
+    const role = normalizeRole(item.recipientRole || localStorage.getItem('collegeflow_role') || 'student');
+    const notifItem = {
+      id: item.notificationId || item.id || `notif-${Date.now()}`,
+      recipientId: item.id,
+      title: item.title,
+      message: item.message,
+      category: item.category || 'ACADEMIC',
+      priority: item.priority || 'NORMAL',
+      senderName: item.senderName || 'Authorized Official',
+      senderRole: item.senderRole || 'Institutional Authority',
+      senderDept: item.senderDept || 'Campus Administration',
+      timestamp: item.timestamp || new Date().toISOString(),
+      unread: true,
+      actionTab: item.actionTab || 'dashboard',
+      actionLabel: item.actionLabel || 'View Details',
+      actionUrl: item.actionUrl || null,
+      attachmentName: item.attachmentName || null,
+      attachmentUrl: item.attachmentUrl || null,
+      sourceModule: item.sourceModule || null,
+      eventType: item.eventType || null,
+    };
+
+    const current = this._loadRawNotifications(role);
+    // Deduplicate by ID
+    if (!current.some((n) => n.id === notifItem.id)) {
+      this._saveRawNotifications(role, [notifItem, ...current]);
+      try {
+        playReceivedSound();
+      } catch {}
+      this._notify();
+    }
+  }
+
+  /**
+   * Sync notifications from authoritative NestJS backend
+   */
+  async syncBackendNotifications(account) {
+    if (this.isSyncing || typeof window === 'undefined') return;
+    const token = localStorage.getItem('collegeflow_token');
+    if (!token) return;
+
+    this.isSyncing = true;
+    try {
+      const res = await api.getMyNotifications({ limit: 50 });
+      if (res && res.success && Array.isArray(res.data)) {
+        const role = normalizeRole(account?.role);
+        const mapped = res.data.map((r) => ({
+          id: r.id,
+          recipientId: r.recipientId,
+          title: r.title,
+          message: r.message,
+          category: r.category || 'ACADEMIC',
+          priority: r.priority || 'NORMAL',
+          senderName: r.senderName || 'CoE / Institutional Office',
+          senderRole: r.senderRole || 'ADMIN',
+          senderDept: r.senderDept || 'Apna Campus',
+          timestamp: r.timestamp || r.createdAt || new Date().toISOString(),
+          unread: !r.isRead,
+          actionTab: r.actionTab || 'dashboard',
+          actionLabel: r.actionLabel || 'View Details',
+          actionUrl: r.actionUrl || null,
+          attachmentName: r.attachmentName || null,
+          attachmentUrl: r.attachmentUrl || null,
+          sourceModule: r.sourceModule || null,
+          eventType: r.eventType || null,
+        }));
+
+        if (mapped.length > 0) {
+          this._saveRawNotifications(role, mapped);
+          this._notify();
+        }
+      }
+    } catch {
+      // Offline fallback: rely on persisted storage
+    } finally {
+      this.isSyncing = false;
+    }
   }
 
   subscribe(listener) {
@@ -951,6 +1085,14 @@ class InstitutionalNotificationStore {
     const roll = account?.rollNumber || account?.registrationNumber || '01';
     const baseNotifs = this._loadRawNotifications(role);
 
+    // Trigger background sync and SSE connection on account change
+    const accountKey = `${role}-${roll}`;
+    if (this.lastAccountKey !== accountKey) {
+      this.lastAccountKey = accountKey;
+      this.syncBackendNotifications(account);
+      this.connectRealtimeStream();
+    }
+
     let allNotifs = [...baseNotifs];
 
     // If student, blend in dynamic faculty broadcast notices
@@ -993,12 +1135,15 @@ class InstitutionalNotificationStore {
     const role = normalizeRole(account?.role);
     const roll = account?.rollNumber || account?.registrationNumber || '01';
 
-    // 1. Update in role store
+    // 1. Sync to backend API asynchronously
+    api.markNotificationRead(id).catch(() => null);
+
+    // 2. Update in role store
     const list = this._loadRawNotifications(role);
     const updated = list.map((n) => (n.id === id ? { ...n, unread: !isRead } : n));
     this._saveRawNotifications(role, updated);
 
-    // 2. If it's a student faculty notice, also update in faculty notifications store
+    // 3. If it's a student faculty notice, also update in faculty notifications store
     if (role === 'student') {
       try {
         const raw = localStorage.getItem(FACULTY_NOTIFS_STORAGE_KEY);
@@ -1033,6 +1178,10 @@ class InstitutionalNotificationStore {
     const role = normalizeRole(account?.role);
     const roll = account?.rollNumber || account?.registrationNumber || '01';
 
+    // 1. Call backend API
+    api.markAllNotificationsRead().catch(() => null);
+
+    // 2. Local state
     const list = this._loadRawNotifications(role);
     const updated = list.map((n) => ({ ...n, unread: false }));
     this._saveRawNotifications(role, updated);
@@ -1077,11 +1226,16 @@ class InstitutionalNotificationStore {
    */
   clearAllRead(account) {
     const role = normalizeRole(account?.role);
+
+    // Call backend API to archive/dismiss read items
+    api.clearReadNotifications().catch(() => null);
+
     const list = this._loadRawNotifications(role);
     const updated = list.filter((n) => n.unread);
     this._saveRawNotifications(role, updated);
     this._notify();
   }
+
 
   /**
    * Send a new notification to a specific role or multiple roles

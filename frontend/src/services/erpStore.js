@@ -284,6 +284,17 @@ export const initialReevaluationRequests = [
 ];
 
 export const initialExamCirculars = [
+  {
+    id: 'CIRC-GIFT-MOD2-2026',
+    circularNo: 'GIFT/COE/2026/MOD2-01',
+    title: 'B.Tech 5th Semester Modular test-II schedule, 2026',
+    date: '04 Nov 2026',
+    audience: 'B.Tech 5th Semester (All Branches) & HoDs',
+    category: 'Schedule',
+    priority: 'Urgent',
+    content: 'Dear Students, The Modular Test -II for B.Tech 5th Semester will be conducted from 05 November 2026 to 12 November 2026 as per the schedule given below. Timing: 8:30 am to 9:30 am across all B.Tech branches (AGRIL, CIVIL, CSE, CSE-AI, CS & IOT, EEE, ECE, MECH). Lab examinations will be conducted per respective HoD timetables.',
+    isOfficialModularTestNotice: true,
+  },
   { id: 'CIRC-EXAM-01', circularNo: 'GIFT/COE/2026/89', title: 'Autumn 2026 End-Semester Admit Card Download Protocol & Deadlines', date: '04 Oct 2026', audience: 'All Students & Mentors', category: 'Hall Ticket', priority: 'High', content: 'All B.Tech/MCA/MBA students are instructed to download and verify their printed admit cards. Minimum 75% attendance and fee clearance is mandatory for hall entry.' },
   { id: 'CIRC-EXAM-02', circularNo: 'GIFT/COE/2026/90', title: 'Autonomous Examination Hall Rules & Anti-Malpractice Guidelines', date: '02 Oct 2026', audience: 'Students & Invigilation Squad', category: 'Guidelines', priority: 'Urgent', content: 'Zero tolerance towards smart gadgets, mobile phones, or unauthorised study material. Flying squads will conduct randomized hall checks during all sessions.' },
   { id: 'CIRC-EXAM-03', circularNo: 'GIFT/COE/2026/91', title: 'Special Supplementary Examination Form Fill-up for 2022-26 Batch', date: '28 Sep 2026', audience: 'Backlog Students', category: 'Schedule', priority: 'Normal', content: 'Eligible students with backlogs in Semesters 3 to 6 can submit their special supplementary applications at the Examination Cell counter.' },

@@ -38,6 +38,7 @@ import CanteenPortal from './components/CanteenPortal.jsx'
 import SuperAdminPortal from './components/SuperAdminPortal.jsx'
 import ManagementPortal from './components/ManagementPortal.jsx'
 import PrincipalPortal from './components/PrincipalPortal.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 import ExamCellPortal from './components/ExamCellPortal.jsx'
 import LibraryPortal from './components/LibraryPortal.jsx'
 import TransportPortal from './components/TransportPortal.jsx'
@@ -550,11 +551,11 @@ function App() {
     if (account.role === 'super_admin') {
       portal = <SuperAdminPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'management') {
-      portal = <ManagementPortal account={account} onLogout={handleLogout} />
+      portal = <ManagementPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'principal') {
-      portal = <PrincipalPortal account={account} onLogout={handleLogout} />
+      portal = <PrincipalPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'admin') {
-      portal = <AdminPortal account={account} onLogout={handleLogout} />
+      portal = <AdminPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'hod') {
       portal = <HodPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'faculty') {
@@ -564,7 +565,7 @@ function App() {
     } else if (account.role === 'scholarship') {
       portal = <ScholarshipPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'exam_cell') {
-      portal = <ExamCellPortal account={account} onLogout={handleLogout} />
+      portal = <ExamCellPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'library') {
       portal = <LibraryPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'warden' || account.role === 'hostel' || account.role === 'hostel_admin') {
@@ -587,7 +588,7 @@ function App() {
 
     if (portal) {
       return (
-        <>
+        <ErrorBoundary>
           <UniversalWhatsAppLauncher account={account} hideTrigger={true} />
           <ApnaAIChatbot account={account} hideTrigger={true} />
           <UnifiedFloatingAssistant account={account} />
@@ -601,7 +602,7 @@ function App() {
             />
           )}
           {portal}
-        </>
+        </ErrorBoundary>
       )
     }
   }

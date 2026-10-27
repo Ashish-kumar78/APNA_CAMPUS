@@ -1027,9 +1027,16 @@ export default function RoleDashboardLanding({
   roleKey,
   onLogout,
   onNavigateTab,
+  onNavigate,
   onSwitchRole,
   onToggleSidebar,
+  children,
 }) {
+  const handleNav = (targetId) => {
+    if (onNavigateTab) onNavigateTab(targetId);
+    else if (onNavigate) onNavigate(targetId);
+  };
+
   // Resolve configuration from prop or account
   const rawKey = roleKey || account?.role || 'super_admin';
   const roleAliases = {
@@ -1486,6 +1493,13 @@ export default function RoleDashboardLanding({
             </article>
           </section>
         </div>
+
+        {/* Optional Custom Injected Operational Content / Children */}
+        {children && (
+          <div className="role-dash-custom-children" style={{ marginTop: '16px', marginBottom: '16px' }}>
+            {children}
+          </div>
+        )}
 
         {/* ==========================================================
             D. DASHBOARD OVERVIEW: Dual Cards Grid (Overview + Notices)

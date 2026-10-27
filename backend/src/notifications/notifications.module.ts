@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
+@Global()
 @Module({
   imports: [PrismaModule],
   controllers: [NotificationsController],
@@ -10,3 +11,4 @@ import { PrismaModule } from '../prisma/prisma.module';
   exports: [NotificationsService],
 })
 export class NotificationsModule {}
+

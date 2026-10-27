@@ -29,6 +29,7 @@ import {
   Volume2
 } from 'lucide-react';
 import { notificationsStore, normalizeRole } from '../../services/notificationsStore.js';
+import OfficialCollegeNoticeModal, { GIFT_MODULAR_TEST_2_NOTICE } from '../ExaminationCell/OfficialCollegeNoticeModal.jsx';
 import './NotificationDrawer.css';
 
 export default function NotificationDrawer({
@@ -41,6 +42,7 @@ export default function NotificationDrawer({
   const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL' | 'UNREAD' | 'URGENT' | 'ACADEMIC' | 'SYSTEM'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNotif, setSelectedNotif] = useState(null);
+  const [showOfficialNoticeModal, setShowOfficialNoticeModal] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
   const roleKey = normalizeRole(account?.role);
@@ -125,13 +127,20 @@ export default function NotificationDrawer({
     }
   };
 
-  const handleActionNavigate = (actionTab) => {
+  const handleActionNavigate = (actionTab, actionUrl) => {
+    setSelectedNotif(null);
+    onClose();
+    if (actionUrl && actionUrl.startsWith('/')) {
+      if (typeof window !== 'undefined' && window.location.pathname !== actionUrl) {
+        window.history.pushState({}, '', actionUrl);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+    }
     if (actionTab && onNavigateTab) {
-      setSelectedNotif(null);
-      onClose();
       onNavigateTab(actionTab);
     }
   };
+
 
   // Filter calculations
   const unreadCount = useMemo(() => notifications.filter(n => n.unread).length, [notifications]);
@@ -628,6 +637,64 @@ export default function NotificationDrawer({
               </div>
             )}
 
+            {/* Official Modular Test Circular & Timetable Callout */}
+            {(selectedNotif.category === 'EXAMINATION' ||
+              selectedNotif.title?.toLowerCase().includes('modular') ||
+              selectedNotif.title?.toLowerCase().includes('schedule') ||
+              selectedNotif.isOfficialModularTestNotice) && (
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%)',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                  marginTop: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  boxShadow: '0 2px 4px rgba(37, 99, 235, 0.08)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: '#1e3a8a',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 800,
+                      fontSize: '0.9rem',
+                      flexShrink: 0,
+                    }}
+                  >
+                    GIFT
+                  </div>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.88rem', color: '#1e3a8a', lineHeight: 1.3 }}>
+                      Official Controller of Examinations Schedule Circular
+                    </strong>
+                    <span style={{ fontSize: '0.78rem', color: '#475569' }}>
+                      B.Tech 5th Semester Modular Test-II (All Branches · Nov 2026)
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="apna-action-primary-btn"
+                  onClick={() => setShowOfficialNoticeModal(true)}
+                  style={{ whiteSpace: 'nowrap', padding: '7px 14px' }}
+                >
+                  <span>View Official Circular</span>
+                  <ExternalLink size={14} />
+                </button>
+              </div>
+            )}
+
             {/* Modal Footer Controls */}
             <div className="apna-modal-footer">
               <div className="apna-modal-footer-left">
@@ -644,16 +711,17 @@ export default function NotificationDrawer({
               </div>
 
               <div className="apna-modal-footer-right">
-                {selectedNotif.actionTab && (
+                {(selectedNotif.actionTab || selectedNotif.actionUrl) && (
                   <button
                     type="button"
                     className="apna-action-primary-btn"
-                    onClick={() => handleActionNavigate(selectedNotif.actionTab)}
+                    onClick={() => handleActionNavigate(selectedNotif.actionTab, selectedNotif.actionUrl)}
                   >
                     <span>{selectedNotif.actionLabel || 'Navigate to Module'}</span>
                     <ExternalLink size={14} />
                   </button>
                 )}
+
 
                 <button
                   type="button"
@@ -666,6 +734,15 @@ export default function NotificationDrawer({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Official GIFT Examination Circular Full View */}
+      {showOfficialNoticeModal && (
+        <OfficialCollegeNoticeModal
+          notice={GIFT_MODULAR_TEST_2_NOTICE}
+          userBranch={account?.departmentCode || account?.deptCode || 'CSE'}
+          onClose={() => setShowOfficialNoticeModal(false)}
+        />
       )}
     </>
   );

@@ -548,60 +548,36 @@ export default function ScholarshipDashboardTab({
           </div>
         </div>
 
-        {/* Widget 3: Quick Action Launchpad */}
+        {/* Widget 3: Statutory Compliance & Gateways */}
         <div className="bg-gradient-to-br from-slate-900 to-blue-950 rounded-xl p-5 text-white shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <span className="font-bold text-xs uppercase tracking-wider text-blue-300 flex items-center gap-1.5">
                 <Sparkles size={14} className="text-amber-400" />
-                Directorate Quick Actions
+                Statutory Directorate Gateways
               </span>
               <span className="text-[10px] bg-blue-900/60 text-blue-200 px-2 py-0.5 rounded font-mono">
                 AUTONOMOUS ERP
               </span>
             </div>
             <p className="text-xs text-slate-300 mb-4">
-              Direct access to critical scholarship administration workflows.
+              Live API synchronization status with central scholarship portals and DBT servers.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              onClick={() => onNavigateTab('apps_all')}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <Users size={14} className="text-sky-300" /> Review Apps
-            </button>
-            <button
-              onClick={() => onNavigateTab('verif_screening')}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <FileCheck size={14} className="text-emerald-300" /> Verify Docs
-            </button>
-            <button
-              onClick={() => onNavigateTab('sel_approval_queue')}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <ShieldCheck size={14} className="text-purple-300" /> Committee Sign
-            </button>
-            <button
-              onClick={() => onNavigateTab('award_disbursements')}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <Send size={14} className="text-amber-300" /> Disbursements
-            </button>
-            <button
-              onClick={() => onNavigateTab('ren_applications')}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <RefreshCw size={14} className="text-indigo-300" /> Renewals
-            </button>
-            <button
-              onClick={() => onNavigateTab('rep_distribution')}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <Download size={14} className="text-pink-300" /> Export MIS
-            </button>
+          <div className="space-y-2 text-xs">
+            <div className="p-2.5 bg-white/10 rounded-lg flex items-center justify-between border border-white/10">
+              <span className="text-slate-200 flex items-center gap-1.5 font-medium"><ShieldCheck size={14} className="text-emerald-300" /> PFMS DBT Gateway</span>
+              <span className="text-[11px] font-bold text-emerald-400">● Live Connected</span>
+            </div>
+            <div className="p-2.5 bg-white/10 rounded-lg flex items-center justify-between border border-white/10">
+              <span className="text-slate-200 flex items-center gap-1.5 font-medium"><FileCheck size={14} className="text-sky-300" /> State Post-Matric Portal</span>
+              <span className="text-[11px] font-bold text-sky-400">● Synchronized</span>
+            </div>
+            <div className="p-2.5 bg-white/10 rounded-lg flex items-center justify-between border border-white/10">
+              <span className="text-slate-200 flex items-center gap-1.5 font-medium"><Award size={14} className="text-purple-300" /> Institutional Endowment Fund</span>
+              <span className="text-[11px] font-bold text-purple-300">100% Solvency</span>
+            </div>
           </div>
         </div>
       </div>

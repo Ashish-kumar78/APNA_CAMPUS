@@ -1,9 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationCategory, NotificationEventType, NotificationPriority } from '../notifications/notification-events';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class CmsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   // Notices
   async getNotices(search?: string, tag?: string) {
@@ -25,15 +31,68 @@ export class CmsService {
     });
   }
 
-  async createNotice(data: { title: string; tag: string; publisher?: string; pinned?: boolean; summary: string; content: string }) {
-    return this.prisma.notice.create({
+  async createNotice(data: {
+    title: string;
+    tag: string;
+    publisher?: string;
+    pinned?: boolean;
+    summary: string;
+    content: string;
+    department?: string;
+    semester?: string;
+  }) {
+    const notice = await this.prisma.notice.create({
       data: {
-        ...data,
-        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        title: data.title,
+        tag: data.tag,
         publisher: data.publisher || 'Dean Office',
+        pinned: data.pinned ?? false,
+        summary: data.summary,
+        content: data.content,
+        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       },
     });
+
+    // Determine category and priority from tag
+    const tagUpper = (data.tag || '').toUpperCase();
+    let category: any = NotificationCategory.CAMPUS;
+    let priority: any = NotificationPriority.NORMAL;
+    if (tagUpper === 'EXAM' || tagUpper === 'ACADEMIC') {
+      category = NotificationCategory.ACADEMIC;
+    } else if (tagUpper === 'ADMIN' || tagUpper === 'POLICY') {
+      category = NotificationCategory.ADMIN;
+    } else if (tagUpper === 'URGENT') {
+      priority = NotificationPriority.URGENT;
+    }
+
+
+    // Dispatch notification to target audience
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.ANNOUNCEMENT_PUBLISHED,
+        title: data.title,
+        message: data.summary || data.content.slice(0, 160),
+        category,
+        priority: data.pinned ? NotificationPriority.HIGH : priority,
+        sourceModule: 'Campus Connect',
+        senderName: data.publisher || 'Dean Office',
+        senderRole: 'ADMIN',
+        actionUrl: '/cms',
+        actionTab: 'notices',
+        actionLabel: 'Read Circular',
+        target: {
+          department: data.department,
+          semester: data.semester,
+        },
+        dedupKey: `cms-notice-${notice.id}`,
+      });
+    } catch {
+      // Non-blocking
+    }
+
+    return notice;
   }
+
 
   // Holidays
   async getHolidays() {

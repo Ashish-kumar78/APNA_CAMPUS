@@ -6,10 +6,11 @@
   "scripts": {
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "build": "npx prisma generate && nest build",
+    "build": "npm run prisma:generate && nest build",
     "start:prod": "node dist/main.js",
     "lint": "tsc --noEmit",
-    "prisma:generate": "npx prisma generate",
+    "prisma:clean": "node -e \"const fs=require('fs'); const path=require('path'); const base=path.join(process.cwd(),'node_modules','.prisma','client'); if (fs.existsSync(base)) { for (const entry of fs.readdirSync(base)) { const full=path.join(base, entry); if (entry.endsWith('.tmp') || entry.includes('.tmp')) { try { fs.rmSync(full, { recursive: true, force: true }); } catch (error) { console.warn('Failed to remove stale Prisma temp file:', full, error.message); } } } }\"",
+    "prisma:generate": "npm run prisma:clean && npx prisma generate",
     "prisma:migrate": "npx prisma migrate deploy",
     "prisma:status": "npx prisma migrate status",
     "prisma:seed": "npx prisma db seed"

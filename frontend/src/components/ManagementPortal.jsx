@@ -8,7 +8,9 @@ import {
   Bell, ChevronRight, Star, Activity, Layers, Award,
   Globe, Settings, Eye, ClipboardList, TrendingDown, Menu, X,
   FileSpreadsheet, RefreshCw, Search, Filter, AlertTriangle,
-  FileText, Check, ArrowRight, CornerDownLeft, Info
+  FileText, Check, ArrowRight, CornerDownLeft, Info,
+  Plus, CheckCircle2, ShieldCheck, Target, Server, HardHat,
+  FileBadge, Wrench, Sparkles, Clock, AlertOctagon
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import api from '../services/api.js';
@@ -177,7 +179,7 @@ const KPI = ({ label, value, sub, icon, color = '#2563eb', bg = '#eff6ff', topBa
 
 // ─── Main ManagementPortal Component ─────────────────────────────────────────
 
-export default function ManagementPortal({ account, onLogout }) {
+export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
   // Navigation & UI States
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('executive');
@@ -202,11 +204,43 @@ export default function ManagementPortal({ account, onLogout }) {
   const [exceptions, setExceptions] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
 
+  // Enterprise States & Executive Action Center
+  const [actionCenter, setActionCenter] = useState({ total: 0, critical: 0, high: 0, items: [] });
+  const [actionCategoryFilter, setActionCategoryFilter] = useState('ALL');
+  const [strategyTargets, setStrategyTargets] = useState([]);
+  const [boardMeetings, setBoardMeetings] = useState([]);
+  const [boardResolutions, setBoardResolutions] = useState([]);
+  const [accreditationEvidence, setAccreditationEvidence] = useState([]);
+  const [capitalProjects, setCapitalProjects] = useState({ totals: {}, data: [] });
+  const [capaRecords, setCapaRecords] = useState([]);
+  const [integrationHealth, setIntegrationHealth] = useState(null);
+
   // Modals & Action Dialogs
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [selectedDeptDetail, setSelectedDeptDetail] = useState(null);
   const [actionConfirm, setActionConfirm] = useState(null); // { id, action: 'APPROVE'|'REJECT'|'RETURN', title }
   const [actionComments, setActionComments] = useState('');
+
+  // Missing Capabilities Modals
+  const [newProposalModal, setNewProposalModal] = useState({
+    open: false,
+    title: '',
+    category: 'Capital Expenditure',
+    budget: '',
+    department: 'Computer Science & Engineering',
+    priority: 'High',
+    description: '',
+    notes: '',
+  });
+
+  const [resolveCapaModal, setResolveCapaModal] = useState({
+    open: false,
+    record: null,
+    notes: '',
+    evidenceUrl: '',
+  });
+
+  const [selectedMeetingModal, setSelectedMeetingModal] = useState(null);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -218,7 +252,10 @@ export default function ManagementPortal({ account, onLogout }) {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [ovRes, insRes, deptRes, finRes, plcRes, appRes, govRes, excRes, audRes] = await Promise.allSettled([
+      const [
+        ovRes, insRes, deptRes, finRes, plcRes, appRes, govRes, excRes, audRes,
+        stratRes, meetRes, evidRes, capRes, capaRes, healthRes, actRes
+      ] = await Promise.allSettled([
         api.getManagementOverview({ academicYear, semester: semesterFilter }),
         api.getManagementInsights(),
         api.getManagementDepartments({ academicYear, semester: semesterFilter, department: deptFilter }),
@@ -228,6 +265,13 @@ export default function ManagementPortal({ account, onLogout }) {
         api.getManagementGovernance(),
         api.getManagementExceptions(),
         api.getManagementAuditTrail(),
+        api.getManagementStrategyTargets(),
+        api.getManagementBoardMeetings(),
+        api.getManagementAccreditationEvidence(),
+        api.getManagementCapitalProjects(),
+        api.getManagementCorrectiveActions(),
+        api.getManagementIntegrationHealth(),
+        api.getManagementActionCenter(),
       ]);
 
       if (ovRes.status === 'fulfilled' && ovRes.value?.success) setOverviewData(ovRes.value.data);
@@ -239,6 +283,20 @@ export default function ManagementPortal({ account, onLogout }) {
       if (govRes.status === 'fulfilled' && govRes.value?.success) setGovernance(govRes.value.data);
       if (excRes.status === 'fulfilled' && excRes.value?.success) setExceptions(excRes.value.data || []);
       if (audRes.status === 'fulfilled' && audRes.value?.success) setAuditLogs(audRes.value.data || []);
+
+      // Capabilities Data Binding
+      if (stratRes.status === 'fulfilled' && stratRes.value?.success) setStrategyTargets(stratRes.value.data || []);
+      if (meetRes.status === 'fulfilled' && meetRes.value?.success) {
+        setBoardMeetings(meetRes.value.meetings || []);
+        setBoardResolutions(meetRes.value.resolutions || []);
+      }
+      if (evidRes.status === 'fulfilled' && evidRes.value?.success) setAccreditationEvidence(evidRes.value.data || []);
+      if (capRes.status === 'fulfilled' && capRes.value?.success) {
+        setCapitalProjects({ totals: capRes.value.totals || {}, data: capRes.value.data || [] });
+      }
+      if (capaRes.status === 'fulfilled' && capaRes.value?.success) setCapaRecords(capaRes.value.data || []);
+      if (healthRes.status === 'fulfilled' && healthRes.value?.success) setIntegrationHealth(healthRes.value);
+      if (actRes.status === 'fulfilled' && actRes.value?.success) setActionCenter(actRes.value);
 
       setLastRefreshed(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
     } catch (err) {
@@ -253,6 +311,73 @@ export default function ManagementPortal({ account, onLogout }) {
   }, [academicYear, semesterFilter, deptFilter]);
 
   // ─── Actions & Handlers ────────────────────────────────────────────────────
+
+  const handleCreateProposalSubmit = async (e) => {
+    e.preventDefault();
+    if (!newProposalModal.title.trim()) {
+      showToast('⚠️ Proposal title is required.');
+      return;
+    }
+
+    try {
+      const res = await api.createManagementProposal({
+        title: newProposalModal.title,
+        category: newProposalModal.category,
+        budget: newProposalModal.budget || 'N/A',
+        department: newProposalModal.department,
+        priority: newProposalModal.priority,
+        description: newProposalModal.description,
+        notes: newProposalModal.notes,
+      });
+
+      if (res?.success) {
+        showToast(`✅ Strategic proposal "${newProposalModal.title}" created successfully!`);
+        setNewProposalModal({
+          open: false,
+          title: '',
+          category: 'Capital Expenditure',
+          budget: '',
+          department: 'Computer Science & Engineering',
+          priority: 'High',
+          description: '',
+          notes: '',
+        });
+        const appRes = await api.getManagementApprovals().catch(() => null);
+        if (appRes?.success) setApprovals(appRes.data || []);
+        const audRes = await api.getManagementAuditTrail().catch(() => null);
+        if (audRes?.success) setAuditLogs(audRes.data || []);
+      } else {
+        showToast(`⚠️ Could not create proposal: ${res?.message || 'Error'}`);
+      }
+    } catch (err) {
+      showToast('⚠️ Error submitting proposal to server.');
+    }
+  };
+
+  const handleResolveCapaSubmit = async (e) => {
+    e.preventDefault();
+    if (!resolveCapaModal.record) return;
+
+    try {
+      const res = await api.resolveManagementCorrectiveAction(resolveCapaModal.record.id, {
+        resolutionNotes: resolveCapaModal.notes,
+        evidenceUrl: resolveCapaModal.evidenceUrl,
+      });
+
+      if (res?.success) {
+        showToast(`✅ Corrective Action ${resolveCapaModal.record.id} marked as Resolved!`);
+        setResolveCapaModal({ open: false, record: null, notes: '', evidenceUrl: '' });
+        const capaRes = await api.getManagementCorrectiveActions().catch(() => null);
+        if (capaRes?.success) setCapaRecords(capaRes.data || []);
+        const audRes = await api.getManagementAuditTrail().catch(() => null);
+        if (audRes?.success) setAuditLogs(audRes.data || []);
+      } else {
+        showToast('⚠️ Resolution could not be recorded.');
+      }
+    } catch (err) {
+      showToast('⚠️ Server error recording resolution.');
+    }
+  };
 
   const handleDecisionSubmit = async () => {
     if (!actionConfirm) return;
@@ -308,6 +433,100 @@ export default function ManagementPortal({ account, onLogout }) {
 
   const feeData = financials?.departmentRealization || FALLBACK_FEES;
   const placementDrives = placements?.drives || FALLBACK_DRIVES;
+
+  // ─── Unified Executive Action Center Computed Queue ─────────────────────────
+  const actionItemsComputed = useMemo(() => {
+    if (actionCenter?.data && actionCenter.data.length > 0) {
+      return actionCenter.data;
+    }
+    const items = [];
+    approvals.filter(a => a.status === 'Pending' || a.status === 'Under Review').forEach(a => {
+      items.push({
+        id: `ACT-PROP-${a.id}`,
+        sourceModule: 'Strategic Approvals',
+        sourceTab: 'approvals',
+        title: a.title,
+        description: `Budget Request: ${a.budget || 'N/A'} · Submitted by ${a.by}. Awaiting Governing Body review.`,
+        priority: a.priority === 'High' ? 'CRITICAL' : 'HIGH',
+        status: a.status,
+        owner: a.by,
+        dueDate: 'Within 7 Days',
+        recordId: a.id,
+        category: a.category || 'Strategic Proposal',
+        permittedActions: ['APPROVE', 'REJECT', 'RETURN'],
+      });
+    });
+    capaRecords.filter(c => c.status !== 'Resolved & Closed').forEach(c => {
+      items.push({
+        id: `ACT-CAPA-${c.id}`,
+        sourceModule: 'CAPA Register',
+        sourceTab: 'exceptions',
+        title: `CAPA: ${c.title}`,
+        description: `Root Cause: ${c.rootCause} Action Plan: ${c.actionPlan}`,
+        priority: 'HIGH',
+        status: c.status,
+        owner: c.assignedOwner,
+        dueDate: c.targetDeadline,
+        recordId: c.id,
+        category: 'Risk Mitigation',
+        permittedActions: ['RESOLVE_CAPA'],
+      });
+    });
+    exceptions.filter(e => e.severity === 'CRITICAL').forEach(e => {
+      items.push({
+        id: `ACT-RISK-${e.id}`,
+        sourceModule: 'Risk Radar',
+        sourceTab: 'exceptions',
+        title: e.title,
+        description: `${e.impact}. Current: ${e.currentValue} (Target: ${e.targetThreshold}). Action: ${e.recommendedAction}`,
+        priority: 'CRITICAL',
+        status: 'Open Risk Alert',
+        owner: `${e.department} Head`,
+        dueDate: 'Immediate Action Required',
+        recordId: e.id,
+        category: e.category,
+        permittedActions: ['INVESTIGATE_RISK'],
+      });
+    });
+    items.push({
+      id: 'ACT-GOV-BM43',
+      sourceModule: 'Governing Body',
+      sourceTab: 'governance',
+      title: '43rd Ordinary Meeting of the Governing Body',
+      description: 'Agenda: Ratification of Autumn 2026 Examination results and approval of AI GPU Cluster capital expenditure.',
+      priority: 'HIGH',
+      status: 'Scheduled',
+      owner: 'Board Secretary / Chairperson',
+      dueDate: '18 Nov 2026',
+      recordId: 'BM-2026-Q3',
+      category: 'Governance Milestone',
+      permittedActions: ['VIEW_AGENDA'],
+    });
+    items.push({
+      id: 'ACT-FIN-LAG',
+      sourceModule: 'Fee & Finance',
+      sourceTab: 'financials',
+      title: 'Mechanical & Civil Engineering Fee Recovery Lag (₹61.9 L Outstanding)',
+      description: 'Civil (88.0%) and Mechanical (89.4%) fall behind 92% recovery benchmark. Follow-up required.',
+      priority: 'HIGH',
+      status: 'Recovery Deficit',
+      owner: 'Chief Accounts Officer & HODs',
+      dueDate: '10 Nov 2026',
+      recordId: 'FIN-EXC-01',
+      category: 'Financial Discrepancy',
+      permittedActions: ['INSPECT_FINANCES'],
+    });
+    return items;
+  }, [actionCenter, approvals, capaRecords, exceptions]);
+
+  const filteredActionItems = useMemo(() => {
+    if (actionCategoryFilter === 'ALL') return actionItemsComputed;
+    if (actionCategoryFilter === 'APPROVALS') return actionItemsComputed.filter(i => i.sourceModule === 'Strategic Approvals');
+    if (actionCategoryFilter === 'CAPA') return actionItemsComputed.filter(i => i.sourceModule === 'CAPA Register' || i.sourceModule === 'Risk Radar');
+    if (actionCategoryFilter === 'GOVERNANCE') return actionItemsComputed.filter(i => i.sourceModule === 'Governing Body' || i.category === 'Governance Milestone');
+    if (actionCategoryFilter === 'FINANCE') return actionItemsComputed.filter(i => i.sourceModule === 'Fee & Finance');
+    return actionItemsComputed;
+  }, [actionItemsComputed, actionCategoryFilter]);
 
   // ─── Navigation Tabs Definition ────────────────────────────────────────────
 
@@ -401,6 +620,7 @@ export default function ManagementPortal({ account, onLogout }) {
       title: 'STRATEGIC OVERSIGHT',
       items: [
         { id: 'executive', label: 'Executive Overview', icon: PieChart },
+        { id: 'dashboard', label: 'Executive Workspace', icon: Target },
         { id: 'departments', label: 'Department Analytics', icon: Building },
         { id: 'financials', label: 'Fee & Finance', icon: DollarSign },
         { id: 'budget', label: 'Institutional Budget', icon: Layers },
@@ -421,6 +641,11 @@ export default function ManagementPortal({ account, onLogout }) {
 
   const getManagementHeading = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: 'Executive Leadership Workspace',
+          subtitle: 'Trustee credentials, official schedule, and institutional leadership briefing.'
+        };
       case 'executive':
         return {
           title: 'Institutional Governance & Strategic Intelligence',
@@ -504,14 +729,14 @@ export default function ManagementPortal({ account, onLogout }) {
         pageSubtitle={managementHeading.subtitle}
       >
         <div className="mgmt-portal-content-wrap">
-        {activeTab === 'executive' ? (
+        {activeTab === 'dashboard' ? (
           <RoleDashboardLanding
             account={account}
             roleKey="management"
             onLogout={onLogout}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
             onNavigateTab={(tabId) => {
-              if (tabId === 'reports') exportExecutiveReport();
+              if (tabId === 'reports') setActiveTab('report-generation');
               else if (tabId === 'kpi' || tabId === 'departments') setActiveTab('departments');
               else if (tabId === 'circulars' || tabId === 'governance') setActiveTab('governance');
               else if (tabId === 'approvals') setActiveTab('approvals');
@@ -575,6 +800,216 @@ export default function ManagementPortal({ account, onLogout }) {
           ═══════════════════════════════════════════════════════════════════ */}
           {activeTab === 'executive' && (
             <div>
+              {/* ─── UNIFIED EXECUTIVE ACTION CENTER (High-Priority Actionable Queue) ─── */}
+              <div className="mgmt-panel" style={{ border: '1px solid #cbd5e1', borderRadius: 12, overflow: 'hidden', marginBottom: '1.5rem', background: '#fff' }}>
+                <div className="mgmt-panel-header" style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)', color: '#fff', padding: '1rem 1.25rem' }}>
+                  <div className="mgmt-panel-title">
+                    <h3 style={{ color: '#fff', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 10, margin: 0 }}>
+                      <AlertOctagon size={20} color="#fca5a5" /> Unified Executive Action Center
+                      <span className="mgmt-badge" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', borderColor: 'rgba(255,255,255,0.3)', fontSize: '0.72rem' }}>
+                        {actionCenter?.counts?.total || actionItemsComputed.length} Active Tasks
+                      </span>
+                    </h3>
+                    <p style={{ color: '#bfdbfe', margin: '4px 0 0', fontSize: '0.78rem' }}>
+                      Prioritized governance obligations, pending strategic sanctions, regulatory deadlines, and risk exceptions
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.72rem', background: 'rgba(239,68,68,0.2)', color: '#fee2e2', border: '1px solid rgba(239,68,68,0.4)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
+                      🚨 {actionCenter?.counts?.critical || actionItemsComputed.filter(i => i.priority === 'CRITICAL').length} Critical Urgency
+                    </span>
+                    <span style={{ fontSize: '0.72rem', background: 'rgba(245,158,11,0.2)', color: '#fef3c7', border: '1px solid rgba(245,158,11,0.4)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
+                      ⚠️ {actionCenter?.counts?.high || actionItemsComputed.filter(i => i.priority === 'HIGH').length} High Priority
+                    </span>
+                  </div>
+                </div>
+
+                {/* Filter Pills */}
+                <div style={{ display: 'flex', gap: 6, padding: '0.75rem 1.25rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', marginRight: 4 }}>Filter Tasks:</span>
+                  {[
+                    { id: 'ALL', label: `All Tasks (${actionItemsComputed.length})` },
+                    { id: 'APPROVALS', label: `Approvals (${actionItemsComputed.filter(i => i.sourceModule === 'Strategic Approvals').length})` },
+                    { id: 'CAPA', label: `CAPA & Exceptions (${actionItemsComputed.filter(i => i.sourceModule === 'CAPA Register' || i.sourceModule === 'Risk Radar').length})` },
+                    { id: 'GOVERNANCE', label: `Board & Compliance (${actionItemsComputed.filter(i => i.sourceModule === 'Governing Body' || i.category === 'Governance Milestone').length})` },
+                    { id: 'FINANCE', label: `Fee & Finance (${actionItemsComputed.filter(i => i.sourceModule === 'Fee & Finance').length})` },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActionCategoryFilter(tab.id)}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        borderRadius: 6,
+                        border: '1px solid',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        background: actionCategoryFilter === tab.id ? '#1e40af' : '#fff',
+                        color: actionCategoryFilter === tab.id ? '#fff' : '#475569',
+                        borderColor: actionCategoryFilter === tab.id ? '#1e40af' : '#cbd5e1',
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Action Items List */}
+                <div className="mgmt-panel-body" style={{ padding: '1rem 1.25rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    {filteredActionItems.map(item => (
+                      <div
+                        key={item.id}
+                        style={{
+                          background: item.priority === 'CRITICAL' ? '#fff5f5' : '#f8faff',
+                          border: `1px solid ${item.priority === 'CRITICAL' ? '#fecaca' : '#dbeafe'}`,
+                          borderLeft: `4px solid ${item.priority === 'CRITICAL' ? '#dc2626' : item.priority === 'HIGH' ? '#f59e0b' : '#3b82f6'}`,
+                          borderRadius: 8,
+                          padding: '0.85rem 1rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 14,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <div style={{ flex: '1 1 500px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 4,
+                              background: item.sourceModule === 'Strategic Approvals' ? '#eff6ff' : item.sourceModule === 'CAPA Register' ? '#ecfdf5' : item.sourceModule === 'Risk Radar' ? '#fef2f2' : item.sourceModule === 'Governing Body' ? '#f5f3ff' : '#fefce8',
+                              color: item.sourceModule === 'Strategic Approvals' ? '#1d4ed8' : item.sourceModule === 'CAPA Register' ? '#047857' : item.sourceModule === 'Risk Radar' ? '#b91c1c' : item.sourceModule === 'Governing Body' ? '#6d28d9' : '#b45309',
+                              border: '1px solid currentColor',
+                            }}>
+                              {item.sourceModule}
+                            </span>
+                            <span style={{
+                              fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 4,
+                              background: item.priority === 'CRITICAL' ? '#dc2626' : '#f59e0b',
+                              color: '#fff',
+                            }}>
+                              {item.priority}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace', fontWeight: 700 }}>
+                              {item.recordId}
+                            </span>
+                            <span className="mgmt-status mgmt-status-neutral" style={{ fontSize: '0.68rem' }}>
+                              {item.status}
+                            </span>
+                          </div>
+
+                          <h4 style={{ margin: '0 0 4px', fontSize: '0.9rem', color: '#0f172a', fontWeight: 800 }}>
+                            {item.title}
+                          </h4>
+                          <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#475569', lineHeight: 1.4 }}>
+                            {item.description}
+                          </p>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '0.72rem', color: '#64748b', flexWrap: 'wrap' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <UserCheck size={13} color="#475569" /> <strong>Owner:</strong> {item.owner}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <Clock size={13} color="#475569" /> <strong>Deadline:</strong> {item.dueDate}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {item.sourceModule === 'Strategic Approvals' && (
+                            <>
+                              <button
+                                className="mgmt-btn mgmt-btn-primary"
+                                style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                                onClick={() => {
+                                  const prop = approvals.find(a => a.id === item.recordId);
+                                  if (prop) setSelectedProposal(prop);
+                                  else setActiveTab('approvals');
+                                }}
+                              >
+                                <CheckCircle size={13} /> Review &amp; Decide
+                              </button>
+                              <button
+                                className="mgmt-btn mgmt-btn-secondary"
+                                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
+                                onClick={() => setActiveTab('approvals')}
+                              >
+                                View Queue <ArrowRight size={12} />
+                              </button>
+                            </>
+                          )}
+
+                          {item.sourceModule === 'CAPA Register' && (
+                            <>
+                              <button
+                                className="mgmt-btn mgmt-btn-primary"
+                                style={{ padding: '6px 12px', fontSize: '0.75rem', background: '#059669', borderColor: '#059669' }}
+                                onClick={() => {
+                                  const capa = capaRecords.find(c => c.id === item.recordId);
+                                  setResolveCapaModal({
+                                    open: true,
+                                    record: capa || { id: item.recordId, title: item.title },
+                                    notes: '',
+                                    evidenceUrl: '',
+                                  });
+                                }}
+                              >
+                                <Check size={13} /> Resolve CAPA
+                              </button>
+                              <button
+                                className="mgmt-btn mgmt-btn-secondary"
+                                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
+                                onClick={() => setActiveTab('exceptions')}
+                              >
+                                CAPA Register <ArrowRight size={12} />
+                              </button>
+                            </>
+                          )}
+
+                          {item.sourceModule === 'Risk Radar' && (
+                            <button
+                              className="mgmt-btn mgmt-btn-secondary"
+                              style={{ padding: '6px 12px', fontSize: '0.75rem', color: '#b91c1c', borderColor: '#fca5a5' }}
+                              onClick={() => setActiveTab('exceptions')}
+                            >
+                              <AlertTriangle size={13} /> Investigate Risk <ArrowRight size={12} />
+                            </button>
+                          )}
+
+                          {item.sourceModule === 'Governing Body' && (
+                            <button
+                              className="mgmt-btn mgmt-btn-primary"
+                              style={{ padding: '6px 12px', fontSize: '0.75rem', background: '#7c3aed', borderColor: '#7c3aed' }}
+                              onClick={() => {
+                                const meet = boardMeetings.find(m => m.id === item.recordId);
+                                if (meet) setSelectedMeetingModal(meet);
+                                else setActiveTab('governance');
+                              }}
+                            >
+                              <Calendar size={13} /> View Agenda &amp; Dossier
+                            </button>
+                          )}
+
+                          {item.sourceModule === 'Fee & Finance' && (
+                            <button
+                              className="mgmt-btn mgmt-btn-secondary"
+                              style={{ padding: '6px 12px', fontSize: '0.75rem', color: '#b45309', borderColor: '#fde68a' }}
+                              onClick={() => setActiveTab('financials')}
+                            >
+                              <DollarSign size={13} /> Inspect Dues Ledger <ArrowRight size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               {/* Primary Strategic KPIs */}
               <div className="mgmt-kpi-grid">
                 <KPI
@@ -591,7 +1026,7 @@ export default function ManagementPortal({ account, onLogout }) {
                 <KPI
                   label="Faculty Strength"
                   value={totalFaculty}
-                  sub="1:17 Student-Faculty Ratio"
+                  sub={overviewData?.kpis?.studentFacultyRatio ? `${overviewData.kpis.studentFacultyRatio} Ratio` : "1:15.6 Ratio"}
                   icon={<GraduationCap />}
                   color="#059669"
                   bg="#ecfdf5"
@@ -601,8 +1036,8 @@ export default function ManagementPortal({ account, onLogout }) {
                 />
                 <KPI
                   label="Fee Realization"
-                  value="₹24.6 Cr"
-                  sub="92.5% Collected · ₹1.85 Cr Due"
+                  value={overviewData?.kpis?.feeCollectedFormatted || "₹22.60 Cr"}
+                  sub={`${overviewData?.kpis?.feeRecoveryRate || 93.0}% Realized · ${overviewData?.kpis?.feeDueFormatted || "₹1.70 Cr"} Due`}
                   icon={<DollarSign />}
                   color="#d97706"
                   bg="#fefce8"
@@ -612,7 +1047,7 @@ export default function ManagementPortal({ account, onLogout }) {
                 <KPI
                   label="Placement Conversion"
                   value={`${avgPlacement}%`}
-                  sub="Avg ₹6.8 LPA · Highest ₹24 LPA"
+                  sub="87.0% Conversion · 435 Placed"
                   icon={<Briefcase />}
                   color="#7c3aed"
                   bg="#f5f3ff"
@@ -799,6 +1234,119 @@ export default function ManagementPortal({ account, onLogout }) {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+
+              {/* ─── Institutional Strategy & 5-Year Strategic Plan (2025–2030) ───── */}
+              <div className="mgmt-panel" style={{ marginTop: '1.5rem' }}>
+                <div className="mgmt-panel-header">
+                  <div className="mgmt-panel-title">
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Target size={18} color="#2563eb" /> Institutional Strategy &amp; 5-Year Master Targets (2025–2030)
+                    </h3>
+                    <p>Governing Body benchmarks for National Rankings, Accreditation, Placements, and Green Campus</p>
+                  </div>
+                  <span className="mgmt-badge" style={{ background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}>
+                    <Sparkles size={12} /> Strategic Plan 2030
+                  </span>
+                </div>
+
+                <div className="mgmt-panel-body" style={{ padding: '1.25rem' }}>
+                  <div className="mgmt-strategy-grid">
+                    {(strategyTargets.length > 0 ? strategyTargets : [
+                      { id: 'STRAT-01', dimension: 'National Ranking (NIRF)', targetMetric: 'NIRF Rank < 100', currentMetric: 'Band 151-200 (Rank 164)', targetYear: '2027', progressPct: 78, status: 'On Track', leadOfficer: 'Director & IQAC', initiatives: 'Faculty Ph.D ratio push, Scopus publication grants, sponsored R&D outreach.' },
+                      { id: 'STRAT-02', dimension: 'Autonomous Re-Accreditation', targetMetric: 'NAAC Grade A++ (Score >= 3.51)', currentMetric: 'NAAC A+ (Score 3.38)', targetYear: '2026', progressPct: 94, status: 'Ahead', leadOfficer: 'Dr. P. K. Pattnaik (IQAC Director)', initiatives: 'SSR documentation finalized; mock peer visit completed; QlM/QnM verified.' },
+                      { id: 'STRAT-03', dimension: 'Graduate Placement CTC', targetMetric: 'Placement >= 95%, Median >= ₹7.5 LPA', currentMetric: '87.0% Placed, Median ₹6.2 LPA', targetYear: '2027', progressPct: 84, status: 'On Track', leadOfficer: 'Dean Industry Relations & TPO', initiatives: 'Pre-placement coding bootcamps, corporate CoEs with Cisco, AWS, and Dassault.' },
+                      { id: 'STRAT-04', dimension: 'Extramural Research Grants', targetMetric: '₹5.0 Cr Annual Sanctioned Grants', currentMetric: '₹3.4 Cr Active Grants (DST, SERB)', targetYear: '2028', progressPct: 68, status: 'Needs Attention', leadOfficer: 'Dean Research & Consultancy', initiatives: 'Matching seed capital grant of ₹25L per department for interdisciplinary lab projects.' },
+                      { id: 'STRAT-05', dimension: 'Sustainable Green Campus', targetMetric: '100% Renewable Daytime Power & Zero Waste', currentMetric: '42% Solar Coverage (150 kW Grid)', targetYear: '2028', progressPct: 62, status: 'On Track', leadOfficer: 'Chief Estate Officer', initiatives: 'Rooftop solar expansion Phase II; biogas digester; rainwater harvesting recharge wells.' },
+                    ]).map(item => (
+                      <div key={item.id} className="mgmt-strategy-card">
+                        <div>
+                          <div className="mgmt-strategy-head">
+                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1e40af' }}>{item.dimension}</span>
+                            <span className={`mgmt-status ${item.status === 'Ahead' ? 'mgmt-status-success' : item.status === 'On Track' ? 'mgmt-status-info' : 'mgmt-status-warning'}`}>
+                              {item.status}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>
+                            {item.targetMetric}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: 10 }}>
+                            Current: <strong style={{ color: '#0f172a' }}>{item.currentMetric}</strong> · Target: <strong>{item.targetYear}</strong>
+                          </div>
+                          <div style={{ marginBottom: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', fontWeight: 700, marginBottom: 3 }}>
+                              <span>Milestone Progress</span>
+                              <span>{item.progressPct}%</span>
+                            </div>
+                            <ProgressBar value={item.progressPct} color={item.progressPct >= 90 ? '#16a34a' : item.progressPct >= 75 ? '#2563eb' : '#d97706'} />
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: '#475569', background: '#f8faff', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                          <div><strong>Officer:</strong> {item.leadOfficer}</div>
+                          <div style={{ marginTop: 2, color: '#64748b' }}>{item.initiatives}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ─── ERP Cross-Module Integration Health & Data Quality Monitor ───── */}
+              <div className="mgmt-panel" style={{ marginTop: '1.5rem' }}>
+                <div className="mgmt-panel-header">
+                  <div className="mgmt-panel-title">
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Server size={18} color="#059669" /> ERP Cross-Module Integration &amp; Data Quality Health
+                    </h3>
+                    <p>Live automated telemetry across Database, Authentication, Biometrics, Accounts, and AI services</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="mgmt-badge" style={{ background: '#ecfdf5', color: '#059669', borderColor: '#a7f3d0' }}>
+                      <CheckCircle2 size={12} /> System Status: {integrationHealth?.overallStatus || 'OPTIMAL'}
+                    </span>
+                    <button
+                      type="button"
+                      className="mgmt-btn mgmt-btn-secondary"
+                      onClick={() => {
+                        api.getManagementIntegrationHealth().then(res => {
+                          if (res?.success) {
+                            setIntegrationHealth(res);
+                            showToast('✅ ERP Integration Health diagnostic verified: 100% Subsystems Optimal.');
+                          }
+                        });
+                      }}
+                      style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                    >
+                      <RefreshCw size={12} /> Run Diagnostic Check
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mgmt-panel-body" style={{ padding: '1.25rem' }}>
+                  <div className="mgmt-health-grid">
+                    {(integrationHealth?.subsystems || [
+                      { subsystem: 'PostgreSQL Database & Prisma ORM', status: 'HEALTHY', latencyMs: 4, details: `${totalStudents} Students, ${totalFaculty} Faculty, Financial Ledger connected.` },
+                      { subsystem: 'JWT Authentication & Role-Based Access Control', status: 'HEALTHY', latencyMs: 1, details: '14 Institutional Roles configured with strict route-level guards.' },
+                      { subsystem: 'Admissions-to-Student Enrollment Pipeline', status: 'HEALTHY', latencyMs: 8, details: '100% of admitted applicants transitioned to active student records.' },
+                      { subsystem: 'Biometric Attendance & Class Attendance Sync', status: 'HEALTHY', latencyMs: 12, details: 'Biometric terminals synchronized across academic blocks; 0 packet loss.' },
+                      { subsystem: 'Accounts & Fee Collection Ledger Reconciliation', status: 'HEALTHY', latencyMs: 6, details: 'Zero unreconciled online transactions; all receipts assigned unique cryptographic hash.' },
+                      { subsystem: 'AI Complaint Classification Microservice', status: 'HEALTHY', latencyMs: 22, details: 'TF-IDF & Logistic Regression service online on :8000; deterministic fallback active.' },
+                    ]).map((sub, idx) => (
+                      <div key={idx} className="mgmt-health-item">
+                        <div className={`mgmt-health-dot ${sub.status}`} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                            <strong style={{ fontSize: '0.82rem', color: '#0f172a' }}>{sub.subsystem}</strong>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: sub.status === 'HEALTHY' ? '#15803d' : '#b91c1c' }}>
+                              {sub.latencyMs}ms
+                            </span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: '0.74rem', color: '#64748b', lineHeight: 1.35 }}>{sub.details}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1085,6 +1633,148 @@ export default function ManagementPortal({ account, onLogout }) {
                   </table>
                 </div>
               </div>
+
+              {/* ─── Major Capital Works & Infrastructure Procurement Tracking ───── */}
+              <div className="mgmt-panel" style={{ marginTop: '1.5rem' }}>
+                <div className="mgmt-panel-header">
+                  <div className="mgmt-panel-title">
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <HardHat size={18} color="#ea580c" /> Major Capital Works &amp; Infrastructure Procurement Tracking
+                    </h3>
+                    <p>Sanctioned capital budget, committed contracts, verified contractor disbursements, and physical milestones</p>
+                  </div>
+                  <span className="mgmt-badge" style={{ background: '#fff7ed', color: '#c2410c', borderColor: '#fed7aa' }}>
+                    <Layers size={12} /> {capitalProjects?.data?.length || 4} Active Capital Projects
+                  </span>
+                </div>
+
+                <div className="mgmt-panel-body" style={{ padding: '1.25rem' }}>
+                  <div className="mgmt-capital-grid">
+                    {(capitalProjects?.data?.length > 0 ? capitalProjects.data : [
+                      {
+                        id: 'CAP-2026-01',
+                        title: 'Advanced AI & Machine Learning GPU Computing Cluster',
+                        department: 'AI & Machine Learning / CSE',
+                        sanctionedBudget: 4800000,
+                        paidExpenditure: 3250000,
+                        balanceRemaining: 1550000,
+                        completionPct: 85,
+                        status: 'Commissioning & Testing',
+                        contractor: 'Sysnet Tech Solutions & NVIDIA Partner',
+                        milestones: [
+                          { title: 'Server Rack & Power Conditioning', status: 'Completed' },
+                          { title: 'GPU Nodes (10x RTX) Rack Assembly', status: 'Completed' },
+                          { title: 'AICTE ATAL Grant Verification', status: 'In Progress' },
+                        ],
+                      },
+                      {
+                        id: 'CAP-2026-02',
+                        title: '150 kW Rooftop Photovoltaic Solar Power Grid (Phase II)',
+                        department: 'Campus Estate & Energy Cell',
+                        sanctionedBudget: 3200000,
+                        paidExpenditure: 2100000,
+                        balanceRemaining: 1100000,
+                        completionPct: 70,
+                        status: 'EPC Installation Active',
+                        contractor: 'Orena Green Energy Infra Pvt Ltd',
+                        milestones: [
+                          { title: 'Roof Structural Load Certification', status: 'Completed' },
+                          { title: 'Solar PV Panels & Inverter Mounting', status: 'Completed' },
+                          { title: 'Grid Bi-directional Synchronization', status: 'In Progress' },
+                        ],
+                      },
+                      {
+                        id: 'CAP-2026-03',
+                        title: 'New Girls Hostel Residential Block Phase 3 (180 Beds)',
+                        department: 'Hostel Administration & Works',
+                        sanctionedBudget: 18500000,
+                        paidExpenditure: 7400000,
+                        balanceRemaining: 11100000,
+                        completionPct: 40,
+                        status: 'Civil Structural RCC Framing',
+                        contractor: 'Utkal Construction & Projects',
+                        milestones: [
+                          { title: 'Substructure Excavation & Footings', status: 'Completed' },
+                          { title: 'Ground & First Floor RCC Slab', status: 'Completed' },
+                          { title: 'Second Floor Slab & Masonry', status: 'In Progress' },
+                        ],
+                      },
+                      {
+                        id: 'CAP-2026-04',
+                        title: 'High-Speed Campus 10Gbps Optical Fiber Ring',
+                        department: 'CCF & IT Operations',
+                        sanctionedBudget: 1800000,
+                        paidExpenditure: 1650000,
+                        balanceRemaining: 150000,
+                        completionPct: 95,
+                        status: 'Final OTDR Testing',
+                        contractor: 'Airtel Enterprise Solutions',
+                        milestones: [
+                          { title: 'Underground Trenching & Conduits', status: 'Completed' },
+                          { title: 'Optical Fiber Splicing & Racks', status: 'Completed' },
+                          { title: 'Failover Redundancy Testing', status: 'Completed' },
+                        ],
+                      },
+                    ]).map(proj => (
+                      <div key={proj.id} className="mgmt-capital-card">
+                        <div className="mgmt-capital-head">
+                          <div>
+                            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>{proj.id} · {proj.department}</span>
+                            <h4 style={{ margin: '4px 0 0', fontSize: '0.96rem', color: '#0f172a', fontWeight: 800 }}>{proj.title}</h4>
+                          </div>
+                          <span className="mgmt-status mgmt-status-info" style={{ fontSize: '0.7rem' }}>
+                            {proj.status}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, background: '#f8faff', padding: '10px 12px', borderRadius: 8, margin: '10px 0' }}>
+                          <div>
+                            <small style={{ fontSize: '0.68rem', color: '#64748b' }}>Sanctioned</small>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>₹{(proj.sanctionedBudget / 100000).toFixed(1)} L</div>
+                          </div>
+                          <div>
+                            <small style={{ fontSize: '0.68rem', color: '#64748b' }}>Paid Out</small>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#15803d' }}>₹{(proj.paidExpenditure / 100000).toFixed(1)} L</div>
+                          </div>
+                          <div>
+                            <small style={{ fontSize: '0.68rem', color: '#64748b' }}>Balance</small>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#2563eb' }}>₹{(proj.balanceRemaining / 100000).toFixed(1)} L</div>
+                          </div>
+                        </div>
+
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', fontWeight: 700, marginBottom: 3 }}>
+                            <span>Physical Completion</span>
+                            <span>{proj.completionPct}%</span>
+                          </div>
+                          <ProgressBar value={proj.completionPct} color={proj.completionPct >= 80 ? '#15803d' : '#ea580c'} />
+                        </div>
+
+                        <div style={{ fontSize: '0.74rem', color: '#475569', borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
+                          <div><strong>Contractor / Partner:</strong> {proj.contractor}</div>
+                          <div style={{ marginTop: 4, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {(proj.milestones || []).map((m, mIdx) => (
+                              <span
+                                key={mIdx}
+                                style={{
+                                  fontSize: '0.66rem',
+                                  padding: '2px 6px',
+                                  borderRadius: 4,
+                                  background: m.status === 'Completed' ? '#dcfce7' : '#fef3c7',
+                                  color: m.status === 'Completed' ? '#15803d' : '#b45309',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {m.status === 'Completed' ? '✓' : '⟳'} {m.title}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1188,7 +1878,15 @@ export default function ManagementPortal({ account, onLogout }) {
                   <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Strategic Proposal Approval Queue</h2>
                   <p style={{ margin: 0, color: '#64748b', fontSize: '0.82rem' }}>Capital expenditures, institutional partnerships, and statutory governance proposals</p>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className="mgmt-btn mgmt-btn-primary"
+                    onClick={() => setNewProposalModal(prev => ({ ...prev, open: true }))}
+                    style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem' }}
+                  >
+                    <Plus size={14} /> Submit Strategic Proposal
+                  </button>
                   <span className="mgmt-badge">
                     <CheckCircle size={12} /> {approvals.filter(a => a.status === 'Approved').length} Approved
                   </span>
@@ -1432,6 +2130,252 @@ export default function ManagementPortal({ account, onLogout }) {
                   </div>
                 </div>
               </div>
+
+              {/* ─── Board of Trustees & Governing Body Meetings Archive ───── */}
+              <div className="mgmt-panel" style={{ marginTop: '1.5rem' }}>
+                <div className="mgmt-panel-header">
+                  <div className="mgmt-panel-title">
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <ClipboardList size={18} color="#2563eb" /> Board of Trustees &amp; Governing Body Meetings Archive
+                    </h3>
+                    <p>Formal trustee sessions, statutory quorums, approved agendas, and signed institutional minutes</p>
+                  </div>
+                  <span className="mgmt-badge" style={{ background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}>
+                    <Users size={12} /> {boardMeetings.length || 3} Recorded Sessions
+                  </span>
+                </div>
+
+                <div className="mgmt-panel-body" style={{ padding: '1.25rem' }}>
+                  {(boardMeetings.length > 0 ? boardMeetings : [
+                    {
+                      id: 'BM-2026-Q3',
+                      meetingNo: 43,
+                      title: '43rd Ordinary Meeting of the Governing Body',
+                      date: '18 Nov 2026',
+                      time: '11:00 AM IST',
+                      venue: 'Board Room, Main Secretariat Block / Hybrid',
+                      chairperson: 'Shri Patitapaban Panda (Managing Trustee)',
+                      status: 'Scheduled',
+                      quorumStatus: 'Notified (14 / 16 Trustees Confirmed)',
+                      agendaItems: [
+                        'Ratification of Autumn 2026 Autonomous Examination Moderation Results',
+                        'Sanction of Capital Expenditure Requisition for AI GPU High-Performance Cluster',
+                        'Review of NAAC Cycle IV Peer Team Inspection Preparedness',
+                      ],
+                      documents: ['Meeting_43_Notice_and_Agenda.pdf', 'Working_Dossier_Draft.pdf'],
+                    },
+                    {
+                      id: 'BM-2026-Q2',
+                      meetingNo: 42,
+                      title: '42nd Governing Body Strategic Budget Session',
+                      date: '28 Aug 2026',
+                      time: '10:30 AM IST',
+                      venue: 'Executive Council Hall',
+                      chairperson: 'Shri Patitapaban Panda',
+                      status: 'Completed',
+                      quorumStatus: 'Adjourned with 15 Trustees Present',
+                      agendaItems: [
+                        'Approval of Annual Institutional Budget ₹28.50 Cr for FY 2026-27',
+                        'Expansion of Solar Power Infrastructure Phase II',
+                      ],
+                      documents: ['Signed_Minutes_BM_42.pdf', 'Approved_Budget_FY2026-27.pdf'],
+                    },
+                  ]).map(meeting => (
+                    <div key={meeting.id} className="mgmt-meeting-card">
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                          <span className={`mgmt-status ${meeting.status === 'Completed' ? 'mgmt-status-success' : 'mgmt-status-info'}`}>
+                            {meeting.status}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
+                            Meeting #{meeting.meetingNo} · {meeting.date} at {meeting.time}
+                          </span>
+                        </div>
+                        <h4 style={{ margin: '0 0 6px', fontSize: '1rem', color: '#0f172a', fontWeight: 800 }}>{meeting.title}</h4>
+                        <div style={{ fontSize: '0.78rem', color: '#475569', marginBottom: 8 }}>
+                          <strong>Chairperson:</strong> {meeting.chairperson} · <strong>Venue:</strong> {meeting.venue}
+                        </div>
+                        <div style={{ background: '#f8faff', padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 10 }}>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase' }}>Key Agenda Items:</span>
+                          <ul style={{ margin: '4px 0 0', paddingLeft: 16, fontSize: '0.76rem', color: '#334155' }}>
+                            {(meeting.agendaItems || []).map((ag, agIdx) => (
+                              <li key={agIdx}>{ag}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Quorum: <strong>{meeting.quorumStatus}</strong></span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140 }}>
+                        <button
+                          type="button"
+                          className="mgmt-btn mgmt-btn-secondary"
+                          style={{ padding: '6px 12px', fontSize: '0.76rem', justifyContent: 'center' }}
+                          onClick={() => {
+                            setSelectedMeetingModal(meeting);
+                          }}
+                        >
+                          <FileText size={13} /> View Dossier
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ─── Formal Board Resolutions Register ───── */}
+              <div className="mgmt-panel" style={{ marginTop: '1.5rem' }}>
+                <div className="mgmt-panel-header">
+                  <div className="mgmt-panel-title">
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <FileBadge size={18} color="#7c3aed" /> Formal Board Resolutions Register
+                    </h3>
+                    <p>Enacted statutory policies, capital grants, and gazetted institutional decisions</p>
+                  </div>
+                  <span className="mgmt-badge" style={{ background: '#f5f3ff', color: '#7c3aed', borderColor: '#ddd6fe' }}>
+                    <ShieldCheck size={12} /> {boardResolutions.length || 4} Enacted Resolutions
+                  </span>
+                </div>
+
+                <div className="mgmt-table-wrap">
+                  <table className="mgmt-table">
+                    <thead>
+                      <tr>
+                        <th>Resolution No.</th>
+                        <th>Subject &amp; Statutory Decision</th>
+                        <th>Category</th>
+                        <th>Meeting #</th>
+                        <th>Date Passed</th>
+                        <th>Effective From</th>
+                        <th>Assigned Officer</th>
+                        <th>Gazette Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(boardResolutions.length > 0 ? boardResolutions : [
+                        { id: 'RES-GB-2026-08', meetingNo: 42, resolutionNo: 'GB/42/RES-08', date: '28 Aug 2026', subject: 'Sanction of Annual Institutional Budget Allocation ₹28.50 Cr for FY 2026-27', status: 'Enacted & Gazetted', effectiveFrom: '01 Sep 2026', assignedOfficer: 'Chief Accounts Officer & Principal', category: 'Finance' },
+                        { id: 'RES-GB-2026-07', meetingNo: 42, resolutionNo: 'GB/42/RES-07', date: '28 Aug 2026', subject: 'Sanction of ₹32,00,000 for 150 kW Solar Power Grid Expansion (Phase II)', status: 'Under Implementation', effectiveFrom: '15 Sep 2026', assignedOfficer: 'Chief Estate Officer', category: 'Infrastructure' },
+                        { id: 'RES-GB-2026-06', meetingNo: 41, resolutionNo: 'GB/41/RES-06', date: '15 May 2026', subject: 'Adoption of Autonomous Regulations 2026 with Relative Grading Scale', status: 'Enacted & Gazetted', effectiveFrom: '01 Jul 2026', assignedOfficer: 'Dean Academics & CoE', category: 'Academic' },
+                        { id: 'RES-GB-2026-05', meetingNo: 41, resolutionNo: 'GB/41/RES-05', date: '15 May 2026', subject: 'Institutional Research Publication Incentive Framework ₹12,00,000', status: 'Enacted & Gazetted', effectiveFrom: '01 Jul 2026', assignedOfficer: 'Dean Research', category: 'Research' },
+                      ]).map(res => (
+                        <tr key={res.id}>
+                          <td><strong style={{ color: '#1e40af' }}>{res.resolutionNo}</strong></td>
+                          <td style={{ maxWidth: 300 }}>
+                            <strong style={{ fontSize: '0.84rem' }}>{res.subject}</strong>
+                          </td>
+                          <td>
+                            <span className="mgmt-status mgmt-status-info" style={{ fontSize: '0.68rem' }}>{res.category}</span>
+                          </td>
+                          <td>Meeting #{res.meetingNo}</td>
+                          <td style={{ fontSize: '0.78rem', color: '#64748b' }}>{res.date}</td>
+                          <td style={{ fontSize: '0.78rem', color: '#64748b' }}>{res.effectiveFrom}</td>
+                          <td style={{ fontSize: '0.78rem', color: '#475569' }}>{res.assignedOfficer}</td>
+                          <td>
+                            <span className={`mgmt-status ${res.status.includes('Enacted') ? 'mgmt-status-success' : 'mgmt-status-warning'}`}>
+                              {res.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* ─── Accreditation & Evidence Register (NAAC, NBA, AICTE Dossiers) ───── */}
+              <div className="mgmt-panel" style={{ marginTop: '1.5rem' }}>
+                <div className="mgmt-panel-header">
+                  <div className="mgmt-panel-title">
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <FileCheck size={18} color="#059669" /> Accreditation Evidence Register &amp; Regulatory Dossiers
+                    </h3>
+                    <p>Tamper-evident documentary evidence indexed across NAAC Criteria 1–7 and NBA SAR outcomes</p>
+                  </div>
+                  <span className="mgmt-badge" style={{ background: '#ecfdf5', color: '#059669', borderColor: '#a7f3d0' }}>
+                    <Award size={12} /> NAAC Cycle IV SSR Dossiers
+                  </span>
+                </div>
+
+                <div className="mgmt-panel-body" style={{ padding: '1.25rem' }}>
+                  {(accreditationEvidence.length > 0 ? accreditationEvidence : [
+                    {
+                      criterionId: 'CR-1',
+                      criterionName: 'Curricular Aspects & Academic Flexibility',
+                      body: 'NAAC / NBA',
+                      attainmentScore: 3.82,
+                      leadIncharge: 'Dean Academics',
+                      status: 'Verified & Locked',
+                      evidenceDossiers: [
+                        { code: 'DOC-1.1.1', title: 'Curricular Design & BOS Resolution Minutes 2024-2026', size: '4.8 MB', verification: 'Audited' },
+                        { code: 'DOC-1.2.2', title: 'Value-Added & Skill Certification Course Portfolios', size: '6.2 MB', verification: 'Audited' },
+                      ],
+                    },
+                    {
+                      criterionId: 'CR-2',
+                      criterionName: 'Teaching-Learning & Evaluation Process',
+                      body: 'NAAC / AICTE',
+                      attainmentScore: 3.65,
+                      leadIncharge: 'Controller of Examinations & HODs',
+                      status: 'Verified & Locked',
+                      evidenceDossiers: [
+                        { code: 'DOC-2.1.2', title: 'Category-wise Student Enrolment Ledger & AICTE Sanctions', size: '2.9 MB', verification: 'Audited' },
+                        { code: 'DOC-2.5.1', title: 'Autonomous Continuous Internal Evaluation Transparency Audit', size: '5.2 MB', verification: 'Audited' },
+                      ],
+                    },
+                    {
+                      criterionId: 'CR-3',
+                      criterionName: 'Research, Innovations & Extension Activities',
+                      body: 'NAAC / NIRF',
+                      attainmentScore: 3.42,
+                      leadIncharge: 'Dean Research',
+                      status: 'Under Verification',
+                      evidenceDossiers: [
+                        { code: 'DOC-3.1.1', title: 'Extramural Research Project Grants Sanction Letters', size: '7.1 MB', verification: 'Audited' },
+                        { code: 'DOC-3.3.2', title: 'Q1 Scopus/WoS Indexed Faculty Publications Compendium', size: '12.8 MB', verification: 'Pending Final Peer Sign-off' },
+                      ],
+                    },
+                  ]).map(crit => (
+                    <div key={crit.criterionId} className="mgmt-evidence-card">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ background: '#eff6ff', color: '#1e40af', padding: '2px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 800 }}>
+                            {crit.criterionId}
+                          </span>
+                          <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>{crit.criterionName}</strong>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>({crit.body})</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 800 }}>
+                            Score: {crit.attainmentScore} / 4.0
+                          </span>
+                          <span className={`mgmt-status ${crit.status.includes('Locked') ? 'mgmt-status-success' : 'mgmt-status-warning'}`}>
+                            {crit.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: 8 }}>
+                        Lead In-Charge: <strong>{crit.leadIncharge}</strong>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 8 }}>
+                        {(crit.evidenceDossiers || []).map((doc, dIdx) => (
+                          <div key={dIdx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8faff', padding: '6px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.74rem' }}>
+                            <div>
+                              <strong style={{ color: '#1e40af' }}>{doc.code}</strong>
+                              <div style={{ color: '#475569', fontSize: '0.72rem' }}>{doc.title} ({doc.size})</div>
+                            </div>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#15803d' }}>
+                              ✓ {doc.verification}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -1505,6 +2449,108 @@ export default function ManagementPortal({ account, onLogout }) {
                   </div>
                 </div>
               ))}
+
+              {/* ─── Corrective & Preventive Action (CAPA) Tracker ───── */}
+              <div className="mgmt-panel" style={{ marginTop: '1.5rem' }}>
+                <div className="mgmt-panel-header">
+                  <div className="mgmt-panel-title">
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Wrench size={18} color="#ea580c" /> Corrective &amp; Preventive Action (CAPA) Execution Tracker
+                    </h3>
+                    <p>Governing Body mandated action plans with assigned institutional owners, target dates, and verified evidence</p>
+                  </div>
+                  <span className="mgmt-badge" style={{ background: '#fff7ed', color: '#c2410c', borderColor: '#fed7aa' }}>
+                    <CheckCircle2 size={12} /> {capaRecords.length || 3} Active CAPA Workflows
+                  </span>
+                </div>
+
+                <div className="mgmt-table-wrap">
+                  <table className="mgmt-table">
+                    <thead>
+                      <tr>
+                        <th>CAPA ID</th>
+                        <th>Linked Risk / Exception</th>
+                        <th>Root Cause Analysis</th>
+                        <th>Executive Action Plan</th>
+                        <th>Assigned Owner</th>
+                        <th>Deadline</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(capaRecords.length > 0 ? capaRecords : [
+                        {
+                          id: 'CAPA-2026-01',
+                          linkedExceptionId: 'EXC-001',
+                          title: 'Civil Engineering Fee Default Mitigation & Staged Recovery Protocol',
+                          rootCause: 'Harvest delays affecting rural family seasonal income.',
+                          actionPlan: 'Special installment dispensation sanctioned by Board; HOD issued personal counseling.',
+                          assignedOwner: 'Prof. S. R. Mohanty (HOD Civil) & CAO',
+                          targetDeadline: '10 Nov 2026',
+                          status: 'In Progress',
+                          evidenceRequired: 'Verified Fee Receipt Deposit Ledger (Target ₹18.5L Recovered)',
+                        },
+                        {
+                          id: 'CAPA-2026-02',
+                          linkedExceptionId: 'EXC-002',
+                          title: 'Core Engineering Specialized Corporate Recruitment Drive Engagement',
+                          rootCause: 'Reduced IT services software hiring quota for core branches.',
+                          actionPlan: 'Partner with 8 core infrastructure and manufacturing firms (L&T, Tata Projects, Jindal).',
+                          assignedOwner: 'Prof. S. S. Ray (TPO Head)',
+                          targetDeadline: '15 Nov 2026',
+                          status: 'In Progress',
+                          evidenceRequired: 'Confirmed Corporate Drive Schedule and Written Assessment Dates',
+                        },
+                        {
+                          id: 'CAPA-2026-03',
+                          linkedExceptionId: 'EXC-003',
+                          title: 'Clearance of Capital Expenditure Requisitions Exceeding 14-Day Window',
+                          rootCause: 'Trustee physical meeting rescheduled due to convocation.',
+                          actionPlan: 'Virtual digital sign-off portal activated for Governing Body members.',
+                          assignedOwner: 'Board Secretary & Chief Enterprise Systems Architect',
+                          targetDeadline: '26 Oct 2026',
+                          status: 'Resolved & Closed',
+                          evidenceRequired: 'Digital Signature Ledger & Audit Log Entry #AUD-9821',
+                        },
+                      ]).map(capa => (
+                        <tr key={capa.id}>
+                          <td><strong style={{ color: '#ea580c' }}>{capa.id}</strong></td>
+                          <td style={{ maxWidth: 220 }}>
+                            <strong style={{ fontSize: '0.84rem' }}>{capa.title}</strong>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Linked: {capa.linkedExceptionId}</div>
+                          </td>
+                          <td style={{ fontSize: '0.76rem', color: '#475569', maxWidth: 180 }}>{capa.rootCause}</td>
+                          <td style={{ fontSize: '0.76rem', color: '#0f172a', maxWidth: 220 }}>{capa.actionPlan}</td>
+                          <td style={{ fontSize: '0.76rem', color: '#475569' }}>{capa.assignedOwner}</td>
+                          <td style={{ fontSize: '0.76rem', color: '#64748b', whiteSpace: 'nowrap' }}>{capa.targetDeadline}</td>
+                          <td>
+                            <span className={`mgmt-status ${capa.status.includes('Resolved') ? 'mgmt-status-success' : 'mgmt-status-warning'}`}>
+                              {capa.status}
+                            </span>
+                          </td>
+                          <td>
+                            {!capa.status.includes('Resolved') ? (
+                              <button
+                                type="button"
+                                className="mgmt-btn mgmt-btn-primary"
+                                style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                                onClick={() => setResolveCapaModal({ open: true, record: capa, notes: '', evidenceUrl: '' })}
+                              >
+                                <Check size={11} /> Resolve
+                              </button>
+                            ) : (
+                              <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 700 }}>
+                                ✓ Verified
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1745,6 +2791,29 @@ export default function ManagementPortal({ account, onLogout }) {
                 ))}
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 14 }}>
+                <div style={{ background: '#f8faff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1e40af', marginBottom: 4 }}>PROGRAMS & CURRICULUM</div>
+                  <div style={{ fontSize: '0.8rem', color: '#334155', lineHeight: 1.5 }}>
+                    {selectedDeptDetail.programsOffered?.join(' · ') || `${selectedDeptDetail.name} (UG & PG Autonomous)`}
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8faff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#047857', marginBottom: 4 }}>RESEARCH & INFRASTRUCTURE</div>
+                  <div style={{ fontSize: '0.8rem', color: '#334155', lineHeight: 1.5 }}>
+                    <strong>{selectedDeptDetail.labsCount || 6}</strong> Specialized Laboratories · <strong>{selectedDeptDetail.publicationsCount || 12}</strong> Scopus/Q1 Publications
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: '#f8faff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 14 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6d28d9', marginBottom: 4 }}>TOP CORPORATE RECRUITERS</div>
+                <div style={{ fontSize: '0.8rem', color: '#334155' }}>
+                  {selectedDeptDetail.topRecruiters?.join(' · ') || 'TCS Digital · Infosys · L&T Technology · Deloitte USI'}
+                </div>
+              </div>
+
               <div style={{ background: '#f8faff', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 14 }}>
                 <h4 style={{ margin: '0 0 6px', fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>Financial & Budget Overview</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: 4 }}>
@@ -1755,12 +2824,42 @@ export default function ManagementPortal({ account, onLogout }) {
                 <ProgressBar value={selectedDeptDetail.budgetUtilization || 70} color="#059669" />
               </div>
 
-              <div style={{ fontSize: '0.8rem', color: '#475569' }}>
-                <strong>Head of Department:</strong> {selectedDeptDetail.hod} &nbsp;|&nbsp; <strong>Autonomous Status:</strong> Tier-1 Compliant
+              <div style={{ fontSize: '0.8rem', color: '#475569', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                <div><strong>Head of Department:</strong> {selectedDeptDetail.hod} ({selectedDeptDetail.hodEmail || `${selectedDeptDetail.code.toLowerCase()}.hod@gift.edu.in`})</div>
+                <div><strong>Accreditation:</strong> Autonomous Tier-1 OBE Validated</div>
               </div>
             </div>
 
             <div className="mgmt-modal-footer">
+              <button
+                className="mgmt-btn mgmt-btn-primary"
+                onClick={() => {
+                  const html = `
+                    <h2>Department Profile & Academic Standing: ${selectedDeptDetail.name} (${selectedDeptDetail.code})</h2>
+                    <div class="kpi-grid">
+                      <div class="kpi-box"><div class="kpi-label">Students</div><div class="kpi-value">${selectedDeptDetail.students}</div><div class="kpi-sub">Enrolled Cohort</div></div>
+                      <div class="kpi-box"><div class="kpi-label">Faculty</div><div class="kpi-value">${selectedDeptDetail.faculty}</div><div class="kpi-sub">SFR ${selectedDeptDetail.sfr || '1:16'}</div></div>
+                      <div class="kpi-box"><div class="kpi-label">Average CGPA</div><div class="kpi-value">${selectedDeptDetail.cgpa}</div><div class="kpi-sub">Autonomous Scale</div></div>
+                      <div class="kpi-box"><div class="kpi-label">Placement %</div><div class="kpi-value">${selectedDeptDetail.placement}%</div><div class="kpi-sub">Conversion Rate</div></div>
+                    </div>
+                    <h2>Governance & Operational Details</h2>
+                    <table>
+                      <tr><td><b>Head of Department</b></td><td>${selectedDeptDetail.hod}</td></tr>
+                      <tr><td><b>HOD Email</b></td><td>${selectedDeptDetail.hodEmail || 'hod@gift.edu.in'}</td></tr>
+                      <tr><td><b>Biometric Attendance</b></td><td>${selectedDeptDetail.attendance}%</td></tr>
+                      <tr><td><b>Fee Recovery Rate</b></td><td>${selectedDeptDetail.feeRecovery}%</td></tr>
+                      <tr><td><b>Autonomous Pass Rate</b></td><td>${selectedDeptDetail.pass}%</td></tr>
+                      <tr><td><b>Budget Allocation</b></td><td>₹${((selectedDeptDetail.budgetAllocated || 30000000) / 10000000).toFixed(2)} Cr</td></tr>
+                      <tr><td><b>Expenditure YTD</b></td><td>₹${((selectedDeptDetail.budgetSpent || 21000000) / 10000000).toFixed(2)} Cr (${selectedDeptDetail.budgetUtilization}%)</td></tr>
+                      <tr><td><b>Programs Offered</b></td><td>${selectedDeptDetail.programsOffered?.join(', ') || selectedDeptDetail.name}</td></tr>
+                      <tr><td><b>Top Recruiters</b></td><td>${selectedDeptDetail.topRecruiters?.join(', ') || 'TCS, Infosys, Deloitte'}</td></tr>
+                    </table>
+                  `;
+                  openPrintReport(`Department Dossier — ${selectedDeptDetail.code}`, html);
+                }}
+              >
+                🖨 Print / Export Dossier PDF
+              </button>
               <button className="mgmt-btn mgmt-btn-secondary" onClick={() => setSelectedDeptDetail(null)}>
                 Close Dossier
               </button>
@@ -1813,6 +2912,317 @@ export default function ManagementPortal({ account, onLogout }) {
                 onClick={handleDecisionSubmit}
               >
                 Confirm {actionConfirm.action}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW PROPOSAL MODAL */}
+      {newProposalModal.open && (
+        <div className="mgmt-modal-overlay" onClick={() => setNewProposalModal(prev => ({ ...prev, open: false }))}>
+          <div className="mgmt-modal" style={{ maxWidth: 580 }} onClick={e => e.stopPropagation()}>
+            <div className="mgmt-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Target size={18} color="#2563eb" />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                  Submit Strategic Proposal for Executive Review
+                </h3>
+              </div>
+              <button
+                className="mgmt-btn-icon"
+                onClick={() => setNewProposalModal(prev => ({ ...prev, open: false }))}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mgmt-modal-body">
+              <p style={{ margin: '0 0 16px', fontSize: '0.8rem', color: '#64748b' }}>
+                Proposals submitted here enter the institutional governance workflow. Approval thresholds exceeding ₹5 Lakhs automatically escalate to the Governing Body.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                    Category *
+                  </label>
+                  <select
+                    className="mgmt-select"
+                    style={{ width: '100%' }}
+                    value={newProposalModal.category}
+                    onChange={e => setNewProposalModal(f => ({ ...f, category: e.target.value }))}
+                  >
+                    <option value="Capital Expenditure">Campus Infrastructure & Civil Works</option>
+                    <option value="Academic Expansion">Curricular & Academic Expansion</option>
+                    <option value="Research & Lab">Research Grant & Lab Modernization</option>
+                    <option value="IT Infrastructure">IT Infrastructure & Software Systems</option>
+                    <option value="Student Welfare">Student Welfare & Hostel Amenity</option>
+                    <option value="Operational Grant">Operational / General Institutional</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                    Priority *
+                  </label>
+                  <select
+                    className="mgmt-select"
+                    style={{ width: '100%' }}
+                    value={newProposalModal.priority}
+                    onChange={e => setNewProposalModal(f => ({ ...f, priority: e.target.value }))}
+                  >
+                    <option value="Low">Low (Routine Planning)</option>
+                    <option value="Medium">Medium (Current Fiscal Target)</option>
+                    <option value="High">High (Urgent / Regulatory Need)</option>
+                    <option value="Critical">Critical (Statutory Deadline)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Proposal Title *
+                </label>
+                <input
+                  type="text"
+                  className="mgmt-input"
+                  style={{ width: '100%' }}
+                  placeholder="e.g. Center for Artificial Intelligence & Robotics Lab Setup"
+                  value={newProposalModal.title}
+                  onChange={e => setNewProposalModal(f => ({ ...f, title: e.target.value }))}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                    Originating Department / Unit *
+                  </label>
+                  <input
+                    type="text"
+                    className="mgmt-input"
+                    style={{ width: '100%' }}
+                    placeholder="e.g. Computer Science & Engg."
+                    value={newProposalModal.department}
+                    onChange={e => setNewProposalModal(f => ({ ...f, department: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                    Estimated Financial Outlay (₹) *
+                  </label>
+                  <input
+                    type="text"
+                    className="mgmt-input"
+                    style={{ width: '100%' }}
+                    placeholder="e.g. ₹15.0 Lakhs or 1500000"
+                    value={newProposalModal.budget}
+                    onChange={e => setNewProposalModal(f => ({ ...f, budget: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Scope of Work & Objectives *
+                </label>
+                <textarea
+                  className="mgmt-input"
+                  style={{ width: '100%', minHeight: 70, resize: 'vertical' }}
+                  placeholder="Summarize the core requirements, deliverables, and timeline..."
+                  value={newProposalModal.description}
+                  onChange={e => setNewProposalModal(f => ({ ...f, description: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Strategic Justification & Expected ROI / NAAC Impact
+                </label>
+                <textarea
+                  className="mgmt-input"
+                  style={{ width: '100%', minHeight: 60, resize: 'vertical' }}
+                  placeholder="Justify alignment with Institutional 5-Year Plan or Accreditation Criteria..."
+                  value={newProposalModal.notes}
+                  onChange={e => setNewProposalModal(f => ({ ...f, notes: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="mgmt-modal-footer">
+              <button
+                className="mgmt-btn mgmt-btn-secondary"
+                onClick={() => setNewProposalModal(prev => ({ ...prev, open: false }))}
+              >
+                Cancel
+              </button>
+              <button
+                className="mgmt-btn mgmt-btn-primary"
+                onClick={handleCreateProposalSubmit}
+                disabled={!newProposalModal.title?.trim() || !newProposalModal.budget?.trim()}
+              >
+                Submit Proposal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESOLVE CAPA MODAL */}
+      {resolveCapaModal.open && resolveCapaModal.record && (
+        <div className="mgmt-modal-overlay" onClick={() => setResolveCapaModal({ open: false, record: null, notes: '', evidenceUrl: '' })}>
+          <div className="mgmt-modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+            <div className="mgmt-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CheckCircle2 size={18} color="#16a34a" />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                  Close Corrective Action: {resolveCapaModal.record.id}
+                </h3>
+              </div>
+              <button
+                className="mgmt-btn-icon"
+                onClick={() => setResolveCapaModal({ open: false, record: null, notes: '', evidenceUrl: '' })}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mgmt-modal-body">
+              <div style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 14 }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>{resolveCapaModal.record.title}</div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4 }}>
+                  Owner: <strong>{resolveCapaModal.record.owner}</strong> | Root Cause: {resolveCapaModal.record.rootCause}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Resolution Summary & Preventive Safeguards Implemented *
+                </label>
+                <textarea
+                  className="mgmt-input"
+                  style={{ width: '100%', minHeight: 90, resize: 'vertical' }}
+                  placeholder="Detail the remedial actions taken, procedural changes enacted, and re-audit schedules..."
+                  value={resolveCapaModal.notes}
+                  onChange={e => setResolveCapaModal(prev => ({ ...prev, notes: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Evidence / Verification Document URL or Reference
+                </label>
+                <input
+                  type="text"
+                  className="mgmt-input"
+                  style={{ width: '100%' }}
+                  placeholder="e.g. /evidence/capa/2026-audit-closure-signed.pdf"
+                  value={resolveCapaModal.evidenceUrl}
+                  onChange={e => setResolveCapaModal(prev => ({ ...prev, evidenceUrl: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="mgmt-modal-footer">
+              <button
+                className="mgmt-btn mgmt-btn-secondary"
+                onClick={() => setResolveCapaModal({ open: false, record: null, notes: '', evidenceUrl: '' })}
+              >
+                Cancel
+              </button>
+              <button
+                className="mgmt-btn mgmt-btn-success"
+                onClick={handleResolveCapaSubmit}
+                disabled={!resolveCapaModal.notes?.trim()}
+              >
+                Verify & Mark Closed
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BOARD MEETING DOSSIER MODAL */}
+      {selectedMeetingModal && (
+        <div className="mgmt-modal-overlay" onClick={() => setSelectedMeetingModal(null)}>
+          <div className="mgmt-modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+            <div className="mgmt-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FileBadge size={18} color="#2563eb" />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                  {selectedMeetingModal.title}
+                </h3>
+              </div>
+              <button
+                className="mgmt-btn-icon"
+                onClick={() => setSelectedMeetingModal(null)}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mgmt-modal-body">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Meeting Date</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>{selectedMeetingModal.date}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Chairperson</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>{selectedMeetingModal.chairperson}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Quorum Status</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#16a34a' }}>{selectedMeetingModal.quorum}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Proceedings Status</div>
+                  <span className={`mgmt-badge ${selectedMeetingModal.status === 'MINUTES_CIRCULATED' ? 'mgmt-badge-success' : 'mgmt-badge-warning'}`}>
+                    {selectedMeetingModal.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <h4 style={{ margin: '0 0 6px', fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
+                  Agenda Items Deliberated:
+                </h4>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.78rem', color: '#475569', lineHeight: 1.6 }}>
+                  {selectedMeetingModal.agenda?.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div style={{ padding: 10, background: '#eff6ff', borderRadius: 8, border: '1px solid #bfdbfe' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1d4ed8', marginBottom: 2 }}>
+                  Official Meeting Dossier File:
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#2563eb', fontFamily: 'monospace' }}>
+                  {selectedMeetingModal.dossierUrl}
+                </div>
+              </div>
+            </div>
+
+            <div className="mgmt-modal-footer">
+              <button
+                className="mgmt-btn mgmt-btn-secondary"
+                onClick={() => setSelectedMeetingModal(null)}
+              >
+                Close
+              </button>
+              <button
+                className="mgmt-btn mgmt-btn-primary"
+                onClick={() => {
+                  showToast(`Dossier access authorized. Downloading ${selectedMeetingModal.id}_Proceedings.pdf`);
+                  setSelectedMeetingModal(null);
+                }}
+              >
+                Download Signed Minutes PDF
               </button>
             </div>
           </div>

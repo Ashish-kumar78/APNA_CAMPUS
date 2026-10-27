@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import './AccountsPortal.css';
 import './AccountsModules/AccountsPortalUtilities.css';
-import CampusConnect from './CampusConnect/CampusConnect.jsx';
+import feesApi from '../services/feesApi';
 
 // Import Master Data & Initial State
 import {
@@ -272,19 +272,66 @@ export default function AccountsPortal({ account, onLogout }) {
     } catch {}
   }, [auditLogs]);
 
+  // Load PostgreSQL data on mount with graceful LocalStorage fallback
+  useEffect(() => {
+    let isMounted = true;
+    const loadBackendFinanceData = async () => {
+      try {
+        const [ledgersRes, vendorsRes, billsRes, coaRes, jrnRes, audRes] = await Promise.allSettled([
+          feesApi.getStudentLedgers(),
+          feesApi.getFinanceVendors(),
+          feesApi.getFinanceVendorBills(),
+          feesApi.getChartOfAccounts(),
+          feesApi.getJournalEntries(),
+          feesApi.getFinancialAuditLogs(),
+        ]);
+
+        if (!isMounted) return;
+
+        if (ledgersRes.status === 'fulfilled' && Array.isArray(ledgersRes.value) && ledgersRes.value.length > 0) {
+          setStudentLedgers(ledgersRes.value);
+        }
+        if (vendorsRes.status === 'fulfilled' && Array.isArray(vendorsRes.value) && vendorsRes.value.length > 0) {
+          setVendors(vendorsRes.value);
+        }
+        if (billsRes.status === 'fulfilled' && Array.isArray(billsRes.value) && billsRes.value.length > 0) {
+          setVendorBills(billsRes.value);
+        }
+        if (coaRes.status === 'fulfilled' && Array.isArray(coaRes.value) && coaRes.value.length > 0) {
+          setChartOfAccounts(coaRes.value);
+        }
+        if (jrnRes.status === 'fulfilled' && Array.isArray(jrnRes.value) && jrnRes.value.length > 0) {
+          setJournalEntries(jrnRes.value);
+        }
+        if (audRes.status === 'fulfilled' && Array.isArray(audRes.value) && audRes.value.length > 0) {
+          setAuditLogs(audRes.value);
+        }
+      } catch (err) {
+        console.warn('Initial accounts data sync notice:', err);
+      }
+    };
+    loadBackendFinanceData();
+    return () => { isMounted = false; };
+  }, []);
+
   // Helper: Append Audit Log Event
-  const handleAddAuditLog = (event) => {
+  const handleAddAuditLog = async (event) => {
     const newLog = {
       id: `FIN-AUD-${Math.floor(1000 + Math.random() * 9000)}`,
-      timestamp: 'Just now',
-      actor: ACCOUNTS_OFFICER.name,
-      role: ACCOUNTS_OFFICER.designation,
+      timestamp: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+      actor: account?.name || ACCOUNTS_OFFICER.name,
+      role: account?.role || ACCOUNTS_OFFICER.designation,
       actionType: event.actionType || 'FINANCIAL_TRANSACTION_RECORDED',
       target: event.target || 'General Ledger Entry',
       details: event.details || 'Processed via central accounts command terminal.',
-      ip: '192.168.1.14 (Accounts Desk 1)'
+      ip: '192.168.1.14 (Accounts Desk)'
     };
     setAuditLogs(prev => [newLog, ...prev]);
+    try {
+      await feesApi.addFinancialAuditLog(newLog);
+    } catch (err) {
+      console.warn('Backend audit log save notice:', err);
+    }
   };
 
   // Helper: Reset Demo Data
@@ -321,77 +368,77 @@ export default function AccountsPortal({ account, onLogout }) {
   };
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Exact 9 Collapsible Sidebar Groups (Section 4 of Master Prompt)
+  // Exact 9 Collapsible Sidebar Groups (Phase 2 Master Specification)
   // ──────────────────────────────────────────────────────────────────────────
   const accountsNavSections = useMemo(() => [
     {
-      title: 'A. DASHBOARD',
+      title: 'A. FINANCE DASHBOARD',
       items: [
         { id: 'dashboard', label: 'Finance Dashboard', icon: Layers }
       ]
     },
     {
-      title: 'B. STUDENT FINANCE',
+      title: 'B. STUDENT FEES & RECEIPTS',
       items: [
-        { id: 'fee_management', label: 'Student Fee Management', icon: GraduationCap },
-        { id: 'fee_structure', label: 'Fee Structure Configuration', icon: Building2 },
+        { id: 'fee_management', label: 'Student Fee Demand & Cohorts', icon: GraduationCap },
+        { id: 'fee_structure', label: 'Fee Structure & Head Master', icon: Building2 },
         { id: 'fee_collection', label: 'Fee Collection Counter', icon: Receipt },
         { id: 'fee_ledger', label: 'Student Fee Ledger', icon: BookOpen },
         { id: 'fee_outstanding', label: 'Outstanding Dues & Defaulters', icon: AlertTriangle, badge: studentLedgers.filter(s => s.outstandingBalance > 0).length || undefined, badgeType: 'urgent' },
-        { id: 'fee_installments', label: 'Installment Management', icon: Clock },
-        { id: 'fee_scholarships', label: 'Scholarships & Concessions', icon: DollarSign },
-        { id: 'fee_refunds', label: 'Refund Management', icon: RotateCcw },
-        { id: 'fee_clearance', label: 'Student Financial Clearance', icon: ShieldCheck }
+        { id: 'fee_installments', label: 'Installment Policies & Milestones', icon: Clock },
+        { id: 'fee_scholarships', label: 'Scholarships & Approved Waivers', icon: DollarSign },
+        { id: 'fee_refunds', label: 'Refunds & Receipt Reversals', icon: RotateCcw },
+        { id: 'fee_clearance', label: 'Financial Clearance & Dues', icon: ShieldCheck }
       ]
     },
     {
-      title: 'C. PAYROLL & EMPLOYEE FINANCE',
+      title: 'C. INCOME & OTHER RECEIPTS',
       items: [
-        { id: 'payroll_staff', label: 'Staff Payroll Directory', icon: Users },
-        { id: 'payroll_teachers', label: 'Teacher Salary Management', icon: Briefcase },
-        { id: 'payroll_processing', label: 'Monthly Payroll Processing', icon: CheckCircle2 },
-        { id: 'payroll_payslips', label: 'Payslip Management', icon: FileText },
-        { id: 'payroll_advances', label: 'Reimbursements & Advances', icon: TrendingUp }
-      ]
-    },
-    {
-      title: 'D. RECEIPTS & INCOME',
-      items: [
-        { id: 'receipt_register', label: 'Fee Receipt Register', icon: Receipt },
+        { id: 'receipt_register', label: 'Fee Receipt Register & Online', icon: Receipt },
         { id: 'income_other', label: 'Other College Auxiliary Revenue', icon: DollarSign },
-        { id: 'income_hostel', label: 'Hostel & Mess Boarding Fees', icon: Building2 },
+        { id: 'income_hostel', label: 'Hostel & Mess Boarding Revenue', icon: Building2 },
         { id: 'income_transport', label: 'Campus Bus Transit Fees', icon: Truck },
-        { id: 'income_exam', label: 'Examination Cell Fees', icon: Layers }
+        { id: 'income_exam', label: 'Examination Cell & Library Charges', icon: Layers }
       ]
     },
     {
-      title: 'E. EXPENSES & PROCUREMENT',
+      title: 'D. EXPENSES & PROCUREMENT',
       items: [
         { id: 'expense_register', label: 'Operating Expense Register', icon: TrendingUp },
         { id: 'vendor_management', label: 'Vendor Directory', icon: Building2 },
-        { id: 'vendor_bills', label: 'Vendor Bills & Invoices', icon: FileText, badge: vendorBills.filter(b => b.balance > 0).length || undefined, badgeType: 'warning' },
+        { id: 'vendor_bills', label: 'Purchase Orders & Vendor Bills', icon: FileText, badge: vendorBills.filter(b => b.balance > 0).length || undefined, badgeType: 'warning' },
         { id: 'vendor_payments', label: 'Supplier Payments & Tracking', icon: CreditCard },
-        { id: 'expense_approvals', label: 'Procurement Approval Queue', icon: ShieldCheck }
+        { id: 'expense_approvals', label: 'Procurement Approval Queue', icon: ShieldCheck },
+        { id: 'payroll_advances', label: 'Staff Advances & Reimbursements', icon: TrendingUp }
       ]
     },
     {
-      title: 'F. ACCOUNTING',
+      title: 'E. ACCOUNTING & GENERAL LEDGER',
       items: [
         { id: 'acc_chart_of_accounts', label: 'Chart of Accounts (COA)', icon: Layers },
         { id: 'acc_general_ledger', label: 'General Ledger Drilldown', icon: BookOpen },
-        { id: 'acc_journal_entries', label: 'Double-Entry Journal Entries', icon: FileText },
-        { id: 'acc_cash_book', label: 'Cash & Bank Books', icon: Landmark },
+        { id: 'acc_journal_entries', label: 'Journal & Contra Vouchers', icon: FileText },
+        { id: 'acc_cash_book', label: 'Cash Book & Bank Book', icon: Landmark },
         { id: 'acc_receivable', label: 'Accounts Receivable (A/R)', icon: TrendingUp },
         { id: 'acc_payable', label: 'Accounts Payable (A/P)', icon: AlertTriangle },
         { id: 'acc_bank_reconciliation', label: 'Bank Reconciliation (BRS)', icon: ShieldCheck },
-        { id: 'acc_period_closing', label: 'Financial Period Closing', icon: CheckCircle2 }
+        { id: 'acc_period_closing', label: 'Financial Period & Year-End Closing', icon: CheckCircle2 }
+      ]
+    },
+    {
+      title: 'F. PAYROLL & STAFF FINANCE',
+      items: [
+        { id: 'payroll_staff', label: 'Staff Salary Structures', icon: Users },
+        { id: 'payroll_teachers', label: 'Faculty Salary Management', icon: Briefcase },
+        { id: 'payroll_processing', label: 'Monthly Payroll Processing', icon: CheckCircle2 },
+        { id: 'payroll_payslips', label: 'Payslip Generation & Disbursement', icon: FileText }
       ]
     },
     {
       title: 'G. BUDGET & FINANCIAL PLANNING',
       items: [
         { id: 'budget_annual', label: 'Annual Master Budget', icon: Layers },
-        { id: 'budget_departments', label: 'Department Budgets', icon: Building2 },
+        { id: 'budget_departments', label: 'Department Budgets & Allocations', icon: Building2 },
         { id: 'budget_utilization', label: 'Budget Utilization & Variance', icon: TrendingUp }
       ]
     },
@@ -400,23 +447,21 @@ export default function AccountsPortal({ account, onLogout }) {
       items: [
         { id: 'rep_fee_collection', label: 'Fee Collection Summary', icon: Receipt },
         { id: 'rep_outstanding_dues', label: 'Outstanding Arrears Report', icon: AlertTriangle },
-        { id: 'rep_payroll', label: 'Monthly Payroll Statement', icon: Users },
         { id: 'rep_income_expenditure', label: 'Income & Expenditure Statement', icon: TrendingUp },
-        { id: 'rep_trial_balance', label: 'Trial Balance Ledger', icon: BookOpen },
-        { id: 'rep_audit_trail', label: 'Statutory Financial Audit Trail', icon: ShieldCheck },
-        { id: 'campus-connect', label: 'Campus Connect Broadcast', icon: MessageSquare }
+        { id: 'rep_trial_balance', label: 'Trial Balance & Financial Statements', icon: BookOpen },
+        { id: 'rep_payroll', label: 'Monthly Payroll Statement', icon: Users },
+        { id: 'rep_audit_trail', label: 'Statutory Financial Audit Trail', icon: ShieldCheck }
       ]
     },
     {
-      title: 'I. CONFIGURATION',
+      title: 'I. FINANCE CONFIGURATION',
       items: [
-        { id: 'cfg_academic_year', label: 'Academic & Financial Periods', icon: Calendar },
+        { id: 'cfg_academic_year', label: 'Institutional Profile & Periods', icon: Calendar },
         { id: 'cfg_fee_heads', label: 'Fee Heads & Late Rules', icon: Layers },
         { id: 'cfg_salary_components', label: 'Salary Components & Formulas', icon: Users },
         { id: 'cfg_numbering', label: 'Voucher Numbering Prefixes', icon: Hash },
         { id: 'cfg_payment_methods', label: 'Payment Channels & Gateways', icon: CreditCard },
-        { id: 'cfg_approval_workflows', label: 'Approval Thresholds', icon: ShieldCheck },
-        { id: 'cfg_reset_demo_data', label: 'Reset Demo Data', icon: RotateCcw }
+        { id: 'cfg_approval_workflows', label: 'Approval Thresholds & Matrix', icon: ShieldCheck }
       ]
     }
   ], [studentLedgers, vendorBills]);
@@ -720,21 +765,10 @@ export default function AccountsPortal({ account, onLogout }) {
           />
         )}
 
-        {/* Campus Connect Broadcast */}
-        {activeTab === 'campus-connect' && (
-          <CampusConnect
-            account={{
-              role: 'accounts',
-              name: ACCOUNTS_OFFICER.name,
-              id: ACCOUNTS_OFFICER.id,
-              department: 'Finance & Accounts Directorate'
-            }}
-          />
-        )}
-
         {/* Section I: Configuration */}
         {activeTab.startsWith('cfg_') && (
           <AccountsSettingsTab
+            account={account}
             onResetDemoData={handleResetDemoData}
             onAddAuditLog={handleAddAuditLog}
             initialSubtab={

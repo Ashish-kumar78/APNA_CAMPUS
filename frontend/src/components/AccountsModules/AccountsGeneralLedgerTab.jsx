@@ -26,6 +26,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { INITIAL_CHART_OF_ACCOUNTS } from './accountsData';
+import feesApi from '../../services/feesApi';
 
 export default function AccountsGeneralLedgerTab({
   chartOfAccounts = INITIAL_CHART_OF_ACCOUNTS,
@@ -181,6 +182,11 @@ export default function AccountsGeneralLedgerTab({
     if (onUpdateJournalEntries) {
       onUpdateJournalEntries([newEntry, ...journalEntries]);
     }
+
+    feesApi.saveJournalEntry(newEntry).catch(err => {
+      console.warn('Journal voucher backend save notice:', err);
+    });
+
     if (onAddAuditLog) {
       onAddAuditLog({
         actionType: 'JOURNAL_ENTRY_POSTED',
@@ -222,6 +228,11 @@ export default function AccountsGeneralLedgerTab({
     if (onUpdateJournalEntries) {
       onUpdateJournalEntries([reversal, ...updated]);
     }
+
+    feesApi.saveJournalEntry(reversal).catch(err => {
+      console.warn('Journal reversal backend save notice:', err);
+    });
+
     if (onAddAuditLog) {
       onAddAuditLog({
         actionType: 'JOURNAL_ENTRY_REVERSED',

@@ -31,6 +31,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import './AccountsStudentFinanceTab.css';
+import feesApi from '../../services/feesApi';
 
 export default function AccountsStudentFinanceTab({
   feeStructures = [],
@@ -227,6 +228,13 @@ export default function AccountsStudentFinanceTab({
     });
 
     onUpdateStudentLedgers(updatedLedgers);
+
+    const changedStudent = updatedLedgers.find(s => s.studentId === paymentForm.studentId);
+    if (changedStudent) {
+      feesApi.saveStudentLedger(changedStudent).catch(err => {
+        console.warn('Student ledger backend save notice:', err);
+      });
+    }
 
     onAddAuditLog({
       actionType: 'FEE_PAYMENT_RECORDED',

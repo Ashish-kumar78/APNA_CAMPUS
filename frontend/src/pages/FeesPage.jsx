@@ -137,13 +137,13 @@ export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studen
         zIndex: 0,
         textAlign: 'center'
       }}>
-        <img src="/gift_logo.svg" alt="Watermark" style={{ width: '220px', height: '220px' }} />
+        <img src="/logo.png" alt="Watermark" style={{ width: '220px', height: 'auto', maxHeight: '220px', objectFit: 'contain' }} />
       </div>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         {/* Top Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '8px' }}>
-          <img src="/gift_logo.svg" alt="GIFT Logo" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
+          <img src="/logo.png" alt="Apna Campus Logo" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
           <div>
             <div style={{ fontSize: '1.22rem', fontWeight: 800, color: '#000000', lineHeight: 1.2 }}>
               Gandhi Institute for Technology (GIFT)
@@ -433,7 +433,7 @@ export default function FeesPage({ account }) {
 
       <div className="fees-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <img src="/gift_logo.svg" alt="GIFT Autonomous Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
+          <img src="/logo.png" alt="Apna Campus Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
           <div>
             <h1 className="fees-title" style={{ margin: 0, fontSize: '1.35rem', color: '#0f172a' }}>
               Gandhi Institute for Technology (GIFT) <span style={{ fontSize: '1.02rem', color: '#0284c7' }}>(Autonomous)</span>

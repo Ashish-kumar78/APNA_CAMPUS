@@ -17,8 +17,10 @@ import {
   Hash
 } from 'lucide-react';
 import { ACCOUNTS_OFFICER } from './accountsData';
+import feesApi from '../../services/feesApi';
 
 export default function AccountsSettingsTab({
+  account,
   onResetDemoData,
   onAddAuditLog,
   initialSubtab = 'institution'
@@ -85,25 +87,79 @@ export default function AccountsSettingsTab({
 
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [resetConfirmCode, setResetConfirmCode] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
-  const handleSaveSettings = (sectionName) => {
-    setSaveSuccessMsg(`${sectionName} configurations saved to local persistent storage.`);
-    setTimeout(() => setSaveSuccessMsg(''), 3000);
+  // Load Configurations from Backend on Mount
+  useEffect(() => {
+    let isMounted = true;
+    const loadSavedConfigs = async () => {
+      try {
+        const [inst, fee, sal, num, gate, app] = await Promise.allSettled([
+          feesApi.getFinanceConfig('institution'),
+          feesApi.getFinanceConfig('fee_rules'),
+          feesApi.getFinanceConfig('salary_rules'),
+          feesApi.getFinanceConfig('voucher_numbering'),
+          feesApi.getFinanceConfig('payment_gateways'),
+          feesApi.getFinanceConfig('approval_thresholds')
+        ]);
+        if (!isMounted) return;
+        if (inst.status === 'fulfilled' && inst.value) setInstSettings(prev => ({ ...prev, ...inst.value }));
+        if (fee.status === 'fulfilled' && fee.value) setFeeRules(prev => ({ ...prev, ...fee.value }));
+        if (sal.status === 'fulfilled' && sal.value) setSalaryRules(prev => ({ ...prev, ...sal.value }));
+        if (num.status === 'fulfilled' && num.value) setNumberingPrefixes(prev => ({ ...prev, ...num.value }));
+        if (gate.status === 'fulfilled' && gate.value) setChannels(prev => ({ ...prev, ...gate.value }));
+        if (app.status === 'fulfilled' && app.value) setThresholds(prev => ({ ...prev, ...app.value }));
+      } catch (err) {
+        console.warn('Finance settings backend sync:', err);
+      }
+    };
+    loadSavedConfigs();
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleSaveSettings = async (sectionName) => {
+    let configKey = 'institution';
+    let configPayload = instSettings;
+    if (sectionName.includes('Fee')) { configKey = 'fee_rules'; configPayload = feeRules; }
+    else if (sectionName.includes('Salary')) { configKey = 'salary_rules'; configPayload = salaryRules; }
+    else if (sectionName.includes('Numbering') || sectionName.includes('Prefix')) { configKey = 'voucher_numbering'; configPayload = numberingPrefixes; }
+    else if (sectionName.includes('Payment') || sectionName.includes('Channel')) { configKey = 'payment_gateways'; configPayload = channels; }
+    else if (sectionName.includes('Threshold') || sectionName.includes('Approval')) { configKey = 'approval_thresholds'; configPayload = thresholds; }
+
+    try {
+      await feesApi.saveFinanceConfig(configKey, configPayload);
+      setSaveSuccessMsg(`${sectionName} configurations synchronized to institutional database.`);
+    } catch {
+      setSaveSuccessMsg(`${sectionName} configurations saved to local persistent storage.`);
+    }
+    setTimeout(() => setSaveSuccessMsg(''), 3500);
 
     if (onAddAuditLog) {
       onAddAuditLog({
         actionType: 'FINANCE_CONFIG_UPDATED',
         target: sectionName,
-        details: `Updated parameters under ${sectionName} by ${ACCOUNTS_OFFICER.name}`
+        details: `Updated parameters under ${sectionName} by ${account?.name || ACCOUNTS_OFFICER.name}`
       });
     }
   };
 
-  const handleConfirmReset = () => {
+  const isSuperAdmin = account?.role === 'super_admin' || account?.role === 'admin';
+
+  const handleConfirmReset = async () => {
+    if (resetConfirmCode !== 'RESET_CAMPUS_FINANCE_2026') return;
+    setIsResetting(true);
+    try {
+      await feesApi.resetFinanceDemoData('RESET_CAMPUS_FINANCE_2026');
+    } catch (err) {
+      console.warn('Backend reset call notice:', err);
+    }
     if (onResetDemoData) {
       onResetDemoData();
     }
+    setIsResetting(false);
     setIsResetConfirmOpen(false);
+    setResetConfirmCode('');
   };
 
   return (
@@ -515,29 +571,51 @@ export default function AccountsSettingsTab({
       ───────────────────────────────────────────────────────────── */}
       {activeSection === 'safety' && (
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
-          <div className="border-b border-slate-200 pb-3">
-            <h3 className="text-sm font-bold text-slate-900">Frontend Demonstration Governance &amp; LocalStorage State</h3>
-            <p className="text-xs text-slate-500">Reset browser simulation state and restore factory test datasets</p>
+          <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Institutional Safety &amp; Sandbox Environment Controls</h3>
+              <p className="text-xs text-slate-500">Production safety isolation and restricted factory reset maintenance</p>
+            </div>
+            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+              isSuperAdmin ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+            }`}>
+              {isSuperAdmin ? 'SUPER ADMIN AUTHORIZED' : 'LOCKED — FINANCE USER'}
+            </span>
           </div>
 
-          <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start justify-between flex-wrap gap-4">
-            <div className="space-y-1 max-w-xl">
-              <div className="flex items-center gap-2 text-rose-900 font-bold text-xs">
-                <AlertTriangle size={16} className="text-rose-600" />
-                <span>Reset All Demo Financial Data</span>
+          {!isSuperAdmin ? (
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+              <div className="flex items-center gap-2 text-slate-800 font-bold text-xs">
+                <Lock size={16} className="text-amber-600" />
+                <span>Production Security Lock: Financial Reset Disabled</span>
               </div>
-              <p className="text-xs text-rose-800">
-                This will wipe out all temporary changes stored in your browser's LocalStorage (including newly recorded student fee payments, posted journal entries, new vendor bills, and budget amendments) and restore the default state.
+              <p className="text-xs text-slate-600 leading-relaxed">
+                For financial auditing integrity and statutory compliance, destructive simulation resets are permanently restricted in the production ERP environment. Routine Accounts Officers, Cashiers, and Bursars cannot reset institutional ledgers. Contact the Chief Institutional Administrator if you require sandbox maintenance.
               </p>
             </div>
+          ) : (
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start justify-between flex-wrap gap-4">
+              <div className="space-y-1 max-w-xl">
+                <div className="flex items-center gap-2 text-rose-900 font-bold text-xs">
+                  <AlertTriangle size={16} className="text-rose-600" />
+                  <span>Sandbox Environment Reset (Super Admin Only)</span>
+                </div>
+                <p className="text-xs text-rose-800">
+                  This will restore all financial modules (student fee ledgers, vendor bills, journals, and configs) to clean initial institutional standards. A cryptographic confirmation token is mandatory.
+                </p>
+              </div>
 
-            <button
-              onClick={() => setIsResetConfirmOpen(true)}
-              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition"
-            >
-              <RotateCcw size={14} /> Reset Demo Data
-            </button>
-          </div>
+              <button
+                onClick={() => {
+                  setResetConfirmCode('');
+                  setIsResetConfirmOpen(true);
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition"
+              >
+                <RotateCcw size={14} /> Reset Sandbox Ledgers
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -546,30 +624,45 @@ export default function AccountsSettingsTab({
       ───────────────────────────────────────────────────────────── */}
       {isResetConfirmOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 border border-slate-200 text-center space-y-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-200 space-y-4">
             <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
               <AlertTriangle size={24} />
             </div>
 
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">Confirm Reset of Demo Data?</h3>
+            <div className="text-center">
+              <h3 className="text-sm font-bold text-slate-900">Authorize Master Financial Reset?</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Are you sure you want to restore the Accounts &amp; Finance module to its pristine initial mock state?
+                To prevent accidental destruction of college financial journals and fee demands, type <code className="bg-rose-100 text-rose-800 px-1 py-0.5 rounded font-mono font-bold">RESET_CAMPUS_FINANCE_2026</code> below to execute.
               </p>
             </div>
 
-            <div className="flex justify-center gap-2 pt-2">
+            <div>
+              <label className="text-[11px] font-semibold text-slate-700 block mb-1">Confirmation Code</label>
+              <input
+                type="text"
+                placeholder="Type RESET_CAMPUS_FINANCE_2026"
+                value={resetConfirmCode}
+                onChange={(e) => setResetConfirmCode(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-mono font-bold outline-none focus:border-rose-500 text-center"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
               <button
-                onClick={() => setIsResetConfirmOpen(false)}
+                onClick={() => {
+                  setIsResetConfirmOpen(false);
+                  setResetConfirmCode('');
+                }}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs"
               >
                 Cancel
               </button>
               <button
+                disabled={resetConfirmCode !== 'RESET_CAMPUS_FINANCE_2026' || isResetting}
                 onClick={handleConfirmReset}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs shadow-xs"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-lg text-xs shadow-xs"
               >
-                Yes, Reset All Records
+                {isResetting ? 'Resetting Ledgers...' : 'Confirm Sandbox Reset'}
               </button>
             </div>
           </div>

@@ -16,6 +16,7 @@ import {
   Send,
   Eye
 } from 'lucide-react';
+import feesApi from '../../services/feesApi';
 
 export default function AccountsExpensesProcurementTab({
   expenses,
@@ -111,6 +112,10 @@ export default function AccountsExpensesProcurementTab({
     onUpdateVendorBills([newBill, ...vendorBills]);
     setIsAddBillOpen(false);
 
+    feesApi.saveFinanceVendorBill(newBill).catch(err => {
+      console.warn('Vendor bill backend save notice:', err);
+    });
+
     onAddAuditLog({
       actionType: 'VENDOR_BILL_REGISTERED',
       target: `${newBill.invoiceNumber} (${vendorObj.name} - ₹${totalAmt})`,
@@ -139,6 +144,15 @@ export default function AccountsExpensesProcurementTab({
 
     onUpdateVendorBills(updatedBills);
     setIsRecordPaymentOpen(false);
+
+    feesApi.payFinanceVendorBill(selectedBillForPayment.id, {
+      amount: payAmt,
+      paymentMethod: supplierPayForm.paymentMethod,
+      reference: supplierPayForm.reference,
+      remarks: supplierPayForm.remarks
+    }).catch(err => {
+      console.warn('Vendor bill payment backend notice:', err);
+    });
 
     onAddAuditLog({
       actionType: 'SUPPLIER_PAYMENT_RELEASED',

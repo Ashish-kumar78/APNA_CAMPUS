@@ -778,6 +778,70 @@ export const api = {
   getStudentFinancialDocuments: (rollNumber = '') =>
     request(`/fees/documents${rollNumber ? `?rollNumber=${encodeURIComponent(rollNumber)}` : ''}`),
 
+  // Comprehensive Accounts & Finance ERP
+  getFinanceConfig: (key) => request(`/fees/config/${encodeURIComponent(key)}`),
+  saveFinanceConfig: (key, payload) =>
+    request(`/fees/config/${encodeURIComponent(key)}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getStudentLedgers: (search = '') =>
+    request(`/fees/ledgers${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  saveStudentLedger: (payload) =>
+    request('/fees/ledgers', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getFinanceVendors: (search = '') =>
+    request(`/fees/vendors${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  saveFinanceVendor: (payload) =>
+    request('/fees/vendors', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getFinanceVendorBills: (status = 'ALL', search = '') =>
+    request(`/fees/bills?status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`),
+  saveFinanceVendorBill: (payload) =>
+    request('/fees/bills', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  approveFinanceVendorBill: (id, notes = '') =>
+    request(`/fees/bills/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    }),
+  payFinanceVendorBill: (id, payload) =>
+    request(`/fees/bills/${id}/pay`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getChartOfAccounts: () => request('/fees/chart-of-accounts'),
+  saveChartOfAccounts: (payload) =>
+    request('/fees/chart-of-accounts', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getJournalEntries: (search = '') =>
+    request(`/fees/journal${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  saveJournalEntry: (payload) =>
+    request('/fees/journal', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getFinancialAuditLogs: (search = '') =>
+    request(`/fees/audit-logs${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  addFinancialAuditLog: (payload) =>
+    request('/fees/audit-logs', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  resetFinanceDemoData: (confirmToken) =>
+    request('/fees/reset-demo', {
+      method: 'POST',
+      body: JSON.stringify({ confirmToken }),
+    }),
+
   // 22. Faculty Portal Academic Operations
   getFacultyDashboard: () => request('/faculty/dashboard'),
   getFacultyAssignments: () => request('/faculty/assignments'),

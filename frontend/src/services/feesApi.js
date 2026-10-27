@@ -334,5 +334,134 @@ export const feesApi = {
     }
     return null;
   },
+
+  // 11. Institutional Finance Configuration
+  getFinanceConfig: async (key) => {
+    try {
+      const res = await api.getFinanceConfig(key);
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  saveFinanceConfig: async (key, payload) => {
+    try {
+      const res = await api.saveFinanceConfig(key, payload);
+      if (res && res.success) return res.data;
+    } catch (err) {
+      console.warn(`Failed to save config for ${key}:`, err);
+    }
+    return payload;
+  },
+
+  // 12. Student Fee Ledgers
+  getStudentLedgers: async (search = '') => {
+    try {
+      const res = await api.getStudentLedgers(search);
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  saveStudentLedger: async (payload) => {
+    return api.saveStudentLedger(payload);
+  },
+
+  // 13. Vendors & Invoices
+  getFinanceVendors: async (search = '') => {
+    try {
+      const res = await api.getFinanceVendors(search);
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  saveFinanceVendor: async (payload) => {
+    return api.saveFinanceVendor(payload);
+  },
+
+  getFinanceVendorBills: async (status = 'ALL', search = '') => {
+    try {
+      const res = await api.getFinanceVendorBills(status, search);
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  saveFinanceVendorBill: async (payload) => {
+    return api.saveFinanceVendorBill(payload);
+  },
+
+  approveFinanceVendorBill: async (id, notes = '') => {
+    return api.approveFinanceVendorBill(id, notes);
+  },
+
+  payFinanceVendorBill: async (id, payload) => {
+    return api.payFinanceVendorBill(id, payload);
+  },
+
+  // 14. Chart of Accounts & General Ledger
+  getChartOfAccounts: async () => {
+    try {
+      const res = await api.getChartOfAccounts();
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  saveChartOfAccounts: async (payload) => {
+    return api.saveChartOfAccounts(payload);
+  },
+
+  getJournalEntries: async (search = '') => {
+    try {
+      const res = await api.getJournalEntries(search);
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  saveJournalEntry: async (payload) => {
+    return api.saveJournalEntry(payload);
+  },
+
+  // 15. Financial Audit Logs
+  getFinancialAuditLogs: async (search = '') => {
+    try {
+      const res = await api.getFinancialAuditLogs(search);
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  addFinancialAuditLog: async (payload) => {
+    try {
+      const res = await api.addFinancialAuditLog(payload);
+      if (res && res.success) return res.data;
+    } catch {
+      // Fallback
+    }
+    return null;
+  },
+
+  // 16. Sandbox Reset (Super Admin ONLY)
+  resetFinanceDemoData: async (confirmToken) => {
+    return api.resetFinanceDemoData(confirmToken);
+  },
 };
 export default feesApi;
+

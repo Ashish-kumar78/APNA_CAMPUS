@@ -196,4 +196,227 @@ export class FeesController {
     const data = await this.feesService.getStudentFinancialDocuments(targetRoll);
     return { success: true, count: data.length, data };
   }
+
+  // =========================================================================
+  // 9. CONFIGURATION ENDPOINTS
+  // =========================================================================
+  @Get('config/:key')
+  @ApiOperation({ summary: 'Get finance configuration by key' })
+  async getFinanceConfig(@Param('key') key: string) {
+    const data = await this.feesService.getFinanceConfig(key);
+    return { success: true, data };
+  }
+
+  @Post('config/:key')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Save finance configuration by key (Accounts & Admin only)' })
+  async saveFinanceConfig(
+    @CurrentUser() user: any,
+    @Param('key') key: string,
+    @Body() body: any,
+  ) {
+    const role = normalizeRole(user.role);
+    if (role !== 'accounts' && role !== 'admin' && role !== 'super_admin' && role !== 'management') {
+      throw new ForbiddenException('Only Accounts or Finance management can update finance settings.');
+    }
+    const data = await this.feesService.saveFinanceConfig(key, body, user);
+    return { success: true, message: `Configuration '${key}' saved successfully.`, data };
+  }
+
+  // =========================================================================
+  // 10. STUDENT LEDGERS ENDPOINTS
+  // =========================================================================
+  @Get('ledgers')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all student fee ledgers and dues' })
+  async getStudentLedgers(@CurrentUser() user: any, @Query('search') search?: string) {
+    const role = normalizeRole(user.role);
+    const authorized = ['accounts', 'super_admin', 'management', 'principal', 'admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
+    const data = await this.feesService.getStudentLedgers(search);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('ledgers')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update or create student fee ledger' })
+  async saveStudentLedger(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    if (role !== 'accounts' && role !== 'admin' && role !== 'super_admin') {
+      throw new ForbiddenException('Only Accounts staff can update student ledgers.');
+    }
+    const data = await this.feesService.saveStudentLedger(body, user);
+    return { success: true, message: 'Student ledger updated.', data };
+  }
+
+  // =========================================================================
+  // 11. VENDORS & BILLS ENDPOINTS
+  // =========================================================================
+  @Get('vendors')
+  @ApiOperation({ summary: 'Get vendors directory' })
+  async getVendors(@Query('search') search?: string) {
+    const data = await this.feesService.getVendors(search);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('vendors')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Save vendor (Accounts & Purchase staff only)' })
+  async saveVendor(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    if (role !== 'accounts' && role !== 'admin' && role !== 'super_admin') {
+      throw new ForbiddenException('Access denied.');
+    }
+    const data = await this.feesService.saveVendor(body, user);
+    return { success: true, message: 'Vendor saved successfully.', data };
+  }
+
+  @Get('bills')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get vendor bills & invoices' })
+  async getVendorBills(
+    @Query('status') statusFilter?: string,
+    @Query('search') search?: string,
+  ) {
+    const data = await this.feesService.getVendorBills(statusFilter, search);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('bills')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Submit vendor bill (Accounts & Procurement only)' })
+  async saveVendorBill(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    if (role !== 'accounts' && role !== 'admin' && role !== 'super_admin') {
+      throw new ForbiddenException('Access denied.');
+    }
+    const data = await this.feesService.saveVendorBill(body, user);
+    return { success: true, message: 'Vendor bill submitted for approval.', data };
+  }
+
+  @Post('bills/:id/approve')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Approve vendor bill (Bursar / Management only)' })
+  async approveVendorBill(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body('notes') notes?: string,
+  ) {
+    const role = normalizeRole(user.role);
+    if (role !== 'accounts' && role !== 'management' && role !== 'principal' && role !== 'super_admin') {
+      throw new ForbiddenException('Access denied. Only Bursar or Management can approve vendor bills.');
+    }
+    const data = await this.feesService.approveVendorBill(id, user, notes);
+    return { success: true, message: 'Vendor bill approved for payment.', data };
+  }
+
+  @Post('bills/:id/pay')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Record vendor bill payment and issue voucher' })
+  async payVendorBill(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() paymentData: any,
+  ) {
+    const role = normalizeRole(user.role);
+    if (role !== 'accounts' && role !== 'admin' && role !== 'super_admin') {
+      throw new ForbiddenException('Access denied. Only Accounts staff can execute payments.');
+    }
+    const data = await this.feesService.payVendorBill(id, paymentData, user);
+    return { success: true, message: `Payment of ₹${data.paidAmount} recorded via ${data.paymentMode}. Payment voucher ${data.paymentVoucher} generated.`, data };
+  }
+
+  // =========================================================================
+  // 12. GENERAL LEDGER & DOUBLE-ENTRY JOURNAL
+  // =========================================================================
+  @Get('chart-of-accounts')
+  @ApiOperation({ summary: 'Get institutional Chart of Accounts (COA)' })
+  async getChartOfAccounts() {
+    const data = await this.feesService.getChartOfAccounts();
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('chart-of-accounts')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update Chart of Accounts (Accounts only)' })
+  async saveChartOfAccounts(@CurrentUser() user: any, @Body() body: any[]) {
+    const role = normalizeRole(user.role);
+    if (role !== 'accounts' && role !== 'super_admin') {
+      throw new ForbiddenException('Access denied.');
+    }
+    const data = await this.feesService.saveChartOfAccounts(body, user);
+    return { success: true, message: 'Chart of accounts updated.', data };
+  }
+
+  @Get('journal')
+  @ApiOperation({ summary: 'Get double-entry general ledger journal entries' })
+  async getJournalEntries(@Query('search') search?: string) {
+    const data = await this.feesService.getJournalEntries(search);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('journal')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Post balanced double-entry journal entry to GL' })
+  async saveJournalEntry(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    if (role !== 'accounts' && role !== 'admin' && role !== 'super_admin') {
+      throw new ForbiddenException('Only Accounts division can post journal entries.');
+    }
+    const data = await this.feesService.saveJournalEntry(body, user);
+    return { success: true, message: `Journal entry ${data.id} posted to general ledger.`, data };
+  }
+
+  // =========================================================================
+  // 13. STATUTORY FINANCIAL AUDIT LOGS
+  // =========================================================================
+  @Get('audit-logs')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get statutory financial audit trail' })
+  async getFinancialAuditLogs(@Query('search') search?: string) {
+    const data = await this.feesService.getFinancialAuditLogs(search);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('audit-logs')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Record financial audit log entry' })
+  async addFinancialAuditLog(@CurrentUser() user: any, @Body() body: any) {
+    const data = await this.feesService.addFinancialAuditLog(body, user);
+    return { success: true, data };
+  }
+
+  // =========================================================================
+  // 14. SUPER ADMIN RESTRICTED DEMO DATA RESET
+  // =========================================================================
+  @Post('reset-demo')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reset financial test data (Super Admin ONLY with explicit token)' })
+  async resetDemoData(
+    @CurrentUser() user: any,
+    @Body('confirmToken') confirmToken: string,
+  ) {
+    const role = normalizeRole(user.role);
+    if (role !== 'super_admin') {
+      throw new ForbiddenException('Access Denied: Financial sandbox reset is strictly restricted to Super Admin.');
+    }
+    const data = await this.feesService.resetDemoData(confirmToken, user);
+    return data;
+  }
 }
+

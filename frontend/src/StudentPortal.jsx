@@ -1146,8 +1146,22 @@ function createCalendarDays(month, today) {
   })
 }
 
-function GiftMark() {
-  return <span className="portal-gift-mark" aria-hidden="true"><span>G</span></span>
+function GiftMark({ size = 32 }) {
+  return (
+    <img
+      src="/logo.png"
+      alt="Apna Campus Logo"
+      className="portal-gift-mark"
+      style={{
+        height: `${size}px`,
+        width: 'auto',
+        maxHeight: '100%',
+        objectFit: 'contain',
+        display: 'inline-block',
+        verticalAlign: 'middle',
+      }}
+    />
+  );
 }
 
 export default StudentPortal

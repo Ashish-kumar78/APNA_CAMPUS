@@ -546,6 +546,24 @@ model HostelComplaint {
   status             String    @default("Pending") // Pending, Assigned, In Progress, Needs Review, Resolved, Rejected
   filedDate          String
   resolutionNotes    String?
+  assignedWardenId    String?
+  assignedWardenName  String?
+  assignedWardenContact String?
+  resolutionDeadline DateTime?
+  isEscalated        Boolean   @default(false)
+  escalatedAt        DateTime?
+  escalationReason   String?
+  workCompletedAt    DateTime?
+  studentVerifiedAt  DateTime?
+  reopenedAt         DateTime?
+  reopenReason       String?   @db.Text
+  reopenAttachmentUrl String?  @db.Text
+  statusHistory      Json?
+  feedbackRating     Int?
+  feedbackText       String?   @db.Text
+  feedbackResolved   Boolean?
+  feedbackAdminComments String? @db.Text
+  feedbackSubmittedAt DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -553,6 +571,9 @@ model HostelComplaint {
   @@index([category])
   @@index([status])
   @@index([assignedStaffId])
+  @@index([assignedWardenName])
+  @@index([isEscalated])
+  @@index([resolutionDeadline])
 }
 
 model HostelVisitor {

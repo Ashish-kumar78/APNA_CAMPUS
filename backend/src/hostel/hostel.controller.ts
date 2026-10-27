@@ -110,7 +110,7 @@ export class HostelController {
   @Get('complaints')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get campus maintenance complaints with AI triage and filters' })
+  @ApiOperation({ summary: 'Get campus maintenance complaints with AI triage, role access, and SLA status' })
   async getComplaints(
     @CurrentUser() user: any,
     @Query('rollNumber') rollNumber?: string,
@@ -119,6 +119,10 @@ export class HostelController {
     @Query('assignedStaffId') assignedStaffId?: string,
     @Query('needsReview') needsReview?: string,
     @Query('search') search?: string,
+    @Query('hostel') hostel?: string,
+    @Query('warden') warden?: string,
+    @Query('isEscalated') isEscalated?: string,
+    @Query('rating') rating?: string,
   ) {
     const role = normalizeRole(user.role);
     let targetRoll = rollNumber;
@@ -140,8 +144,113 @@ export class HostelController {
       assignedStaffId: role === 'admin' || role === 'super_admin' || role === 'warden' || role === 'hostel' ? assignedStaffId : targetStaffId,
       needsReview: needsReview !== undefined ? needsReview === 'true' : undefined,
       search,
+      hostel,
+      warden,
+      isEscalated: isEscalated !== undefined ? isEscalated === 'true' : undefined,
+      rating: rating ? Number(rating) : undefined,
     });
     return { success: true, count: data.length, data };
+  }
+
+  @Get('complaints/metrics')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get summary KPI cards data for Hostel Administrator complaints dashboard' })
+  async getComplaintMetrics(@CurrentUser() user: any) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Administrator privileges required.');
+    }
+    const metrics = await this.hostelService.getAdminComplaintMetrics();
+    return { success: true, data: metrics };
+  }
+
+  @Post('complaints/check-escalations')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Trigger automatic 72-hour SLA escalation check' })
+  async checkEscalations(@CurrentUser() user: any) {
+    const escalated = await this.hostelService.evaluateOverdueEscalations();
+    return { success: true, count: escalated.length, data: escalated };
+  }
+
+  @Post('complaints/:id/mark-completed')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Warden or technician marks work completed; sets status to Awaiting Student Verification' })
+  async markWorkCompleted(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { notes?: string },
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin', 'staff'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Only authorized staff or warden can mark work completed.');
+    }
+    const updated = await this.hostelService.markWorkCompleted(id, user, body.notes);
+    return {
+      success: true,
+      message: `Complaint #${id} marked as completed. Awaiting student verification.`,
+      data: updated,
+    };
+  }
+
+  @Post('complaints/:id/confirm-completed')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Student confirms work completed and submits rating & feedback' })
+  async confirmCompleted(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { rating: number; feedbackText?: string; adminComments?: string },
+  ) {
+    const updated = await this.hostelService.confirmWorkCompleted(id, user, body);
+    return {
+      success: true,
+      message: `Thank you! Complaint #${id} has been marked resolved and your feedback was saved.`,
+      data: updated,
+    };
+  }
+
+  @Post('complaints/:id/reopen')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Student reports problem not resolved; reopens complaint for further work' })
+  async reopenComplaint(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { reason: string; attachmentUrl?: string },
+  ) {
+    const updated = await this.hostelService.reopenComplaint(id, user, body);
+    return {
+      success: true,
+      message: `Complaint #${id} reopened. Assigned warden and administration have been alerted.`,
+      data: updated,
+    };
+  }
+
+  @Post('complaints/:id/admin-action')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Hostel Administrator performs action: Add Note, Reassign Staff, Close Case' })
+  async adminAction(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { action: string; note?: string; assignedStaffId?: string; assignedStaffName?: string },
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Administrator privileges required.');
+    }
+    const updated = await this.hostelService.adminComplaintAction(id, user, body);
+    return {
+      success: true,
+      message: `Administrative action "${body.action}" executed on complaint #${id}.`,
+      data: updated,
+    };
   }
 
   @Post('complaints/preview-ai')

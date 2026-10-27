@@ -211,6 +211,10 @@ export const api = {
       if (params.assignedStaffId) q.append('assignedStaffId', params.assignedStaffId);
       if (params.needsReview !== undefined) q.append('needsReview', String(params.needsReview));
       if (params.search) q.append('search', params.search);
+      if (params.hostel && params.hostel !== 'ALL') q.append('hostel', params.hostel);
+      if (params.warden && params.warden !== 'ALL') q.append('warden', params.warden);
+      if (params.isEscalated !== undefined) q.append('isEscalated', String(params.isEscalated));
+      if (params.rating) q.append('rating', String(params.rating));
     }
     const qs = q.toString();
     return request(`/hostel/complaints${qs ? '?' + qs : ''}`);
@@ -241,6 +245,31 @@ export const api = {
       body: JSON.stringify(body),
     });
   },
+  markComplaintCompleted: (id, notes) =>
+    request(`/hostel/complaints/${id}/mark-completed`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    }),
+  confirmComplaintCompleted: (id, payload) =>
+    request(`/hostel/complaints/${id}/confirm-completed`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  reopenComplaint: (id, payload) =>
+    request(`/hostel/complaints/${id}/reopen`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  adminComplaintAction: (id, payload) =>
+    request(`/hostel/complaints/${id}/admin-action`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getComplaintMetrics: () => request('/hostel/complaints/metrics'),
+  checkComplaintEscalations: () =>
+    request('/hostel/complaints/check-escalations', {
+      method: 'POST',
+    }),
   reassignComplaint: (id, payload) =>
     request(`/hostel/complaints/${id}/reassign`, {
       method: 'POST',

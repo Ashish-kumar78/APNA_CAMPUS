@@ -380,6 +380,14 @@ export default function SmartComplaintModal({
         status: aiResult?.needsReview ? 'Needs Review' : 'Assigned',
         assignedStaffName: category === 'PLUMBING' ? 'Suresh Mohapatra' : category === 'ELECTRICAL' ? 'Pramod Panda' : 'Campus Maintenance Team',
         assignedStaffRole: category === 'PLUMBING' ? 'Plumber & Water Works' : 'Maintenance Specialist',
+        assignedWardenName: building.includes('Girls') ? 'Mrs. Nibedita Das' : 'Mr. Rajesh Jena',
+        assignedWardenContact: building.includes('Girls') ? '+91 94370 33445' : '+91 94371 88990',
+        resolutionDeadline: new Date(Date.now() + 72 * 3600 * 1000).toISOString(),
+        isEscalated: false,
+        statusHistory: [
+          { status: 'Submitted', timestamp: new Date().toISOString(), note: 'Complaint submitted by student' },
+          { status: 'Assigned', timestamp: new Date().toISOString(), note: 'Auto-routed to Resident Warden and technical staff' }
+        ],
         filedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         imageUrl: imagePreview || null,
       };

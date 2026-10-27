@@ -4,6 +4,7 @@ import {
   Bed,
   Users,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Clock,
   ShieldAlert,
@@ -15,12 +16,17 @@ import {
   Image,
   FileText,
   Trash2,
-  ShieldCheck
+  ShieldCheck,
+  Star,
+  UserCheck,
+  ArrowRight
 } from 'lucide-react';
 import './StudentHostelPage.css';
 import { initialStudentHostelDetail, initialHostelComplaints } from '../data/collegeData.js';
 import StudentGatePassSection from '../components/StudentGatePassSection.jsx';
 import SmartComplaintModal from '../components/SmartComplaintModal.jsx';
+import StudentComplaintFeedbackModal from '../components/StudentComplaintFeedbackModal.jsx';
+import ReopenComplaintModal from '../components/ReopenComplaintModal.jsx';
 import { getStudentGatePasses } from '../services/gatePassStore.js';
 
 import { api } from '../services/api.js';
@@ -45,52 +51,14 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
   }, []);
 
   const [hostelDetail] = useState(initialStudentHostelDetail);
-  const [complaints, setComplaints] = useState([
-    {
-      id: 'CMP-2026-101',
-      studentName: 'Rakesh Das',
-      rollNumber: '01',
-      hostel: 'Sarojini Girls Residence (Block A)',
-      roomNumber: '204',
-      location: 'Room 204 Attached Bathroom',
-      category: 'Plumbing',
-      predictedCategory: 'plumbing',
-      confidence: 0.88,
-      needsReview: false,
-      title: 'Water tap leaking continuously in bathroom',
-      description: 'The bathroom wash basin tap is broken at the valve and dripping water constantly.',
-      priority: 'High',
-      status: 'In Progress',
-      assignedStaffId: 'STF-PLUMB-01',
-      assignedStaffName: 'Suresh Mohapatra',
-      assignedStaffPhone: '+91 94379 11231',
-      assignedStaffRole: 'Plumber & Water Works',
-      filedDate: '18 Oct 2026',
-      resolutionNotes: 'Assigned to Suresh Mohapatra. Ceramic washer replacement scheduled for 11:30 AM.',
-    },
-    {
-      id: 'CMP-2026-102',
-      studentName: 'Rakesh Das',
-      rollNumber: '01',
-      hostel: 'Sarojini Girls Residence (Block A)',
-      roomNumber: '204',
-      location: 'Study Area Desk #02',
-      category: 'Electrical',
-      predictedCategory: 'electrical',
-      confidence: 0.82,
-      needsReview: false,
-      title: 'Ceiling fan making screeching noise',
-      description: 'The ceiling fan bearing has deteriorated and makes a loud squeaking sound on speed 4 and 5.',
-      priority: 'Medium',
-      status: 'Assigned',
-      assignedStaffId: 'STF-ELEC-01',
-      assignedStaffName: 'Pramod Panda',
-      assignedStaffPhone: '+91 94378 99120',
-      assignedStaffRole: 'Electrician & Power Maintenance',
-      filedDate: '18 Oct 2026',
-      resolutionNotes: 'Allocated to Pramod Panda based on lowest pending electrical workload.',
-    }
-  ]);
+  const [complaints, setComplaints] = useState(initialHostelComplaints);
+
+  // Modals for Feedback and Reopening
+  const [feedbackModalTarget, setFeedbackModalTarget] = useState(null);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [reopenModalTarget, setReopenModalTarget] = useState(null);
+  const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
+
 
   // Load complaints from API if server is up
   useEffect(() => {
@@ -338,8 +306,75 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
   };
 
 
-  const statusColor = (status) =>
-    status === 'Resolved' ? 'approved' : (status === 'In Progress' || status === 'Assigned') ? 'pending' : 'rejected';
+  const getDeadlineInfo = (c) => {
+    if (c.status === 'Resolved') {
+      return {
+        text: 'Resolved',
+        state: 'resolved',
+        hoursRemaining: null,
+        isOverdue: false,
+      };
+    }
+    let deadlineMs;
+    if (c.resolutionDeadline) {
+      deadlineMs = new Date(c.resolutionDeadline).getTime();
+    } else {
+      const baseDate = c.createdAt ? new Date(c.createdAt) : new Date();
+      deadlineMs = baseDate.getTime() + 72 * 3600 * 1000;
+    }
+    const now = Date.now();
+    const diffHours = Math.round((deadlineMs - now) / (1000 * 60 * 60));
+
+    if (diffHours <= 0) {
+      const overdueHours = Math.abs(diffHours);
+      return {
+        text: overdueHours === 0 ? 'Deadline exceeded' : `Deadline exceeded (${overdueHours}h overdue)`,
+        state: 'exceeded',
+        hoursRemaining: diffHours,
+        isOverdue: true,
+      };
+    } else if (diffHours <= 12) {
+      return {
+        text: `${diffHours} hours remaining — Deadline approaching`,
+        state: 'approaching',
+        hoursRemaining: diffHours,
+        isOverdue: false,
+      };
+    } else {
+      return {
+        text: `${diffHours} hours remaining`,
+        state: 'safe',
+        hoursRemaining: diffHours,
+        isOverdue: false,
+      };
+    }
+  };
+
+  const handleFeedbackSuccess = (updatedComplaint) => {
+    setComplaints(prev => prev.map(c => c.id === updatedComplaint.id ? { ...c, ...updatedComplaint } : c));
+    setIsFeedbackModalOpen(false);
+    setSubmitFeedback({
+      type: 'success',
+      message: `Resolution verified for Ticket #${updatedComplaint.id}! Thank you for your feedback. Details have been recorded and dispatched to both Resident Warden & Hostel Administrator.`
+    });
+  };
+
+  const handleReopenSuccess = (updatedComplaint) => {
+    setComplaints(prev => prev.map(c => c.id === updatedComplaint.id ? { ...c, ...updatedComplaint } : c));
+    setIsReopenModalOpen(false);
+    setSubmitFeedback({
+      type: 'warning',
+      message: `Complaint #${updatedComplaint.id} has been reopened. Resident Warden and Hostel Administrator have been alerted for priority rework.`
+    });
+  };
+
+  const statusColor = (status) => {
+    if (status === 'Resolved') return 'approved';
+    if (status === 'Awaiting Student Verification' || status === 'Awaiting Verification') return 'pending';
+    if (status === 'In Progress' || status === 'Assigned') return 'active';
+    if (status === 'Escalated' || status === 'Reopened') return 'rejected';
+    return 'pending';
+  };
 
   return (
     <div className="student-hostel-page">
@@ -536,9 +571,14 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {complaints.map(c => {
             const isResolved = c.status === 'Resolved';
-            const isInProgress = c.status === 'In Progress';
-            const isAssigned = c.status === 'Assigned' || isInProgress || isResolved;
+            const isAwaitingVerification = c.status === 'Awaiting Student Verification' || c.status === 'Awaiting Verification';
+            const isInProgress = c.status === 'In Progress' || isAwaitingVerification || isResolved;
+            const isAssigned = c.status === 'Assigned' || isInProgress;
+            const isReopened = c.status === 'Reopened';
+            const isEscalatedStatus = c.status === 'Escalated' || c.isEscalated;
             const confPercent = Math.round((c.confidence || 0.85) * 100);
+            const deadlineInfo = getDeadlineInfo(c);
+            const isOverdue = deadlineInfo.isOverdue || isEscalatedStatus;
 
             return (
               <div key={c.id} className="complaint-card-enhanced">
@@ -553,17 +593,60 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
                         ✨ AI: {c.predictedCategory} ({confPercent}%)
                       </span>
                     )}
+                    {/* 72h Deadline Remaining Badge */}
+                    <span className={`deadline-badge ${deadlineInfo.state}`}>
+                      <Clock size={12} /> {deadlineInfo.text}
+                    </span>
+                    {/* Escalation to Hostel Admin Badge */}
+                    {(c.isEscalated || c.status === 'Escalated' || isOverdue) && (
+                      <span className="escalated-admin-badge">
+                        <AlertTriangle size={13} /> Escalated to Hostel Administrator
+                      </span>
+                    )}
                   </div>
                   <span className={`admin-badge ${statusColor(c.status)}`} style={{ flexShrink: 0 }}>
                     {c.status}
                   </span>
                 </div>
 
-                {/* Location & Ticket Metadata */}
-                <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {/* Location & Ticket Metadata & Assigned Warden */}
+                <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <span>Ticket: <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>{c.id}</code></span>
-                  <span>📅 {c.filedDate}</span>
+                  <span>📅 Filed: {c.filedDate || (c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Recent')}</span>
                   <span>📍 {c.location || (c.roomNumber ? `Room ${c.roomNumber}` : 'Hostel Complex')}</span>
+                  {c.resolutionDeadline && (
+                    <span style={{ color: isOverdue ? '#dc2626' : '#475569', fontWeight: 600 }}>
+                      ⏰ 72h Deadline: {new Date(c.resolutionDeadline).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+
+                {/* Assigned Warden Auto-Routing Indicator */}
+                <div style={{
+                  fontSize: '0.8rem',
+                  color: '#1e40af',
+                  background: '#eff6ff',
+                  border: '1px solid #dbeafe',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '8px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <ShieldCheck size={14} color="#2563eb" />
+                    <span>Assigned Resident Warden: <strong>{c.assignedWardenName || hostelDetail.wardenName}</strong> (Auto-routed by Hostel &amp; Block)</span>
+                  </div>
+                  {(c.assignedWardenContact || hostelDetail.wardenContact) && (
+                    <a
+                      href={`tel:${c.assignedWardenContact || hostelDetail.wardenContact}`}
+                      style={{ color: '#2563eb', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+                    >
+                      <Phone size={12} /> {c.assignedWardenContact || hostelDetail.wardenContact}
+                    </a>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -574,7 +657,7 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
                   </div>
                 )}
 
-                {/* Assigned Staff Card */}
+                {/* Assigned Staff (Maintenance Worker) Card */}
                 {c.assignedStaffName ? (
                   <div className="staff-contact-card">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -613,24 +696,130 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
                   </div>
                 )}
 
-                {/* Progress History Stepper */}
+                {/* 7-Stage Visual Progress Timeline */}
+                {/* Submitted -> Assigned -> In Progress -> Awaiting Verification -> Resolved */}
                 <div className="complaint-progress-stepper">
                   <div className="stepper-step done">
-                    ✓ 1. Filed
+                    ✓ 1. Submitted
                   </div>
                   <span style={{ color: '#94a3b8', fontWeight: 600 }}>→</span>
                   <div className={`stepper-step ${isAssigned ? 'done' : 'active'}`}>
-                    {isAssigned ? '✓ 2. AI Assigned' : '2. Classification'}
+                    {isAssigned ? '✓ 2. Assigned' : '2. Assigned'}
                   </div>
                   <span style={{ color: '#94a3b8', fontWeight: 600 }}>→</span>
-                  <div className={`stepper-step ${isResolved ? 'done' : isInProgress ? 'active' : ''}`}>
-                    {isResolved ? '✓ 3. In Progress' : '3. Work Execution'}
+                  <div className={`stepper-step ${isInProgress ? (isAwaitingVerification || isResolved ? 'done' : 'active') : ''}`}>
+                    {isAwaitingVerification || isResolved ? '✓ 3. In Progress' : '3. In Progress'}
+                  </div>
+                  <span style={{ color: '#94a3b8', fontWeight: 600 }}>→</span>
+                  <div className={`stepper-step ${isResolved ? 'done' : isAwaitingVerification ? 'active' : ''}`}>
+                    {isResolved ? '✓ 4. Awaiting Verification' : isAwaitingVerification ? '⏳ 4. Awaiting Verification' : '4. Awaiting Verification'}
                   </div>
                   <span style={{ color: '#94a3b8', fontWeight: 600 }}>→</span>
                   <div className={`stepper-step ${isResolved ? 'done' : ''}`}>
-                    {isResolved ? '✓ 4. Resolved' : '4. Verification'}
+                    {isResolved ? '✓ 5. Resolved' : '5. Resolved'}
                   </div>
+                  {isReopened && (
+                    <span style={{ marginLeft: '6px', background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>
+                      ⚠️ Reopened
+                    </span>
+                  )}
                 </div>
+
+                {/* Completion Verification Actions (When work is completed and awaiting student verification) */}
+                {isAwaitingVerification && (
+                  <div className="student-verification-box">
+                    <div className="student-verification-header">
+                      <AlertCircle size={22} color="#7c3aed" style={{ flexShrink: 0 }} />
+                      <div>
+                        <strong>Work Reported Complete by Maintenance Team</strong>
+                        <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#475569' }}>
+                          Technician has reported this issue as serviced. Please inspect the work in your room and confirm or report if unresolved.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="student-verification-actions">
+                      <button
+                        type="button"
+                        className="btn-confirm-completed"
+                        onClick={() => {
+                          setFeedbackModalTarget(c);
+                          setIsFeedbackModalOpen(true);
+                        }}
+                      >
+                        <CheckCircle2 size={16} /> Confirm Work Completed
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-problem-unresolved"
+                        onClick={() => {
+                          setReopenModalTarget(c);
+                          setIsReopenModalOpen(true);
+                        }}
+                      >
+                        <X size={16} /> Problem Not Resolved
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Verified Student Feedback Card (Shown for Resolved tickets) */}
+                {isResolved && (c.feedbackRating || c.studentVerifiedAt) && (
+                  <div className="student-feedback-recorded-box">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Star size={16} color="#eab308" fill="#eab308" />
+                        <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>
+                          Student Verified Resolution · {c.feedbackRating ? `${c.feedbackRating}/5 Stars` : '5/5 Stars'}
+                        </strong>
+                        <div style={{ display: 'flex', gap: '2px' }}>
+                          {[1, 2, 3, 4, 5].map((st) => (
+                            <Star
+                              key={st}
+                              size={13}
+                              color="#eab308"
+                              fill={st <= (c.feedbackRating || 5) ? '#eab308' : '#e2e8f0'}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <span className="flow-dispatch-pill">
+                        ✓ Process completed before 72h. Verified feedback provided to both Resident Warden &amp; Hostel Admin
+                      </span>
+                    </div>
+                    {c.feedbackText && (
+                      <p style={{ margin: '8px 0 0', fontSize: '0.82rem', color: '#475569', fontStyle: 'italic' }}>
+                        "{c.feedbackText}"
+                      </p>
+                    )}
+                    {c.studentVerifiedAt && (
+                      <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '4px' }}>
+                        Confirmed on: {new Date(c.studentVerifiedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Reopen Alert Details */}
+                {isReopened && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 12px', fontSize: '0.82rem', color: '#991b1b', marginTop: '8px' }}>
+                    <strong>⚠️ Issue Reopened by Student:</strong> {c.reopenReason || 'Problem persisted after initial maintenance check.'}
+                    <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '3px' }}>
+                      Assigned warden and hostel administrator have been notified for priority rework.
+                    </div>
+                  </div>
+                )}
+
+                {/* Escalation Alert Details */}
+                {(c.isEscalated || c.status === 'Escalated') && (
+                  <div style={{ background: '#fff7ed', border: '1px solid #ffedd5', borderRadius: '8px', padding: '8px 12px', fontSize: '0.8rem', color: '#9a3412', marginTop: '6px' }}>
+                    🚨 <strong>Escalation Notice:</strong> {c.escalationReason || 'Resolution exceeded 72-hour mandatory SLA. Case escalated to Hostel Administrator.'}
+                    {c.escalatedAt && (
+                      <span style={{ marginLeft: '6px', fontSize: '0.74rem', color: '#c2410c' }}>
+                        (Escalated on {new Date(c.escalatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })})
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Image thumbnail */}
                 {c.imageUrl && (
@@ -651,7 +840,7 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
 
                 {/* Resolution note */}
                 <div style={{ fontSize: '0.78rem', color: '#64748b', background: '#f8fafc', padding: '6px 10px', borderRadius: '6px', borderLeft: '3px solid #7c3aed' }}>
-                  ℹ️ <strong>Status Log:</strong> {c.resolutionNotes}
+                  ℹ️ <strong>Status Log:</strong> {c.resolutionNotes || (c.statusHistory && c.statusHistory.length > 0 ? c.statusHistory[c.statusHistory.length - 1].note : 'Under standard maintenance SLA')}
                 </div>
               </div>
             );
@@ -675,8 +864,8 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
           setSubmitFeedback({
             type: 'success',
             message: newTicket.assignedStaffName
-              ? `Complaint #${newTicket.id} registered! Classified as ${newTicket.category} and assigned to ${newTicket.assignedStaffName}.`
-              : `Complaint #${newTicket.id} registered and queued for supervisor triage.`,
+              ? `Complaint #${newTicket.id} registered! Auto-assigned to Warden ${newTicket.assignedWardenName || 'Nibedita Das'} & Technician ${newTicket.assignedStaffName}. 72h deadline active.`
+              : `Complaint #${newTicket.id} registered and auto-assigned to Warden ${newTicket.assignedWardenName || 'Nibedita Das'}.`,
           });
         }}
         defaultLocation={complaintForm.location}
@@ -684,6 +873,27 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
         roomNumber={hostelDetail.roomNumber}
         studentName="Rakesh Das"
         rollNumber="01"
+      />
+
+      {/* Student Feedback Modal */}
+      <StudentComplaintFeedbackModal
+        isOpen={isFeedbackModalOpen}
+        complaint={feedbackModalTarget}
+        onClose={() => setIsFeedbackModalOpen(false)}
+        onSubmitted={handleFeedbackSuccess}
+        onRouteToReopen={(comp) => {
+          setIsFeedbackModalOpen(false);
+          setReopenModalTarget(comp);
+          setIsReopenModalOpen(true);
+        }}
+      />
+
+      {/* Reopen Complaint Modal */}
+      <ReopenComplaintModal
+        isOpen={isReopenModalOpen}
+        complaint={reopenModalTarget}
+        onClose={() => setIsReopenModalOpen(false)}
+        onReopened={handleReopenSuccess}
       />
 
       {/* Full Image Viewer Modal */}

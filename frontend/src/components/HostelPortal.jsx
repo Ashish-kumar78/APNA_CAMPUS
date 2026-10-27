@@ -49,7 +49,8 @@ import {
   PhoneCall,
   Settings,
   Bell,
-  Shield
+  Shield,
+  Star
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import './HostelPortal.css';
@@ -156,6 +157,16 @@ export default function HostelPortal({ account, onLogout }) {
   // Complaints state & filter
   const [complaintCategoryFilter, setComplaintCategoryFilter] = useState('ALL');
   const [complaintStatusFilter, setComplaintStatusFilter] = useState('ALL');
+  const [complaintHostelFilter, setComplaintHostelFilter] = useState('ALL');
+  const [complaintWardenFilter, setComplaintWardenFilter] = useState('ALL');
+  const [complaintEscalationFilter, setComplaintEscalationFilter] = useState('ALL');
+  const [complaintRatingFilter, setComplaintRatingFilter] = useState('ALL');
+  const [complaintSearchQuery, setComplaintSearchQuery] = useState('');
+  const [selectedAdminComplaintModal, setSelectedAdminComplaintModal] = useState(null);
+  const [adminActionTab, setAdminActionTab] = useState('NOTE'); // 'NOTE' | 'REASSIGN' | 'CLOSE'
+  const [adminNoteInput, setAdminNoteInput] = useState('');
+  const [adminReassignStaffInput, setAdminReassignStaffInput] = useState('Mr. Suresh Mohapatra (Plumber)');
+
   const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
   const [complaintForm, setComplaintForm] = useState({
     studentName: 'Rakesh Das',
@@ -329,6 +340,235 @@ export default function HostelPortal({ account, onLogout }) {
       console.warn('Backend sync failed:', e);
     }
   };
+
+  // Fetch complaints from backend API & run escalation evaluation
+  const refreshComplaints = async () => {
+    try {
+      const res = await api.getComplaints();
+      if (res && res.data && res.data.length > 0) {
+        setComplaints(res.data);
+      }
+    } catch (err) {
+      console.warn('Backend complaints load fallback:', err);
+    }
+  };
+
+  useEffect(() => {
+    refreshComplaints();
+    api.checkComplaintEscalations().catch(() => {});
+  }, []);
+
+  const getComplaintDeadlineInfo = (c) => {
+    if (c.status === 'Resolved') {
+      return { text: 'Resolved', state: 'resolved', isOverdue: false, diffHours: null };
+    }
+    let deadlineMs;
+    if (c.resolutionDeadline) {
+      deadlineMs = new Date(c.resolutionDeadline).getTime();
+    } else {
+      const baseDate = c.createdAt ? new Date(c.createdAt) : new Date();
+      deadlineMs = baseDate.getTime() + 72 * 3600 * 1000;
+    }
+    const now = Date.now();
+    const diffHours = Math.round((deadlineMs - now) / (1000 * 60 * 60));
+
+    if (diffHours <= 0) {
+      const overdueHours = Math.abs(diffHours);
+      return {
+        text: overdueHours === 0 ? 'Deadline exceeded' : `${overdueHours}h overdue`,
+        state: 'exceeded',
+        isOverdue: true,
+        diffHours
+      };
+    } else if (diffHours <= 12) {
+      return {
+        text: `${diffHours}h left (Approaching)`,
+        state: 'approaching',
+        isOverdue: false,
+        diffHours
+      };
+    } else {
+      return {
+        text: `${diffHours}h remaining`,
+        state: 'safe',
+        isOverdue: false,
+        diffHours
+      };
+    }
+  };
+
+  const handleMarkWorkCompleted = async (complaintId) => {
+    setComplaints(prev => prev.map(c => {
+      if (c.id === complaintId) {
+        const history = Array.isArray(c.statusHistory) ? [...c.statusHistory] : [];
+        history.push({
+          status: 'Awaiting Student Verification',
+          timestamp: new Date().toISOString(),
+          note: 'Maintenance finished by worker. Verification request sent to student.'
+        });
+        return {
+          ...c,
+          status: 'Awaiting Student Verification',
+          workCompletedAt: new Date().toISOString(),
+          statusHistory: history,
+          resolutionNotes: 'Work executed on-site. Waiting for student verification.'
+        };
+      }
+      return c;
+    }));
+    showToast(`✓ Ticket #${complaintId} marked complete! Notification sent to student for verification.`);
+    try {
+      await api.markComplaintCompleted(complaintId, {
+        technicianName: 'Qualified Maintenance Specialist',
+        completionNotes: 'Work finished on-site.'
+      });
+    } catch (err) {
+      console.warn('Backend mark completed sync failed:', err);
+    }
+  };
+
+  const handleAdminActionSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedAdminComplaintModal) return;
+    const cid = selectedAdminComplaintModal.id;
+    const note = adminNoteInput.trim();
+
+    setComplaints(prev => prev.map(c => {
+      if (c.id === cid) {
+        const history = Array.isArray(c.statusHistory) ? [...c.statusHistory] : [];
+        let newStatus = c.status;
+        let staffName = c.assignedStaffName;
+        let resolutionNotes = c.resolutionNotes;
+
+        if (adminActionTab === 'NOTE') {
+          history.push({
+            status: c.status,
+            timestamp: new Date().toISOString(),
+            note: `Administrator Note: ${note || 'Internal review added'}`
+          });
+        } else if (adminActionTab === 'REASSIGN') {
+          staffName = adminReassignStaffInput;
+          history.push({
+            status: 'Assigned',
+            timestamp: new Date().toISOString(),
+            note: `Administrator reassigned staff to ${staffName}. ${note}`
+          });
+          newStatus = 'Assigned';
+        } else if (adminActionTab === 'CLOSE') {
+          newStatus = 'Resolved';
+          resolutionNotes = `Case administratively closed by Hostel Administrator. ${note}`;
+          history.push({
+            status: 'Resolved',
+            timestamp: new Date().toISOString(),
+            note: `Administrative case closure: ${note || 'Verified by admin'}`
+          });
+        }
+
+        return {
+          ...c,
+          status: newStatus,
+          assignedStaffName: staffName,
+          resolutionNotes,
+          statusHistory: history,
+          adminNotes: note ? (c.adminNotes ? `${c.adminNotes} | ${note}` : note) : c.adminNotes
+        };
+      }
+      return c;
+    }));
+
+    showToast(`✓ Administrative action executed on Complaint #${cid}`);
+    setSelectedAdminComplaintModal(null);
+    setAdminNoteInput('');
+
+    try {
+      await api.adminComplaintAction(cid, {
+        action: adminActionTab === 'NOTE' ? 'ADD_NOTE' : adminActionTab === 'REASSIGN' ? 'REASSIGN' : 'CLOSE_CASE',
+        note,
+        staffName: adminReassignStaffInput
+      });
+    } catch (err) {
+      console.warn('Backend admin action sync failed:', err);
+    }
+  };
+
+  const complaintMetrics = useMemo(() => {
+    const total = complaints.length;
+    const newCount = complaints.filter(c => c.status === 'Submitted' || c.status === 'Pending').length;
+    const inProgress = complaints.filter(c => c.status === 'In Progress' || c.status === 'Assigned').length;
+    const awaitingVerification = complaints.filter(c => c.status === 'Awaiting Student Verification' || c.status === 'Awaiting Verification').length;
+    const resolved = complaints.filter(c => c.status === 'Resolved').length;
+    const reopened = complaints.filter(c => c.status === 'Reopened').length;
+
+    const overdue = complaints.filter(c => {
+      if (c.status === 'Resolved') return false;
+      if (c.isEscalated || c.status === 'Escalated') return true;
+      if (c.resolutionDeadline) {
+        return new Date(c.resolutionDeadline).getTime() < Date.now();
+      }
+      return false;
+    }).length;
+
+    const escalated = complaints.filter(c => c.isEscalated || c.status === 'Escalated').length;
+
+    // Average resolution time (hours)
+    const resolvedWithTime = complaints.filter(c => c.status === 'Resolved' && (c.studentVerifiedAt || c.workCompletedAt) && (c.createdAt || c.filedDate));
+    let avgResolutionHours = '18.5h';
+    if (resolvedWithTime.length > 0) {
+      const sumHours = resolvedWithTime.reduce((sum, c) => {
+        const end = new Date(c.studentVerifiedAt || c.workCompletedAt).getTime();
+        const start = new Date(c.createdAt || c.filedDate).getTime();
+        const diff = Math.max(1, (end - start) / (1000 * 3600));
+        return sum + diff;
+      }, 0);
+      avgResolutionHours = `${Math.round(sumHours / resolvedWithTime.length)}h`;
+    }
+
+    // Average Student Rating
+    const ratedComplaints = complaints.filter(c => c.feedbackRating && c.feedbackRating > 0);
+    const avgRating = ratedComplaints.length > 0
+      ? (ratedComplaints.reduce((acc, c) => acc + c.feedbackRating, 0) / ratedComplaints.length).toFixed(1)
+      : '4.8';
+
+    return {
+      total,
+      newCount,
+      inProgress,
+      awaitingVerification,
+      resolved,
+      reopened,
+      overdue,
+      escalated,
+      avgResolutionHours,
+      avgRating
+    };
+  }, [complaints]);
+
+  const filteredComplaints = useMemo(() => {
+    return complaints.filter(c => {
+      const matchCategory = complaintCategoryFilter === 'ALL' || c.category === complaintCategoryFilter;
+      const matchStatus = complaintStatusFilter === 'ALL' ||
+        (complaintStatusFilter === 'Overdue' ? ((c.isEscalated || c.status === 'Escalated') || (c.status !== 'Resolved' && c.resolutionDeadline && new Date(c.resolutionDeadline).getTime() < Date.now())) : c.status === complaintStatusFilter);
+      const matchHostel = complaintHostelFilter === 'ALL' || (c.hostel && c.hostel.toLowerCase().includes(complaintHostelFilter.toLowerCase()));
+      const matchWarden = complaintWardenFilter === 'ALL' || (c.assignedWardenName && c.assignedWardenName.toLowerCase().includes(complaintWardenFilter.toLowerCase()));
+      const matchEscalation = complaintEscalationFilter === 'ALL' ||
+        (complaintEscalationFilter === 'ESCALATED' ? (c.isEscalated || c.status === 'Escalated') : (!c.isEscalated && c.status !== 'Escalated'));
+      const matchRating = complaintRatingFilter === 'ALL' ||
+        (complaintRatingFilter === '5' && c.feedbackRating === 5) ||
+        (complaintRatingFilter === '4+' && c.feedbackRating >= 4) ||
+        (complaintRatingFilter === 'low' && c.feedbackRating && c.feedbackRating < 3);
+      const matchSearch = !complaintSearchQuery ||
+        c.id.toLowerCase().includes(complaintSearchQuery.toLowerCase()) ||
+        (c.title && c.title.toLowerCase().includes(complaintSearchQuery.toLowerCase())) ||
+        (c.studentName && c.studentName.toLowerCase().includes(complaintSearchQuery.toLowerCase())) ||
+        (c.rollNumber && c.rollNumber.toLowerCase().includes(complaintSearchQuery.toLowerCase()));
+
+      return matchCategory && matchStatus && matchHostel && matchWarden && matchEscalation && matchRating && matchSearch;
+    });
+  }, [complaints, complaintCategoryFilter, complaintStatusFilter, complaintHostelFilter, complaintWardenFilter, complaintEscalationFilter, complaintRatingFilter, complaintSearchQuery]);
+
+  const escalatedComplaints = useMemo(() => {
+    return complaints.filter(c => c.isEscalated || c.status === 'Escalated' || (c.status !== 'Resolved' && c.resolutionDeadline && new Date(c.resolutionDeadline).getTime() < Date.now()));
+  }, [complaints]);
 
   const handleUpdateComplaintStatus = async (id, newStatus) => {
     setComplaints(prev => prev.map(c => {
@@ -732,6 +972,16 @@ export default function HostelPortal({ account, onLogout }) {
 
   const hostelNavSections = [
     {
+      title: 'OVERVIEW',
+      items: [
+        {
+          id: 'dashboard',
+          label: isHostelAdmin ? 'Hostel Admin Dashboard' : 'Warden Dashboard',
+          icon: Home
+        },
+      ]
+    },
+    {
       title: 'HOSTEL',
       items: [
         { id: 'take-attendance', label: 'Take Hostel Attendance', icon: Clock },
@@ -746,7 +996,6 @@ export default function HostelPortal({ account, onLogout }) {
     {
       title: 'RESIDENTIAL OPERATIONS',
       items: [
-        { id: 'dashboard', label: 'Warden Dashboard', icon: Home },
         { id: 'hostels', label: 'Hostel Blocks & Wings', icon: Building2 },
         ...(isHostelAdmin ? [{ id: 'rooms', label: 'Rooms & Bed Allotment', icon: Bed }] : []),
         { id: 'checkin-checkout', label: 'Check-In & Check-Out', icon: UserCheck },
@@ -793,8 +1042,10 @@ export default function HostelPortal({ account, onLogout }) {
     switch (activeTab) {
       case 'dashboard':
         return {
-          title: 'Hostel & Residential Services Management',
-          subtitle: 'Real-time room occupancy, night roll calls, gate passes, and resident welfare.'
+          title: isHostelAdmin ? 'Hostel Administrator Executive Console' : 'Hostel & Residential Services Management',
+          subtitle: isHostelAdmin
+            ? 'Centralized administrative oversight for hostel blocks, warden management, attendance sync, and maintenance SLA.'
+            : 'Real-time room occupancy, night roll calls, gate passes, and resident welfare.'
         };
       case 'profile':
         return {
@@ -1621,94 +1872,413 @@ export default function HostelPortal({ account, onLogout }) {
             <div>
               <div className="admin-view-header">
                 <div>
-                  <h2>Resident Maintenance Complaints Desk</h2>
-                  <p>Electrical, plumbing, internet, and carpentry tickets logged by hostel residents.</p>
+                  <h2>Resident Maintenance Complaints Desk &amp; SLA Monitoring</h2>
+                  <p>72-hour automated SLA resolution tracker, auto-warden assignment, student verification, and admin escalation.</p>
                 </div>
-                <button className="admin-action-btn-primary" onClick={() => setIsComplaintModalOpen(true)}>
-                  <Plus size={15} /> Lodge Maintenance Ticket
-                </button>
-              </div>
-
-              {/* Filter Row */}
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-                {['ALL', 'Electrical', 'Plumbing', 'Internet / Wi-Fi', 'Carpentry', 'HVAC'].map(cat => (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
-                    key={cat}
-                    type="button"
-                    className={`hostel-floor-pill ${complaintCategoryFilter === cat ? 'active' : ''}`}
-                    onClick={() => setComplaintCategoryFilter(cat)}
+                    className="admin-action-btn-secondary"
+                    onClick={async () => {
+                      showToast('Checking for overdue complaints past 72h SLA...');
+                      try {
+                        const res = await api.checkComplaintEscalations();
+                        await refreshComplaints();
+                        showToast(`✓ SLA check complete: ${res?.escalatedCount || 0} overdue ticket(s) escalated.`);
+                      } catch (err) {
+                        showToast('✓ Escalation check completed.');
+                      }
+                    }}
+                    title="Run background SLA check for overdue complaints"
                   >
-                    {cat === 'ALL' ? 'All Categories' : cat}
+                    <RotateCcw size={14} /> Run Escalation Check
                   </button>
-                ))}
+                  <button className="admin-action-btn-primary" onClick={() => setIsComplaintModalOpen(true)}>
+                    <Plus size={15} /> Lodge Maintenance Ticket
+                  </button>
+                </div>
               </div>
 
+              {/* 10 SUMMARY KPI CARDS */}
+              <div className="complaint-kpi-grid">
+                <div
+                  className={`complaint-kpi-card ${complaintStatusFilter === 'ALL' ? 'active' : ''}`}
+                  onClick={() => setComplaintStatusFilter('ALL')}
+                >
+                  <span className="complaint-kpi-lbl">Total Complaints</span>
+                  <div className="complaint-kpi-val" style={{ color: '#0f172a' }}>{complaintMetrics.total}</div>
+                </div>
+
+                <div
+                  className={`complaint-kpi-card ${complaintStatusFilter === 'Submitted' ? 'active' : ''}`}
+                  onClick={() => setComplaintStatusFilter('Submitted')}
+                >
+                  <span className="complaint-kpi-lbl">New Complaints</span>
+                  <div className="complaint-kpi-val" style={{ color: '#3b82f6' }}>{complaintMetrics.newCount}</div>
+                </div>
+
+                <div
+                  className={`complaint-kpi-card ${complaintStatusFilter === 'In Progress' ? 'active' : ''}`}
+                  onClick={() => setComplaintStatusFilter('In Progress')}
+                >
+                  <span className="complaint-kpi-lbl">In Progress</span>
+                  <div className="complaint-kpi-val" style={{ color: '#8b5cf6' }}>{complaintMetrics.inProgress}</div>
+                </div>
+
+                <div
+                  className={`complaint-kpi-card ${complaintStatusFilter === 'Awaiting Student Verification' ? 'active' : ''}`}
+                  onClick={() => setComplaintStatusFilter('Awaiting Student Verification')}
+                >
+                  <span className="complaint-kpi-lbl">Awaiting Verification</span>
+                  <div className="complaint-kpi-val" style={{ color: '#f59e0b' }}>{complaintMetrics.awaitingVerification}</div>
+                </div>
+
+                <div
+                  className={`complaint-kpi-card ${complaintStatusFilter === 'Resolved' ? 'active' : ''}`}
+                  onClick={() => setComplaintStatusFilter('Resolved')}
+                >
+                  <span className="complaint-kpi-lbl">Resolved</span>
+                  <div className="complaint-kpi-val" style={{ color: '#10b981' }}>{complaintMetrics.resolved}</div>
+                </div>
+
+                <div
+                  className={`complaint-kpi-card ${complaintStatusFilter === 'Reopened' ? 'active' : ''}`}
+                  onClick={() => setComplaintStatusFilter('Reopened')}
+                >
+                  <span className="complaint-kpi-lbl">Reopened</span>
+                  <div className="complaint-kpi-val" style={{ color: '#ef4444' }}>{complaintMetrics.reopened}</div>
+                </div>
+
+                <div
+                  className={`complaint-kpi-card ${complaintStatusFilter === 'Overdue' ? 'active' : ''}`}
+                  onClick={() => setComplaintStatusFilter('Overdue')}
+                >
+                  <span className="complaint-kpi-lbl">Overdue (&gt;72h)</span>
+                  <div className="complaint-kpi-val" style={{ color: '#dc2626' }}>{complaintMetrics.overdue}</div>
+                </div>
+
+                <div
+                  className={`complaint-kpi-card ${complaintStatusFilter === 'Escalated' ? 'active' : ''}`}
+                  onClick={() => setComplaintStatusFilter('Escalated')}
+                >
+                  <span className="complaint-kpi-lbl">Escalated to Admin</span>
+                  <div className="complaint-kpi-val" style={{ color: '#ea580c' }}>{complaintMetrics.escalated}</div>
+                </div>
+
+                <div className="complaint-kpi-card">
+                  <span className="complaint-kpi-lbl">Avg Resolution Time</span>
+                  <div className="complaint-kpi-val" style={{ color: '#0284c7' }}>{complaintMetrics.avgResolutionHours}</div>
+                </div>
+
+                <div
+                  className={`complaint-kpi-card ${complaintRatingFilter === '5' ? 'active' : ''}`}
+                  onClick={() => setComplaintRatingFilter(complaintRatingFilter === '5' ? 'ALL' : '5')}
+                >
+                  <span className="complaint-kpi-lbl">Avg Student Rating</span>
+                  <div className="complaint-kpi-val" style={{ color: '#eab308' }}>⭐ {complaintMetrics.avgRating}</div>
+                </div>
+              </div>
+
+              {/* DEDICATED ESCALATED COMPLAINTS SECTION */}
+              {escalatedComplaints.length > 0 && (
+                <div className="escalated-complaints-section">
+                  <div className="escalated-complaints-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <AlertOctagon size={20} color="#ea580c" />
+                      <strong style={{ fontSize: '1.05rem', color: '#9a3412' }}>
+                        Escalated Complaints to Hostel Administrator ({escalatedComplaints.length} Overdue Case{escalatedComplaints.length !== 1 ? 's' : ''})
+                      </strong>
+                    </div>
+                    <span style={{ fontSize: '0.8rem', color: '#c2410c', background: '#fed7aa', padding: '3px 10px', borderRadius: '20px', fontWeight: 700 }}>
+                      Mandatory 72h SLA Exceeded
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {escalatedComplaints.map(ec => {
+                      const dl = getComplaintDeadlineInfo(ec);
+                      return (
+                        <div key={ec.id} className="escalated-complaint-card">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span className="escalation-badge">
+                                  <AlertTriangle size={13} /> ESCALATED TO HOSTEL ADMIN
+                                </span>
+                                <strong style={{ fontSize: '0.96rem', color: '#0f172a' }}>Ticket #{ec.id} — {ec.title}</strong>
+                                <span className="admin-badge active">{ec.category}</span>
+                              </div>
+                              <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '4px' }}>
+                                Student: <strong>{ec.studentName}</strong> (Roll {ec.rollNumber}) · {ec.hostel} · <strong>Room {ec.roomNumber}</strong>
+                              </div>
+                            </div>
+
+                            <button
+                              className="admin-action-btn-primary"
+                              style={{ background: '#ea580c', borderColor: '#ea580c', fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
+                              onClick={() => setSelectedAdminComplaintModal(ec)}
+                            >
+                              <ShieldAlert size={14} /> Review &amp; Take Admin Action
+                            </button>
+                          </div>
+
+                          <div style={{ fontSize: '0.82rem', color: '#334155', background: '#fffbeb', padding: '8px 12px', borderRadius: '6px' }}>
+                            {ec.description || 'Maintenance defect requires urgent supervisory intervention.'}
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', fontSize: '0.78rem', color: '#64748b' }}>
+                            <div>👤 <strong>Assigned Warden:</strong> {ec.assignedWardenName || 'Hostel Warden'}</div>
+                            <div>🔧 <strong>Technician:</strong> {ec.assignedStaffName || 'Unassigned'}</div>
+                            <div>⏰ <strong>Original 72h Deadline:</strong> {ec.resolutionDeadline ? new Date(ec.resolutionDeadline).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Overdue'}</div>
+                            <div style={{ color: '#dc2626', fontWeight: 700 }}>🚨 <strong>Overdue Duration:</strong> {dl.text}</div>
+                          </div>
+
+                          {ec.escalationReason && (
+                            <div style={{ fontSize: '0.78rem', color: '#9a3412', fontStyle: 'italic', borderTop: '1px dashed #fed7aa', paddingTop: '6px' }}>
+                              ⚠️ <strong>Escalation Reason:</strong> {ec.escalationReason} {ec.escalatedAt && `(${new Date(ec.escalatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })})`}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* COMPREHENSIVE FILTER ROW */}
+              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  {['ALL', 'Electrical', 'Plumbing', 'Cleaning', 'Furniture', 'Internet / Wi-Fi', 'Civil Works', 'HVAC'].map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      className={`hostel-floor-pill ${complaintCategoryFilter === cat ? 'active' : ''}`}
+                      onClick={() => setComplaintCategoryFilter(cat)}
+                      style={{ fontSize: '0.76rem', padding: '0.35rem 0.75rem' }}
+                    >
+                      {cat === 'ALL' ? 'All Categories' : cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginLeft: 'auto' }}>
+                  {/* Status filter */}
+                  <select
+                    className="admin-select"
+                    value={complaintStatusFilter}
+                    onChange={e => setComplaintStatusFilter(e.target.value)}
+                    style={{ fontSize: '0.8rem', padding: '4px 8px' }}
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="Submitted">Submitted</option>
+                    <option value="Assigned">Assigned</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Awaiting Student Verification">Awaiting Verification</option>
+                    <option value="Resolved">Resolved</option>
+                    <option value="Reopened">Reopened</option>
+                    <option value="Escalated">Escalated</option>
+                    <option value="Overdue">Overdue (&gt;72h)</option>
+                  </select>
+
+                  {/* Hostel filter */}
+                  <select
+                    className="admin-select"
+                    value={complaintHostelFilter}
+                    onChange={e => setComplaintHostelFilter(e.target.value)}
+                    style={{ fontSize: '0.8rem', padding: '4px 8px' }}
+                  >
+                    <option value="ALL">All Hostels &amp; Blocks</option>
+                    <option value="Sarojini">Sarojini Girls</option>
+                    <option value="Kalpana">Kalpana Chawla Girls</option>
+                    <option value="Gandhi">Gandhi Boys</option>
+                    <option value="Kalam">Kalam Boys</option>
+                  </select>
+
+                  {/* Warden filter */}
+                  <select
+                    className="admin-select"
+                    value={complaintWardenFilter}
+                    onChange={e => setComplaintWardenFilter(e.target.value)}
+                    style={{ fontSize: '0.8rem', padding: '4px 8px' }}
+                  >
+                    <option value="ALL">All Wardens</option>
+                    <option value="Nibedita">Mrs. Nibedita Das</option>
+                    <option value="Pratima">Mrs. Pratima Mohapatra</option>
+                    <option value="Rajesh">Mr. Rajesh Jena</option>
+                    <option value="Manoj">Mr. Manoj Sahoo</option>
+                  </select>
+
+                  {/* Escalation filter */}
+                  <select
+                    className="admin-select"
+                    value={complaintEscalationFilter}
+                    onChange={e => setComplaintEscalationFilter(e.target.value)}
+                    style={{ fontSize: '0.8rem', padding: '4px 8px' }}
+                  >
+                    <option value="ALL">All Escalations</option>
+                    <option value="ESCALATED">Escalated to Admin Only</option>
+                    <option value="NORMAL">Standard SLA Only</option>
+                  </select>
+
+                  {/* Rating filter */}
+                  <select
+                    className="admin-select"
+                    value={complaintRatingFilter}
+                    onChange={e => setComplaintRatingFilter(e.target.value)}
+                    style={{ fontSize: '0.8rem', padding: '4px 8px' }}
+                  >
+                    <option value="ALL">All Student Ratings</option>
+                    <option value="5">⭐⭐⭐⭐⭐ (5 Stars)</option>
+                    <option value="4+">⭐⭐⭐⭐+ (4+ Stars)</option>
+                    <option value="low">Under 3 Stars</option>
+                  </select>
+
+                  {/* Search input */}
+                  <input
+                    type="text"
+                    className="admin-input"
+                    placeholder="Search ID, student, roll..."
+                    value={complaintSearchQuery}
+                    onChange={e => setComplaintSearchQuery(e.target.value)}
+                    style={{ fontSize: '0.8rem', padding: '4px 10px', width: '160px' }}
+                  />
+                </div>
+              </div>
+
+              {/* COMPLAINTS DATA TABLE */}
               <div className="admin-table-container">
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>Ticket ID</th>
-                      <th>Student &amp; Roll</th>
-                      <th>Hostel &amp; Room</th>
-                      <th>Category</th>
+                      <th>Ticket ID &amp; 72h SLA</th>
+                      <th>Student &amp; Room</th>
+                      <th>Category &amp; Priority</th>
                       <th>Issue Description</th>
-                      <th>Priority</th>
+                      <th>Assigned Warden</th>
+                      <th>Assigned Technician</th>
                       <th>Status</th>
+                      <th>Student Feedback</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {complaints
-                      .filter(c => complaintCategoryFilter === 'ALL' || c.category === complaintCategoryFilter)
-                      .map(c => (
+                    {filteredComplaints.map(c => {
+                      const dl = getComplaintDeadlineInfo(c);
+                      const isOverdue = dl.isOverdue || c.isEscalated || c.status === 'Escalated';
+                      const isAwaitingVerification = c.status === 'Awaiting Student Verification' || c.status === 'Awaiting Verification';
+                      const isResolved = c.status === 'Resolved';
+                      const isReopened = c.status === 'Reopened';
+
+                      return (
                         <tr key={c.id}>
-                          <td><strong>{c.id}</strong></td>
+                          <td>
+                            <strong>{c.id}</strong>
+                            <div style={{ marginTop: '3px' }}>
+                              <span className={`deadline-badge ${dl.state}`} style={{ fontSize: '0.72rem' }}>
+                                <Clock size={11} /> {dl.text}
+                              </span>
+                            </div>
+                            {isOverdue && (
+                              <div style={{ marginTop: '2px' }}>
+                                <span className="escalation-badge" style={{ fontSize: '0.68rem', padding: '1px 5px' }}>
+                                  🚨 Escalated
+                                </span>
+                              </div>
+                            )}
+                          </td>
                           <td>
                             <div style={{ fontWeight: 600 }}>{c.studentName}</div>
                             <small style={{ color: '#64748b' }}>Roll {c.rollNumber}</small>
+                            <div style={{ fontSize: '0.75rem', color: '#7c3aed', fontWeight: 600 }}>
+                              {c.hostel} · Room {c.roomNumber}
+                            </div>
                           </td>
                           <td>
-                            <div>{c.hostel}</div>
-                            <small style={{ color: '#7c3aed', fontWeight: 600 }}>Room {c.roomNumber}</small>
+                            <span className="admin-badge active">{c.category}</span>
+                            <div style={{ marginTop: '3px' }}>
+                              <span className={`admin-badge ${c.priority === 'High' ? 'rejected' : c.priority === 'Medium' ? 'pending' : 'active'}`}>
+                                {c.priority}
+                              </span>
+                            </div>
                           </td>
-                          <td><span className="admin-badge active">{c.category}</span></td>
                           <td>
                             <div style={{ fontWeight: 600 }}>{c.title}</div>
                             {c.description && (
-                              <small style={{ color: '#64748b', display: 'block', maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <small style={{ color: '#64748b', display: 'block', maxWidth: '240px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {c.description}
                               </small>
                             )}
                           </td>
                           <td>
-                            <span className={`admin-badge ${c.priority === 'High' ? 'rejected' : c.priority === 'Medium' ? 'pending' : 'active'}`}>
-                              {c.priority}
-                            </span>
+                            <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#1e40af' }}>
+                              {c.assignedWardenName || 'Mrs. Nibedita Das'}
+                            </div>
+                            <small style={{ color: '#64748b' }}>
+                              {c.assignedWardenContact || '+91 94370 33445'}
+                            </small>
                           </td>
                           <td>
-                            <span className={`admin-badge ${c.status === 'Resolved' ? 'approved' : c.status === 'In Progress' ? 'pending' : 'rejected'}`}>
+                            <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#0f172a' }}>
+                              {c.assignedStaffName || 'Triage Queue'}
+                            </div>
+                            <small style={{ color: '#64748b' }}>{c.assignedStaffRole || 'Technician'}</small>
+                          </td>
+                          <td>
+                            <span className={`admin-badge ${c.status === 'Resolved' ? 'approved' : isAwaitingVerification ? 'pending' : isReopened || isOverdue ? 'rejected' : 'active'}`}>
                               {c.status}
                             </span>
                           </td>
+                          <td>
+                            {isResolved && c.feedbackRating ? (
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#eab308' }}>
+                                  {[1, 2, 3, 4, 5].map(st => (
+                                    <Star key={st} size={11} fill={st <= c.feedbackRating ? '#eab308' : '#e2e8f0'} />
+                                  ))}
+                                  <span style={{ fontSize: '0.75rem', fontWeight: 700, marginLeft: '3px', color: '#0f172a' }}>{c.feedbackRating}/5</span>
+                                </div>
+                                {c.feedbackText && (
+                                  <small style={{ color: '#475569', display: 'block', fontStyle: 'italic', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    "{c.feedbackText}"
+                                  </small>
+                                )}
+                                <span style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 600, display: 'block', marginTop: '2px' }}>
+                                  ✓ Sent to Warden &amp; Admin
+                                </span>
+                              </div>
+                            ) : isAwaitingVerification ? (
+                              <span style={{ fontSize: '0.74rem', color: '#d97706', fontWeight: 600 }}>
+                                ⏳ Student verification requested
+                              </span>
+                            ) : isReopened ? (
+                              <span style={{ fontSize: '0.74rem', color: '#dc2626', fontWeight: 700 }}>
+                                ⚠️ Reopened by student
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>Pending completion</span>
+                            )}
+                          </td>
                           <td style={{ textAlign: 'right' }}>
-                            <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
-                              <select
-                                className="admin-select"
-                                value={c.status}
-                                onChange={e => handleUpdateComplaintStatus(c.id, e.target.value)}
-                                style={{ fontSize: '0.75rem', padding: '2px 6px' }}
-                              >
-                                <option value="Pending">Pending</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Resolved">Resolved</option>
-                              </select>
+                            <div style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                              {/* Mark Work as Completed button for active complaints */}
+                              {(c.status === 'In Progress' || c.status === 'Assigned' || c.status === 'Submitted' || c.status === 'Reopened') && (
+                                <button
+                                  className="admin-action-btn-primary"
+                                  style={{ padding: '0.25rem 0.55rem', fontSize: '0.73rem', background: '#059669', borderColor: '#059669' }}
+                                  onClick={() => handleMarkWorkCompleted(c.id)}
+                                  title="Mark Work as Completed (transitions to Awaiting Student Verification)"
+                                >
+                                  <Check size={12} /> Mark Work Done
+                                </button>
+                              )}
+
+                              {/* Staff Assignment Button */}
                               <button
                                 className="admin-action-btn-secondary"
-                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.74rem' }}
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.73rem' }}
                                 onClick={() => {
                                   setAssignStaffForm({
                                     complaintId: c.id,
-                                    staffName: 'Mr. Pramod Panda (Electrician)',
+                                    staffName: c.assignedStaffName || 'Mr. Pramod Panda (Electrician)',
                                     status: c.status,
                                     resolutionNotes: c.resolutionNotes || ''
                                   });
@@ -1717,10 +2287,23 @@ export default function HostelPortal({ account, onLogout }) {
                               >
                                 Staff / Notes
                               </button>
+
+                              {/* Admin Case Management Button */}
+                              {(isHostelAdmin || isOverdue || c.isEscalated) && (
+                                <button
+                                  className="admin-action-btn-secondary"
+                                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.73rem', background: isOverdue ? '#fff7ed' : '#f8fafc', borderColor: isOverdue ? '#ea580c' : '#cbd5e1', color: isOverdue ? '#ea580c' : '#334155' }}
+                                  onClick={() => setSelectedAdminComplaintModal(c)}
+                                  title="Review Case and Audit History"
+                                >
+                                  <Eye size={12} /> Admin Review
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -2777,7 +3360,177 @@ export default function HostelPortal({ account, onLogout }) {
         </div>
       )}
 
-      {/* ── MODAL: ADD HOSTEL COMPLEX ── */}
+      {/* ── MODAL: HOSTEL ADMINISTRATOR COMPLAINT REVIEW & AUDIT ACTION ── */}
+      {selectedAdminComplaintModal && (
+        <div className="admin-modal-backdrop" onClick={() => setSelectedAdminComplaintModal(null)}>
+          <div className="admin-modal-card" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>
+                  Administrator Case Review — #{selectedAdminComplaintModal.id}
+                </h3>
+                <small style={{ color: '#64748b' }}>
+                  Hostel Management SLA Governance &amp; Escalation Resolution
+                </small>
+              </div>
+              <button className="admin-table-action-btn" onClick={() => setSelectedAdminComplaintModal(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAdminActionSubmit}>
+              <div className="admin-modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+                {/* Status & Escalation Alert */}
+                {(selectedAdminComplaintModal.isEscalated || selectedAdminComplaintModal.status === 'Escalated' || getComplaintDeadlineInfo(selectedAdminComplaintModal).isOverdue) && (
+                  <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '8px', padding: '10px 12px', marginBottom: '1rem', color: '#9a3412', fontSize: '0.82rem' }}>
+                    <strong>🚨 Case Escalated to Hostel Administrator:</strong>
+                    <div>{selectedAdminComplaintModal.escalationReason || 'Resolution deadline of 72 hours has been exceeded. Case requires administrative direction.'}</div>
+                    <div style={{ fontSize: '0.74rem', color: '#c2410c', marginTop: '4px' }}>
+                      Status: {selectedAdminComplaintModal.status} · SLA Duration Overdue: {getComplaintDeadlineInfo(selectedAdminComplaintModal).text}
+                    </div>
+                  </div>
+                )}
+
+                {/* Complaint Overview */}
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', marginBottom: '1rem', fontSize: '0.84rem' }}>
+                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.95rem' }}>{selectedAdminComplaintModal.title}</div>
+                  <div style={{ color: '#475569', marginTop: '4px' }}>{selectedAdminComplaintModal.description}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '8px', fontSize: '0.78rem', color: '#64748b' }}>
+                    <div>👤 <strong>Student:</strong> {selectedAdminComplaintModal.studentName} ({selectedAdminComplaintModal.rollNumber})</div>
+                    <div>🏠 <strong>Room:</strong> {selectedAdminComplaintModal.hostel} · Room {selectedAdminComplaintModal.roomNumber}</div>
+                    <div>🛡️ <strong>Assigned Warden:</strong> {selectedAdminComplaintModal.assignedWardenName || 'Hostel Warden'}</div>
+                    <div>🔧 <strong>Technician:</strong> {selectedAdminComplaintModal.assignedStaffName || 'Unassigned'}</div>
+                    <div>⏰ <strong>72h SLA Deadline:</strong> {selectedAdminComplaintModal.resolutionDeadline ? new Date(selectedAdminComplaintModal.resolutionDeadline).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '72h from submission'}</div>
+                    <div>📅 <strong>Submitted:</strong> {selectedAdminComplaintModal.filedDate || 'Recent'}</div>
+                  </div>
+                </div>
+
+                {/* Verified Student Feedback (if available) */}
+                {selectedAdminComplaintModal.feedbackRating && (
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Star size={16} fill="#eab308" color="#eab308" />
+                      <strong style={{ fontSize: '0.88rem', color: '#166534' }}>
+                        Student Verified Feedback ({selectedAdminComplaintModal.feedbackRating}/5 Stars)
+                      </strong>
+                    </div>
+                    {selectedAdminComplaintModal.feedbackText && (
+                      <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: '#14532d', fontStyle: 'italic' }}>
+                        "{selectedAdminComplaintModal.feedbackText}"
+                      </p>
+                    )}
+                    <div style={{ fontSize: '0.74rem', color: '#15803d', marginTop: '4px' }}>
+                      ✓ Feedback successfully routed to both Resident Warden &amp; Hostel Administrator
+                    </div>
+                  </div>
+                )}
+
+                {/* Status & Audit History Timeline */}
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    Audit History &amp; SLA Event Trail
+                  </label>
+                  <div className="history-timeline-list">
+                    {Array.isArray(selectedAdminComplaintModal.statusHistory) && selectedAdminComplaintModal.statusHistory.length > 0 ? (
+                      selectedAdminComplaintModal.statusHistory.map((item, idx) => (
+                        <div key={idx} className="history-timeline-item">
+                          <div>
+                            <strong>{item.status}</strong>
+                            <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: '8px' }}>
+                              {item.timestamp ? new Date(item.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Recorded'}
+                            </span>
+                          </div>
+                          {item.note && <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '2px' }}>{item.note}</div>}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="history-timeline-item">
+                        <div><strong>Submitted</strong> — Initial registration in campus portal</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Administrator Action Selector */}
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                  <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a', display: 'block', marginBottom: '8px' }}>
+                    Select Administrative Action
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className={`hostel-floor-pill ${adminActionTab === 'NOTE' ? 'active' : ''}`}
+                      onClick={() => setAdminActionTab('NOTE')}
+                    >
+                      Add Internal Note
+                    </button>
+                    <button
+                      type="button"
+                      className={`hostel-floor-pill ${adminActionTab === 'REASSIGN' ? 'active' : ''}`}
+                      onClick={() => setAdminActionTab('REASSIGN')}
+                    >
+                      Reassign Responsible Staff
+                    </button>
+                    <button
+                      type="button"
+                      className={`hostel-floor-pill ${adminActionTab === 'CLOSE' ? 'active' : ''}`}
+                      onClick={() => setAdminActionTab('CLOSE')}
+                    >
+                      Close Administrative Case
+                    </button>
+                  </div>
+
+                  {adminActionTab === 'REASSIGN' && (
+                    <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                      <label>Reassign Maintenance Technician / Specialist</label>
+                      <select
+                        className="admin-form-select"
+                        value={adminReassignStaffInput}
+                        onChange={e => setAdminReassignStaffInput(e.target.value)}
+                      >
+                        <option value="Mr. Suresh Mohapatra (Plumber)">Mr. Suresh Mohapatra (Senior Plumber)</option>
+                        <option value="Mr. Pramod Panda (Electrician)">Mr. Pramod Panda (Senior Electrician)</option>
+                        <option value="Mr. Tapan Barik (Senior IT Technician)">Mr. Tapan Barik (Senior IT Specialist)</option>
+                        <option value="Mr. Dilip Behera (HVAC Technician)">Mr. Dilip Behera (HVAC &amp; Cooling Specialist)</option>
+                        <option value="Mr. Ramesh Nayak (Carpentry & Civil)">Mr. Ramesh Nayak (Carpentry &amp; Civil Works)</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="admin-form-group">
+                    <label>
+                      {adminActionTab === 'NOTE' ? 'Internal Administrator Note' : adminActionTab === 'REASSIGN' ? 'Reassignment Reason & Instructions' : 'Case Closure Verification Remarks'}
+                    </label>
+                    <textarea
+                      className="admin-form-input"
+                      rows={3}
+                      value={adminNoteInput}
+                      onChange={e => setAdminNoteInput(e.target.value)}
+                      placeholder={
+                        adminActionTab === 'NOTE'
+                          ? 'Enter internal notes, supervisor directives, or contractor instructions...'
+                          : adminActionTab === 'REASSIGN'
+                          ? 'Enter instructions for newly assigned technician...'
+                          : 'Confirm reason for administrative closure and satisfaction verification...'
+                      }
+                      required={adminActionTab === 'CLOSE'}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-modal-footer">
+                <button type="button" className="admin-action-btn-secondary" onClick={() => setSelectedAdminComplaintModal(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="admin-action-btn-primary" style={{ background: adminActionTab === 'CLOSE' ? '#059669' : '#7c3aed' }}>
+                  {adminActionTab === 'NOTE' ? 'Save Internal Note' : adminActionTab === 'REASSIGN' ? 'Reassign Staff' : 'Close Case'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       {isAddHostelModalOpen && (
         <div className="admin-modal-backdrop" onClick={() => setIsAddHostelModalOpen(false)}>
           <div className="admin-modal-card" onClick={e => e.stopPropagation()}>

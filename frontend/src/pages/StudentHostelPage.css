@@ -275,3 +275,167 @@
   color: #059669;
 }
 
+/* ── 72-Hour Deadline & Escalation Badges ── */
+.deadline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  letter-spacing: 0.01em;
+}
+
+.deadline-badge.safe {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.deadline-badge.approaching {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  animation: pulseApproaching 2s infinite ease-in-out;
+}
+
+.deadline-badge.exceeded {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  font-weight: 800;
+}
+
+.deadline-badge.resolved {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+@keyframes pulseApproaching {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+
+.escalated-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #ffffff;
+  padding: 4px 11px;
+  border-radius: 20px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.escalation-history-strip {
+  background: #fff1f2;
+  border-left: 4px solid #ef4444;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.79rem;
+  color: #9f1239;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Work Completion Verification Action Box ── */
+.student-verification-box {
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  border: 1.5px solid #86efac;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.student-verification-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-confirm-completed {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+}
+
+.btn-confirm-completed:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.btn-problem-unresolved {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #ffffff;
+  color: #dc2626;
+  border: 1.5px solid #f87171;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-problem-unresolved:hover {
+  background: #fef2f2;
+  border-color: #dc2626;
+}
+
+/* ── Verified Feedback Banner & Flow Indicator ── */
+.student-feedback-recorded-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #10b981;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feedback-stars-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #f59e0b;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.flow-dispatch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #0369a1;
+  background: #e0f2fe;
+  padding: 3px 8px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+

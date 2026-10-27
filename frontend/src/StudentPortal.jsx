@@ -744,9 +744,7 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'scholarship' && <ScholarshipPage account={account} />}
               {activePage === 'internship' && <InternshipPage account={account} />}
               {activePage === 'online-exam' && <OnlineExamPage />}
-              {(activePage === 'apply-scholarship' || activePage === 'scholarship') && (
-                <ScholarshipApplyPage account={account} onNavigate={handleStudentTabChange} />
-              )}
+              {activePage === 'apply-scholarship' && <ScholarshipPage account={account} />}
               {(activePage === 'bonafide' || activePage === 'apply-bonafide') && (
                 <BonafidePage account={account} />
               )}

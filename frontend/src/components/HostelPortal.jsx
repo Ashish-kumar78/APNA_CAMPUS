@@ -987,10 +987,8 @@ export default function HostelPortal({ account, onLogout }) {
         { id: 'take-attendance', label: 'Take Hostel Attendance', icon: Clock },
         { id: 'view-attendance', label: 'View Hostel Attendance', icon: UserCheck },
         { id: 'applicant-details', label: 'View Applicant Details', icon: Users },
-        ...(isHostelAdmin ? [
-          { id: 'room-allotment', label: 'Room Allotment', icon: Bed },
-          { id: 'manage-hostels', label: 'Manage Hostel(s)', icon: Building2 },
-        ] : []),
+        { id: 'room-allotment', label: 'Room Allotment', icon: Bed },
+        { id: 'manage-hostels', label: 'Manage Hostel(s)', icon: Building2 },
       ]
     },
     {
@@ -1156,56 +1154,6 @@ export default function HostelPortal({ account, onLogout }) {
         pageSubtitle={hostelHeading.subtitle}
       >
         <div className="hostel-portal-content-wrap">
-          {/* Quick Role Perspective Bar */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: isHostelAdmin ? '#eff6ff' : '#f0fdf4',
-            border: `1px solid ${isHostelAdmin ? '#bfdbfe' : '#bbf7d0'}`,
-            padding: '8px 16px',
-            borderRadius: '8px',
-            marginBottom: '16px',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
-              <ShieldCheck size={16} color={isHostelAdmin ? '#1d4ed8' : '#15803d'} />
-              <span>
-                Current Active Scope:{' '}
-                <strong style={{ color: isHostelAdmin ? '#1d4ed8' : '#15803d' }}>
-                  {isHostelAdmin ? 'Hostel Admin Role' : 'Warden Role'}
-                </strong>
-                {' · '}
-                <span style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                  {isHostelAdmin
-                    ? 'All 5 Hostel options enabled (Take Attendance, View Attendance, Applicant Details, Room Allotment, Manage Hostels)'
-                    : '1st 3 Hostel options enabled (Take Attendance, View Attendance, Applicant Details) — Last 2 reserved for Hostel Admin'}
-                </span>
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const next = isHostelAdmin ? 'warden' : 'hostel_admin';
-                setRolePerspective(next);
-                showToast(`Switched view to ${next === 'hostel_admin' ? 'Hostel Admin' : 'Warden'} role.`);
-              }}
-              style={{
-                background: isHostelAdmin ? '#1d4ed8' : '#16a34a',
-                color: '#fff',
-                border: 'none',
-                padding: '4px 12px',
-                borderRadius: '6px',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              Switch to {isHostelAdmin ? 'Warden View' : 'Hostel Admin View'}
-            </button>
-          </div>
-
           {/* TAB: TAKE HOSTEL ATTENDANCE (WARDEN & HOSTEL ADMIN) */}
           {activeTab === 'take-attendance' && (
             <TakeHostelAttendance account={account} onNavigateTab={setActiveTab} />
@@ -1221,34 +1169,14 @@ export default function HostelPortal({ account, onLogout }) {
             <HostelApplicantDetails account={account} />
           )}
 
-          {/* TAB: ROOM ALLOTMENT (HOSTEL ADMIN ONLY) */}
+          {/* TAB: ROOM ALLOTMENT (ENABLED FOR BOTH WARDEN & HOSTEL ADMIN) */}
           {activeTab === 'room-allotment' && (
-            isHostelAdmin ? (
-              <RoomAllotmentSection account={account} />
-            ) : (
-              <div style={{ padding: '2.5rem', textAlign: 'center', background: '#fff', borderRadius: '10px', border: '1px solid #fee2e2' }}>
-                <ShieldAlert size={36} color="#ef4444" style={{ margin: '0 auto 10px' }} />
-                <h3 style={{ margin: '0 0 6px', color: '#991b1b' }}>Access Restricted to Hostel Admin</h3>
-                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
-                  Room Allotment is exclusively managed by the Hostel Administrator.
-                </p>
-              </div>
-            )
+            <RoomAllotmentSection account={account} />
           )}
 
-          {/* TAB: MANAGE HOSTEL(S) (HOSTEL ADMIN ONLY - IMAGE 2 REPLICA) */}
+          {/* TAB: MANAGE HOSTEL(S) (ENABLED FOR BOTH WARDEN & HOSTEL ADMIN) */}
           {activeTab === 'manage-hostels' && (
-            isHostelAdmin ? (
-              <ManageHostelsSection account={account} />
-            ) : (
-              <div style={{ padding: '2.5rem', textAlign: 'center', background: '#fff', borderRadius: '10px', border: '1px solid #fee2e2' }}>
-                <ShieldAlert size={36} color="#ef4444" style={{ margin: '0 auto 10px' }} />
-                <h3 style={{ margin: '0 0 6px', color: '#991b1b' }}>Access Restricted to Hostel Admin</h3>
-                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
-                  Manage Hostel(s) infrastructure configuration is exclusively available to Hostel Admin.
-                </p>
-              </div>
-            )
+            <ManageHostelsSection account={account} />
           )}
 
           {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}

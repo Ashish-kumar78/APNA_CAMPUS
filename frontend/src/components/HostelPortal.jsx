@@ -92,6 +92,7 @@ import HostelFeedbackSection from './hostel/HostelFeedbackSection.jsx';
 import HostelInspectionSection from './hostel/HostelInspectionSection.jsx';
 import HostelEmergencyContactsSection from './hostel/HostelEmergencyContactsSection.jsx';
 import HostelSettingsRulesSection from './hostel/HostelSettingsRulesSection.jsx';
+import WardenEmployeeProfile from './hostel/WardenEmployeeProfile.jsx';
 
 
 export default function HostelPortal({ account, onLogout }) {
@@ -764,6 +765,11 @@ export default function HostelPortal({ account, onLogout }) {
           title: 'Hostel & Residential Services Management',
           subtitle: 'Real-time room occupancy, night roll calls, gate passes, and resident welfare.'
         };
+      case 'profile':
+        return {
+          title: 'Employee Profile',
+          subtitle: 'Hostel Administration & Staff Service Record'
+        };
       case 'gatepasses':
         return {
           title: 'Autonomous Digital Gate Pass Registry',
@@ -833,6 +839,14 @@ export default function HostelPortal({ account, onLogout }) {
             </div>
           )}
 
+          {/* TAB: WARDEN EMPLOYEE PROFILE (2ND IMAGE REPLICA) */}
+          {activeTab === 'profile' && (
+            <WardenEmployeeProfile
+              account={account}
+              onBack={() => setActiveTab('dashboard')}
+            />
+          )}
+
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
             <RoleDashboardLanding
@@ -840,7 +854,8 @@ export default function HostelPortal({ account, onLogout }) {
               account={account}
               onLogout={onLogout}
               onNavigateTab={(target) => {
-                if (target === 'rooms') setActiveTab('rooms');
+                if (target === 'profile') setActiveTab('profile');
+                else if (target === 'rooms') setActiveTab('rooms');
                 else if (target === 'complaints') setActiveTab('complaints');
                 else if (target === 'maintenance') setActiveTab('complaints');
                 else if (target === 'attendance') setActiveTab('attendance');
@@ -850,7 +865,8 @@ export default function HostelPortal({ account, onLogout }) {
                 else setActiveTab('rooms');
               }}
               onNavigate={(target) => {
-                if (target === 'rooms') setActiveTab('rooms');
+                if (target === 'profile') setActiveTab('profile');
+                else if (target === 'rooms') setActiveTab('rooms');
                 else if (target === 'complaints') setActiveTab('complaints');
                 else if (target === 'maintenance') setActiveTab('complaints');
                 else if (target === 'attendance') setActiveTab('attendance');

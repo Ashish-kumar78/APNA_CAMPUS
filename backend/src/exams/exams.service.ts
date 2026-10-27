@@ -1,9 +1,15 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationCategory, NotificationEventType, NotificationPriority } from '../notifications/notification-events';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class ExamsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   // 1. Dashboard Metrics & Operational KPIs
   async getDashboardStats() {
@@ -197,6 +203,48 @@ export class ExamsService {
             approverName: user?.name,
           },
         });
+
+        // Dispatch notifications to affected students & academic leadership
+        if (newStatus === 'Admit Cards Ready') {
+          await this.notificationsService.dispatch({
+            eventType: NotificationEventType.EXAM_NOTICE_PUBLISHED,
+            title: `Admit Cards Available: ${record.title}`,
+            message: `Hall tickets and door charts have been released for ${record.title}. Students with cleared no-dues can download hall tickets now.`,
+            category: NotificationCategory.ACADEMIC,
+            priority: NotificationPriority.HIGH,
+            sourceModule: 'Exam Cell',
+            senderId: user?.id,
+            senderName: user?.name || 'Controller of Examinations',
+            senderRole: 'EXAM_CELL',
+            actionUrl: '/examinationcell',
+            actionTab: 'hall-tickets',
+            actionLabel: 'Download Admit Card',
+            target: {
+              roles: [Role.STUDENT, Role.FACULTY, Role.HOD],
+            },
+            dedupKey: `exam-admit-${id}`,
+          });
+        } else if (newStatus === 'Published') {
+          await this.notificationsService.dispatch({
+            eventType: NotificationEventType.RESULT_PUBLISHED,
+            title: `Autonomous Examination Results Published: ${record.title}`,
+            message: `Official examination results and grade rosters have been certified and published. Check your grades in the student portal.`,
+            category: NotificationCategory.ACADEMIC,
+            priority: NotificationPriority.URGENT,
+            sourceModule: 'Exam Cell',
+            senderId: user?.id,
+            senderName: user?.name || 'Controller of Examinations',
+            senderRole: 'EXAM_CELL',
+            actionUrl: '/examinationcell',
+            actionTab: 'results',
+            actionLabel: 'View Results',
+            target: {
+              roles: [Role.STUDENT, Role.FACULTY, Role.HOD, Role.PRINCIPAL],
+            },
+            dedupKey: `exam-results-${id}`,
+          });
+        }
+
         return { success: true, message: `Cycle transitioned to ${newStatus}`, data: updated };
       }
     } catch {
@@ -204,6 +252,39 @@ export class ExamsService {
     }
 
     return { success: true, message: `Cycle status set to ${newStatus}`, data: { id, status: newStatus } };
+  }
+
+  // Publish targeted examination notice (e.g., Semester 5 CSE students)
+  async publishExamNotice(payload: {
+    title: string;
+    message: string;
+    semester?: string;
+    department?: string;
+    priority?: NotificationPriority;
+    actionUrl?: string;
+    dedupKey?: string;
+  }, user: any) {
+    const notice = await this.notificationsService.dispatch({
+      eventType: NotificationEventType.EXAM_NOTICE_PUBLISHED,
+      title: payload.title || 'Official Examination Notice',
+      message: payload.message,
+      category: NotificationCategory.ACADEMIC,
+      priority: payload.priority || NotificationPriority.HIGH,
+      sourceModule: 'Exam Cell',
+      senderId: user?.id,
+      senderName: user?.name || 'Examination Cell',
+      senderRole: user?.role || 'EXAM_CELL',
+      actionUrl: payload.actionUrl || '/examinationcell',
+      actionTab: 'notices',
+      actionLabel: 'View Examination Notice',
+      target: {
+        roles: [Role.STUDENT, Role.FACULTY, Role.HOD, Role.PRINCIPAL],
+        semester: payload.semester,
+        department: payload.department,
+      },
+      dedupKey: payload.dedupKey,
+    });
+    return { success: true, message: 'Examination notice dispatched to target audience.', notification: notice };
   }
 
   // 3. Timetable & Scheduling with Conflict Validation

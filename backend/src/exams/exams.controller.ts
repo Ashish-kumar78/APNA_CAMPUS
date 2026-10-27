@@ -165,7 +165,7 @@ export class ExamsController {
     return { success: true, count: data.length, data };
   }
 
-  // 9. CoE Circulars
+  // 9. CoE Circulars & Notices
   @Get('circulars')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -174,4 +174,18 @@ export class ExamsController {
     const data = await this.examsService.getExamCirculars();
     return { success: true, count: data.length, data };
   }
+
+  @Post('notices')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Publish official examination notice to scoped audience' })
+  async publishExamNotice(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user?.role);
+    if (role !== 'exam_cell' && role !== 'super_admin' && role !== 'principal') {
+      throw new ForbiddenException('Access denied. Only Examination Cell or Principal can publish exam notices.');
+    }
+    const res = await this.examsService.publishExamNotice(body, user);
+    return res;
+  }
 }
+

@@ -541,60 +541,36 @@ export default function AccountsDashboardTab({
           </div>
         </div>
 
-        {/* Widget 3: Quick Action Launchpad */}
+        {/* Widget 3: Statutory Treasury & Audit Gateway */}
         <div className="bg-gradient-to-br from-slate-900 to-blue-950 rounded-xl p-5 text-white shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <span className="font-bold text-xs uppercase tracking-wider text-blue-300 flex items-center gap-1.5">
                 <Sparkles size={14} className="text-amber-400" />
-                Finance Directorate Quick Actions
+                Treasury &amp; Fiscal Compliance
               </span>
               <span className="text-[10px] bg-blue-900/60 text-blue-200 px-2 py-0.5 rounded font-mono">
                 AUTONOMOUS ERP
               </span>
             </div>
             <p className="text-xs text-slate-300 mb-4">
-              Instant access to core accounting workflows, fee collection, and vouchers.
+              Real-time banking gateway telemetry, statutory ledger audit, and treasury liquidity.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              onClick={onOpenRecordPayment}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <Receipt size={14} className="text-emerald-300" /> Record Fee
-            </button>
-            <button
-              onClick={() => onNavigateTab('fee_ledger')}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <Users size={14} className="text-sky-300" /> Student Ledger
-            </button>
-            <button
-              onClick={() => onNavigateTab('payroll_processing')}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <IndianRupee size={14} className="text-purple-300" /> Run Payroll
-            </button>
-            <button
-              onClick={onOpenAddBill}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <PlusCircle size={14} className="text-amber-300" /> Add Vendor Bill
-            </button>
-            <button
-              onClick={() => onNavigateTab('journal_entries')}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <FileText size={14} className="text-indigo-300" /> Journal Entry
-            </button>
-            <button
-              onClick={() => onNavigateTab('rep_fee_collection')}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition text-left flex items-center gap-1.5 border border-white/10"
-            >
-              <Download size={14} className="text-pink-300" /> MIS Reports
-            </button>
+          <div className="space-y-2 text-xs">
+            <div className="p-2.5 bg-white/10 rounded-lg flex items-center justify-between border border-white/10">
+              <span className="text-slate-200 flex items-center gap-1.5 font-medium"><Landmark size={14} className="text-emerald-300" /> SBI Treasury Gateway</span>
+              <span className="text-[11px] font-bold text-emerald-400">● Reconciled</span>
+            </div>
+            <div className="p-2.5 bg-white/10 rounded-lg flex items-center justify-between border border-white/10">
+              <span className="text-slate-200 flex items-center gap-1.5 font-medium"><CreditCard size={14} className="text-sky-300" /> Campus Smart Pay / UPI</span>
+              <span className="text-[11px] font-bold text-sky-400">● 0-Wait Webhook</span>
+            </div>
+            <div className="p-2.5 bg-white/10 rounded-lg flex items-center justify-between border border-white/10">
+              <span className="text-slate-200 flex items-center gap-1.5 font-medium"><ShieldCheck size={14} className="text-purple-300" /> Statutory GST &amp; TDS Audit</span>
+              <span className="text-[11px] font-bold text-purple-300">Compliant (FY27)</span>
+            </div>
           </div>
         </div>
       </div>

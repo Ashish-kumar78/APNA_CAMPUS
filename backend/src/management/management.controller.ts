@@ -42,6 +42,13 @@ export class ManagementController {
     return this.managementService.getOverview(academicYear, semester);
   }
 
+  @Get('action-center')
+  @ApiOperation({ summary: 'Get unified executive action center consolidating actionable tasks across ERP' })
+  async getExecutiveActionCenter(@CurrentUser() user: any) {
+    this.checkManagementAccess(user);
+    return this.managementService.getExecutiveActionCenter();
+  }
+
   @Get('executive-insights')
   @ApiOperation({ summary: 'Get rule-based institutional executive alerts & insights' })
   async getExecutiveInsights(@CurrentUser() user: any) {

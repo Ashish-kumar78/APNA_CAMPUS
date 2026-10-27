@@ -1,9 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationCategory, NotificationEventType, NotificationPriority } from '../notifications/notification-events';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class EnterpriseService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
+
 
   // ==========================================
   // 1. EXAM CELL
@@ -1269,6 +1276,37 @@ export class EnterpriseService {
       },
     });
 
+    // Dispatch notification to eligible students
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.PLACEMENT_DRIVE_PUBLISHED,
+        title: `Campus Recruitment Drive: ${drive.companyName}`,
+        message: `${drive.companyName} is recruiting for ${drive.roleTitle} (CTC: ₹${drive.packageLPA} LPA). Eligibility: Min CGPA ${drive.minCgpa}.`,
+        category: NotificationCategory.CAREER,
+        priority: NotificationPriority.HIGH,
+        sourceModule: 'Training & Placement',
+        senderName: 'Placement Directorate',
+        senderRole: 'PLACEMENT',
+        actionUrl: '/placement',
+        actionTab: 'drives',
+        actionLabel: 'Apply Now',
+        target: {
+          roles: [Role.STUDENT],
+          minCgpa: drive.minCgpa,
+        },
+        metadata: {
+          driveId: drive.id,
+          companyName: drive.companyName,
+          roleTitle: drive.roleTitle,
+          packageLPA: drive.packageLPA,
+          minCgpa: drive.minCgpa,
+        },
+        dedupKey: `placement-drive-${drive.id}`,
+      });
+    } catch {
+      // Non-blocking
+    }
+
     return {
       id: drive.id,
       company: drive.companyName,
@@ -1290,6 +1328,7 @@ export class EnterpriseService {
       },
     };
   }
+
 
   async updatePlacementDriveStatus(driveId: string, status: string, user: any) {
     const updated = await this.prisma.placementDrive.update({

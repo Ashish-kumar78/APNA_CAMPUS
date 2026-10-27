@@ -234,4 +234,31 @@ export class FacultyController {
     });
     return { success: true, message: data.message, data: data.data };
   }
+
+  @Post('schedule-class')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Schedule upcoming class and notify enrolled cohort' })
+  async scheduleClass(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    if (role !== 'faculty' && role !== 'hod' && role !== 'super_admin') {
+      throw new ForbiddenException('Access denied. Only teaching faculty can schedule classes.');
+    }
+    const res = await this.facultyService.scheduleClass(body, user);
+    return res;
+  }
+
+  @Post('reschedule-class')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reschedule class or update venue with duplicate prevention' })
+  async rescheduleClass(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    if (role !== 'faculty' && role !== 'hod' && role !== 'super_admin') {
+      throw new ForbiddenException('Access denied. Only teaching faculty can reschedule classes.');
+    }
+    const res = await this.facultyService.rescheduleClass(body, user);
+    return res;
+  }
 }
+

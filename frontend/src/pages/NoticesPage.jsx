@@ -13,9 +13,22 @@ import {
 } from 'lucide-react'
 import { downloadNoticePdf } from '../utils/pdfGenerator'
 import { notificationsApi } from '../services/notificationsApi.js'
+import OfficialCollegeNoticeModal, { GIFT_MODULAR_TEST_2_NOTICE } from '../components/ExaminationCell/OfficialCollegeNoticeModal.jsx'
 import './NoticesPage.css'
 
 const allNotices = [
+  {
+    id: 'gift-mod2-2026',
+    title: 'B.Tech 5th Semester Modular test-II schedule, 2026',
+    tag: 'exam',
+    date: '04 Nov 2026',
+    publisher: 'Controller of Examinations (GIFT)',
+    pinned: true,
+    summary: 'The Modular Test -II for B.Tech 5th Semester will be conducted from 05 November 2026 to 12 November 2026 across all branches (CSE, CSE-AI, CS & IOT, CIVIL, EEE, ECE, MECH, AGRIL). Time: 8:30 am to 9:30 am.',
+    content: 'Dear Students, The Modular Test -II for B.Tech 5th Semester will be conducted from 05 November 2026 to 12 November 2026 as per official schedule. All students are advised to prepare accordingly. Lab examinations will be conducted per respective HoD schedules.',
+    attachment: 'BTech_5th_Sem_Modular_Test_II_Schedule_2026.pdf',
+    isOfficialModularNotice: true,
+  },
   {
     id: 1,
     title: 'Registration & Verification for PRERANA State Scholarship 2026-27',
@@ -77,6 +90,7 @@ export default function NoticesPage() {
   const [selectedTag, setSelectedTag] = useState('all')
   const [query, setQuery] = useState('')
   const [selectedNotice, setSelectedNotice] = useState(null)
+  const [showOfficialModal, setShowOfficialModal] = useState(false)
   const [facultyNotices, setFacultyNotices] = useState([])
 
   useEffect(() => {
@@ -230,6 +244,18 @@ export default function NoticesPage() {
             <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', fontSize: '0.92rem', lineHeight: '1.6', color: '#334155', marginBottom: '20px' }}>
               {selectedNotice.content}
             </div>
+            {(selectedNotice.isOfficialModularNotice || selectedNotice.title?.includes('Modular')) && (
+              <div style={{ marginBottom: '16px' }}>
+                <button
+                  type="button"
+                  className="btn-pay-now"
+                  style={{ width: '100%', justifyContent: 'center', background: '#1e3a8a', padding: '10px' }}
+                  onClick={() => setShowOfficialModal(true)}
+                >
+                  🏛 View Full Official Multi-Branch Schedule Circular (PDF View)
+                </button>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button 
                 className="btn-pay-now" 
@@ -241,6 +267,14 @@ export default function NoticesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showOfficialModal && (
+        <OfficialCollegeNoticeModal
+          notice={GIFT_MODULAR_TEST_2_NOTICE}
+          userBranch="CSE"
+          onClose={() => setShowOfficialModal(false)}
+        />
       )}
     </div>
   )

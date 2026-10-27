@@ -1038,6 +1038,7 @@ export const api = {
     const q = new URLSearchParams(params).toString();
     return request(`/management/overview${q ? '?' + q : ''}`);
   },
+  getManagementActionCenter: () => request('/management/action-center'),
   getManagementInsights: () => request('/management/executive-insights'),
   getManagementDepartments: (params = {}) => {
     const q = new URLSearchParams(params).toString();
@@ -1267,6 +1268,23 @@ export const api = {
     request(`/notifications/student/${id}/read`, {
       method: 'POST',
     }),
+
+  // Central Role-Based Notification Engine APIs
+  getMyNotifications: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/notifications${q ? `?${q}` : ''}`);
+  },
+  getUnreadNotificationsCount: () => request('/notifications/unread-count'),
+  markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: 'POST' }),
+  markAllNotificationsRead: (filter = {}) =>
+    request('/notifications/mark-all-read', { method: 'POST', body: JSON.stringify(filter) }),
+  clearReadNotifications: () => request('/notifications/clear-read', { method: 'POST' }),
+  getNotificationPreferences: () => request('/notifications/preferences'),
+  updateNotificationPreferences: (prefs) =>
+    request('/notifications/preferences', { method: 'PUT', body: JSON.stringify(prefs) }),
+  dispatchNotification: (payload) =>
+    request('/notifications/dispatch', { method: 'POST', body: JSON.stringify(payload) }),
+
 
   // 32. Principal & Director Command Center
   getPrincipalOverview: (academicYear) =>

@@ -204,7 +204,9 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
   const [exceptions, setExceptions] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
 
-  // Missing Capabilities Enterprise States
+  // Enterprise States & Executive Action Center
+  const [actionCenter, setActionCenter] = useState({ total: 0, critical: 0, high: 0, items: [] });
+  const [actionCategoryFilter, setActionCategoryFilter] = useState('ALL');
   const [strategyTargets, setStrategyTargets] = useState([]);
   const [boardMeetings, setBoardMeetings] = useState([]);
   const [boardResolutions, setBoardResolutions] = useState([]);
@@ -252,7 +254,7 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
     try {
       const [
         ovRes, insRes, deptRes, finRes, plcRes, appRes, govRes, excRes, audRes,
-        stratRes, meetRes, evidRes, capRes, capaRes, healthRes
+        stratRes, meetRes, evidRes, capRes, capaRes, healthRes, actRes
       ] = await Promise.allSettled([
         api.getManagementOverview({ academicYear, semester: semesterFilter }),
         api.getManagementInsights(),
@@ -269,6 +271,7 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
         api.getManagementCapitalProjects(),
         api.getManagementCorrectiveActions(),
         api.getManagementIntegrationHealth(),
+        api.getManagementActionCenter(),
       ]);
 
       if (ovRes.status === 'fulfilled' && ovRes.value?.success) setOverviewData(ovRes.value.data);
@@ -293,6 +296,7 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
       }
       if (capaRes.status === 'fulfilled' && capaRes.value?.success) setCapaRecords(capaRes.value.data || []);
       if (healthRes.status === 'fulfilled' && healthRes.value?.success) setIntegrationHealth(healthRes.value);
+      if (actRes.status === 'fulfilled' && actRes.value?.success) setActionCenter(actRes.value);
 
       setLastRefreshed(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
     } catch (err) {
@@ -430,6 +434,100 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
   const feeData = financials?.departmentRealization || FALLBACK_FEES;
   const placementDrives = placements?.drives || FALLBACK_DRIVES;
 
+  // ─── Unified Executive Action Center Computed Queue ─────────────────────────
+  const actionItemsComputed = useMemo(() => {
+    if (actionCenter?.data && actionCenter.data.length > 0) {
+      return actionCenter.data;
+    }
+    const items = [];
+    approvals.filter(a => a.status === 'Pending' || a.status === 'Under Review').forEach(a => {
+      items.push({
+        id: `ACT-PROP-${a.id}`,
+        sourceModule: 'Strategic Approvals',
+        sourceTab: 'approvals',
+        title: a.title,
+        description: `Budget Request: ${a.budget || 'N/A'} · Submitted by ${a.by}. Awaiting Governing Body review.`,
+        priority: a.priority === 'High' ? 'CRITICAL' : 'HIGH',
+        status: a.status,
+        owner: a.by,
+        dueDate: 'Within 7 Days',
+        recordId: a.id,
+        category: a.category || 'Strategic Proposal',
+        permittedActions: ['APPROVE', 'REJECT', 'RETURN'],
+      });
+    });
+    capaRecords.filter(c => c.status !== 'Resolved & Closed').forEach(c => {
+      items.push({
+        id: `ACT-CAPA-${c.id}`,
+        sourceModule: 'CAPA Register',
+        sourceTab: 'exceptions',
+        title: `CAPA: ${c.title}`,
+        description: `Root Cause: ${c.rootCause} Action Plan: ${c.actionPlan}`,
+        priority: 'HIGH',
+        status: c.status,
+        owner: c.assignedOwner,
+        dueDate: c.targetDeadline,
+        recordId: c.id,
+        category: 'Risk Mitigation',
+        permittedActions: ['RESOLVE_CAPA'],
+      });
+    });
+    exceptions.filter(e => e.severity === 'CRITICAL').forEach(e => {
+      items.push({
+        id: `ACT-RISK-${e.id}`,
+        sourceModule: 'Risk Radar',
+        sourceTab: 'exceptions',
+        title: e.title,
+        description: `${e.impact}. Current: ${e.currentValue} (Target: ${e.targetThreshold}). Action: ${e.recommendedAction}`,
+        priority: 'CRITICAL',
+        status: 'Open Risk Alert',
+        owner: `${e.department} Head`,
+        dueDate: 'Immediate Action Required',
+        recordId: e.id,
+        category: e.category,
+        permittedActions: ['INVESTIGATE_RISK'],
+      });
+    });
+    items.push({
+      id: 'ACT-GOV-BM43',
+      sourceModule: 'Governing Body',
+      sourceTab: 'governance',
+      title: '43rd Ordinary Meeting of the Governing Body',
+      description: 'Agenda: Ratification of Autumn 2026 Examination results and approval of AI GPU Cluster capital expenditure.',
+      priority: 'HIGH',
+      status: 'Scheduled',
+      owner: 'Board Secretary / Chairperson',
+      dueDate: '18 Nov 2026',
+      recordId: 'BM-2026-Q3',
+      category: 'Governance Milestone',
+      permittedActions: ['VIEW_AGENDA'],
+    });
+    items.push({
+      id: 'ACT-FIN-LAG',
+      sourceModule: 'Fee & Finance',
+      sourceTab: 'financials',
+      title: 'Mechanical & Civil Engineering Fee Recovery Lag (₹61.9 L Outstanding)',
+      description: 'Civil (88.0%) and Mechanical (89.4%) fall behind 92% recovery benchmark. Follow-up required.',
+      priority: 'HIGH',
+      status: 'Recovery Deficit',
+      owner: 'Chief Accounts Officer & HODs',
+      dueDate: '10 Nov 2026',
+      recordId: 'FIN-EXC-01',
+      category: 'Financial Discrepancy',
+      permittedActions: ['INSPECT_FINANCES'],
+    });
+    return items;
+  }, [actionCenter, approvals, capaRecords, exceptions]);
+
+  const filteredActionItems = useMemo(() => {
+    if (actionCategoryFilter === 'ALL') return actionItemsComputed;
+    if (actionCategoryFilter === 'APPROVALS') return actionItemsComputed.filter(i => i.sourceModule === 'Strategic Approvals');
+    if (actionCategoryFilter === 'CAPA') return actionItemsComputed.filter(i => i.sourceModule === 'CAPA Register' || i.sourceModule === 'Risk Radar');
+    if (actionCategoryFilter === 'GOVERNANCE') return actionItemsComputed.filter(i => i.sourceModule === 'Governing Body' || i.category === 'Governance Milestone');
+    if (actionCategoryFilter === 'FINANCE') return actionItemsComputed.filter(i => i.sourceModule === 'Fee & Finance');
+    return actionItemsComputed;
+  }, [actionItemsComputed, actionCategoryFilter]);
+
   // ─── Navigation Tabs Definition ────────────────────────────────────────────
 
   const navItems = [
@@ -522,6 +620,7 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
       title: 'STRATEGIC OVERSIGHT',
       items: [
         { id: 'executive', label: 'Executive Overview', icon: PieChart },
+        { id: 'dashboard', label: 'Executive Workspace', icon: Target },
         { id: 'departments', label: 'Department Analytics', icon: Building },
         { id: 'financials', label: 'Fee & Finance', icon: DollarSign },
         { id: 'budget', label: 'Institutional Budget', icon: Layers },
@@ -542,6 +641,11 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
 
   const getManagementHeading = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: 'Executive Leadership Workspace',
+          subtitle: 'Trustee credentials, official schedule, and institutional leadership briefing.'
+        };
       case 'executive':
         return {
           title: 'Institutional Governance & Strategic Intelligence',
@@ -625,7 +729,7 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
         pageSubtitle={managementHeading.subtitle}
       >
         <div className="mgmt-portal-content-wrap">
-        {activeTab === 'executive' ? (
+        {activeTab === 'dashboard' ? (
           <RoleDashboardLanding
             account={account}
             roleKey="management"
@@ -696,6 +800,216 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
           ═══════════════════════════════════════════════════════════════════ */}
           {activeTab === 'executive' && (
             <div>
+              {/* ─── UNIFIED EXECUTIVE ACTION CENTER (High-Priority Actionable Queue) ─── */}
+              <div className="mgmt-panel" style={{ border: '1px solid #cbd5e1', borderRadius: 12, overflow: 'hidden', marginBottom: '1.5rem', background: '#fff' }}>
+                <div className="mgmt-panel-header" style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)', color: '#fff', padding: '1rem 1.25rem' }}>
+                  <div className="mgmt-panel-title">
+                    <h3 style={{ color: '#fff', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 10, margin: 0 }}>
+                      <AlertOctagon size={20} color="#fca5a5" /> Unified Executive Action Center
+                      <span className="mgmt-badge" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', borderColor: 'rgba(255,255,255,0.3)', fontSize: '0.72rem' }}>
+                        {actionCenter?.counts?.total || actionItemsComputed.length} Active Tasks
+                      </span>
+                    </h3>
+                    <p style={{ color: '#bfdbfe', margin: '4px 0 0', fontSize: '0.78rem' }}>
+                      Prioritized governance obligations, pending strategic sanctions, regulatory deadlines, and risk exceptions
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.72rem', background: 'rgba(239,68,68,0.2)', color: '#fee2e2', border: '1px solid rgba(239,68,68,0.4)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
+                      🚨 {actionCenter?.counts?.critical || actionItemsComputed.filter(i => i.priority === 'CRITICAL').length} Critical Urgency
+                    </span>
+                    <span style={{ fontSize: '0.72rem', background: 'rgba(245,158,11,0.2)', color: '#fef3c7', border: '1px solid rgba(245,158,11,0.4)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
+                      ⚠️ {actionCenter?.counts?.high || actionItemsComputed.filter(i => i.priority === 'HIGH').length} High Priority
+                    </span>
+                  </div>
+                </div>
+
+                {/* Filter Pills */}
+                <div style={{ display: 'flex', gap: 6, padding: '0.75rem 1.25rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', marginRight: 4 }}>Filter Tasks:</span>
+                  {[
+                    { id: 'ALL', label: `All Tasks (${actionItemsComputed.length})` },
+                    { id: 'APPROVALS', label: `Approvals (${actionItemsComputed.filter(i => i.sourceModule === 'Strategic Approvals').length})` },
+                    { id: 'CAPA', label: `CAPA & Exceptions (${actionItemsComputed.filter(i => i.sourceModule === 'CAPA Register' || i.sourceModule === 'Risk Radar').length})` },
+                    { id: 'GOVERNANCE', label: `Board & Compliance (${actionItemsComputed.filter(i => i.sourceModule === 'Governing Body' || i.category === 'Governance Milestone').length})` },
+                    { id: 'FINANCE', label: `Fee & Finance (${actionItemsComputed.filter(i => i.sourceModule === 'Fee & Finance').length})` },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActionCategoryFilter(tab.id)}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        borderRadius: 6,
+                        border: '1px solid',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        background: actionCategoryFilter === tab.id ? '#1e40af' : '#fff',
+                        color: actionCategoryFilter === tab.id ? '#fff' : '#475569',
+                        borderColor: actionCategoryFilter === tab.id ? '#1e40af' : '#cbd5e1',
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Action Items List */}
+                <div className="mgmt-panel-body" style={{ padding: '1rem 1.25rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    {filteredActionItems.map(item => (
+                      <div
+                        key={item.id}
+                        style={{
+                          background: item.priority === 'CRITICAL' ? '#fff5f5' : '#f8faff',
+                          border: `1px solid ${item.priority === 'CRITICAL' ? '#fecaca' : '#dbeafe'}`,
+                          borderLeft: `4px solid ${item.priority === 'CRITICAL' ? '#dc2626' : item.priority === 'HIGH' ? '#f59e0b' : '#3b82f6'}`,
+                          borderRadius: 8,
+                          padding: '0.85rem 1rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 14,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <div style={{ flex: '1 1 500px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 4,
+                              background: item.sourceModule === 'Strategic Approvals' ? '#eff6ff' : item.sourceModule === 'CAPA Register' ? '#ecfdf5' : item.sourceModule === 'Risk Radar' ? '#fef2f2' : item.sourceModule === 'Governing Body' ? '#f5f3ff' : '#fefce8',
+                              color: item.sourceModule === 'Strategic Approvals' ? '#1d4ed8' : item.sourceModule === 'CAPA Register' ? '#047857' : item.sourceModule === 'Risk Radar' ? '#b91c1c' : item.sourceModule === 'Governing Body' ? '#6d28d9' : '#b45309',
+                              border: '1px solid currentColor',
+                            }}>
+                              {item.sourceModule}
+                            </span>
+                            <span style={{
+                              fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 4,
+                              background: item.priority === 'CRITICAL' ? '#dc2626' : '#f59e0b',
+                              color: '#fff',
+                            }}>
+                              {item.priority}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace', fontWeight: 700 }}>
+                              {item.recordId}
+                            </span>
+                            <span className="mgmt-status mgmt-status-neutral" style={{ fontSize: '0.68rem' }}>
+                              {item.status}
+                            </span>
+                          </div>
+
+                          <h4 style={{ margin: '0 0 4px', fontSize: '0.9rem', color: '#0f172a', fontWeight: 800 }}>
+                            {item.title}
+                          </h4>
+                          <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#475569', lineHeight: 1.4 }}>
+                            {item.description}
+                          </p>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '0.72rem', color: '#64748b', flexWrap: 'wrap' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <UserCheck size={13} color="#475569" /> <strong>Owner:</strong> {item.owner}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <Clock size={13} color="#475569" /> <strong>Deadline:</strong> {item.dueDate}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {item.sourceModule === 'Strategic Approvals' && (
+                            <>
+                              <button
+                                className="mgmt-btn mgmt-btn-primary"
+                                style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                                onClick={() => {
+                                  const prop = approvals.find(a => a.id === item.recordId);
+                                  if (prop) setSelectedProposal(prop);
+                                  else setActiveTab('approvals');
+                                }}
+                              >
+                                <CheckCircle size={13} /> Review &amp; Decide
+                              </button>
+                              <button
+                                className="mgmt-btn mgmt-btn-secondary"
+                                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
+                                onClick={() => setActiveTab('approvals')}
+                              >
+                                View Queue <ArrowRight size={12} />
+                              </button>
+                            </>
+                          )}
+
+                          {item.sourceModule === 'CAPA Register' && (
+                            <>
+                              <button
+                                className="mgmt-btn mgmt-btn-primary"
+                                style={{ padding: '6px 12px', fontSize: '0.75rem', background: '#059669', borderColor: '#059669' }}
+                                onClick={() => {
+                                  const capa = capaRecords.find(c => c.id === item.recordId);
+                                  setResolveCapaModal({
+                                    open: true,
+                                    record: capa || { id: item.recordId, title: item.title },
+                                    notes: '',
+                                    evidenceUrl: '',
+                                  });
+                                }}
+                              >
+                                <Check size={13} /> Resolve CAPA
+                              </button>
+                              <button
+                                className="mgmt-btn mgmt-btn-secondary"
+                                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
+                                onClick={() => setActiveTab('exceptions')}
+                              >
+                                CAPA Register <ArrowRight size={12} />
+                              </button>
+                            </>
+                          )}
+
+                          {item.sourceModule === 'Risk Radar' && (
+                            <button
+                              className="mgmt-btn mgmt-btn-secondary"
+                              style={{ padding: '6px 12px', fontSize: '0.75rem', color: '#b91c1c', borderColor: '#fca5a5' }}
+                              onClick={() => setActiveTab('exceptions')}
+                            >
+                              <AlertTriangle size={13} /> Investigate Risk <ArrowRight size={12} />
+                            </button>
+                          )}
+
+                          {item.sourceModule === 'Governing Body' && (
+                            <button
+                              className="mgmt-btn mgmt-btn-primary"
+                              style={{ padding: '6px 12px', fontSize: '0.75rem', background: '#7c3aed', borderColor: '#7c3aed' }}
+                              onClick={() => {
+                                const meet = boardMeetings.find(m => m.id === item.recordId);
+                                if (meet) setSelectedMeetingModal(meet);
+                                else setActiveTab('governance');
+                              }}
+                            >
+                              <Calendar size={13} /> View Agenda &amp; Dossier
+                            </button>
+                          )}
+
+                          {item.sourceModule === 'Fee & Finance' && (
+                            <button
+                              className="mgmt-btn mgmt-btn-secondary"
+                              style={{ padding: '6px 12px', fontSize: '0.75rem', color: '#b45309', borderColor: '#fde68a' }}
+                              onClick={() => setActiveTab('financials')}
+                            >
+                              <DollarSign size={13} /> Inspect Dues Ledger <ArrowRight size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               {/* Primary Strategic KPIs */}
               <div className="mgmt-kpi-grid">
                 <KPI
@@ -712,7 +1026,7 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
                 <KPI
                   label="Faculty Strength"
                   value={totalFaculty}
-                  sub="1:17 Student-Faculty Ratio"
+                  sub={overviewData?.kpis?.studentFacultyRatio ? `${overviewData.kpis.studentFacultyRatio} Ratio` : "1:15.6 Ratio"}
                   icon={<GraduationCap />}
                   color="#059669"
                   bg="#ecfdf5"
@@ -722,8 +1036,8 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
                 />
                 <KPI
                   label="Fee Realization"
-                  value="₹24.6 Cr"
-                  sub="92.5% Collected · ₹1.85 Cr Due"
+                  value={overviewData?.kpis?.feeCollectedFormatted || "₹22.60 Cr"}
+                  sub={`${overviewData?.kpis?.feeRecoveryRate || 93.0}% Realized · ${overviewData?.kpis?.feeDueFormatted || "₹1.70 Cr"} Due`}
                   icon={<DollarSign />}
                   color="#d97706"
                   bg="#fefce8"
@@ -733,7 +1047,7 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
                 <KPI
                   label="Placement Conversion"
                   value={`${avgPlacement}%`}
-                  sub="Avg ₹6.8 LPA · Highest ₹24 LPA"
+                  sub="87.0% Conversion · 435 Placed"
                   icon={<Briefcase />}
                   color="#7c3aed"
                   bg="#f5f3ff"
@@ -2477,6 +2791,29 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
                 ))}
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 14 }}>
+                <div style={{ background: '#f8faff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1e40af', marginBottom: 4 }}>PROGRAMS & CURRICULUM</div>
+                  <div style={{ fontSize: '0.8rem', color: '#334155', lineHeight: 1.5 }}>
+                    {selectedDeptDetail.programsOffered?.join(' · ') || `${selectedDeptDetail.name} (UG & PG Autonomous)`}
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8faff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#047857', marginBottom: 4 }}>RESEARCH & INFRASTRUCTURE</div>
+                  <div style={{ fontSize: '0.8rem', color: '#334155', lineHeight: 1.5 }}>
+                    <strong>{selectedDeptDetail.labsCount || 6}</strong> Specialized Laboratories · <strong>{selectedDeptDetail.publicationsCount || 12}</strong> Scopus/Q1 Publications
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: '#f8faff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 14 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6d28d9', marginBottom: 4 }}>TOP CORPORATE RECRUITERS</div>
+                <div style={{ fontSize: '0.8rem', color: '#334155' }}>
+                  {selectedDeptDetail.topRecruiters?.join(' · ') || 'TCS Digital · Infosys · L&T Technology · Deloitte USI'}
+                </div>
+              </div>
+
               <div style={{ background: '#f8faff', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 14 }}>
                 <h4 style={{ margin: '0 0 6px', fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>Financial & Budget Overview</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: 4 }}>
@@ -2487,12 +2824,42 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
                 <ProgressBar value={selectedDeptDetail.budgetUtilization || 70} color="#059669" />
               </div>
 
-              <div style={{ fontSize: '0.8rem', color: '#475569' }}>
-                <strong>Head of Department:</strong> {selectedDeptDetail.hod} &nbsp;|&nbsp; <strong>Autonomous Status:</strong> Tier-1 Compliant
+              <div style={{ fontSize: '0.8rem', color: '#475569', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                <div><strong>Head of Department:</strong> {selectedDeptDetail.hod} ({selectedDeptDetail.hodEmail || `${selectedDeptDetail.code.toLowerCase()}.hod@gift.edu.in`})</div>
+                <div><strong>Accreditation:</strong> Autonomous Tier-1 OBE Validated</div>
               </div>
             </div>
 
             <div className="mgmt-modal-footer">
+              <button
+                className="mgmt-btn mgmt-btn-primary"
+                onClick={() => {
+                  const html = `
+                    <h2>Department Profile & Academic Standing: ${selectedDeptDetail.name} (${selectedDeptDetail.code})</h2>
+                    <div class="kpi-grid">
+                      <div class="kpi-box"><div class="kpi-label">Students</div><div class="kpi-value">${selectedDeptDetail.students}</div><div class="kpi-sub">Enrolled Cohort</div></div>
+                      <div class="kpi-box"><div class="kpi-label">Faculty</div><div class="kpi-value">${selectedDeptDetail.faculty}</div><div class="kpi-sub">SFR ${selectedDeptDetail.sfr || '1:16'}</div></div>
+                      <div class="kpi-box"><div class="kpi-label">Average CGPA</div><div class="kpi-value">${selectedDeptDetail.cgpa}</div><div class="kpi-sub">Autonomous Scale</div></div>
+                      <div class="kpi-box"><div class="kpi-label">Placement %</div><div class="kpi-value">${selectedDeptDetail.placement}%</div><div class="kpi-sub">Conversion Rate</div></div>
+                    </div>
+                    <h2>Governance & Operational Details</h2>
+                    <table>
+                      <tr><td><b>Head of Department</b></td><td>${selectedDeptDetail.hod}</td></tr>
+                      <tr><td><b>HOD Email</b></td><td>${selectedDeptDetail.hodEmail || 'hod@gift.edu.in'}</td></tr>
+                      <tr><td><b>Biometric Attendance</b></td><td>${selectedDeptDetail.attendance}%</td></tr>
+                      <tr><td><b>Fee Recovery Rate</b></td><td>${selectedDeptDetail.feeRecovery}%</td></tr>
+                      <tr><td><b>Autonomous Pass Rate</b></td><td>${selectedDeptDetail.pass}%</td></tr>
+                      <tr><td><b>Budget Allocation</b></td><td>₹${((selectedDeptDetail.budgetAllocated || 30000000) / 10000000).toFixed(2)} Cr</td></tr>
+                      <tr><td><b>Expenditure YTD</b></td><td>₹${((selectedDeptDetail.budgetSpent || 21000000) / 10000000).toFixed(2)} Cr (${selectedDeptDetail.budgetUtilization}%)</td></tr>
+                      <tr><td><b>Programs Offered</b></td><td>${selectedDeptDetail.programsOffered?.join(', ') || selectedDeptDetail.name}</td></tr>
+                      <tr><td><b>Top Recruiters</b></td><td>${selectedDeptDetail.topRecruiters?.join(', ') || 'TCS, Infosys, Deloitte'}</td></tr>
+                    </table>
+                  `;
+                  openPrintReport(`Department Dossier — ${selectedDeptDetail.code}`, html);
+                }}
+              >
+                🖨 Print / Export Dossier PDF
+              </button>
               <button className="mgmt-btn mgmt-btn-secondary" onClick={() => setSelectedDeptDetail(null)}>
                 Close Dossier
               </button>

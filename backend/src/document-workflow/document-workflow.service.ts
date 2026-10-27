@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeRole } from '../rbac/rbac';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationCategory, NotificationEventType, NotificationPriority } from '../notifications/notification-events';
+import { Role } from '@prisma/client';
 
 export type DocumentWorkflowStatus =
   | 'UPLOADED'
@@ -14,7 +17,10 @@ export type DocumentWorkflowStatus =
 
 @Injectable()
 export class DocumentWorkflowService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async submitDocument(input: {
     ownerUserId: string;
@@ -77,8 +83,47 @@ export class DocumentWorkflowService {
       },
     });
 
+    // Notify document owner and administrative verification queue
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.DOCUMENT_CORRECTION_REQUESTED, // uploaded event
+        title: 'Document Submitted for Verification',
+        message: `Your document "${input.title}" (${input.category}) has been submitted and is pending verification.`,
+        category: NotificationCategory.ADMIN,
+        priority: NotificationPriority.NORMAL,
+        sourceModule: 'Document Verification',
+        actionUrl: '/student',
+        actionTab: 'documents',
+        actionLabel: 'View Documents',
+        target: {
+          userIds: [input.ownerUserId],
+        },
+        dedupKey: `doc-submit-${document.id}`,
+      });
+
+      // Notify verifier queue
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.DOCUMENT_CORRECTION_REQUESTED,
+        title: 'New Document Pending Verification',
+        message: `New ${input.category} document "${input.title}" submitted by ${owner.name} awaiting verification.`,
+        category: NotificationCategory.ADMIN,
+        priority: NotificationPriority.NORMAL,
+        sourceModule: 'Document Verification',
+        actionUrl: '/admin',
+        actionTab: 'documents',
+        actionLabel: 'Open Verification Queue',
+        target: {
+          roles: [Role.ADMIN, Role.SUPER_ADMIN],
+        },
+        dedupKey: `doc-queue-${document.id}`,
+      });
+    } catch {
+      // Non-blocking
+    }
+
     return document;
   }
+
 
   async getQueue({ verifierUserId, verifierRole, category, status }: {
     verifierUserId?: string;
@@ -189,8 +234,81 @@ export class DocumentWorkflowService {
       },
     });
 
+    // Notify document owner of the verifier's decision
+    try {
+      if (input.action === 'VERIFY') {
+        await this.notificationsService.dispatch({
+          eventType: NotificationEventType.DOCUMENT_VERIFICATION_COMPLETED,
+          title: `Document Verified & Approved: ${document.title}`,
+          message: `Your document "${document.title}" (${document.category}) has been verified and approved by the administrative office.`,
+          category: NotificationCategory.ADMIN,
+          priority: NotificationPriority.NORMAL,
+          sourceModule: 'Admin Office',
+          senderId: reviewer.id,
+          senderName: reviewer.name,
+          senderRole: reviewer.role,
+          actionUrl: '/student',
+          actionTab: 'documents',
+          actionLabel: 'View Verified Document',
+          target: {
+            userIds: [document.ownerUserId],
+          },
+          dedupKey: `doc-verify-${updated.id}-${updated.version}`,
+        });
+      } else if (input.action === 'REJECT') {
+        await this.notificationsService.dispatch({
+          eventType: NotificationEventType.DOCUMENT_CORRECTION_REQUESTED,
+          title: `Document Verification Rejected: ${document.title}`,
+          message: `Your document "${document.title}" was rejected. Reason: ${input.reason || 'Document does not satisfy institutional criteria.'}`,
+          category: NotificationCategory.ADMIN,
+          priority: NotificationPriority.HIGH,
+          sourceModule: 'Admin Office',
+          senderId: reviewer.id,
+          senderName: reviewer.name,
+          senderRole: reviewer.role,
+          actionUrl: '/student',
+          actionTab: 'documents',
+          actionLabel: 'Check Reason & Re-upload',
+          target: {
+            userIds: [document.ownerUserId],
+          },
+          metadata: {
+            reason: input.reason,
+            documentId: document.id,
+          },
+          dedupKey: `doc-reject-${updated.id}-${Date.now()}`,
+        });
+      } else if (input.action === 'REQUEST_CORRECTION') {
+        await this.notificationsService.dispatch({
+          eventType: NotificationEventType.DOCUMENT_CORRECTION_REQUESTED,
+          title: `Document Correction Requested: ${document.title}`,
+          message: `Administrative correction requested for "${document.title}". Note: ${input.reason || 'Please provide updated document copy.'}`,
+          category: NotificationCategory.ADMIN,
+          priority: NotificationPriority.HIGH,
+          sourceModule: 'Admin Office',
+          senderId: reviewer.id,
+          senderName: reviewer.name,
+          senderRole: reviewer.role,
+          actionUrl: '/student',
+          actionTab: 'documents',
+          actionLabel: 'Upload Correction',
+          target: {
+            userIds: [document.ownerUserId],
+          },
+          metadata: {
+            reason: input.reason,
+            documentId: document.id,
+          },
+          dedupKey: `doc-correct-${updated.id}-${Date.now()}`,
+        });
+      }
+    } catch {
+      // Non-blocking
+    }
+
     return updated;
   }
+
 
   async createApprovalWorkflow(input: {
     workflowType: string;

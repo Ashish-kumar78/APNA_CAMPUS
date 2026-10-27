@@ -1068,12 +1068,6 @@ export default function FacultyPortal({ account, onLogout }) {
                   <button className="admin-action-btn-primary" onClick={handleOpenAttendanceModal} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px' }}>
                     <Calendar size={15} /> Mark Attendance
                   </button>
-                  <button className="admin-action-btn-primary" onClick={() => setActiveTab('marks')} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px' }}>
-                    <BarChart2 size={15} /> Enter Marks
-                  </button>
-                  <button className="admin-action-btn-secondary" onClick={() => setActiveTab('students')} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px' }}>
-                    <Users size={15} /> View Roster ({scopedStudents.length})
-                  </button>
                 </div>
               </div>
 

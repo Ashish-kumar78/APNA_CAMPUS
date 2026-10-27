@@ -1,9 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationCategory, NotificationEventType, NotificationPriority } from '../notifications/notification-events';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class FacultyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
+
 
   /**
    * Official teaching assignments for the faculty member
@@ -652,6 +659,33 @@ export class FacultyService {
       // Continue even if audit fails
     }
 
+    // Check absent roll numbers for early warning low attendance threshold (< 75%)
+    const absentRolls = rolls.filter(r => !payload.attendanceMap[r]);
+    if (absentRolls.length > 0) {
+      try {
+        await this.notificationsService.dispatch({
+          eventType: NotificationEventType.ATTENDANCE_LOW_THRESHOLD,
+          title: `Attendance Alert: ${payload.subjectCode}`,
+          message: `You were marked absent in ${payload.subjectCode} on ${payload.date} (${payload.period}). Maintain minimum 75% attendance to prevent autonomous exam detention.`,
+          category: NotificationCategory.ACADEMIC,
+          priority: NotificationPriority.HIGH,
+          sourceModule: 'Academic Attendance',
+          senderName: payload.facultyName || 'Course Faculty',
+          senderRole: 'FACULTY',
+          actionUrl: '/student',
+          actionTab: 'attendance',
+          actionLabel: 'View Attendance Roster',
+          target: {
+            roles: [Role.STUDENT],
+            studentRollNumbers: absentRolls,
+          },
+          dedupKey: `att-alert-${payload.subjectCode}-${payload.date}`,
+        });
+      } catch {
+        // Non-blocking
+      }
+    }
+
     return {
       success: true,
       sessionId: `att-${Date.now()}`,
@@ -665,6 +699,122 @@ export class FacultyService {
       message: `Attendance session successfully logged for ${payload.subjectCode} (${payload.section}).`
     };
   }
+
+  // 1. Faculty schedules a class (for tomorrow or upcoming date)
+  async scheduleClass(payload: {
+    facultyName?: string;
+    subjectCode: string;
+    subjectName?: string;
+    semester?: string;
+    section?: string;
+    department?: string;
+    date: string;
+    time: string;
+    room?: string;
+    meetingLink?: string;
+    notes?: string;
+    dedupKey?: string;
+  }, user: any) {
+    const sem = payload.semester || 'Semester 5';
+    const sec = payload.section || 'Section A';
+    const dept = payload.department || 'CSE';
+    const room = payload.room || 'Block B - 302';
+    const dedup = payload.dedupKey || `faculty-class-${payload.subjectCode}-${payload.date}-${payload.time.replace(/\s+/g, '')}`;
+
+    const notification = await this.notificationsService.dispatch({
+      eventType: NotificationEventType.CLASS_SCHEDULE_UPDATED,
+      title: `Upcoming Class: ${payload.subjectCode} (${payload.subjectName || 'Course'})`,
+      message: `Class scheduled by ${payload.facultyName || user?.name || 'Faculty'} on ${payload.date} at ${payload.time} in ${room}.${payload.notes ? ` Note: ${payload.notes}` : ''}`,
+      category: NotificationCategory.ACADEMIC,
+      priority: NotificationPriority.NORMAL,
+      sourceModule: 'Faculty Portal',
+      senderId: user?.id,
+      senderName: payload.facultyName || user?.name || 'Course Faculty',
+      senderRole: 'FACULTY',
+      actionUrl: '/academics',
+      actionTab: 'timetable',
+      actionLabel: 'View Timetable',
+      target: {
+        roles: [Role.STUDENT],
+        department: dept,
+        semester: sem,
+        section: sec,
+      },
+      metadata: {
+        subjectCode: payload.subjectCode,
+        subjectName: payload.subjectName,
+        date: payload.date,
+        time: payload.time,
+        room,
+        meetingLink: payload.meetingLink,
+      },
+      dedupKey: dedup,
+    });
+
+    return {
+      success: true,
+      message: `Class notification dispatched to enrolled students in ${dept} ${sem} (${sec}).`,
+      notification,
+    };
+  }
+
+  // 2. Faculty reschedules or moves a class venue
+  async rescheduleClass(payload: {
+    facultyName?: string;
+    subjectCode: string;
+    subjectName?: string;
+    semester?: string;
+    section?: string;
+    department?: string;
+    date: string;
+    newTime?: string;
+    newRoom?: string;
+    reason?: string;
+    dedupKey?: string;
+  }, user: any) {
+    const sem = payload.semester || 'Semester 5';
+    const sec = payload.section || 'Section A';
+    const dept = payload.department || 'CSE';
+    const newRoom = payload.newRoom || 'Block B - 304 (Lab)';
+    const newTime = payload.newTime || '11:30 AM';
+    const dedup = payload.dedupKey || `faculty-reschedule-${payload.subjectCode}-${payload.date}`;
+
+    const notification = await this.notificationsService.dispatch({
+      eventType: NotificationEventType.CLASS_SCHEDULE_UPDATED,
+      title: `Class Rescheduled / Venue Change: ${payload.subjectCode}`,
+      message: `Class on ${payload.date} has been moved to ${newRoom} at ${newTime}. ${payload.reason ? `Reason: ${payload.reason}` : ''}`,
+      category: NotificationCategory.ACADEMIC,
+      priority: NotificationPriority.HIGH,
+      sourceModule: 'Faculty Portal',
+      senderId: user?.id,
+      senderName: payload.facultyName || user?.name || 'Course Faculty',
+      senderRole: 'FACULTY',
+      actionUrl: '/academics',
+      actionTab: 'timetable',
+      actionLabel: 'Check Updated Schedule',
+      target: {
+        roles: [Role.STUDENT],
+        department: dept,
+        semester: sem,
+        section: sec,
+      },
+      metadata: {
+        subjectCode: payload.subjectCode,
+        date: payload.date,
+        newTime,
+        newRoom,
+        reason: payload.reason,
+      },
+      dedupKey: dedup,
+    });
+
+    return {
+      success: true,
+      message: `Reschedule update dispatched to ${dept} ${sem} (${sec}) without duplicate notices.`,
+      notification,
+    };
+  }
+
 
   /**
    * Quizzes Management

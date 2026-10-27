@@ -548,7 +548,7 @@ function App() {
     } else if (account.role === 'scholarship') {
       portal = <ScholarshipPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'exam_cell') {
-      portal = <ExamCellPortal account={account} onLogout={handleLogout} />
+      portal = <ExamCellPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'library') {
       portal = <LibraryPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'warden' || account.role === 'hostel' || account.role === 'hostel_admin') {

@@ -659,13 +659,75 @@ model FeedbackSurvey {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  role      String
-  title     String
-  message   String
-  time      String
-  unread    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id              String                  @id @default(cuid())
+  title           String
+  message         String                  @db.Text
+  category        String                  @default("GENERAL")
+  priority        String                  @default("NORMAL")
+  sourceModule    String                  @default("system")
+  eventType       String?
+  actionTab       String?
+  actionLabel     String?
+  senderId        String?
+  senderName      String?
+  senderRole      String?
+  senderDept      String?
+  attachmentUrl   String?                 @db.Text
+  attachmentName  String?
+  targetScope     String?
+  dedupKey        String?                 @unique
+  metadata        Json?
+  createdAt       DateTime                @default(now())
+  expiresAt       DateTime?
+
+  // Legacy backwards compatibility fields
+  role            String?
+  time            String?
+  unread          Boolean                 @default(true)
+
+  recipients      NotificationRecipient[]
+
+  @@index([sourceModule])
+  @@index([category])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model NotificationRecipient {
+  id                  String        @id @default(cuid())
+  notificationId      String
+  notification        Notification  @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  
+  userId              String?
+  recipientRole       String        @default("STUDENT")
+  recipientIdentifier String
+  recipientName       String?
+  
+  isRead              Boolean       @default(false)
+  readAt              DateTime?
+  isDismissed         Boolean       @default(false)
+  dismissedAt         DateTime?
+  createdAt           DateTime      @default(now())
+
+  @@unique([notificationId, recipientIdentifier])
+  @@index([recipientIdentifier, isRead])
+  @@index([recipientRole, isRead])
+  @@index([userId, isRead])
+  @@index([recipientIdentifier, isDismissed])
+}
+
+model NotificationPreference {
+  id                  String        @id @default(cuid())
+  userId              String?
+  userIdentifier      String        @unique
+  emailAlerts         Boolean       @default(true)
+  smsAlerts           Boolean       @default(false)
+  academicAlerts      Boolean       @default(true)
+  financialAlerts     Boolean       @default(true)
+  placementAlerts     Boolean       @default(true)
+  urgentAlerts        Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 }
 
 model Holiday {

@@ -66,6 +66,7 @@ import CanteenPage from './pages/CanteenPage.jsx'
 import StudentHostelPage from './pages/StudentHostelPage.jsx'
 import ClassNotesPage from './pages/ClassNotesPage.jsx'
 import BonafidePage from './pages/BonafidePage.jsx'
+import ScholarshipApplyPage from './pages/ScholarshipApplyPage.jsx'
 import CampusConnect from './components/CampusConnect/CampusConnect.jsx'
 import AcademicResourcesSection from './components/CampusConnect/AcademicResourcesSection.jsx'
 import LeadershipScoreboardSection from './components/CampusConnect/LeadershipScoreboardSection.jsx'
@@ -129,7 +130,6 @@ const studentNavSections = [
     items: [
       { label: 'Academics', icon: BookOpen, page: 'academics' },
       { label: 'Online Examination', icon: ClipboardList, page: 'online-exam' },
-      { label: 'Bonafide Certificate', icon: FileCheck, page: 'bonafide' },
     ]
   },
   {
@@ -146,6 +146,13 @@ const studentNavSections = [
     items: [
       { label: 'Anonymous Complaints', icon: ShieldCheck, page: 'anonymous-complaints' },
       { label: 'Feedback/Appraisal/Survey', icon: ChatBubbleIcon, page: 'feedback' },
+    ]
+  },
+  {
+    title: 'SCHOLARSHIP AND BONAFIDE CERTIFICATES',
+    items: [
+      { label: 'Apply Scholarship', icon: Award, page: 'apply-scholarship' },
+      { label: 'Apply Bonafide Certificate', icon: FileCheck, page: 'bonafide' },
     ]
   }
 ];
@@ -257,6 +264,12 @@ function StudentPortal({ account, onLogout }) {
       }
       if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal' || hash === 'grievance' || hash === 'grievance-redressal') {
         return { page: 'feedback', link: 'Feedback/Appraisal/Survey', tab: '', quickView: '' };
+      }
+      if (hash === 'scholarship' || hash === 'apply-scholarship') {
+        return { page: 'apply-scholarship', link: 'Apply Scholarship', tab: '', quickView: '' };
+      }
+      if (hash === 'bonafide' || hash === 'apply-bonafide' || hash === 'bonafide-certificate') {
+        return { page: 'bonafide', link: 'Apply Bonafide Certificate', tab: '', quickView: '' };
       }
       const match = navigation.find((n) => n.page === hash);
       if (match) return { page: hash, link: match.label, tab: '', quickView: '' };
@@ -734,7 +747,12 @@ function StudentPortal({ account, onLogout }) {
                 </ErrorBoundary>
               )}
               {activePage === 'online-exam' && <OnlineExamPage />}
-              {activePage === 'bonafide' && <BonafidePage account={account} />}
+              {(activePage === 'apply-scholarship' || activePage === 'scholarship') && (
+                <ScholarshipApplyPage account={account} onNavigate={handleStudentTabChange} />
+              )}
+              {(activePage === 'bonafide' || activePage === 'apply-bonafide') && (
+                <BonafidePage account={account} />
+              )}
               {activePage === 'placement' && <PlacementPage />}
               {activePage === 'feedback' && (
                 <FeedbackPage

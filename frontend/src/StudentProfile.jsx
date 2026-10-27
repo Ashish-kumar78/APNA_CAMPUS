@@ -251,25 +251,25 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
 
       <section className="profile-overview-strip" aria-label="Student identity summary">
         <div className="profile-photo" style={{ padding: 0, overflow: 'hidden', border: '2px solid #ffffff' }}>
-          <img src={studentPhoto} alt={account?.name || 'Student'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={studentPhoto} alt={student.name || account?.name || 'Student'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
         <div className="profile-overview-copy">
           <span className="profile-overview-label">STUDENT RECORD · ACTIVE</span>
-          <h2>{account?.name || 'Student'}</h2>
-          <p>{account?.department || 'Computer Science & Engineering'}</p>
+          <h2>{student.name || account?.name || 'Student'}</h2>
+          <p>{student.department || student.branch || account?.department || 'Computer Science & Engineering'}</p>
         </div>
         <div className="profile-overview-facts">
           <span>
             <small>Registration number</small>
-            <strong>{account?.registrationNumber || '—'}</strong>
+            <strong>{student.registrationNumber || account?.registrationNumber || '—'}</strong>
           </span>
           <span>
             <small>Program</small>
-            <strong>B.Tech · 2023–2027</strong>
+            <strong>{student.targetProgram || student.appliedCourse || student.course || 'B.Tech'} · {student.batch || '2023–2027'}</strong>
           </span>
           <span>
             <small>Current section</small>
-            <strong>CSE · Section A</strong>
+            <strong>{student.section || student.academicSection || account?.section || 'CSE · Section A'}</strong>
           </span>
           <details className="profile-registry-summary">
             <summary>
@@ -1071,31 +1071,42 @@ function AcademicDetails({ student }) {
 
   const fields = [
     ['Course', s.course || 'Bachelor of Technology'],
+    ['Target Academic Program', s.targetProgram || s.appliedCourse || s.course || 'Bachelor of Technology in Computer Science & Engineering'],
     ['Batch', s.batch || 'BTECH 2028-P'],
-    ['Branch', s.branch || 'Computer Science & Engineering (Artificial Intelligence)'],
+    ['Branch', s.branch || s.department || 'Computer Science & Engineering (Artificial Intelligence)'],
     ['Section', s.section || s.academicSection || 'CSE (AI) - Genius'],
     ['House', s.house || 'ANAND'],
     ['Lab Group', s.labGroup || '1'],
     ['Honors', s.honors || 'N'],
     ['Minor', s.minor || 'N'],
-    ['Value added course-1', s.valueAdded1 || ''],
-    ['Value added course-2', s.valueAdded2 || ''],
-    ['Value added course-3', s.valueAdded3 || ''],
+    ['Value added course-1', s.valueAdded1 || '—'],
+    ['Value added course-2', s.valueAdded2 || '—'],
+    ['Value added course-3', s.valueAdded3 || '—'],
     ['Admission Date', s.admissionDateFormatted || s.admissionDate || '05-08-2024'],
     ['Entrance Examination', s.entranceExam || 'JEE MAIN'],
     ['Rank', s.rank !== undefined ? String(s.rank) : '0'],
+    ['Rank Type / Merit Category', s.rankType || s.admissionCategory || s.category || 'General Merit (CRL)'],
   ]
 
-  const qualifications = [
-    ['10th', s.qual10thInstitute || 'ARACHANDI UCHA BIDYAMANDIR,NISTIPUR', s.qual10thYear || '2022', s.qual10thMarks || '82.50'],
-    ['12th', s.qual12thInstitute || 'Shanti Institute Of Management,CDA,Cuttack', s.qual12thYear || '2024', s.qual12thMarks || '80.16'],
-    ['ITI', s.qualItiInstitute || '0', s.qualItiYear || '', s.qualItiMarks || '0.00'],
-    ['Diploma', s.qualDiplomaInstitute || '0', s.qualDiplomaYear || '', s.qualDiplomaMarks || '0.00'],
-    ['+3', s.qualPlus3Institute || '0', s.qualPlus3Year || '', s.qualPlus3Marks || '0.00'],
-    ['BCA', s.qualBcaInstitute || '0', s.qualBcaYear || '', s.qualBcaMarks || '0.00'],
-    ['BBA', s.qualBbaInstitute || '0', s.qualBbaYear || '', s.qualBbaMarks || '0.00'],
-    ['BTECH', s.qualBtechInstitute || '0', s.qualBtechYear || '', s.qualBtechMarks || '0.00'],
-  ]
+  const qualifications = Array.isArray(s.qualifications) && s.qualifications.some(q => q && (q.institute || q.marks || q.year))
+    ? s.qualifications
+        .filter(q => q && q.qualification && (q.institute || q.marks || q.year || q.maxMarks || q.resultStatus))
+        .map(q => [
+          q.qualification,
+          q.institute || '—',
+          q.year || '—',
+          q.marks ? `${q.marks}${q.maxMarks ? ` / ${q.maxMarks}` : ''}${q.resultStatus && q.resultStatus !== 'Passed' ? ` (${q.resultStatus})` : ''}` : (q.resultStatus || '—')
+        ])
+    : [
+        ['10th', s.qual10thInstitute || 'ARACHANDI UCHA BIDYAMANDIR,NISTIPUR', s.qual10thYear || '2022', s.qual10thMarks || '82.50'],
+        ['12th', s.qual12thInstitute || 'Shanti Institute Of Management,CDA,Cuttack', s.qual12thYear || '2024', s.qual12thMarks || '80.16'],
+        ['ITI', s.qualItiInstitute || '0', s.qualItiYear || '', s.qualItiMarks || '0.00'],
+        ['Diploma', s.qualDiplomaInstitute || '0', s.qualDiplomaYear || '', s.qualDiplomaMarks || '0.00'],
+        ['+3', s.qualPlus3Institute || '0', s.qualPlus3Year || '', s.qualPlus3Marks || '0.00'],
+        ['BCA', s.qualBcaInstitute || '0', s.qualBcaYear || '', s.qualBcaMarks || '0.00'],
+        ['BBA', s.qualBbaInstitute || '0', s.qualBbaYear || '', s.qualBbaMarks || '0.00'],
+        ['BTECH', s.qualBtechInstitute || '0', s.qualBtechYear || '', s.qualBtechMarks || '0.00'],
+      ]
 
   return (
     <div className="erp-tab-content">
@@ -1225,6 +1236,38 @@ function AcademicDetails({ student }) {
 
 function GuardiansDetails({ student }) {
   const s = student || {}
+
+  const guardiansList = Array.isArray(s.guardians) && s.guardians.length > 0
+    ? s.guardians
+    : [
+        {
+          name: s.fatherName || 'AJAY KUMAR SAHOO',
+          relationship: s.fatherRelationship || 'Father',
+          isEmergency: s.fatherIsEmergency || 'No',
+          occupation: s.fatherOccupation || 'FARMER',
+          phone: s.fatherPhone || '7749844291',
+          landline: s.fatherLandline || '',
+          income: s.fatherIncome || '1LAK',
+          email: s.fatherEmail || '',
+          qualification: s.fatherQualification || '',
+          homeAddress: s.fatherHomeAddress || '',
+          officeAddress: s.fatherOfficeAddress || ''
+        },
+        {
+          name: s.motherName || 'SANJUBALA SAHOO',
+          relationship: s.motherRelationship || 'Mother',
+          isEmergency: s.motherIsEmergency || 'No',
+          occupation: s.motherOccupation || '',
+          phone: s.motherPhone || '',
+          landline: s.motherLandline || '',
+          income: s.motherIncome || '0',
+          email: s.motherEmail || '',
+          qualification: s.motherQualification || '',
+          homeAddress: s.motherHomeAddress || '',
+          officeAddress: s.motherOfficeAddress || ''
+        }
+      ]
+
   return (
     <div className="erp-tab-content">
       <div className="erp-profile-header">
@@ -1232,119 +1275,67 @@ function GuardiansDetails({ student }) {
         <span>Guardians Details</span>
       </div>
 
-      {/* Guardian 1: Father */}
-      <div className="erp-guardian-section">
-        <div className="erp-section-subhead-row">
-          <div className="erp-section-subhead">1-{s.fatherName || 'AJAY KUMAR SAHOO'}</div>
-          <div className="erp-emergency-contact-box">
-            <span>Is Emergency Contact</span>
-            <span className="erp-badge-orange">{s.fatherIsEmergency || 'No'}</span>
+      {guardiansList.map((g, idx) => (
+        <div key={idx} className="erp-guardian-section" style={{ marginTop: idx > 0 ? '28px' : '0' }}>
+          <div className="erp-section-subhead-row">
+            <div className="erp-section-subhead">
+              {idx + 1}-{g.name || `Guardian ${idx + 1}`}
+            </div>
+            <div className="erp-emergency-contact-box">
+              <span>Is Emergency Contact</span>
+              <span className={g.isEmergency === 'Yes' || g.emergencyContact === 'Yes' ? 'erp-badge-green' : 'erp-badge-orange'}>
+                {g.isEmergency || g.emergencyContact || 'No'}
+              </span>
+            </div>
+          </div>
+          <div className="erp-gold-divider-line"></div>
+
+          <div className="erp-table-responsive">
+            <table className="erp-grid-table">
+              <tbody>
+                <tr>
+                  <td className="erp-th-cell">Name</td>
+                  <td className="erp-td-cell">{g.name || '—'}</td>
+                  <td className="erp-th-cell"></td>
+                  <td className="erp-td-cell"></td>
+                </tr>
+                <tr>
+                  <td className="erp-th-cell">Relation</td>
+                  <td className="erp-td-cell">{g.relationship || 'Guardian'}</td>
+                  <td className="erp-th-cell">Occupation</td>
+                  <td className="erp-td-cell">{g.occupation || '—'}</td>
+                </tr>
+                <tr>
+                  <td className="erp-th-cell">Mobile No</td>
+                  <td className="erp-td-cell">{g.phone || g.mobile || '—'}</td>
+                  <td className="erp-th-cell">Phone No</td>
+                  <td className="erp-td-cell">{g.landline || g.altPhone || '—'}</td>
+                </tr>
+                <tr>
+                  <td className="erp-th-cell">Income</td>
+                  <td className="erp-td-cell">{g.income || g.annualIncome || '—'}</td>
+                  <td className="erp-th-cell">Email</td>
+                  <td className="erp-td-cell">{g.email || '—'}</td>
+                </tr>
+                <tr>
+                  <td className="erp-th-cell">Qualification</td>
+                  <td className="erp-td-cell">{g.qualification || '—'}</td>
+                  <td className="erp-th-cell"></td>
+                  <td className="erp-td-cell"></td>
+                </tr>
+                <tr>
+                  <td className="erp-th-cell">Home Address</td>
+                  <td className="erp-td-cell" colSpan={3}>{g.homeAddress || '—'}</td>
+                </tr>
+                <tr>
+                  <td className="erp-th-cell">Office Address</td>
+                  <td className="erp-td-cell" colSpan={3}>{g.officeAddress || '—'}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-        <div className="erp-gold-divider-line"></div>
-
-        <div className="erp-table-responsive">
-          <table className="erp-grid-table">
-            <tbody>
-              <tr>
-                <td className="erp-th-cell">Name</td>
-                <td className="erp-td-cell">{s.fatherName || 'AJAY KUMAR SAHOO'}</td>
-                <td className="erp-th-cell"></td>
-                <td className="erp-td-cell"></td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Relation</td>
-                <td className="erp-td-cell">{s.fatherRelationship || 'Father'}</td>
-                <td className="erp-th-cell">Occupation</td>
-                <td className="erp-td-cell">{s.fatherOccupation || 'FARMER'}</td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Mobile No</td>
-                <td className="erp-td-cell">{s.fatherPhone || '7749844291'}</td>
-                <td className="erp-th-cell">Phone No</td>
-                <td className="erp-td-cell">{s.fatherLandline || ''}</td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Income</td>
-                <td className="erp-td-cell">{s.fatherIncome || '1LAK'}</td>
-                <td className="erp-th-cell">Email</td>
-                <td className="erp-td-cell">{s.fatherEmail || ''}</td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Qualification</td>
-                <td className="erp-td-cell">{s.fatherQualification || ''}</td>
-                <td className="erp-th-cell"></td>
-                <td className="erp-td-cell"></td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Home Address</td>
-                <td className="erp-td-cell" colSpan={3}>{s.fatherHomeAddress || ''}</td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Office Address</td>
-                <td className="erp-td-cell" colSpan={3}>{s.fatherOfficeAddress || ''}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Guardian 2: Mother */}
-      <div className="erp-guardian-section" style={{ marginTop: '28px' }}>
-        <div className="erp-section-subhead-row">
-          <div className="erp-section-subhead">2-{s.motherName || 'SANJUBALA SAHOO'}</div>
-          <div className="erp-emergency-contact-box">
-            <span>Is Emergency Contact</span>
-            <span className="erp-badge-orange">{s.motherIsEmergency || 'No'}</span>
-          </div>
-        </div>
-        <div className="erp-gold-divider-line"></div>
-
-        <div className="erp-table-responsive">
-          <table className="erp-grid-table">
-            <tbody>
-              <tr>
-                <td className="erp-th-cell">Name</td>
-                <td className="erp-td-cell">{s.motherName || 'SANJUBALA SAHOO'}</td>
-                <td className="erp-th-cell"></td>
-                <td className="erp-td-cell"></td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Relation</td>
-                <td className="erp-td-cell">{s.motherRelationship || 'Mother'}</td>
-                <td className="erp-th-cell">Occupation</td>
-                <td className="erp-td-cell">{s.motherOccupation || ''}</td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Mobile No</td>
-                <td className="erp-td-cell">{s.motherPhone || ''}</td>
-                <td className="erp-th-cell">Phone No</td>
-                <td className="erp-td-cell">{s.motherLandline || ''}</td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Income</td>
-                <td className="erp-td-cell">{s.motherIncome || '0'}</td>
-                <td className="erp-th-cell">Email</td>
-                <td className="erp-td-cell">{s.motherEmail || ''}</td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Qualification</td>
-                <td className="erp-td-cell">{s.motherQualification || ''}</td>
-                <td className="erp-th-cell"></td>
-                <td className="erp-td-cell"></td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Home Address</td>
-                <td className="erp-td-cell" colSpan={3}>{s.motherHomeAddress || ''}</td>
-              </tr>
-              <tr>
-                <td className="erp-th-cell">Office Address</td>
-                <td className="erp-td-cell" colSpan={3}>{s.motherOfficeAddress || ''}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      ))}
     </div>
   )
 }

@@ -94,16 +94,22 @@ import HostelEmergencyContactsSection from './hostel/HostelEmergencyContactsSect
 import HostelSettingsRulesSection from './hostel/HostelSettingsRulesSection.jsx';
 import WardenEmployeeProfile from './hostel/WardenEmployeeProfile.jsx';
 import HostelApplyLeaveModule from './hostel/HostelApplyLeaveModule.jsx';
-
+import TakeHostelAttendance from './hostel/TakeHostelAttendance.jsx';
+import ViewHostelAttendance from './hostel/ViewHostelAttendance.jsx';
+import HostelApplicantDetails from './hostel/HostelApplicantDetails.jsx';
+import RoomAllotmentSection from './hostel/RoomAllotmentSection.jsx';
+import ManageHostelsSection from './hostel/ManageHostelsSection.jsx';
 
 export default function HostelPortal({ account, onLogout }) {
-  const isHostelAdmin = Boolean(
+  const detectedIsAdmin = Boolean(
     account?.role === 'hostel_admin' ||
     account?.role === 'admin' ||
     account?.role === 'super_admin' ||
     account?.identity === 'WRD-ADM-01' ||
     account?.detail?.toLowerCase().includes('administrator')
   );
+  const [rolePerspective, setRolePerspective] = useState(() => (detectedIsAdmin ? 'hostel_admin' : 'warden'));
+  const isHostelAdmin = rolePerspective === 'hostel_admin';
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const greeting = useTimeGreeting();
@@ -726,13 +732,25 @@ export default function HostelPortal({ account, onLogout }) {
 
   const hostelNavSections = [
     {
+      title: 'HOSTEL',
+      items: [
+        { id: 'take-attendance', label: 'Take Hostel Attendance', icon: Clock },
+        { id: 'view-attendance', label: 'View Hostel Attendance', icon: UserCheck },
+        { id: 'applicant-details', label: 'View Applicant Details', icon: Users },
+        ...(isHostelAdmin ? [
+          { id: 'room-allotment', label: 'Room Allotment', icon: Bed },
+          { id: 'manage-hostels', label: 'Manage Hostel(s)', icon: Building2 },
+        ] : []),
+      ]
+    },
+    {
       title: 'RESIDENTIAL OPERATIONS',
       items: [
         { id: 'dashboard', label: 'Warden Dashboard', icon: Home },
         { id: 'hostels', label: 'Hostel Blocks & Wings', icon: Building2 },
-        { id: 'rooms', label: 'Rooms & Bed Allotment', icon: Bed },
+        ...(isHostelAdmin ? [{ id: 'rooms', label: 'Rooms & Bed Allotment', icon: Bed }] : []),
         { id: 'checkin-checkout', label: 'Check-In & Check-Out', icon: UserCheck },
-        { id: 'attendance', label: 'Night Roll Call', icon: Clock },
+        { id: 'attendance', label: 'Night Roll Call (Biometric)', icon: Clock },
       ]
     },
     {
@@ -782,6 +800,31 @@ export default function HostelPortal({ account, onLogout }) {
         return {
           title: 'Employee Profile',
           subtitle: 'Hostel Administration & Staff Service Record'
+        };
+      case 'take-attendance':
+        return {
+          title: 'Take Hostel Attendance',
+          subtitle: 'Daily student roll call and curfew inspection. Submissions auto-sync to Hostel Admin in real time.'
+        };
+      case 'view-attendance':
+        return {
+          title: 'View Hostel Attendance Console',
+          subtitle: 'Real-time attendance ledger automatically fetched from Warden roll call submissions.'
+        };
+      case 'applicant-details':
+        return {
+          title: 'Hostel Accommodation Applicant Details',
+          subtitle: 'Boarding applications, merit ranks, allotted rooms, and guardian records.'
+        };
+      case 'room-allotment':
+        return {
+          title: 'Room Allotment & Bed Capacity Manager',
+          subtitle: 'Hostel Admin console for bed allocation, vacancy monitoring, and room transfers.'
+        };
+      case 'manage-hostels':
+        return {
+          title: 'Manage Hostel(s)',
+          subtitle: 'Add new hostels, configure bed capacity matrix, and export official returns.'
         };
       case 'gatepasses':
         return {
@@ -862,6 +905,101 @@ export default function HostelPortal({ account, onLogout }) {
         pageSubtitle={hostelHeading.subtitle}
       >
         <div className="hostel-portal-content-wrap">
+          {/* Quick Role Perspective Bar */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: isHostelAdmin ? '#eff6ff' : '#f0fdf4',
+            border: `1px solid ${isHostelAdmin ? '#bfdbfe' : '#bbf7d0'}`,
+            padding: '8px 16px',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
+              <ShieldCheck size={16} color={isHostelAdmin ? '#1d4ed8' : '#15803d'} />
+              <span>
+                Current Active Scope:{' '}
+                <strong style={{ color: isHostelAdmin ? '#1d4ed8' : '#15803d' }}>
+                  {isHostelAdmin ? 'Hostel Admin Role' : 'Warden Role'}
+                </strong>
+                {' · '}
+                <span style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                  {isHostelAdmin
+                    ? 'All 5 Hostel options enabled (Take Attendance, View Attendance, Applicant Details, Room Allotment, Manage Hostels)'
+                    : '1st 3 Hostel options enabled (Take Attendance, View Attendance, Applicant Details) — Last 2 reserved for Hostel Admin'}
+                </span>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const next = isHostelAdmin ? 'warden' : 'hostel_admin';
+                setRolePerspective(next);
+                showToast(`Switched view to ${next === 'hostel_admin' ? 'Hostel Admin' : 'Warden'} role.`);
+              }}
+              style={{
+                background: isHostelAdmin ? '#1d4ed8' : '#16a34a',
+                color: '#fff',
+                border: 'none',
+                padding: '4px 12px',
+                borderRadius: '6px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Switch to {isHostelAdmin ? 'Warden View' : 'Hostel Admin View'}
+            </button>
+          </div>
+
+          {/* TAB: TAKE HOSTEL ATTENDANCE (WARDEN & HOSTEL ADMIN) */}
+          {activeTab === 'take-attendance' && (
+            <TakeHostelAttendance account={account} onNavigateTab={setActiveTab} />
+          )}
+
+          {/* TAB: VIEW HOSTEL ATTENDANCE (AUTO-FETCH TO HOSTEL ADMIN) */}
+          {activeTab === 'view-attendance' && (
+            <ViewHostelAttendance account={account} onNavigateTab={setActiveTab} />
+          )}
+
+          {/* TAB: VIEW APPLICANT DETAILS (WARDEN & HOSTEL ADMIN) */}
+          {activeTab === 'applicant-details' && (
+            <HostelApplicantDetails account={account} />
+          )}
+
+          {/* TAB: ROOM ALLOTMENT (HOSTEL ADMIN ONLY) */}
+          {activeTab === 'room-allotment' && (
+            isHostelAdmin ? (
+              <RoomAllotmentSection account={account} />
+            ) : (
+              <div style={{ padding: '2.5rem', textAlign: 'center', background: '#fff', borderRadius: '10px', border: '1px solid #fee2e2' }}>
+                <ShieldAlert size={36} color="#ef4444" style={{ margin: '0 auto 10px' }} />
+                <h3 style={{ margin: '0 0 6px', color: '#991b1b' }}>Access Restricted to Hostel Admin</h3>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
+                  Room Allotment is exclusively managed by the Hostel Administrator.
+                </p>
+              </div>
+            )
+          )}
+
+          {/* TAB: MANAGE HOSTEL(S) (HOSTEL ADMIN ONLY - IMAGE 2 REPLICA) */}
+          {activeTab === 'manage-hostels' && (
+            isHostelAdmin ? (
+              <ManageHostelsSection account={account} />
+            ) : (
+              <div style={{ padding: '2.5rem', textAlign: 'center', background: '#fff', borderRadius: '10px', border: '1px solid #fee2e2' }}>
+                <ShieldAlert size={36} color="#ef4444" style={{ margin: '0 auto 10px' }} />
+                <h3 style={{ margin: '0 0 6px', color: '#991b1b' }}>Access Restricted to Hostel Admin</h3>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
+                  Manage Hostel(s) infrastructure configuration is exclusively available to Hostel Admin.
+                </p>
+              </div>
+            )
+          )}
+
           {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
           {activeTab === 'campus-connect' && (
             <div style={{ height: 'calc(100vh - 120px)', minHeight: '680px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', marginBottom: '20px' }}>

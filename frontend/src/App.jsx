@@ -54,6 +54,8 @@ import UnifiedFloatingAssistant from './components/Common/UnifiedFloatingAssista
 import MarksManagementModule from './marks/MarksManagementModule.jsx'
 import DigitalAnswerSheetEvaluationSystem from './components/DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx'
 import PublicTimetable from './components/PublicTimetable.jsx'
+import IdCardVerificationView from './components/InternshipCell/IdCardVerificationView.jsx'
+import ApnaCampusSymbol from './components/Branding/ApnaCampusSymbol.jsx'
 import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, findStudentByQuery } from './services/studentStore.js'
 import { getTimeGreeting, getGreetingDisplayName } from './utils/timeGreeting.js'
@@ -380,6 +382,7 @@ function App() {
   const [activationModalOpen, setActivationModalOpen] = useState(false)
   const [activationTokenInput, setActivationTokenInput] = useState('')
   const [showPublicTimetable, setShowPublicTimetable] = useState(false)
+  const [verificationToken, setVerificationToken] = useState('')
 
   useEffect(() => {
     // Session restoration across refreshes
@@ -405,6 +408,20 @@ function App() {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash || ''
       const search = window.location.search || ''
+      const pathname = window.location.pathname || ''
+
+      if (pathname.includes('/verify/id-card/')) {
+        const tok = pathname.split('/verify/id-card/')[1]?.split('/')[0]?.split('?')[0]
+        if (tok) setVerificationToken(tok)
+      } else if (hash.includes('verify/id-card/')) {
+        const tok = hash.split('verify/id-card/')[1]?.split('&')[0]?.split('?')[0]
+        if (tok) setVerificationToken(tok)
+      } else if (search.includes('verify=')) {
+        const params = new URLSearchParams(search)
+        const tok = params.get('verify')
+        if (tok) setVerificationToken(tok)
+      }
+
       if (hash.includes('timetable') || search.includes('timetable')) {
         setShowPublicTimetable(true)
       } else if (hash.includes('activate?token=')) {
@@ -575,6 +592,15 @@ function App() {
           <UniversalWhatsAppLauncher account={account} hideTrigger={true} />
           <ApnaAIChatbot account={account} hideTrigger={true} />
           <UnifiedFloatingAssistant account={account} />
+          {verificationToken && (
+            <IdCardVerificationView
+              token={verificationToken}
+              onClose={() => {
+                setVerificationToken('')
+                clearUrlHash()
+              }}
+            />
+          )}
           {portal}
         </ErrorBoundary>
       )
@@ -587,6 +613,15 @@ function App() {
       <UniversalWhatsAppLauncher account={account} hideTrigger={true} />
       <ApnaAIChatbot account={account} hideTrigger={true} />
       <UnifiedFloatingAssistant account={account} />
+      {verificationToken && (
+        <IdCardVerificationView
+          token={verificationToken}
+          onClose={() => {
+            setVerificationToken('')
+            clearUrlHash()
+          }}
+        />
+      )}
       <main className="erp-split-page">
         {/* Left hero panel (Campus photo at golden hour with dark vignette) */}
         <div className="erp-hero-panel">
@@ -595,7 +630,7 @@ function App() {
             <header className="erp-top-brand-wrapper">
               <div className="erp-top-brand">
                 <div className="erp-logo-box">
-                  <img src="/logo.png" alt="Apna Campus Logo" className="erp-campus-logo" />
+                  <ApnaCampusSymbol size={36} />
                 </div>
                 <div className="erp-brand-titles">
                   <span className="erp-brand-name">APNA CAMPUS</span>

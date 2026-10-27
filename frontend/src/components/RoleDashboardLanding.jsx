@@ -58,6 +58,7 @@ import {
 import '../DashboardHome.css';
 import './RoleDashboardLanding.css';
 import { getGreetingDisplayName } from '../utils/timeGreeting.js';
+import WardenEmployeeProfile from './hostel/WardenEmployeeProfile.jsx';
 
 // DetailRow matching StudentPortal
 function DetailRow({ label, value }) {
@@ -1047,6 +1048,9 @@ export default function RoleDashboardLanding({
   const resolvedKey = roleAliases[rawKey] || rawKey;
   const config = ROLE_CONFIGS[resolvedKey] || ROLE_CONFIGS['super_admin'];
 
+  // Warden Employee Profile toggle state (Matching 2nd Image when 'More info' clicked)
+  const [showWardenProfile, setShowWardenProfile] = useState(false);
+
   // Current live time & date matching Student Dashboard
   const [currentTime, setCurrentTime] = useState(() => new Date());
   useEffect(() => {
@@ -1214,6 +1218,16 @@ export default function RoleDashboardLanding({
   const C3Icon = c3.icon;
   const C4Icon = c4.icon;
 
+  // When warden requests Employee Profile (2nd Image format)
+  if (resolvedKey === 'warden' && showWardenProfile) {
+    return (
+      <WardenEmployeeProfile
+        account={account}
+        onBack={() => setShowWardenProfile(false)}
+      />
+    );
+  }
+
   return (
     <div className="role-dash-wrapper dash">
       <div className="role-dash-container">
@@ -1290,107 +1304,139 @@ export default function RoleDashboardLanding({
               </span>
             </div>
 
-            {/* Profile Sub-Sections Tabs */}
-            <div className="dash-info-tab-pills" role="tablist" aria-label="Officer Profile Navigation">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={profileTab === 'profile'}
-                className={`dash-info-pill ${profileTab === 'profile' ? 'active' : ''}`}
-                onClick={() => setProfileTab('profile')}
-              >
-                {roleKey === 'faculty' ? 'Faculty Profile' : 'Profile'}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={profileTab === 'academic'}
-                className={`dash-info-pill ${profileTab === 'academic' ? 'active' : ''}`}
-                onClick={() => setProfileTab('academic')}
-              >
-                {roleKey === 'faculty' || roleKey === 'hod' ? 'Teaching & Academic' : 'Professional Dossier'}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={profileTab === 'identity'}
-                className={`dash-info-pill ${profileTab === 'identity' ? 'active' : ''}`}
-                onClick={() => setProfileTab('identity')}
-              >
-                Identity &amp; Status
-              </button>
-            </div>
+            {/* When role is Warden: Format strictly like 3rd Image (clean flat rows, no tab pills, and 'More info' button) */}
+            {resolvedKey === 'warden' ? (
+              <>
+                <dl className="dash-info-list">
+                  <DetailRow label="Registration No." value={officer.id || 'WRD-CHIEF-01'} />
+                  <DetailRow label="Name" value={officerDisplayName} />
+                  <DetailRow label="Program" value={officer.designation || 'Chief Resident Warden'} />
+                  <DetailRow label="Batch" value={officer.academicYear || '2023–2027'} />
+                  <DetailRow label="Department" value={officer.department || 'Hostel Administration & Student Housing'} />
+                  <DetailRow label="Section" value={officer.office || 'Sarojini & Gandhi Blocks'} />
+                  <DetailRow label="Email ID" value={officer.email || 'warden@apnacampus.edu.in'} />
+                  <DetailRow label="Mobile No." value={officer.phone || '+91 94370 00120'} />
+                </dl>
 
-            <dl className="dash-info-list">
-              {profileTab === 'profile' && (
-                <>
-                  <DetailRow label={roleKey === 'faculty' ? 'Faculty ID' : 'Officer ID'} value={officer.id} />
-                  <DetailRow label="Employee Code" value={officer.employeeCode || officer.id} />
-                  <DetailRow label="Full Name" value={officerDisplayName} />
-                  <DetailRow label="Designation" value={officer.designation} />
-                  <DetailRow label="Department" value={officer.department} />
-                  <DetailRow label="Specialization" value={officer.specialization || 'Academic Excellence'} />
-                  <DetailRow label="Official Email ID" value={officer.email} />
-                  <DetailRow label="Mobile Number" value={officer.phone} />
-                  <DetailRow label="Employment Type" value={officer.employmentType || 'Full-Time Regular (Permanent)'} />
-                  <DetailRow label="Date of Joining" value={officer.dateOfJoining || '16 Jul 2018'} />
-                  <DetailRow label="Employment Status" value={officer.employmentStatus || 'Active · On Duty'} />
-                  <DetailRow label="Reporting Authority" value={officer.reportingAuthority || 'Principal Secretariat'} />
-                </>
-              )}
+                <button
+                  className="dash-btn dash-btn-primary dash-info-btn"
+                  type="button"
+                  onClick={() => {
+                    if (onNavigateTab) onNavigateTab('profile');
+                    else if (onNavigate) onNavigate('profile');
+                    setShowWardenProfile(true);
+                  }}
+                  title="View complete Warden Employee Profile"
+                >
+                  <span>More info</span>
+                  <ChevronRight size={15} />
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Profile Sub-Sections Tabs */}
+                <div className="dash-info-tab-pills" role="tablist" aria-label="Officer Profile Navigation">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={profileTab === 'profile'}
+                    className={`dash-info-pill ${profileTab === 'profile' ? 'active' : ''}`}
+                    onClick={() => setProfileTab('profile')}
+                  >
+                    {roleKey === 'faculty' ? 'Faculty Profile' : 'Profile'}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={profileTab === 'academic'}
+                    className={`dash-info-pill ${profileTab === 'academic' ? 'active' : ''}`}
+                    onClick={() => setProfileTab('academic')}
+                  >
+                    {roleKey === 'faculty' || roleKey === 'hod' ? 'Teaching & Academic' : 'Professional Dossier'}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={profileTab === 'identity'}
+                    className={`dash-info-pill ${profileTab === 'identity' ? 'active' : ''}`}
+                    onClick={() => setProfileTab('identity')}
+                  >
+                    Identity &amp; Status
+                  </button>
+                </div>
 
-              {profileTab === 'academic' && (
-                <>
-                  <DetailRow label="Highest Qualification" value={officer.qualification || 'Ph.D, M.Tech'} />
-                  <DetailRow label="Teaching Experience" value={officer.experience || '12+ Years'} />
-                  <DetailRow label="Academic Year" value={officer.academicYear || '2026–2027'} />
-                  {officer.assignedSubjects && (
-                    <DetailRow label="Assigned Subjects" value={officer.assignedSubjects} />
+                <dl className="dash-info-list">
+                  {profileTab === 'profile' && (
+                    <>
+                      <DetailRow label={roleKey === 'faculty' ? 'Faculty ID' : 'Officer ID'} value={officer.id} />
+                      <DetailRow label="Employee Code" value={officer.employeeCode || officer.id} />
+                      <DetailRow label="Full Name" value={officerDisplayName} />
+                      <DetailRow label="Designation" value={officer.designation} />
+                      <DetailRow label="Department" value={officer.department} />
+                      <DetailRow label="Specialization" value={officer.specialization || 'Academic Excellence'} />
+                      <DetailRow label="Official Email ID" value={officer.email} />
+                      <DetailRow label="Mobile Number" value={officer.phone} />
+                      <DetailRow label="Employment Type" value={officer.employmentType || 'Full-Time Regular (Permanent)'} />
+                      <DetailRow label="Date of Joining" value={officer.dateOfJoining || '16 Jul 2018'} />
+                      <DetailRow label="Employment Status" value={officer.employmentStatus || 'Active · On Duty'} />
+                      <DetailRow label="Reporting Authority" value={officer.reportingAuthority || 'Principal Secretariat'} />
+                    </>
                   )}
-                  {officer.assignedSemester && (
-                    <DetailRow label="Assigned Semester" value={officer.assignedSemester} />
-                  )}
-                  {officer.assignedSections && (
-                    <DetailRow label="Assigned Sections" value={officer.assignedSections} />
-                  )}
-                  {officer.researchInterests && (
-                    <DetailRow label="Research Interests" value={officer.researchInterests} />
-                  )}
-                  {officer.assignedResponsibilities && (
-                    <DetailRow label="Responsibilities" value={officer.assignedResponsibilities} />
-                  )}
-                  <DetailRow label="Office / Cabin" value={officer.office || 'Academic Block'} />
-                </>
-              )}
 
-              {profileTab === 'identity' && (
-                <>
-                  <DetailRow
-                    label="Employment Status"
-                    value={<span style={{ color: '#059669', fontWeight: 700 }}>● Active · On Duty</span>}
-                  />
-                  <DetailRow
-                    label="Identity Verification"
-                    value={<span style={{ color: '#2563eb', fontWeight: 700 }}>✓ Verified Official</span>}
-                  />
-                  <DetailRow label="Aadhaar ID (Masked)" value={officer.maskedAadhaar || '•••• •••• 9821'} />
-                  <DetailRow label="PAN Card (Masked)" value={officer.maskedPan || '•••••542F'} />
-                  <DetailRow label="Biometric Punch UID" value={officer.biometricId || `BIO-${officer.id}`} />
-                  <DetailRow label="Date of Joining" value={officer.dateOfJoining || '16 Jul 2018'} />
-                  <DetailRow label="Reporting Authority" value={officer.reportingAuthority || 'Principal Secretariat'} />
-                  <DetailRow label="Data Security Level" value="Tier-1 Masked (PII Protected)" />
-                </>
-              )}
-            </dl>
+                  {profileTab === 'academic' && (
+                    <>
+                      <DetailRow label="Highest Qualification" value={officer.qualification || 'Ph.D, M.Tech'} />
+                      <DetailRow label="Teaching Experience" value={officer.experience || '12+ Years'} />
+                      <DetailRow label="Academic Year" value={officer.academicYear || '2026–2027'} />
+                      {officer.assignedSubjects && (
+                        <DetailRow label="Assigned Subjects" value={officer.assignedSubjects} />
+                      )}
+                      {officer.assignedSemester && (
+                        <DetailRow label="Assigned Semester" value={officer.assignedSemester} />
+                      )}
+                      {officer.assignedSections && (
+                        <DetailRow label="Assigned Sections" value={officer.assignedSections} />
+                      )}
+                      {officer.researchInterests && (
+                        <DetailRow label="Research Interests" value={officer.researchInterests} />
+                      )}
+                      {officer.assignedResponsibilities && (
+                        <DetailRow label="Responsibilities" value={officer.assignedResponsibilities} />
+                      )}
+                      <DetailRow label="Office / Cabin" value={officer.office || 'Academic Block'} />
+                    </>
+                  )}
 
-            <button
-              className="dash-btn dash-btn-primary dash-info-btn"
-              type="button"
-              onClick={() => setIsDossierModalOpen(true)}
-            >
-              <span>View Institutional Dossier</span>
-              <ChevronRight size={15} />
-            </button>
+                  {profileTab === 'identity' && (
+                    <>
+                      <DetailRow
+                        label="Employment Status"
+                        value={<span style={{ color: '#059669', fontWeight: 700 }}>● Active · On Duty</span>}
+                      />
+                      <DetailRow
+                        label="Identity Verification"
+                        value={<span style={{ color: '#2563eb', fontWeight: 700 }}>✓ Verified Official</span>}
+                      />
+                      <DetailRow label="Aadhaar ID (Masked)" value={officer.maskedAadhaar || '•••• •••• 9821'} />
+                      <DetailRow label="PAN Card (Masked)" value={officer.maskedPan || '•••••542F'} />
+                      <DetailRow label="Biometric Punch UID" value={officer.biometricId || `BIO-${officer.id}`} />
+                      <DetailRow label="Date of Joining" value={officer.dateOfJoining || '16 Jul 2018'} />
+                      <DetailRow label="Reporting Authority" value={officer.reportingAuthority || 'Principal Secretariat'} />
+                      <DetailRow label="Data Security Level" value="Tier-1 Masked (PII Protected)" />
+                    </>
+                  )}
+                </dl>
+
+                <button
+                  className="dash-btn dash-btn-primary dash-info-btn"
+                  type="button"
+                  onClick={() => setIsDossierModalOpen(true)}
+                >
+                  <span>View Institutional Dossier</span>
+                  <ChevronRight size={15} />
+                </button>
+              </>
+            )}
           </aside>
 
           {/* RIGHT: 2x2 Stats Grid (Matching Student 2x2 Stats Grid) */}

@@ -44,6 +44,7 @@ import {
   Layers,
   Send,
   HelpCircle,
+  FileCheck,
 } from 'lucide-react';
 import './PlacementPortal.css';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
@@ -51,6 +52,8 @@ import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import placementStore from '../services/placementStore.js';
 import { getAllStudents } from '../services/studentStore.js';
+import InternshipCellManagement from './InternshipCell/InternshipCellManagement.jsx';
+import BonafideReviewQueue from './Bonafide/BonafideReviewQueue.jsx';
 
 export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -116,7 +119,9 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
     {
       title: 'TRAINING & INTERNSHIPS',
       items: [
-        { id: 'internships', label: 'Internship Management', icon: Briefcase },
+        { id: 'internship-cell', label: 'Internship Cell & ID Cards', icon: ShieldCheck },
+        { id: 'bonafide-verification', label: 'Bonafide Verification', icon: FileCheck },
+        { id: 'internships', label: 'Internship Drives & Ops', icon: Briefcase },
         { id: 'training', label: 'Training & Skill Development', icon: BookOpen },
       ],
     },
@@ -2027,6 +2032,19 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
                     );
                   })()}
                 </div>
+              </div>
+            )}
+
+            {/* ═════════════════════════════════════════════════════════════
+                INTERNSHIP CELL & AUTOMATIC ID CARD GENERATION
+                ═════════════════════════════════════════════════════════════ */}
+            {activeTab === 'internship-cell' && (
+              <InternshipCellManagement account={account} />
+            )}
+
+            {activeTab === 'bonafide-verification' && (
+              <div className="erp-panel" style={{ padding: 0, border: 'none', background: 'transparent' }}>
+                <BonafideReviewQueue role="placement" account={account} />
               </div>
             )}
 

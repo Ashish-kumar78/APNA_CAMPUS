@@ -1,0 +1,363 @@
+/* =====================================================================
+   WARDEN EMPLOYEE PROFILE — 2ND IMAGE REPLICA STYLES
+   ===================================================================== */
+
+.emp-profile-wrapper {
+  padding: 1.5rem;
+  max-width: 1440px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #334155;
+  background: #f8fafc;
+  min-height: calc(100vh - 120px);
+}
+
+/* Header Bar */
+.emp-profile-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.emp-profile-title-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.emp-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.emp-back-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.emp-profile-heading {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.emp-generate-pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.3);
+  transition: all 0.18s ease;
+}
+
+.emp-generate-pdf-btn:hover {
+  background: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
+  transform: translateY(-1px);
+}
+
+/* Main Two-Column Layout */
+.emp-profile-grid {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+/* Left Sidebar Summary Card */
+.emp-summary-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.5rem 1.25rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.emp-photo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.emp-photo-ring {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  border: 3px solid #0ea5e9;
+  padding: 3px;
+  background: #ffffff;
+}
+
+.emp-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.emp-photo-edit-badge {
+  position: absolute;
+  bottom: 0px;
+  right: 2px;
+  width: 32px;
+  height: 32px;
+  background: #0284c7;
+  color: #ffffff;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.emp-photo-edit-badge:hover {
+  transform: scale(1.1);
+  background: #0369a1;
+}
+
+.emp-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.emp-summary-table td {
+  padding: 0.55rem 0.25rem;
+  font-size: 0.83rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+
+.emp-summary-label {
+  color: #64748b;
+  font-weight: 600;
+  width: 42%;
+}
+
+.emp-summary-val {
+  color: #1e293b;
+  font-weight: 600;
+  width: 58%;
+  word-break: break-word;
+}
+
+.emp-status-pill {
+  display: inline-block;
+  background: #10b981;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 4px;
+}
+
+/* Right Tabs Section */
+.emp-tabs-section {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tabs Bar */
+.emp-tabs-nav {
+  display: flex;
+  gap: 2px;
+  border-bottom: none;
+  background: transparent;
+  overflow-x: auto;
+}
+
+.emp-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0.65rem 1.15rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.emp-tab-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.emp-tab-btn.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+  font-weight: 700;
+}
+
+/* Tab Panel Card */
+.emp-tab-panel {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0 8px 8px 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.emp-tab-inner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.emp-tab-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.emp-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.emp-edit-btn:hover {
+  background: #0369a1;
+}
+
+/* Personal Details Grid (Matching 2nd Image) */
+.emp-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 0.85rem;
+  column-gap: 2rem;
+}
+
+.emp-detail-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px dashed #e2e8f0;
+  font-size: 0.86rem;
+}
+
+.emp-detail-row.full-width {
+  grid-column: span 2;
+}
+
+.emp-detail-label {
+  color: #64748b;
+  font-weight: 600;
+  width: 45%;
+}
+
+.emp-detail-value {
+  color: #0f172a;
+  font-weight: 600;
+  width: 55%;
+  word-break: break-word;
+}
+
+/* Document cards */
+.emp-doc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.emp-doc-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.emp-doc-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.emp-doc-meta {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.emp-doc-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0284c7;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.emp-doc-action-btn:hover {
+  background: #f0f9ff;
+  border-color: #0284c7;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .emp-profile-grid {
+    grid-template-columns: 1fr;
+  }
+  .emp-details-grid {
+    grid-template-columns: 1fr;
+  }
+  .emp-detail-row.full-width {
+    grid-column: span 1;
+  }
+}

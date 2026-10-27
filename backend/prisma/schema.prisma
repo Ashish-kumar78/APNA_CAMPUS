@@ -19,6 +19,7 @@ enum Role {
   ACCOUNTS
   LIBRARY
   PLACEMENT
+  SCHOLARSHIP
   TRANSPORT
   HOSTEL
   STAFF
@@ -239,6 +240,8 @@ model Student {
   programmeId        String?
   programme          Programme?         @relation(fields: [programmeId], references: [id], onDelete: SetNull)
   enrollments        StudentEnrollment[]
+  internshipCards    InternshipIdCard[]
+  bonafideApplications BonafideApplication[]
 
   @@index([rollNumber])
   @@index([studentId])
@@ -1462,5 +1465,220 @@ model TimetableConflict {
 
   @@index([timetableId])
 }
+
+// ==============================================================================
+// 3. INTERNSHIP CELL & AUTOMATIC ID CARD GENERATION MODELS
+// ==============================================================================
+
+enum InternshipCardStatus {
+  PENDING
+  ISSUED
+  EXPIRED
+  REVOKED
+}
+
+model InternshipIdCard {
+  id                 String               @id @default(cuid())
+  cardNumber         String               @unique // e.g. "AC-INT-2026-0001"
+  studentId          String
+  student            Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  // Snapshot/verified details at time of issuance
+  studentName        String
+  registrationNo     String               // Student's roll number or studentId
+  course             String               // e.g. "B.Tech Computer Science & Engineering"
+  department         String               // e.g. "Computer Science & Engineering"
+  batch              String               // e.g. "BTECH 2028-P"
+  academicSession    String               @default("2026-2027 (SIP)")
+  company            String               @default("Central Tool Room and Training Center")
+  designation        String?              @default("Industrial Trainee / Intern")
+  mobile             String?
+  photoUrl           String?              // Base64 Data URL, SVG, or public asset path
+  
+  // Dates and validity
+  issueDate          DateTime             @default(now())
+  expiryDate         DateTime?
+  status             InternshipCardStatus @default(ISSUED)
+  
+  // Issuance metadata
+  issuedBy           String               @default("Internship Cell Coordinator")
+  issuedByUserId     String?
+  
+  // Verification security
+  verificationToken  String               @unique @default(cuid())
+  qrCodeDataUrl      String?              @db.Text
+  
+  // Revocation details
+  revokedAt          DateTime?
+  revokedBy          String?
+  revocationReason   String?              @db.Text
+  
+  // Renewal & Reissue History
+  version            Int                  @default(1)
+  isCurrent          Boolean              @default(true)
+  previousCardId     String?
+  reissueReason      String?
+  history            Json?                @default("[]")
+  
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([studentId])
+  @@index([registrationNo])
+  @@index([cardNumber])
+  @@index([verificationToken])
+  @@index([status])
+}
+
+// ==============================================================================
+// 4. BONAFIDE CERTIFICATE MANAGEMENT SYSTEM MODELS
+// ==============================================================================
+
+enum BonafidePurpose {
+  INTERNSHIP
+  SCHOLARSHIP_HOSTELLER
+  STUDY_LOAN
+  EXTERNAL_EVENT
+}
+
+enum BonafideStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  CHANGES_REQUESTED
+  REJECTED
+  APPROVED
+  CERTIFICATE_ISSUED
+  WITHDRAWN
+}
+
+enum BonafideStage {
+  STUDENT_SUBMISSION
+  PLACEMENT_VERIFICATION
+  SCHOLARSHIP_INITIAL_VERIFICATION
+  PRINCIPAL_APPROVAL
+  SCHOLARSHIP_FINAL_APPROVAL
+  COMPLETED
+}
+
+model BonafideApplication {
+  id                     String           @id @default(cuid())
+  applicationNumber      String           @unique // e.g. "GIFT-BNF-2026-0001"
+  studentId              String
+  student                Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentRoll            String
+  studentName            String
+  purpose                BonafidePurpose
+  purposeTitle           String
+  academicYear           String           @default("2026-27")
+  status                 BonafideStatus   @default(SUBMITTED)
+  currentStage           BonafideStage    @default(STUDENT_SUBMISSION)
+  currentStageLabel      String           @default("Submitted by Student")
+  assignedRole           String           // "PLACEMENT", "SCHOLARSHIP", "PRINCIPAL"
+  isHostellerVerified    Boolean          @default(false)
+  formData               Json             // Purpose-specific fields
+  supportingDocs         Json?            @default("[]")
+  submissionDate         DateTime         @default(now())
+  lastUpdated            DateTime         @updatedAt
+  currentRevision        Int              @default(1)
+  
+  // Rejection / Correction fields
+  rejectionReason        String?          @db.Text
+  rejectionCategory      String?
+  correctionInstructions String?          @db.Text
+  
+  // Withdrawal
+  withdrawnAt            DateTime?
+  withdrawalReason       String?
+  
+  // Relations
+  certificate            BonafideCertificate?
+  revisions              BonafideRevision[]
+  reviews                BonafideReview[]
+  auditLogs              BonafideAuditLog[]
+
+  @@index([studentId])
+  @@index([studentRoll])
+  @@index([purpose])
+  @@index([status])
+  @@index([currentStage])
+  @@index([assignedRole])
+  @@map("bonafide_applications")
+}
+
+model BonafideRevision {
+  id              String              @id @default(cuid())
+  applicationId   String
+  application     BonafideApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  revisionNumber  Int
+  formData        Json
+  supportingDocs  Json?               @default("[]")
+  submittedAt     DateTime            @default(now())
+  notes           String?             @db.Text
+
+  @@index([applicationId])
+  @@map("bonafide_revisions")
+}
+
+model BonafideReview {
+  id                 String              @id @default(cuid())
+  applicationId      String
+  application        BonafideApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  stage              BonafideStage
+  stageName          String
+  assignedRole       String
+  reviewerId         String?
+  reviewerName       String
+  reviewerRole       String
+  action             String              // "APPROVED", "REJECTED", "CHANGES_REQUESTED"
+  status             String
+  remarks            String?             @db.Text
+  rejectionCategory  String?
+  reviewedAt         DateTime            @default(now())
+
+  @@index([applicationId])
+  @@index([stage])
+  @@map("bonafide_reviews")
+}
+
+model BonafideCertificate {
+  id                String              @id @default(cuid())
+  certificateNumber String              @unique // e.g. "GIFT/BONAFIDE/2026/0001"
+  applicationId     String              @unique
+  application       BonafideApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  studentId         String
+  purpose           BonafidePurpose
+  issueDate         DateTime            @default(now())
+  validUntil        DateTime?
+  certificateTitle  String
+  recipient         String?
+  verificationToken String              @unique @default(cuid())
+  qrCodeDataUrl     String?             @db.Text
+  issuedBy          String              @default("Registrar / Authorized Signatory")
+  issuedByRole      String              @default("REGISTRAR")
+  pdfUrl            String?
+  meta              Json?
+
+  @@index([applicationId])
+  @@index([verificationToken])
+  @@map("bonafide_certificates")
+}
+
+model BonafideAuditLog {
+  id               String              @id @default(cuid())
+  applicationId    String
+  application      BonafideApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  action           String
+  performedBy      String
+  performedByRole  String
+  previousStatus   String?
+  newStatus        String?
+  remarks          String?             @db.Text
+  timestamp        DateTime            @default(now())
+
+  @@index([applicationId])
+  @@map("bonafide_audit_logs")
+}
+
 
 

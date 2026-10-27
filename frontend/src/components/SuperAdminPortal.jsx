@@ -882,15 +882,8 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
       items: [
         { label: 'Integrations', icon: Plug, id: 'integrations' },
         { label: 'Backup & Recovery', icon: Database, id: 'backup' },
-        { label: 'Timetable Manager', icon: CalendarDays, id: 'timetable' },
         { label: 'Report Generation', icon: FileSpreadsheet, id: 'report-generation' },
         { label: 'System Settings', icon: Settings, id: 'settings' },
-      ]
-    },
-    {
-      title: 'COMMUNICATION',
-      items: [
-        { label: 'Campus Connect', icon: MessageSquare, id: 'campus-connect' },
       ]
     }
   ];
@@ -909,10 +902,8 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
       approvals: { title: 'Pending Approvals', subtitle: 'Cross-portal escalated approval queue' },
       integrations: { title: 'Integrations', subtitle: 'Third-party API and service connectivity management' },
       backup: { title: 'Backup & Recovery', subtitle: 'Data backup schedules and disaster recovery status' },
-      timetable: { title: 'Timetable Manager', subtitle: 'Institutional academic timetable administration' },
       'report-generation': { title: 'Report Generation', subtitle: 'Institutional analytics and export suite' },
       settings: { title: 'System Settings', subtitle: 'Global ERP configuration and preferences' },
-      'campus-connect': { title: 'Campus Connect', subtitle: 'Institutional messaging and communication hub' },
     };
     return tabLabels[activeTab] || { title: activeTab.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), subtitle: '' };
   })();

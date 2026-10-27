@@ -35,6 +35,7 @@ import {
   Printer
 } from 'lucide-react';
 import './AccountsPortal.css';
+import './AccountsModules/AccountsPortalUtilities.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 
 // Import Master Data & Initial State
@@ -429,44 +430,48 @@ export default function AccountsPortal({ account, onLogout }) {
           subtitle: 'Institutional bursar operations, fee realizations, reconciliations, and executive fiscal oversight.'
         };
       case 'fee_management':
+        return {
+          title: 'Student Fee Management',
+          subtitle: 'Institutional fee oversight, student cohort demand tracking, collection metrics, and batch actions.'
+        };
       case 'fee_ledger':
         return {
-          title: 'Student Fee Directory & 360° Financial Ledger',
-          subtitle: 'Searchable database of student fee demands, scholarship adjustments, installment schedules, and dues.'
+          title: 'Student Fee Ledger',
+          subtitle: 'Searchable database of student fee ledgers, payment histories, adjustments, and receipts.'
         };
       case 'fee_structure':
         return {
-          title: 'Academic Fee Structures & Program Tariffs',
+          title: 'Fee Structure Configuration',
           subtitle: 'Autonomous tuition fees, lab dues, development funds, and installment policies.'
         };
       case 'fee_collection':
         return {
-          title: 'Real-Time Fee Collection & Counter Counterpart',
+          title: 'Fee Collection Counter',
           subtitle: 'Instant student receipting, payment channel realization, and printable fee receipts.'
         };
       case 'fee_outstanding':
         return {
-          title: 'Outstanding Dues Register & Aging Defaulters',
+          title: 'Outstanding Dues & Defaulters',
           subtitle: 'Active student arrears classified by aging brackets with contact records and follow-ups.'
         };
       case 'fee_installments':
         return {
-          title: 'Installment Schedules & Payment Plans',
+          title: 'Installment Management',
           subtitle: 'Configured semester installment milestones, upcoming due dates, and partial balances.'
         };
       case 'fee_scholarships':
         return {
-          title: 'Scholarships, Concessions & Tuition Fee Waivers',
+          title: 'Scholarships & Concessions',
           subtitle: 'PRERANA, National Scholarship Portal (NSP), merit aid, and institutional fee waivers.'
         };
       case 'fee_refunds':
         return {
-          title: 'Refund & Security Deposit Reversals',
+          title: 'Refund Management',
           subtitle: 'Hostel caution money refunds, semester overpayment adjustments, and approved reversals.'
         };
       case 'fee_clearance':
         return {
-          title: 'Student Financial Clearance & No-Dues Console',
+          title: 'Student Financial Clearance',
           subtitle: 'Semester exam and degree issuance financial clearance review without blocking academic rights.'
         };
       case 'payroll_staff':
@@ -559,6 +564,7 @@ export default function AccountsPortal({ account, onLogout }) {
       pageTitle={headerInfo.title}
       pageSubtitle={headerInfo.subtitle}
     >
+      <div className="accounts-content-root">
       <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
         {/* Section A: Dashboard */}
         {activeTab === 'dashboard' && (
@@ -586,7 +592,10 @@ export default function AccountsPortal({ account, onLogout }) {
             onUpdateStudentLedgers={setStudentLedgers}
             onUpdateTransactions={setTransactions}
             onAddAuditLog={handleAddAuditLog}
+            activeTab={activeTab}
+            onNavigateTab={(tab) => setActiveTab(tab)}
             initialSubtab={
+              activeTab === 'fee_management' ? 'management' :
               activeTab === 'fee_structure' || activeTab === 'structure' ? 'structure' :
               activeTab === 'fee_collection' ? 'collection' :
               activeTab === 'fee_outstanding' ? 'outstanding' :
@@ -739,6 +748,7 @@ export default function AccountsPortal({ account, onLogout }) {
             }
           />
         )}
+      </div>
       </div>
     </AppLayout>
   );

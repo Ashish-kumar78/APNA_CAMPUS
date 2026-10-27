@@ -22,6 +22,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ManagementModule } from './management/management.module';
 import { PrincipalModule } from './principal/principal.module';
 import { TimetablesModule } from './timetables/timetables.module';
+import { InternshipModule } from './internship/internship.module';
+import { BonafideModule } from './bonafide/bonafide.module';
 import { DocumentWorkflowModule } from './document-workflow/document-workflow.module';
 import { AppController } from './app.controller';
 
@@ -60,8 +62,10 @@ import * as path from 'path';
     ManagementModule,
     PrincipalModule,
     TimetablesModule,
+    InternshipModule,
+    BonafideModule,
     DocumentWorkflowModule,
   ],
   controllers: [AppController],
 })
-export class AppModule {}
+export class AppModule { }

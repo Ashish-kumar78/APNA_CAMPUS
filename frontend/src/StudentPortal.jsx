@@ -40,6 +40,7 @@ import {
   MapPin,
   Award,
   Maximize2,
+  FileCheck,
 } from 'lucide-react'
 import './StudentPortal.css'
 import './DashboardHome.css'
@@ -49,6 +50,7 @@ import AcademicsPage from './pages/AcademicsPage.jsx'
 import ExaminationPage from './pages/ExaminationPage.jsx'
 import FeedbackPage from './pages/FeedbackPage.jsx'
 import InternshipPage from './pages/InternshipPage.jsx'
+import ErrorBoundary from './components/Common/ErrorBoundary.jsx'
 import LibraryPage from './pages/LibraryPage.jsx'
 import OnlineExamPage from './pages/OnlineExamPage.jsx'
 import PlacementPage from './pages/PlacementPage.jsx'
@@ -144,6 +146,13 @@ const studentNavSections = [
     items: [
       { label: 'Anonymous Complaints', icon: ShieldCheck, page: 'anonymous-complaints' },
       { label: 'Feedback/Appraisal/Survey', icon: ChatBubbleIcon, page: 'feedback' },
+    ]
+  },
+  {
+    title: 'SCHOLARSHIP AND BONAFIDE CERTIFICATES',
+    items: [
+      { label: 'Apply Scholarship', icon: Award, page: 'apply-scholarship' },
+      { label: 'Apply Bonafide Certificate', icon: FileCheck, page: 'bonafide' },
     ]
   }
 ];
@@ -255,6 +264,12 @@ function StudentPortal({ account, onLogout }) {
       }
       if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal' || hash === 'grievance' || hash === 'grievance-redressal') {
         return { page: 'feedback', link: 'Feedback/Appraisal/Survey', tab: '', quickView: '' };
+      }
+      if (hash === 'scholarship' || hash === 'apply-scholarship') {
+        return { page: 'apply-scholarship', link: 'Apply Scholarship', tab: '', quickView: '' };
+      }
+      if (hash === 'bonafide' || hash === 'apply-bonafide' || hash === 'bonafide-certificate') {
+        return { page: 'bonafide', link: 'Apply Bonafide Certificate', tab: '', quickView: '' };
       }
       const match = navigation.find((n) => n.page === hash);
       if (match) return { page: hash, link: match.label, tab: '', quickView: '' };
@@ -729,6 +744,12 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'scholarship' && <ScholarshipPage account={account} />}
               {activePage === 'internship' && <InternshipPage account={account} />}
               {activePage === 'online-exam' && <OnlineExamPage />}
+              {(activePage === 'apply-scholarship' || activePage === 'scholarship') && (
+                <ScholarshipApplyPage account={account} onNavigate={handleStudentTabChange} />
+              )}
+              {(activePage === 'bonafide' || activePage === 'apply-bonafide') && (
+                <BonafidePage account={account} />
+              )}
               {activePage === 'placement' && <PlacementPage />}
               {activePage === 'feedback' && (
                 <FeedbackPage

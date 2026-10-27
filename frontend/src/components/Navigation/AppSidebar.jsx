@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ShieldCheck, ChevronDown, ChevronRight } from 'lucide-react';
+import ApnaCampusSymbol from '../Branding/ApnaCampusSymbol';
 
 export default function AppSidebar({
   portalName = 'Apna Campus',
@@ -80,7 +81,7 @@ export default function AppSidebar({
         {/* Sidebar Brand Header */}
         <div className="apna-sidebar-header">
           <div className="apna-sidebar-logo-frame">
-            <img src="/logo.png" alt="Apna Campus Logo" className="apna-sidebar-logo" />
+            <ApnaCampusSymbol size={32} />
           </div>
           <div className="apna-sidebar-brand-text">
             <span className="apna-sidebar-title">{portalName}</span>

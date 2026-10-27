@@ -136,7 +136,6 @@ const studentNavSections = [
     items: [
       { label: 'Hostel Residence', icon: Building2, page: 'hostel' },
       { label: 'Library', icon: LibraryBig, page: 'library' },
-      { label: 'Scholarships & Aid', icon: Award, page: 'scholarship' },
       { label: 'Self Development & Placement', icon: TrendingUp, page: 'placement' },
       { label: 'Internship', icon: Briefcase, page: 'internship' },
     ]

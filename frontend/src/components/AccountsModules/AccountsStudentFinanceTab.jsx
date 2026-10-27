@@ -23,32 +23,44 @@ import {
   IndianRupee,
   FileText,
   Award,
-  DollarSign
+  DollarSign,
+  GraduationCap,
+  TrendingUp,
+  Send,
+  ExternalLink,
+  ChevronRight
 } from 'lucide-react';
+import './AccountsStudentFinanceTab.css';
 
 export default function AccountsStudentFinanceTab({
-  feeStructures,
-  studentLedgers,
-  transactions,
+  feeStructures = [],
+  studentLedgers = [],
+  transactions = [],
   onUpdateFeeStructures,
   onUpdateStudentLedgers,
   onUpdateTransactions,
   onAddAuditLog,
-  initialSubtab = 'ledger'
+  initialSubtab = 'ledger',
+  activeTab,
+  onNavigateTab
 }) {
   const [selectedSubtab, setSelectedSubtab] = useState(initialSubtab);
   const [searchTerm, setSearchTerm] = useState('');
   const [deptFilter, setDeptFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
+  // Synchronize active subtab whenever parent's activeTab / initialSubtab changes
   useEffect(() => {
     if (initialSubtab) {
       setSelectedSubtab(initialSubtab);
     }
   }, [initialSubtab]);
 
-  // Selected Student for 360° Financial Profile
+  // Selected Student for 360° Financial Profile Modal
   const [selectedProfileStudent, setSelectedProfileStudent] = useState(null);
+
+  // Selected Student for No-Dues Certificate Modal
+  const [issuedCertificateStudent, setIssuedCertificateStudent] = useState(null);
 
   // Refund Requests State
   const [refundRequests, setRefundRequests] = useState([
@@ -136,6 +148,14 @@ export default function AccountsStudentFinanceTab({
     dueDate: '15-Nov-2026'
   });
 
+  // Safe navigation handler: switches local view and informs parent sidebar router if available
+  const navigateToPage = (subtabName, portalTabId) => {
+    setSelectedSubtab(subtabName);
+    if (onNavigateTab && portalTabId) {
+      onNavigateTab(portalTabId);
+    }
+  };
+
   // Filtered Ledgers
   const filteredLedgers = studentLedgers.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -150,6 +170,15 @@ export default function AccountsStudentFinanceTab({
 
     return matchesSearch && matchesDept && matchesStatus;
   });
+
+  // Calculated aggregate metrics
+  const totalAssessedAll = studentLedgers.reduce((sum, s) => sum + (s.totalAssessed || 0), 0);
+  const totalPaidAll = studentLedgers.reduce((sum, s) => sum + (s.totalPaid || 0), 0);
+  const totalOutstandingAll = studentLedgers.reduce((sum, s) => sum + (s.outstandingBalance || 0), 0);
+  const totalConcessionsAll = studentLedgers.reduce((sum, s) => sum + (s.concessions || 0), 0);
+  const realizationRate = totalAssessedAll > 0 ? ((totalPaidAll / totalAssessedAll) * 100).toFixed(1) : '0.0';
+  const defaultersCount = studentLedgers.filter(s => s.outstandingBalance > 0).length;
+  const clearedCount = studentLedgers.filter(s => s.outstandingBalance === 0).length;
 
   // Handle Recording New Fee Payment
   const handleRecordPaymentSubmit = (e) => {
@@ -178,10 +207,8 @@ export default function AccountsStudentFinanceTab({
       accountOfficer: 'Mr. S. K. Roy'
     };
 
-    // Update transactions list
     onUpdateTransactions([newTxn, ...transactions]);
 
-    // Recalculate student ledger outstanding balance
     const updatedLedgers = studentLedgers.map(s => {
       if (s.studentId === paymentForm.studentId) {
         const newPaid = s.totalPaid + payAmt;
@@ -207,7 +234,6 @@ export default function AccountsStudentFinanceTab({
       details: `Mode: ${paymentForm.mode}, Ref: ${paymentForm.reference}. Balance updated.`
     });
 
-    // Display receipt immediately
     setPrintableReceipt({
       ...newTxn,
       studentDetails: studentLedgers.find(s => s.studentId === paymentForm.studentId)
@@ -273,6 +299,34 @@ export default function AccountsStudentFinanceTab({
     document.body.removeChild(link);
   };
 
+  const handleExportFullLedgerCSV = () => {
+    const headers = ['Student ID', 'Name', 'Department', 'Course', 'Semester', 'Total Assessed', 'Concessions', 'Total Paid', 'Outstanding Balance', 'Payment Status', 'Clearance Status', 'Last Payment Date', 'Receipt Ref'];
+    const rows = studentLedgers.map(s => [
+      s.studentId,
+      `"${s.name}"`,
+      `"${s.department}"`,
+      s.course || 'B.Tech',
+      s.semester,
+      s.totalAssessed,
+      s.concessions || 0,
+      s.totalPaid,
+      s.outstandingBalance,
+      `"${s.paymentStatus}"`,
+      `"${s.clearanceStatus}"`,
+      s.lastPaymentDate || '—',
+      s.receiptNo || '—'
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Institutional_Student_Fee_Ledger_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleGrantScholarshipSubmit = (e) => {
     e.preventDefault();
     const grantAmt = Number(scholarshipForm.amount) || 0;
@@ -324,6 +378,21 @@ export default function AccountsStudentFinanceTab({
     });
   };
 
+  const handleRejectRefund = (refundId) => {
+    setRefundRequests(prev => prev.map(r => {
+      if (r.id === refundId) {
+        return { ...r, status: 'Rejected' };
+      }
+      return r;
+    }));
+
+    onAddAuditLog({
+      actionType: 'REFUND_APPLICATION_REJECTED',
+      target: refundId,
+      details: 'Claim rejected by Finance Directorate. Non-eligible payment adjustment.'
+    });
+  };
+
   const handleProcessRefund = (refund) => {
     setRefundRequests(prev => prev.map(r => {
       if (r.id === refund.id) {
@@ -353,126 +422,148 @@ export default function AccountsStudentFinanceTab({
   };
 
   return (
-    <div className="accounts-module-wrap">
-      {/* Subtab Navigation Pills */}
-      <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs flex items-center justify-between flex-wrap gap-2 no-print">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            onClick={() => setSelectedSubtab('ledger')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              selectedSubtab === 'ledger' ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            Student Fee Ledgers ({studentLedgers.length})
-          </button>
-          <button
-            onClick={() => setSelectedSubtab('collection')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              selectedSubtab === 'collection' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            Fee Collection Counter
-          </button>
-          <button
-            onClick={() => setSelectedSubtab('structure')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              selectedSubtab === 'structure' ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            Fee Structures ({feeStructures.length})
-          </button>
-          <button
-            onClick={() => setSelectedSubtab('outstanding')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              selectedSubtab === 'outstanding' ? 'bg-rose-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            Outstanding Dues
-          </button>
-          <button
-            onClick={() => setSelectedSubtab('installments')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              selectedSubtab === 'installments' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            Installment Plans
-          </button>
-          <button
-            onClick={() => setSelectedSubtab('scholarships')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              selectedSubtab === 'scholarships' ? 'bg-amber-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            Scholarships &amp; Waivers
-          </button>
-          <button
-            onClick={() => setSelectedSubtab('refunds')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              selectedSubtab === 'refunds' ? 'bg-teal-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            Refunds ({refundRequests.filter(r => r.status === 'Pending Approval').length})
-          </button>
-          <button
-            onClick={() => setSelectedSubtab('clearance')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              selectedSubtab === 'clearance' ? 'bg-purple-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            No-Dues Clearance
-          </button>
-        </div>
+    <div className="asf-wrap">
+      {/* =========================================================================
+          PAGE 1: STUDENT FEE MANAGEMENT
+          ========================================================================= */}
+      {selectedSubtab === 'management' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Executive Summary Cards */}
+          <div className="asf-kpi-grid">
+            <div className="asf-kpi-card">
+              <div className="asf-kpi-header">
+                <span className="asf-kpi-title">Total Invoiced Demand</span>
+                <Layers size={16} color="#64748b" />
+              </div>
+              <div className="asf-kpi-val">₹{(totalAssessedAll / 100000).toFixed(2)} L</div>
+              <div className="asf-kpi-sub">
+                <strong>{studentLedgers.length}</strong> Enrolled Students
+              </div>
+            </div>
 
-        <div className="flex items-center gap-2">
-          {selectedSubtab === 'outstanding' && (
-            <button
-              onClick={handleExportDefaultersCSV}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1.5 shadow-xs"
-            >
-              <Download size={13} /> Export Defaulters CSV
-            </button>
-          )}
-          {selectedSubtab === 'structure' && (
-            <button
-              onClick={() => setIsCreateStructureOpen(true)}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs flex items-center gap-1.5 shadow-xs"
-            >
-              <PlusCircle size={14} /> Add Fee Structure
-            </button>
-          )}
-          {selectedSubtab === 'scholarships' && (
-            <button
-              onClick={() => setIsGrantScholarshipOpen(true)}
-              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs flex items-center gap-1.5 shadow-xs"
-            >
-              <PlusCircle size={14} /> Grant Concession / Aid
-            </button>
-          )}
-        </div>
-      </div>
+            <div className="asf-kpi-card">
+              <div className="asf-kpi-header">
+                <span className="asf-kpi-title">Fee Realization</span>
+                <TrendingUp size={16} color="#059669" />
+              </div>
+              <div className="asf-kpi-val" style={{ color: '#059669' }}>
+                ₹{(totalPaidAll / 100000).toFixed(2)} L
+              </div>
+              <div className="asf-kpi-sub" style={{ color: '#059669', fontWeight: 650 }}>
+                {realizationRate}% Overall Realization
+              </div>
+            </div>
 
-      {/* Subtab 1: Student Fee Ledgers */}
-      {selectedSubtab === 'ledger' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
-            <div className="relative flex-1 w-full">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div className="asf-kpi-card">
+              <div className="asf-kpi-header">
+                <span className="asf-kpi-title">Outstanding Arrears</span>
+                <AlertTriangle size={16} color="#e11d48" />
+              </div>
+              <div className="asf-kpi-val" style={{ color: '#e11d48' }}>
+                ₹{(totalOutstandingAll / 100000).toFixed(2)} L
+              </div>
+              <div className="asf-kpi-sub" style={{ color: '#e11d48', fontWeight: 600 }}>
+                {defaultersCount} Students with Dues
+              </div>
+            </div>
+
+            <div className="asf-kpi-card">
+              <div className="asf-kpi-header">
+                <span className="asf-kpi-title">Fee Concessions</span>
+                <Award size={16} color="#d97706" />
+              </div>
+              <div className="asf-kpi-val" style={{ color: '#d97706' }}>
+                ₹{(totalConcessionsAll / 100000).toFixed(2)} L
+              </div>
+              <div className="asf-kpi-sub">
+                Institutional &amp; Merit Aid
+              </div>
+            </div>
+          </div>
+
+          {/* Departmental Realization Breakdown Panel */}
+          <div className="asf-panel">
+            <div className="asf-panel-header">
+              <div>
+                <h4 className="asf-panel-title">Departmental Fee Realization Matrix</h4>
+                <p className="asf-panel-desc">Autonomous session collection progress segmented by academic branch.</p>
+              </div>
+              <button
+                onClick={handleExportFullLedgerCSV}
+                className="asf-btn-secondary"
+              >
+                <Download size={14} /> Export Cohort Report
+              </button>
+            </div>
+
+            <div className="asf-cohort-grid">
+              {['Computer Science & Engineering', 'Electronics & Telecommunication', 'Mechanical Engineering', 'Civil Engineering', 'Electrical & Electronics'].map(dept => {
+                const deptStudents = studentLedgers.filter(s => s.department.toLowerCase().includes(dept.toLowerCase().slice(0, 5)));
+                const dDemand = deptStudents.reduce((sum, s) => sum + (s.totalAssessed || 0), 0);
+                const dPaid = deptStudents.reduce((sum, s) => sum + (s.totalPaid || 0), 0);
+                const dPct = dDemand > 0 ? Math.round((dPaid / dDemand) * 100) : 0;
+
+                return (
+                  <div key={dept} className="asf-cohort-card">
+                    <div className="asf-cohort-header">
+                      <span className="asf-cohort-name" title={dept}>{dept}</span>
+                      <span className="asf-badge approved">
+                        {deptStudents.length} Students
+                      </span>
+                    </div>
+
+                    <div className="asf-cohort-stats">
+                      <span>Collected: <strong>₹{(dPaid / 1000).toFixed(0)}k</strong></span>
+                      <span>Demand: <strong>₹{(dDemand / 1000).toFixed(0)}k</strong></span>
+                    </div>
+
+                    <div className="asf-progress-track">
+                      <div
+                        className={`asf-progress-bar ${
+                          dPct >= 80 ? 'success' : dPct >= 50 ? '' : 'warning'
+                        }`}
+                        style={{ width: `${Math.min(100, dPct)}%` }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', paddingTop: '0.2rem' }}>
+                      <span style={{ color: '#64748b', fontWeight: 600 }}>{dPct}% Realized</span>
+                      <button
+                        onClick={() => {
+                          setDeptFilter(dept.slice(0, 4));
+                          navigateToPage('ledger', 'fee_ledger');
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 650, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', padding: 0 }}
+                      >
+                        View Ledgers <ChevronRight size={12} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Quick Management Toolbar */}
+          <div className="asf-toolbar">
+            <div className="asf-search-box">
+              <Search size={15} className="asf-search-icon" />
               <input
                 type="text"
-                placeholder="Search student name, registration ID, department..."
+                placeholder="Search student by name, registration ID, branch..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                className="asf-search-input"
               />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="asf-filter-group">
               <select
                 value={deptFilter}
                 onChange={(e) => setDeptFilter(e.target.value)}
-                className="px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg text-slate-700 outline-none"
+                className="asf-select"
               >
-                <option value="ALL">All Departments</option>
+                <option value="ALL">All Academic Streams</option>
                 <option value="CSE">Computer Science</option>
                 <option value="AIML">AI &amp; ML</option>
                 <option value="ECE">Electronics</option>
@@ -484,78 +575,97 @@ export default function AccountsStudentFinanceTab({
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg text-slate-700 outline-none"
+                className="asf-select"
               >
                 <option value="ALL">All Payment Statuses</option>
                 <option value="Cleared">Cleared (Zero Balance)</option>
                 <option value="Pending">Pending Installments</option>
                 <option value="Defaulter">Overdue Defaulters</option>
               </select>
+
+              <button
+                onClick={() => alert('Dispatched automated payment reminder notifications via campus SMS and student email portal.')}
+                className="asf-btn-primary"
+              >
+                <Send size={13} /> Broadcast Dues Notice
+              </button>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            <table className="w-full text-left border-collapse text-xs">
+          {/* Management Student Directory Table */}
+          <div className="asf-table-container">
+            <table className="asf-table">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4">Student &amp; ID</th>
-                  <th className="py-3 px-4">Department &amp; Sem</th>
-                  <th className="py-3 px-4">Assessed Fee</th>
-                  <th className="py-3 px-4">Scholarship / Aid</th>
-                  <th className="py-3 px-4">Paid to Date</th>
-                  <th className="py-3 px-4">Outstanding Balance</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                <tr>
+                  <th>Student &amp; Registration ID</th>
+                  <th>Department &amp; Sem</th>
+                  <th>Assessed Demand</th>
+                  <th>Paid to Date</th>
+                  <th>Outstanding Balance</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Management Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {filteredLedgers.map(st => (
-                  <tr key={st.studentId} className="hover:bg-slate-50 transition">
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{st.name}</div>
-                      <div className="text-[11px] text-slate-500 font-mono">{st.studentId}</div>
+                  <tr key={st.studentId}>
+                    <td>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{st.name}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>{st.studentId}</div>
                     </td>
-
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-800">{st.department}</div>
-                      <div className="text-[10px] text-slate-400">{st.semester} · {st.residenceType}</div>
+                    <td>
+                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{st.department}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{st.semester}</div>
                     </td>
-
-                    <td className="py-3.5 px-4 font-bold text-slate-800">
+                    <td style={{ fontWeight: 700, color: '#0f172a' }}>
                       ₹{st.totalAssessed.toLocaleString('en-IN')}
                     </td>
-
-                    <td className="py-3.5 px-4 font-semibold text-teal-700">
-                      {st.concessions > 0 ? `-₹${st.concessions.toLocaleString('en-IN')}` : '₹0'}
-                    </td>
-
-                    <td className="py-3.5 px-4 font-bold text-emerald-700">
+                    <td style={{ fontWeight: 700, color: '#059669' }}>
                       ₹{st.totalPaid.toLocaleString('en-IN')}
                     </td>
-
-                    <td className="py-3.5 px-4">
-                      <span className={`font-extrabold text-sm ${st.outstandingBalance > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                        ₹{st.outstandingBalance.toLocaleString('en-IN')}
-                      </span>
+                    <td style={{ fontWeight: 800 }}>
+                      {st.outstandingBalance === 0 ? (
+                        <span style={{ color: '#059669' }}>₹0.00</span>
+                      ) : (
+                        <span style={{ color: '#e11d48' }}>₹{st.outstandingBalance.toLocaleString('en-IN')}</span>
+                      )}
                     </td>
-
-                    <td className="py-3.5 px-4">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        st.outstandingBalance === 0 ? 'bg-emerald-100 text-emerald-800' :
-                        st.outstandingBalance > 40000 ? 'bg-rose-100 text-rose-800' :
-                        'bg-amber-100 text-amber-800'
-                      }`}>
+                    <td>
+                      <span className={`asf-badge ${st.outstandingBalance === 0 ? 'cleared' : 'partial'}`}>
                         {st.paymentStatus}
                       </span>
                     </td>
-
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => setSelectedProfileStudent(st)}
-                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700 font-semibold rounded-md transition text-xs flex items-center gap-1 ml-auto"
-                      >
-                        <Eye size={13} /> Ledger
-                      </button>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
+                        <button
+                          onClick={() => setSelectedProfileStudent(st)}
+                          className="asf-btn-secondary asf-btn-sm"
+                          title="Open 360° student financial ledger"
+                        >
+                          <Eye size={12} /> 360° Dossier
+                        </button>
+                        {st.outstandingBalance > 0 && (
+                          <button
+                            onClick={() => {
+                              setPaymentForm({
+                                studentId: st.studentId,
+                                studentName: st.name,
+                                department: st.department,
+                                semester: st.semester,
+                                feeHead: 'Tuition & Development Fee',
+                                amount: String(st.outstandingBalance),
+                                mode: 'UPI (Google Pay / PhonePe)',
+                                reference: `UPI/${Math.floor(100000000000 + Math.random() * 900000000000)}`,
+                                remarks: 'Counter payment generated from management console.'
+                              });
+                              navigateToPage('collection', 'fee_collection');
+                            }}
+                            className="asf-btn-primary asf-btn-emerald asf-btn-sm"
+                          >
+                            <CreditCard size={12} /> Collect
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -565,23 +675,116 @@ export default function AccountsStudentFinanceTab({
         </div>
       )}
 
-      {/* Subtab 2: Fee Collection Counter */}
+      {/* =========================================================================
+          PAGE 2: FEE STRUCTURE CONFIGURATION
+          ========================================================================= */}
+      {selectedSubtab === 'structure' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Header Action Bar */}
+          <div className="asf-panel" style={{ padding: '1rem 1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h4 className="asf-panel-title">
+                  <Building2 size={18} color="#2563eb" />
+                  Approved Academic Program Fee Tariffs (Session 2026–27)
+                </h4>
+                <p className="asf-panel-desc">
+                  Statutory autonomous tuition schedules, lab dues, development funds, and residential boarding rates.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCreateStructureOpen(true)}
+                className="asf-btn-primary"
+              >
+                <PlusCircle size={14} /> Add New Fee Structure
+              </button>
+            </div>
+          </div>
+
+          {/* Tariffs Grid */}
+          <div className="asf-tariff-grid">
+            {feeStructures.map(str => (
+              <div key={str.id} className="asf-tariff-card">
+                <div>
+                  <div className="asf-tariff-top">
+                    <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0' }}>
+                      {str.courseCode} · {str.id}
+                    </span>
+                    <span className="asf-badge cleared">
+                      {str.status}
+                    </span>
+                  </div>
+
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', margin: '0.65rem 0 0.2rem 0' }}>
+                    {str.program}
+                  </h4>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{str.semester}</span>
+
+                  <div className="asf-tariff-breakdown" style={{ marginTop: '0.85rem' }}>
+                    <div className="asf-tariff-row">
+                      <span>Tuition Fee:</span>
+                      <strong>₹{str.tuitionFee.toLocaleString('en-IN')}</strong>
+                    </div>
+                    <div className="asf-tariff-row">
+                      <span>Development Fund:</span>
+                      <strong>₹{str.developmentFee.toLocaleString('en-IN')}</strong>
+                    </div>
+                    <div className="asf-tariff-row">
+                      <span>Lab &amp; Library Dues:</span>
+                      <strong>₹{str.labLibraryFee.toLocaleString('en-IN')}</strong>
+                    </div>
+                    <div className="asf-tariff-row">
+                      <span>Hostel &amp; Mess:</span>
+                      <strong>₹{str.hostelMessFee.toLocaleString('en-IN')}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="asf-tariff-totals">
+                  <div>
+                    <span style={{ fontSize: '0.69rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 600, display: 'block' }}>
+                      Day Scholar Base
+                    </span>
+                    <strong style={{ fontSize: '1.05rem', color: '#2563eb', fontWeight: 800 }}>
+                      ₹{str.totalBaseFee.toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.69rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 600, display: 'block' }}>
+                      With Hostel &amp; Mess
+                    </span>
+                    <strong style={{ fontSize: '1.05rem', color: '#0f172a', fontWeight: 800 }}>
+                      ₹{str.totalHostelFee.toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          PAGE 3: FEE COLLECTION COUNTER
+          ========================================================================= */}
       {selectedSubtab === 'collection' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="asf-counter-grid">
           {/* Payment Form (2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4 text-xs">
-            <div className="border-b border-slate-100 pb-3">
-              <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                <Receipt size={16} className="text-emerald-600" />
-                Fee Payment Collection &amp; Receipt Generator Counter
-              </h4>
-              <p className="text-slate-500">Record counter cash, online UPI, bank challan, or RTGS fee credits.</p>
+          <div className="asf-panel">
+            <div className="asf-panel-header">
+              <div>
+                <h4 className="asf-panel-title">
+                  <Receipt size={18} color="#059669" />
+                  Fee Payment Collection &amp; Official Receipt Counter
+                </h4>
+                <p className="asf-panel-desc">Record counter cash, online UPI, bank challan, or RTGS fee credits.</p>
+              </div>
             </div>
 
-            <form onSubmit={handleRecordPaymentSubmit} className="space-y-3.5">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Select Student</label>
+            <form onSubmit={handleRecordPaymentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+              <div className="asf-form-2col">
+                <div className="asf-form-group">
+                  <label>Select Enrolled Student</label>
                   <select
                     value={paymentForm.studentId}
                     onChange={(e) => {
@@ -597,7 +800,7 @@ export default function AccountsStudentFinanceTab({
                         });
                       }
                     }}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none focus:border-blue-500"
+                    className="asf-form-select"
                   >
                     {studentLedgers.map(s => (
                       <option key={s.studentId} value={s.studentId}>
@@ -607,12 +810,12 @@ export default function AccountsStudentFinanceTab({
                   </select>
                 </div>
 
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Fee Demand Head</label>
+                <div className="asf-form-group">
+                  <label>Fee Demand Head</label>
                   <select
                     value={paymentForm.feeHead}
                     onChange={(e) => setPaymentForm({ ...paymentForm, feeHead: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                    className="asf-form-select"
                   >
                     <option value="Tuition & Development Fee">Tuition &amp; Development Fee</option>
                     <option value="Hostel & Residential Boarding Fee">Hostel &amp; Residential Boarding Fee</option>
@@ -623,213 +826,305 @@ export default function AccountsStudentFinanceTab({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Payment Amount (₹)</label>
+              <div className="asf-form-2col">
+                <div className="asf-form-group">
+                  <label>Payment Amount (₹)</label>
                   <input
                     type="number"
                     value={paymentForm.amount}
                     onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md font-bold text-sm text-slate-900 outline-none focus:border-blue-500"
+                    className="asf-form-input"
+                    style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}
                     required
                   />
                 </div>
 
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Payment Mode</label>
+                <div className="asf-form-group">
+                  <label>Payment Channel</label>
                   <select
                     value={paymentForm.mode}
                     onChange={(e) => setPaymentForm({ ...paymentForm, mode: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                    className="asf-form-select"
                   >
-                    <option value="UPI (Google Pay / PhonePe)">UPI (QR Scan / PhonePe / GPay)</option>
-                    <option value="Net Banking (SBI / HDFC)">Online Net Banking</option>
-                    <option value="Bank Challan (SBI Treasury)">Bank Challan (SBI)</option>
-                    <option value="Accounts Counter Cash">Accounts Counter Cash</option>
-                    <option value="Debit / Credit Card (POS)">Debit / Credit Card (POS)</option>
-                    <option value="Demand Draft / Cheque">Demand Draft / Cheque</option>
+                    <option value="UPI (Google Pay / PhonePe)">UPI (Google Pay / PhonePe / Paytm)</option>
+                    <option value="Bank Demand Draft (DD)">Bank Demand Draft (DD)</option>
+                    <option value="Online NetBanking / NEFT / RTGS">NetBanking / NEFT / RTGS</option>
+                    <option value="Cash Deposit at Bursar Counter">Cash Deposit at Bursar Counter</option>
+                    <option value="POS Debit / Credit Card">POS Debit / Credit Card Swipe</option>
                   </select>
                 </div>
               </div>
 
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Transaction Reference / UTR Number</label>
-                <input
-                  type="text"
-                  value={paymentForm.reference}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-md font-mono text-xs outline-none"
-                  required
-                />
+              <div className="asf-form-2col">
+                <div className="asf-form-group">
+                  <label>Transaction Reference / UTR Number</label>
+                  <input
+                    type="text"
+                    value={paymentForm.reference}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+                    className="asf-form-input"
+                    style={{ fontFamily: 'monospace' }}
+                    required
+                  />
+                </div>
+
+                <div className="asf-form-group">
+                  <label>Cashier Note / Remarks</label>
+                  <input
+                    type="text"
+                    value={paymentForm.remarks}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, remarks: e.target.value })}
+                    className="asf-form-input"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Accounts Counter Remarks</label>
-                <textarea
-                  rows="2"
-                  value={paymentForm.remarks}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, remarks: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end">
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.5rem' }}>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-xs flex items-center gap-1.5"
+                  className="asf-btn-primary asf-btn-emerald"
+                  style={{ height: '2.5rem', padding: '0.5rem 1.25rem', fontSize: '0.82rem' }}
                 >
-                  <CheckCircle2 size={15} /> Collect Fee &amp; Issue Receipt
+                  <Printer size={15} /> Collect Payment &amp; Issue Official Receipt
                 </button>
               </div>
             </form>
           </div>
 
-          {/* Quick Guidelines Panel (1 col) */}
-          <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 text-xs space-y-3">
-            <h4 className="font-bold text-slate-900 text-sm">Autonomous Fee Policy Guidelines</h4>
-            <ul className="space-y-2 text-slate-600 leading-relaxed list-disc pl-4">
-              <li>Receipts are generated immediately with distinct numbering and cryptographic verification tags.</li>
-              <li>Partial payments automatically decrement the student ledger balance.</li>
-              <li>Scholarship waivers adjust tuition demand directly without cash outflow.</li>
-              <li>All payments are credited directly into institutional treasury accounts (SBI/HDFC).</li>
-            </ul>
+          {/* Recent Counter Collections */}
+          <div className="asf-panel">
+            <div className="asf-panel-header">
+              <h4 className="asf-panel-title">
+                <Clock size={16} color="#2563eb" /> Recent Counter Receipts
+              </h4>
+              <span className="asf-badge approved">
+                {transactions.length} LOGGED
+              </span>
+            </div>
 
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-900 mt-4">
-              <strong>Bursar Desk Contact:</strong> Ext 104 · Room 104 Admin Block for disputed transactions.
+            <div className="asf-recent-list">
+              {transactions.slice(0, 8).map(txn => (
+                <div key={txn.id} className="asf-recent-item">
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                    <div>
+                      <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.8rem', display: 'block' }}>
+                        {txn.studentName}
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>
+                        {txn.studentId || txn.receiptNo}
+                      </span>
+                    </div>
+                    <strong style={{ color: '#059669', fontSize: '0.85rem', fontWeight: 800 }}>
+                      +₹{txn.amount.toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b', paddingTop: '0.35rem', borderTop: '1px solid #e2e8f0' }}>
+                    <span>{txn.mode}</span>
+                    <button
+                      onClick={() => setPrintableReceipt(txn)}
+                      style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', padding: 0 }}
+                    >
+                      <Printer size={12} /> Print
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* Subtab 3: Fee Structures & Program Tariffs */}
-      {selectedSubtab === 'structure' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex justify-between items-center">
-            <div>
-              <h4 className="font-bold text-slate-900 text-sm">Approved Program Fee Tariffs (Academic Session 2026–27)</h4>
-              <p className="text-xs text-slate-500">Autonomous syllabus, laboratory, development, and residential boarding rates.</p>
+      {/* =========================================================================
+          PAGE 4: STUDENT FEE LEDGER (360° Directory)
+          ========================================================================= */}
+      {selectedSubtab === 'ledger' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Search & Filter Toolbar */}
+          <div className="asf-toolbar">
+            <div className="asf-search-box">
+              <Search size={15} className="asf-search-icon" />
+              <input
+                type="text"
+                placeholder="Search student name, registration ID, department..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="asf-search-input"
+              />
             </div>
-            <button
-              onClick={() => setIsCreateStructureOpen(true)}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs"
-            >
-              <PlusCircle size={14} /> Add Tariff
-            </button>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {feeStructures.map(str => (
-              <div key={str.id} className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between space-y-3">
-                <div>
-                  <div className="flex justify-between items-start">
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
-                      {str.courseCode} · {str.id}
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                      {str.status}
-                    </span>
-                  </div>
+            <div className="asf-filter-group">
+              <select
+                value={deptFilter}
+                onChange={(e) => setDeptFilter(e.target.value)}
+                className="asf-select"
+              >
+                <option value="ALL">All Departments</option>
+                <option value="CSE">Computer Science</option>
+                <option value="AIML">AI &amp; ML</option>
+                <option value="ECE">Electronics</option>
+                <option value="EEE">Electrical</option>
+                <option value="MECH">Mechanical</option>
+                <option value="CIVIL">Civil</option>
+              </select>
 
-                  <h4 className="font-bold text-slate-900 text-sm mt-2">{str.program}</h4>
-                  <span className="text-xs text-slate-500">{str.semester}</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="asf-select"
+              >
+                <option value="ALL">All Payment Statuses</option>
+                <option value="Cleared">Cleared (Zero Balance)</option>
+                <option value="Pending">Pending Installments</option>
+                <option value="Defaulter">Overdue Defaulters</option>
+              </select>
 
-                  <div className="mt-3 p-2.5 bg-slate-50 rounded-lg border border-slate-100 space-y-1.5 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Tuition Fee:</span>
-                      <strong className="text-slate-800">₹{str.tuitionFee.toLocaleString('en-IN')}</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Development Fund:</span>
-                      <strong className="text-slate-800">₹{str.developmentFee.toLocaleString('en-IN')}</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Lab &amp; Library Dues:</span>
-                      <strong className="text-slate-800">₹{str.labLibraryFee.toLocaleString('en-IN')}</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Hostel &amp; Mess:</span>
-                      <strong className="text-slate-800">₹{str.hostelMessFee.toLocaleString('en-IN')}</strong>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-xs">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">Total Base (Day Scholar)</span>
-                    <strong className="text-blue-700 font-extrabold text-sm">₹{str.totalBaseFee.toLocaleString('en-IN')}</strong>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block">With Hostel</span>
-                    <strong className="text-slate-900 font-extrabold text-sm">₹{str.totalHostelFee.toLocaleString('en-IN')}</strong>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Subtab 4: Outstanding Dues & Defaulters */}
-      {selectedSubtab === 'outstanding' && (
-        <div className="space-y-4">
-          <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-rose-900 text-xs flex items-start justify-between">
-            <div>
-              <span className="font-bold text-sm block mb-1">Student Outstanding Dues &amp; Aging Ledger</span>
-              <p>
-                Enrolled students with overdue tuition, examination, or hostel boarding arrears for Autumn Session 2026.
-              </p>
+              <button
+                onClick={handleExportFullLedgerCSV}
+                className="asf-btn-secondary"
+              >
+                <Download size={13} /> Export Ledger CSV
+              </button>
             </div>
-            <span className="text-[10px] font-mono font-bold bg-rose-200 text-rose-900 px-2 py-0.5 rounded">
-              ARREARS ACTIVE
-            </span>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            <table className="w-full text-left border-collapse text-xs">
+          {/* Ledger Table */}
+          <div className="asf-table-container">
+            <table className="asf-table">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4">Student &amp; Roll Number</th>
-                  <th className="py-3 px-4">Department</th>
-                  <th className="py-3 px-4">Total Assessed</th>
-                  <th className="py-3 px-4">Paid to Date</th>
-                  <th className="py-3 px-4">Outstanding Balance</th>
-                  <th className="py-3 px-4">Aging Bracket</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                <tr>
+                  <th>Student &amp; ID</th>
+                  <th>Department &amp; Sem</th>
+                  <th>Assessed Fee</th>
+                  <th>Scholarship / Aid</th>
+                  <th>Paid to Date</th>
+                  <th>Outstanding Balance</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {studentLedgers.filter(s => s.outstandingBalance > 0).map(st => (
-                  <tr key={st.studentId} className="hover:bg-slate-50 transition">
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{st.name}</div>
-                      <div className="text-[11px] text-slate-500 font-mono">{st.studentId}</div>
+              <tbody>
+                {filteredLedgers.map(st => (
+                  <tr key={st.studentId}>
+                    <td>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{st.name}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>{st.studentId}</div>
                     </td>
 
-                    <td className="py-3.5 px-4 text-slate-700">
-                      {st.department} · {st.semester}
+                    <td>
+                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{st.department}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{st.semester}</div>
                     </td>
 
-                    <td className="py-3.5 px-4 font-bold text-slate-800">
+                    <td style={{ fontWeight: 700, color: '#0f172a' }}>
                       ₹{st.totalAssessed.toLocaleString('en-IN')}
                     </td>
 
-                    <td className="py-3.5 px-4 font-bold text-emerald-700">
+                    <td style={{ fontWeight: 600, color: '#059669' }}>
+                      {st.concessions > 0 ? `-₹${st.concessions.toLocaleString('en-IN')}` : '—'}
+                    </td>
+
+                    <td style={{ fontWeight: 700, color: '#059669' }}>
                       ₹{st.totalPaid.toLocaleString('en-IN')}
                     </td>
 
-                    <td className="py-3.5 px-4 font-extrabold text-rose-600 text-sm">
+                    <td style={{ fontWeight: 800 }}>
+                      {st.outstandingBalance === 0 ? (
+                        <span style={{ color: '#059669' }}>₹0 (Zero Due)</span>
+                      ) : (
+                        <span style={{ color: '#e11d48' }}>₹{st.outstandingBalance.toLocaleString('en-IN')}</span>
+                      )}
+                    </td>
+
+                    <td>
+                      <span className={`asf-badge ${st.outstandingBalance === 0 ? 'cleared' : 'partial'}`}>
+                        {st.paymentStatus}
+                      </span>
+                    </td>
+
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        onClick={() => setSelectedProfileStudent(st)}
+                        className="asf-btn-secondary asf-btn-sm"
+                      >
+                        <Eye size={12} /> 360° Ledger
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          PAGE 5: OUTSTANDING DUES & DEFAULTERS
+          ========================================================================= */}
+      {selectedSubtab === 'outstanding' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="asf-info-banner urgent">
+            <div>
+              <strong>Student Outstanding Arrears &amp; Defaulters Register</strong>
+              <span>Enrolled candidates with overdue tuition, examination, or residential boarding arrears for Autumn Session 2026.</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                onClick={handleExportDefaultersCSV}
+                className="asf-btn-secondary asf-btn-sm"
+              >
+                <Download size={13} /> Export Defaulters CSV
+              </button>
+              <span className="asf-badge overdue" style={{ fontFamily: 'monospace' }}>
+                {studentLedgers.filter(s => s.outstandingBalance > 0).length} CASES OVERDUE
+              </span>
+            </div>
+          </div>
+
+          <div className="asf-table-container">
+            <table className="asf-table">
+              <thead>
+                <tr>
+                  <th>Student &amp; Roll Number</th>
+                  <th>Department</th>
+                  <th>Total Assessed</th>
+                  <th>Paid to Date</th>
+                  <th>Outstanding Balance</th>
+                  <th>Aging Bracket</th>
+                  <th style={{ textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {studentLedgers.filter(s => s.outstandingBalance > 0).map(st => (
+                  <tr key={st.studentId}>
+                    <td>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{st.name}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>{st.studentId}</div>
+                    </td>
+
+                    <td style={{ color: '#334155' }}>
+                      {st.department} · {st.semester}
+                    </td>
+
+                    <td style={{ fontWeight: 700, color: '#0f172a' }}>
+                      ₹{st.totalAssessed.toLocaleString('en-IN')}
+                    </td>
+
+                    <td style={{ fontWeight: 700, color: '#059669' }}>
+                      ₹{st.totalPaid.toLocaleString('en-IN')}
+                    </td>
+
+                    <td style={{ fontWeight: 800, color: '#e11d48', fontSize: '0.85rem' }}>
                       ₹{st.outstandingBalance.toLocaleString('en-IN')}
                     </td>
 
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
-                        st.outstandingBalance > 40000 ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
+                    <td>
+                      <span className={`asf-badge ${st.outstandingBalance > 40000 ? 'overdue' : 'partial'}`}>
                         {st.outstandingBalance > 40000 ? '> 60 Days Overdue' : '1–30 Days Overdue'}
                       </span>
                     </td>
 
-                    <td className="py-3.5 px-4 text-right">
+                    <td style={{ textAlign: 'right' }}>
                       <button
                         onClick={() => {
                           setPaymentForm({
@@ -843,11 +1138,11 @@ export default function AccountsStudentFinanceTab({
                             reference: `UPI/${Math.floor(100000000000 + Math.random() * 900000000000)}`,
                             remarks: 'Arrears clearance at accounts counter.'
                           });
-                          setSelectedSubtab('collection');
+                          navigateToPage('collection', 'fee_collection');
                         }}
-                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded text-[11px]"
+                        className="asf-btn-primary asf-btn-emerald asf-btn-sm"
                       >
-                        Collect Dues
+                        <CreditCard size={12} /> Collect Dues
                       </button>
                     </td>
                   </tr>
@@ -858,128 +1153,66 @@ export default function AccountsStudentFinanceTab({
         </div>
       )}
 
-      {/* Subtab 5: Financial No-Dues Clearance */}
-      {selectedSubtab === 'clearance' && (
-        <div className="space-y-4">
-          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-purple-900 text-xs flex items-start justify-between">
-            <div>
-              <span className="font-bold text-sm block mb-1">Autonomous Examination &amp; Degree Financial Clearance Console</span>
-              <p>
-                Verification of complete tuition fee settlement prior to issuing Autonomous Examination Admit Cards and Final Transcripts.
-              </p>
-            </div>
-            <span className="text-[10px] font-mono font-bold bg-purple-200 text-purple-900 px-2 py-0.5 rounded">
-              NO DUES DESK
-            </span>
-          </div>
-
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4">Student Name &amp; ID</th>
-                  <th className="py-3 px-4">Department &amp; Sem</th>
-                  <th className="py-3 px-4">Balance Fee</th>
-                  <th className="py-3 px-4">Clearance Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {studentLedgers.map(st => (
-                  <tr key={st.studentId} className="hover:bg-slate-50 transition">
-                    <td className="py-3.5 px-4 font-bold text-slate-900">{st.name} ({st.studentId})</td>
-                    <td className="py-3.5 px-4 text-slate-700">{st.department} · {st.semester}</td>
-                    <td className="py-3.5 px-4 font-bold">
-                      {st.outstandingBalance === 0 ? (
-                        <span className="text-emerald-700">₹0 (Zero Dues)</span>
-                      ) : (
-                        <span className="text-rose-600">₹{st.outstandingBalance.toLocaleString('en-IN')} Due</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                        st.outstandingBalance === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                      }`}>
-                        {st.clearanceStatus}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      {st.outstandingBalance === 0 ? (
-                        <button
-                          onClick={() => alert(`Official No-Dues Certificate issued for ${st.name} (${st.studentId}). Admit card released.`)}
-                          className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded text-[11px]"
-                        >
-                          Issue Certificate
-                        </button>
-                      ) : (
-                        <span className="text-slate-400 italic text-[11px]">Hold (Arrears)</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Subtab 6: Installment Plans & Management */}
+      {/* =========================================================================
+          PAGE 6: INSTALLMENT MANAGEMENT
+          ========================================================================= */}
       {selectedSubtab === 'installments' && (
-        <div className="space-y-4">
-          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-indigo-950 text-xs flex items-start justify-between">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="asf-info-banner">
             <div>
-              <span className="font-bold text-sm block mb-1">Autonomous Fee Installment Scheme &amp; Tranche Matrix</span>
-              <p className="text-indigo-800">
-                Approved 3-Tranche Installment Facility (Tranche 1: 40% at Enrollment, Tranche 2: 30% Mid-Semester Due 15-Nov, Tranche 3: 30% Pre-Exam Due 15-Dec).
-              </p>
+              <strong>Autonomous Fee Installment Scheme &amp; Tranche Matrix</strong>
+              <span>Approved 3-Tranche Facility (Tranche 1: 40% at Enrollment, Tranche 2: 30% Mid-Semester due 15-Nov, Tranche 3: 30% Pre-Exam due 15-Dec).</span>
             </div>
-            <span className="text-[10px] font-mono font-bold bg-indigo-200 text-indigo-900 px-2 py-0.5 rounded">
+            <span className="asf-badge approved" style={{ fontFamily: 'monospace' }}>
               3-TRANCHE POLICY
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Installment Enrollees</span>
-              <strong className="text-lg font-black text-slate-900 mt-1 block">
-                {studentLedgers.filter(s => s.paymentStatus.includes('Partial') || s.paymentStatus === 'Cleared').length} Students
-              </strong>
-              <span className="text-[10px] text-emerald-600 font-bold">Approved for Tranche Pay</span>
+          <div className="asf-kpi-grid">
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Installment Enrollees</span>
+              <div className="asf-kpi-val">
+                {studentLedgers.filter(s => s.paymentStatus.includes('Partial') || s.paymentStatus === 'Cleared').length}
+              </div>
+              <div className="asf-kpi-sub" style={{ color: '#059669', fontWeight: 600 }}>Approved for Tranche Pay</div>
             </div>
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Tranche 2 Realized</span>
-              <strong className="text-lg font-black text-indigo-700 mt-1 block">82.4%</strong>
-              <span className="text-[10px] text-slate-500">Target: ₹42.8 Lakh</span>
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Tranche 2 Realized</span>
+              <div className="asf-kpi-val" style={{ color: '#2563eb' }}>82.4%</div>
+              <div className="asf-kpi-sub">Target: ₹42.8 Lakh</div>
             </div>
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Upcoming Tranche 3 Due</span>
-              <strong className="text-lg font-black text-slate-900 mt-1 block">15-Dec-2026</strong>
-              <span className="text-[10px] text-blue-600 font-semibold">Pre-Exam Autonomous Dues</span>
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Upcoming Tranche 3 Due</span>
+              <div className="asf-kpi-val">15-Dec-2026</div>
+              <div className="asf-kpi-sub" style={{ color: '#2563eb', fontWeight: 600 }}>Pre-Exam Autonomous Dues</div>
             </div>
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Tranche Overdue Alerts</span>
-              <strong className="text-lg font-black text-rose-600 mt-1 block">
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Tranche Overdue Alerts</span>
+              <div className="asf-kpi-val" style={{ color: '#e11d48' }}>
                 {studentLedgers.filter(s => s.outstandingBalance > 0).length} Cases
-              </strong>
-              <span className="text-[10px] text-rose-600 font-semibold">Follow-up notifications sent</span>
+              </div>
+              <div className="asf-kpi-sub" style={{ color: '#e11d48', fontWeight: 600 }}>Follow-up notifications sent</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="asf-table-container">
+            <table className="asf-table">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4">Student &amp; Roll Number</th>
-                  <th className="py-3 px-4">Department &amp; Sem</th>
-                  <th className="py-3 px-4">Total Demand</th>
-                  <th className="py-3 px-4">Tranche 1 (40%)</th>
-                  <th className="py-3 px-4">Tranche 2 (30%)</th>
-                  <th className="py-3 px-4">Tranche 3 (30%)</th>
-                  <th className="py-3 px-4">Balance</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                <tr>
+                  <th>Student &amp; Roll Number</th>
+                  <th>Department &amp; Sem</th>
+                  <th>Total Demand</th>
+                  <th>Tranche 1 (40%)</th>
+                  <th>Tranche 2 (30%)</th>
+                  <th>Tranche 3 (30%)</th>
+                  <th>Balance</th>
+                  <th style={{ textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {studentLedgers.map(st => {
                   const t1 = Math.round(st.totalAssessed * 0.4);
                   const t2 = Math.round(st.totalAssessed * 0.3);
@@ -989,61 +1222,46 @@ export default function AccountsStudentFinanceTab({
                   const t3Paid = st.totalPaid >= st.totalAssessed;
 
                   return (
-                    <tr key={st.studentId} className="hover:bg-slate-50 transition">
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">{st.name}</div>
-                        <div className="text-[10px] font-mono text-slate-500">{st.studentId}</div>
+                    <tr key={st.studentId}>
+                      <td>
+                        <div style={{ fontWeight: 700, color: '#0f172a' }}>{st.name}</div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>{st.studentId}</div>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-700">
+                      <td style={{ color: '#334155' }}>
                         {st.department} · {st.semester}
                       </td>
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                      <td style={{ fontWeight: 700, color: '#0f172a' }}>
                         ₹{st.totalAssessed.toLocaleString('en-IN')}
                       </td>
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${t1Paid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
-                          {t1Paid ? 'Paid (₹' + t1.toLocaleString('en-IN') + ')' : 'Due ₹' + t1.toLocaleString('en-IN')}
+                      <td>
+                        <span className={`asf-badge ${t1Paid ? 'cleared' : 'partial'}`}>
+                          {t1Paid ? '✓ Paid' : `₹${t1.toLocaleString('en-IN')}`}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${t2Paid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                          {t2Paid ? 'Paid (₹' + t2.toLocaleString('en-IN') + ')' : 'Due ₹' + t2.toLocaleString('en-IN')}
+                      <td>
+                        <span className={`asf-badge ${t2Paid ? 'cleared' : 'partial'}`}>
+                          {t2Paid ? '✓ Paid' : `Due ₹${t2.toLocaleString('en-IN')}`}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${t3Paid ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
-                          {t3Paid ? 'Paid (₹' + t3.toLocaleString('en-IN') + ')' : 'Due 15-Dec'}
+                      <td>
+                        <span className={`asf-badge ${t3Paid ? 'cleared' : 'neutral'}`}>
+                          {t3Paid ? '✓ Paid' : `Sched ₹${t3.toLocaleString('en-IN')}`}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 font-extrabold text-xs">
+                      <td style={{ fontWeight: 800 }}>
                         {st.outstandingBalance === 0 ? (
-                          <span className="text-emerald-700">₹0 Cleared</span>
+                          <span style={{ color: '#059669' }}>₹0</span>
                         ) : (
-                          <span className="text-rose-600">₹{st.outstandingBalance.toLocaleString('en-IN')}</span>
+                          <span style={{ color: '#e11d48' }}>₹{st.outstandingBalance.toLocaleString('en-IN')}</span>
                         )}
                       </td>
-                      <td className="py-3.5 px-4 text-right">
-                        {st.outstandingBalance > 0 && (
-                          <button
-                            onClick={() => {
-                              setPaymentForm({
-                                studentId: st.studentId,
-                                studentName: st.name,
-                                department: st.department,
-                                semester: st.semester,
-                                feeHead: 'Installment Tranche Payment',
-                                amount: String(Math.min(st.outstandingBalance, 30000)),
-                                mode: 'UPI (Google Pay / PhonePe)',
-                                reference: `INST/${Math.floor(100000000000 + Math.random() * 900000000000)}`,
-                                remarks: 'Installment payment realization at accounts counter.'
-                              });
-                              setSelectedSubtab('collection');
-                            }}
-                            className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded text-[11px]"
-                          >
-                            Collect Tranche
-                          </button>
-                        )}
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          onClick={() => setSelectedProfileStudent(st)}
+                          className="asf-btn-secondary asf-btn-sm"
+                        >
+                          Schedule
+                        </button>
                       </td>
                     </tr>
                   );
@@ -1054,88 +1272,91 @@ export default function AccountsStudentFinanceTab({
         </div>
       )}
 
-      {/* Subtab 7: Scholarships & Concessions */}
+      {/* =========================================================================
+          PAGE 7: SCHOLARSHIPS & CONCESSIONS
+          ========================================================================= */}
       {selectedSubtab === 'scholarships' && (
-        <div className="space-y-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-950 text-xs flex items-start justify-between">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="asf-info-banner">
             <div>
-              <span className="font-bold text-sm block mb-1">Scholarships, Fee Concessions &amp; Financial Aid Ledgers</span>
-              <p className="text-amber-800">
-                Institutional fee concessions directly adjust student fee assessment without recording cash outflow. All awards require Board of Governors authorization.
-              </p>
+              <strong>Scholarships, Fee Concessions &amp; Financial Aid Ledgers</strong>
+              <span>Institutional fee concessions directly adjust student fee assessment without recording cash outflow.</span>
             </div>
             <button
               onClick={() => setIsGrantScholarshipOpen(true)}
-              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs shadow-xs flex items-center gap-1.5"
+              className="asf-btn-primary"
             >
               <PlusCircle size={14} /> Grant Concession / Aid
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Total Waivers Realized</span>
-              <strong className="text-lg font-black text-amber-700 mt-1 block">
+          <div className="asf-kpi-grid">
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Total Waivers Realized</span>
+              <div className="asf-kpi-val" style={{ color: '#2563eb' }}>
                 ₹{studentLedgers.reduce((s, st) => s + (st.concessions || 0), 0).toLocaleString('en-IN')}
-              </strong>
-              <span className="text-[10px] text-slate-500">Autonomous session 2026-27</span>
+              </div>
+              <div className="asf-kpi-sub">Autonomous session 2026-27</div>
             </div>
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Beneficiary Students</span>
-              <strong className="text-lg font-black text-slate-900 mt-1 block">
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Beneficiary Students</span>
+              <div className="asf-kpi-val">
                 {studentLedgers.filter(s => (s.concessions || 0) > 0).length} Scholars
-              </strong>
-              <span className="text-[10px] text-emerald-600 font-bold">Merit, EWS &amp; State Schemes</span>
+              </div>
+              <div className="asf-kpi-sub" style={{ color: '#059669', fontWeight: 600 }}>Merit, EWS &amp; State Schemes</div>
             </div>
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Average Concession</span>
-              <strong className="text-lg font-black text-slate-900 mt-1 block">₹50,000</strong>
-              <span className="text-[10px] text-slate-500">Per qualified scholar</span>
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Average Concession</span>
+              <div className="asf-kpi-val">₹50,000</div>
+              <div className="asf-kpi-sub">Per qualified scholar</div>
             </div>
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Endowment Balance</span>
-              <strong className="text-lg font-black text-blue-700 mt-1 block">₹45.0 Lakh</strong>
-              <span className="text-[10px] text-emerald-600 font-semibold">Solvent &amp; Sanctioned</span>
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Endowment Balance</span>
+              <div className="asf-kpi-val" style={{ color: '#059669' }}>₹45.0 Lakh</div>
+              <div className="asf-kpi-sub" style={{ color: '#059669', fontWeight: 600 }}>Solvent &amp; Sanctioned</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="asf-table-container">
+            <table className="asf-table">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4">Student &amp; Roll Number</th>
-                  <th className="py-3 px-4">Department</th>
-                  <th className="py-3 px-4">Admission Category</th>
-                  <th className="py-3 px-4">Assessed Tariff</th>
-                  <th className="py-3 px-4">Scholarship / Waiver</th>
-                  <th className="py-3 px-4">Net Receivable</th>
-                  <th className="py-3 px-4">Status</th>
+                <tr>
+                  <th>Student &amp; Roll Number</th>
+                  <th>Department</th>
+                  <th>Admission Category</th>
+                  <th>Assessed Tariff</th>
+                  <th>Scholarship / Waiver</th>
+                  <th>Net Receivable</th>
+                  <th>Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {studentLedgers.filter(s => (s.concessions || 0) > 0).map(st => (
-                  <tr key={st.studentId} className="hover:bg-slate-50 transition">
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{st.name}</div>
-                      <div className="text-[10px] font-mono text-slate-500">{st.studentId}</div>
+                  <tr key={st.studentId}>
+                    <td>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{st.name}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>{st.studentId}</div>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700">
-                      {st.department} · {st.course}
+                    <td style={{ color: '#334155' }}>
+                      {st.department} · {st.course || 'B.Tech'}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">
+                    <td style={{ color: '#475569', fontWeight: 500 }}>
                       {st.admissionCategory}
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">
+                    <td style={{ fontWeight: 700, color: '#0f172a' }}>
                       ₹{st.totalAssessed.toLocaleString('en-IN')}
                     </td>
-                    <td className="py-3.5 px-4 font-extrabold text-amber-700 text-sm">
+                    <td style={{ fontWeight: 800, color: '#059669', fontSize: '0.85rem' }}>
                       -₹{st.concessions.toLocaleString('en-IN')}
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-blue-800">
+                    <td style={{ fontWeight: 700, color: '#2563eb' }}>
                       ₹{(st.totalAssessed - st.concessions).toLocaleString('en-IN')}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900">
+                    <td>
+                      <span className="asf-badge approved">
                         Sanctioned &amp; Adjusted
                       </span>
                     </td>
@@ -1147,115 +1368,125 @@ export default function AccountsStudentFinanceTab({
         </div>
       )}
 
-      {/* Subtab 8: Refund Management */}
+      {/* =========================================================================
+          PAGE 8: REFUND MANAGEMENT
+          ========================================================================= */}
       {selectedSubtab === 'refunds' && (
-        <div className="space-y-4">
-          <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 text-teal-950 text-xs flex items-start justify-between">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="asf-info-banner">
             <div>
-              <span className="font-bold text-sm block mb-1">Student Refund &amp; Caution Money Disbursement Register</span>
-              <p className="text-teal-800">
-                Authorized institutional refunds for admission cancellations, duplicate payment adjustments, and graduated student caution deposits.
-              </p>
+              <strong>Student Refund &amp; Caution Money Disbursement Register</strong>
+              <span>Authorized institutional refunds for admission cancellations, duplicate payments, and caution deposits.</span>
             </div>
-            <span className="text-[10px] font-mono font-bold bg-teal-200 text-teal-900 px-2 py-0.5 rounded">
+            <span className="asf-badge approved" style={{ fontFamily: 'monospace' }}>
               TREASURY DISBURSEMENT
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Total Claims Registered</span>
-              <strong className="text-lg font-black text-slate-900 mt-1 block">{refundRequests.length} Claims</strong>
-              <span className="text-[10px] text-slate-500">Autonomous session 2026-27</span>
+          <div className="asf-kpi-grid">
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Total Claims Registered</span>
+              <div className="asf-kpi-val">{refundRequests.length} Claims</div>
+              <div className="asf-kpi-sub">Autonomous session 2026-27</div>
             </div>
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Pending Approval</span>
-              <strong className="text-lg font-black text-amber-600 mt-1 block">
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Pending Approval</span>
+              <div className="asf-kpi-val" style={{ color: '#d97706' }}>
                 {refundRequests.filter(r => r.status === 'Pending Approval').length} Claims
-              </strong>
-              <span className="text-[10px] text-amber-700 font-semibold">Requires Bursar sign-off</span>
+              </div>
+              <div className="asf-kpi-sub" style={{ color: '#d97706', fontWeight: 600 }}>Requires Bursar sign-off</div>
             </div>
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Approved &amp; Ready</span>
-              <strong className="text-lg font-black text-blue-600 mt-1 block">
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Approved &amp; Ready</span>
+              <div className="asf-kpi-val" style={{ color: '#2563eb' }}>
                 {refundRequests.filter(r => r.status === 'Approved').length} Claims
-              </strong>
-              <span className="text-[10px] text-blue-700 font-semibold">Awaiting treasury NEFT</span>
+              </div>
+              <div className="asf-kpi-sub" style={{ color: '#2563eb', fontWeight: 600 }}>Awaiting treasury NEFT</div>
             </div>
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] text-slate-500 font-medium block">Settled to Date</span>
-              <strong className="text-lg font-black text-emerald-600 mt-1 block">
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Settled to Date</span>
+              <div className="asf-kpi-val" style={{ color: '#059669' }}>
                 ₹{refundRequests.filter(r => r.status === 'Processed').reduce((s, r) => s + r.amount, 0).toLocaleString('en-IN')}
-              </strong>
-              <span className="text-[10px] text-emerald-700 font-semibold">Disbursed via bank transfer</span>
+              </div>
+              <div className="asf-kpi-sub" style={{ color: '#059669', fontWeight: 600 }}>Disbursed via bank transfer</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="asf-table-container">
+            <table className="asf-table">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4">Claim ID &amp; Date</th>
-                  <th className="py-3 px-4">Student &amp; Department</th>
-                  <th className="py-3 px-4">Refund Reason</th>
-                  <th className="py-3 px-4">Original Receipt</th>
-                  <th className="py-3 px-4">Refund Amount</th>
-                  <th className="py-3 px-4">Method</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                <tr>
+                  <th>Claim ID &amp; Date</th>
+                  <th>Student &amp; Department</th>
+                  <th>Refund Reason</th>
+                  <th>Original Receipt</th>
+                  <th>Refund Amount</th>
+                  <th>Method</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {refundRequests.map(ref => (
-                  <tr key={ref.id} className="hover:bg-slate-50 transition">
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{ref.id}</div>
-                      <div className="text-[10px] text-slate-500">{ref.requestDate}</div>
+                  <tr key={ref.id}>
+                    <td>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{ref.id}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{ref.requestDate}</div>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{ref.studentName}</div>
-                      <div className="text-[10px] text-slate-500 font-mono">{ref.studentId} · {ref.department}</div>
+                    <td>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{ref.studentName}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>{ref.studentId} · {ref.department}</div>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700 max-w-xs">
+                    <td style={{ color: '#334155', maxWidth: '16rem' }}>
                       {ref.reason}
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-600 text-[11px]">
+                    <td style={{ fontFamily: 'monospace', color: '#475569', fontSize: '0.75rem' }}>
                       {ref.receiptRef}
                     </td>
-                    <td className="py-3.5 px-4 font-extrabold text-slate-900 text-sm">
+                    <td style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.85rem' }}>
                       ₹{ref.amount.toLocaleString('en-IN')}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600">
+                    <td style={{ color: '#334155' }}>
                       {ref.method}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                        ref.status === 'Processed' ? 'bg-emerald-100 text-emerald-800' :
-                        ref.status === 'Approved' ? 'bg-blue-100 text-blue-800' :
-                        'bg-amber-100 text-amber-800'
+                    <td>
+                      <span className={`asf-badge ${
+                        ref.status === 'Processed' ? 'cleared' :
+                        ref.status === 'Approved' ? 'approved' : 'partial'
                       }`}>
                         {ref.status}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td style={{ textAlign: 'right' }}>
                       {ref.status === 'Pending Approval' && (
-                        <button
-                          onClick={() => handleApproveRefund(ref.id)}
-                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-[11px]"
-                        >
-                          Approve
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                          <button
+                            onClick={() => handleApproveRefund(ref.id)}
+                            className="asf-btn-primary asf-btn-emerald asf-btn-sm"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleRejectRefund(ref.id)}
+                            className="asf-btn-danger asf-btn-sm"
+                          >
+                            Reject
+                          </button>
+                        </div>
                       )}
                       {ref.status === 'Approved' && (
                         <button
                           onClick={() => handleProcessRefund(ref)}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded text-[11px]"
+                          className="asf-btn-primary asf-btn-sm"
                         >
                           Process Payout
                         </button>
                       )}
                       {ref.status === 'Processed' && (
-                        <span className="text-emerald-700 font-bold text-[11px]">✓ Settled</span>
+                        <span style={{ color: '#059669', fontWeight: 700, fontSize: '0.75rem' }}>✓ Settled</span>
                       )}
                     </td>
                   </tr>
@@ -1266,27 +1497,241 @@ export default function AccountsStudentFinanceTab({
         </div>
       )}
 
-      {/* Grant Scholarship / Concession Modal */}
-      {isGrantScholarshipOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden flex flex-col">
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
-              <h3 className="font-bold text-sm flex items-center gap-2">
-                <Award size={16} className="text-amber-400" />
-                Sanction Student Fee Concession
-              </h3>
-              <button onClick={() => setIsGrantScholarshipOpen(false)} className="p-1 text-slate-400 hover:text-white">
+      {/* =========================================================================
+          PAGE 9: STUDENT FINANCIAL CLEARANCE (No-Dues Desk)
+          ========================================================================= */}
+      {selectedSubtab === 'clearance' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="asf-info-banner">
+            <div>
+              <strong>Autonomous Examination &amp; Degree Financial Clearance Console</strong>
+              <span>Verification of complete tuition fee settlement prior to issuing Examination Admit Cards and Transcripts.</span>
+            </div>
+            <span className="asf-badge approved" style={{ fontFamily: 'monospace' }}>
+              NO DUES DESK
+            </span>
+          </div>
+
+          <div className="asf-kpi-grid">
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Evaluated Candidates</span>
+              <div className="asf-kpi-val">{studentLedgers.length}</div>
+              <div className="asf-kpi-sub">Autonomous Term 2026-27</div>
+            </div>
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Admit Cards Cleared</span>
+              <div className="asf-kpi-val" style={{ color: '#059669' }}>{clearedCount}</div>
+              <div className="asf-kpi-sub" style={{ color: '#059669', fontWeight: 600 }}>Zero Outstanding Dues</div>
+            </div>
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Admit Cards on Hold</span>
+              <div className="asf-kpi-val" style={{ color: '#e11d48' }}>{defaultersCount}</div>
+              <div className="asf-kpi-sub" style={{ color: '#e11d48', fontWeight: 600 }}>Pending Arrears</div>
+            </div>
+
+            <div className="asf-kpi-card">
+              <span className="asf-kpi-title">Clearance Rate</span>
+              <div className="asf-kpi-val" style={{ color: '#2563eb' }}>
+                {studentLedgers.length > 0 ? Math.round((clearedCount / studentLedgers.length) * 100) : 0}%
+              </div>
+              <div className="asf-kpi-sub" style={{ color: '#2563eb', fontWeight: 600 }}>Compliant candidates</div>
+            </div>
+          </div>
+
+          <div className="asf-table-container">
+            <table className="asf-table">
+              <thead>
+                <tr>
+                  <th>Student Name &amp; ID</th>
+                  <th>Department &amp; Sem</th>
+                  <th>Balance Fee</th>
+                  <th>Clearance Status</th>
+                  <th style={{ textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {studentLedgers.map(st => (
+                  <tr key={st.studentId}>
+                    <td>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{st.name}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>{st.studentId}</div>
+                    </td>
+                    <td style={{ color: '#334155' }}>
+                      {st.department} · {st.semester}
+                    </td>
+                    <td style={{ fontWeight: 700 }}>
+                      {st.outstandingBalance === 0 ? (
+                        <span style={{ color: '#059669' }}>₹0 (Zero Dues)</span>
+                      ) : (
+                        <span style={{ color: '#e11d48' }}>₹{st.outstandingBalance.toLocaleString('en-IN')} Due</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`asf-badge ${st.outstandingBalance === 0 ? 'cleared' : 'overdue'}`}>
+                        {st.clearanceStatus}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      {st.outstandingBalance === 0 ? (
+                        <button
+                          onClick={() => setIssuedCertificateStudent(st)}
+                          className="asf-btn-primary asf-btn-sm"
+                        >
+                          <ShieldCheck size={13} /> Issue Certificate
+                        </button>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
+                          <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.72rem' }}>Hold (Arrears)</span>
+                          <button
+                            onClick={() => {
+                              setPaymentForm({
+                                studentId: st.studentId,
+                                studentName: st.name,
+                                department: st.department,
+                                semester: st.semester,
+                                feeHead: 'Pre-Exam Arrears Clearance',
+                                amount: String(st.outstandingBalance),
+                                mode: 'UPI (Google Pay / PhonePe)',
+                                reference: `UPI/${Math.floor(100000000000 + Math.random() * 900000000000)}`,
+                                remarks: 'No-dues clearance payment.'
+                              });
+                              navigateToPage('collection', 'fee_collection');
+                            }}
+                            className="asf-btn-secondary asf-btn-sm"
+                          >
+                            Clear at Counter
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODALS & DRAWERS (Preserved & Enhanced)
+          ========================================================================= */}
+
+      {/* Modal: Official No-Dues Certificate */}
+      {issuedCertificateStudent && (
+        <div className="asf-modal-overlay">
+          <div className="asf-modal-card" style={{ maxWidth: '34rem' }}>
+            <div className="asf-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ShieldCheck size={18} color="#60a5fa" />
+                <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>Official Financial No-Dues Certificate</span>
+              </div>
+              <button
+                onClick={() => setIssuedCertificateStudent(null)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.2rem' }}
+              >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleGrantScholarshipSubmit} className="p-5 space-y-3 text-xs">
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Target Student</label>
+            <div style={{ padding: '1.25rem', background: '#ffffff', display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.8rem' }}>
+              <div style={{ textAlign: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '0.75rem' }}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 900, textTransform: 'uppercase', color: '#0f172a', margin: 0 }}>
+                  APNA CAMPUS AUTONOMOUS COLLEGE OF ENGINEERING &amp; TECHNOLOGY
+                </h3>
+                <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '0.2rem 0' }}>
+                  Office of the Bursar &amp; Finance Directorate · Statutory Audit Cleared
+                </p>
+                <div style={{ marginTop: '0.35rem', fontWeight: 700, fontSize: '0.78rem', color: '#2563eb', letterSpacing: '0.04em' }}>
+                  OFFICIAL INSTITUTIONAL NO-DUES CLEARANCE SLIP
+                </div>
+              </div>
+
+              <div style={{ padding: '0.85rem', background: '#f8fafc', borderRadius: '0.55rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.78rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Candidate Name:</span>
+                  <strong style={{ color: '#0f172a' }}>{issuedCertificateStudent.name}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Registration Number:</span>
+                  <strong style={{ fontFamily: 'monospace', color: '#0f172a' }}>{issuedCertificateStudent.studentId}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Academic Branch &amp; Term:</span>
+                  <span style={{ color: '#334155', fontWeight: 600 }}>{issuedCertificateStudent.department} · {issuedCertificateStudent.semester}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Total Assessed Tariff:</span>
+                  <span style={{ fontWeight: 600 }}>₹{issuedCertificateStudent.totalAssessed.toLocaleString('en-IN')}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Net Paid &amp; Verified:</span>
+                  <span style={{ fontWeight: 600, color: '#059669' }}>₹{issuedCertificateStudent.totalPaid.toLocaleString('en-IN')}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.35rem', borderTop: '1px solid #e2e8f0' }}>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>Outstanding Arrears:</span>
+                  <strong style={{ color: '#059669', fontWeight: 800 }}>₹0.00 (Zero Dues Cleared)</strong>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.75rem', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '0.55rem', color: '#065f46', fontSize: '0.75rem', lineHeight: 1.5 }}>
+                ✓ Certified that the above student holds zero outstanding financial dues across Tuition, Lab, Hostel, and Autonomous Examination heads. Eligible for Autonomous Examination Admit Card &amp; Degree Transcript issuance.
+              </div>
+
+              <div style={{ paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.72rem' }}>
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block', fontFamily: 'monospace' }}>Date: {new Date().toLocaleDateString('en-IN')}</span>
+                  <span style={{ color: '#64748b', display: 'block' }}>Certificate Ref: NODUES-2026-{issuedCertificateStudent.studentId.slice(-4)}</span>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontStyle: 'italic', color: '#0f172a', fontWeight: 700 }}>Mr. S. K. Roy</div>
+                  <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '2px', fontWeight: 700, color: '#334155', fontSize: '0.69rem' }}>
+                    Authorized Accounts Officer
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="asf-modal-footer no-print">
+              <button
+                onClick={() => setIssuedCertificateStudent(null)}
+                className="asf-btn-secondary"
+              >
+                Close
+              </button>
+              <button
+                onClick={handlePrint}
+                className="asf-btn-primary"
+              >
+                <Printer size={13} /> Print Certificate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Grant Scholarship / Concession Modal */}
+      {isGrantScholarshipOpen && (
+        <div className="asf-modal-overlay">
+          <div className="asf-modal-card">
+            <div className="asf-modal-header">
+              <h3 style={{ fontWeight: 700, fontSize: '0.88rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Award size={16} color="#fbbf24" />
+                Sanction Student Fee Concession
+              </h3>
+              <button onClick={() => setIsGrantScholarshipOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.2rem' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleGrantScholarshipSubmit} className="asf-modal-body">
+              <div className="asf-form-group">
+                <label>Target Student</label>
                 <select
                   value={scholarshipForm.studentId}
                   onChange={(e) => setScholarshipForm({ ...scholarshipForm, studentId: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                  className="asf-form-select"
                 >
                   {studentLedgers.map(s => (
                     <option key={s.studentId} value={s.studentId}>
@@ -1296,12 +1741,12 @@ export default function AccountsStudentFinanceTab({
                 </select>
               </div>
 
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Scholarship / Concession Scheme</label>
+              <div className="asf-form-group">
+                <label>Scholarship / Concession Scheme</label>
                 <select
                   value={scholarshipForm.schemeName}
                   onChange={(e) => setScholarshipForm({ ...scholarshipForm, schemeName: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                  className="asf-form-select"
                 >
                   <option value="Autonomous Merit-Cum-Means Scholarship">Autonomous Merit-Cum-Means Scholarship</option>
                   <option value="Dean's Honors Academic Excellence Award">Dean's Honors Academic Excellence Award (25% Tuition)</option>
@@ -1311,51 +1756,53 @@ export default function AccountsStudentFinanceTab({
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Sanctioned Amount (₹)</label>
+              <div className="asf-form-2col">
+                <div className="asf-form-group">
+                  <label>Sanctioned Amount (₹)</label>
                   <input
                     type="number"
                     value={scholarshipForm.amount}
                     onChange={(e) => setScholarshipForm({ ...scholarshipForm, amount: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none font-bold text-amber-700"
+                    className="asf-form-input"
+                    style={{ fontWeight: 700, color: '#d97706' }}
                     required
                   />
                 </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Funding Source</label>
+                <div className="asf-form-group">
+                  <label>Funding Source</label>
                   <input
                     type="text"
                     value={scholarshipForm.fundingSource}
                     onChange={(e) => setScholarshipForm({ ...scholarshipForm, fundingSource: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                    className="asf-form-input"
                     required
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Board of Governors Approval Ref</label>
+              <div className="asf-form-group">
+                <label>Board of Governors Approval Ref</label>
                 <input
                   type="text"
                   value={scholarshipForm.approvalRef}
                   onChange={(e) => setScholarshipForm({ ...scholarshipForm, approvalRef: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none font-mono"
+                  className="asf-form-input"
+                  style={{ fontFamily: 'monospace' }}
                   required
                 />
               </div>
 
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex justify-end gap-2 -mx-5 -mb-5 mt-4">
+              <div className="asf-modal-footer" style={{ margin: '0.5rem -1.25rem -1.25rem -1.25rem' }}>
                 <button
                   type="button"
                   onClick={() => setIsGrantScholarshipOpen(false)}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg text-xs"
+                  className="asf-btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs shadow-xs"
+                  className="asf-btn-primary"
                 >
                   Apply Concession to Ledger
                 </button>
@@ -1367,66 +1814,66 @@ export default function AccountsStudentFinanceTab({
 
       {/* 360° Student Financial Profile Modal */}
       {selectedProfileStudent && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+        <div className="asf-modal-overlay">
+          <div className="asf-modal-card" style={{ maxWidth: '40rem' }}>
+            <div className="asf-modal-header">
               <div>
-                <span className="text-[10px] font-mono font-bold text-blue-300 block">
-                  360° STUDENT FINANCIAL DOSSIER
+                <span style={{ fontSize: '0.69rem', fontFamily: 'monospace', fontWeight: 700, color: '#93c5fd', display: 'block', textTransform: 'uppercase' }}>
+                  360° Student Financial Dossier
                 </span>
-                <h3 className="font-bold text-sm text-white">
+                <h3 style={{ fontWeight: 700, fontSize: '0.92rem', color: '#ffffff', margin: '0.15rem 0 0 0' }}>
                   {selectedProfileStudent.name} ({selectedProfileStudent.studentId})
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedProfileStudent(null)}
-                className="p-1 text-slate-400 hover:text-white"
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.2rem' }}
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="p-5 overflow-y-auto space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-2.5 bg-slate-50 rounded border border-slate-100">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Department &amp; Program</span>
-                  <strong className="text-slate-800">{selectedProfileStudent.department} ({selectedProfileStudent.course})</strong>
+            <div className="asf-modal-body">
+              <div className="asf-form-2col">
+                <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '0.55rem', border: '1px solid #e2e8f0' }}>
+                  <span style={{ fontSize: '0.69rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Department &amp; Program</span>
+                  <strong style={{ color: '#0f172a', fontSize: '0.82rem' }}>{selectedProfileStudent.department} ({selectedProfileStudent.course || 'B.Tech'})</strong>
                 </div>
-                <div className="p-2.5 bg-slate-50 rounded border border-slate-100">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Admission Category</span>
-                  <strong className="text-slate-800">{selectedProfileStudent.admissionCategory}</strong>
-                </div>
-              </div>
-
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
-                <span className="font-bold text-slate-800 block">Fee Assessment &amp; Balance Summary:</span>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-600">Total Assessed Tariff:</span>
-                  <strong className="text-slate-900">₹{selectedProfileStudent.totalAssessed.toLocaleString('en-IN')}</strong>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-600">Approved Scholarships &amp; Waivers:</span>
-                  <strong className="text-teal-700">-₹{selectedProfileStudent.concessions.toLocaleString('en-IN')}</strong>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-600">Paid to Date (Verified Credits):</span>
-                  <strong className="text-emerald-700">₹{selectedProfileStudent.totalPaid.toLocaleString('en-IN')}</strong>
-                </div>
-                <div className="flex justify-between py-1 text-sm">
-                  <span className="font-bold text-slate-800">Outstanding Balance:</span>
-                  <strong className="text-rose-600">₹{selectedProfileStudent.outstandingBalance.toLocaleString('en-IN')}</strong>
+                <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '0.55rem', border: '1px solid #e2e8f0' }}>
+                  <span style={{ fontSize: '0.69rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Admission Category</span>
+                  <strong style={{ color: '#0f172a', fontSize: '0.82rem' }}>{selectedProfileStudent.admissionCategory || 'General Merit'}</strong>
                 </div>
               </div>
 
-              <div className="p-2.5 bg-blue-50 border border-blue-100 rounded text-blue-900">
-                <strong>Latest Receipt:</strong> {selectedProfileStudent.receiptNo} on {selectedProfileStudent.lastPaymentDate}
+              <div style={{ padding: '0.85rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.78rem' }}>
+                <span style={{ fontWeight: 700, color: '#0f172a', display: 'block' }}>Fee Assessment &amp; Balance Summary:</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.35rem', borderBottom: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b' }}>Total Assessed Tariff:</span>
+                  <strong style={{ color: '#0f172a' }}>₹{selectedProfileStudent.totalAssessed.toLocaleString('en-IN')}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.35rem', borderBottom: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b' }}>Approved Scholarships &amp; Waivers:</span>
+                  <strong style={{ color: '#059669' }}>-₹{(selectedProfileStudent.concessions || 0).toLocaleString('en-IN')}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.35rem', borderBottom: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b' }}>Paid to Date (Verified Credits):</span>
+                  <strong style={{ color: '#059669' }}>₹{selectedProfileStudent.totalPaid.toLocaleString('en-IN')}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.15rem' }}>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>Outstanding Balance:</span>
+                  <strong style={{ color: '#e11d48', fontWeight: 800 }}>₹{selectedProfileStudent.outstandingBalance.toLocaleString('en-IN')}</strong>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.75rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.55rem', color: '#1e40af', fontSize: '0.75rem' }}>
+                <strong>Latest Receipt:</strong> {selectedProfileStudent.receiptNo || 'None'} on {selectedProfileStudent.lastPaymentDate || 'N/A'}
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+            <div className="asf-modal-footer">
               <button
                 onClick={() => setSelectedProfileStudent(null)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg text-xs"
+                className="asf-btn-secondary"
               >
                 Close Dossier
               </button>
@@ -1437,22 +1884,22 @@ export default function AccountsStudentFinanceTab({
 
       {/* Printable Receipt Generator Modal */}
       {printableReceipt && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden flex flex-col max-h-[95vh]">
-            <div className="p-3 bg-slate-900 text-white flex items-center justify-between no-print">
-              <span className="font-bold text-xs uppercase tracking-wider text-slate-300">
+        <div className="asf-modal-overlay">
+          <div className="asf-modal-card" style={{ maxWidth: '32rem' }}>
+            <div className="asf-modal-header no-print">
+              <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#cbd5e1' }}>
                 Official Institutional Fee Receipt
               </span>
-              <div className="flex items-center gap-2">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 <button
                   onClick={handlePrint}
-                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded flex items-center gap-1"
+                  className="asf-btn-primary asf-btn-sm"
                 >
                   <Printer size={13} /> Print
                 </button>
                 <button
                   onClick={() => setPrintableReceipt(null)}
-                  className="p-1 text-slate-400 hover:text-white"
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.2rem' }}
                 >
                   <X size={18} />
                 </button>
@@ -1460,20 +1907,20 @@ export default function AccountsStudentFinanceTab({
             </div>
 
             {/* Printable Receipt Body */}
-            <div className="p-6 text-slate-900 bg-white overflow-y-auto space-y-4 text-xs font-sans">
-              <div className="text-center border-b-2 border-slate-900 pb-3">
-                <h3 className="text-base font-black uppercase text-slate-900">
+            <div style={{ padding: '1.5rem', background: '#ffffff', color: '#0f172a', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.78rem' }}>
+              <div style={{ textAlign: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '0.75rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 900, textTransform: 'uppercase', color: '#0f172a', margin: 0 }}>
                   APNA CAMPUS AUTONOMOUS ENGINEERING COLLEGE
                 </h3>
-                <p className="text-[10px] text-slate-500">
+                <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '0.2rem 0' }}>
                   Directorate of Finance &amp; Accounts · Central Accounts Counter
                 </p>
-                <div className="mt-1 font-bold text-xs text-blue-900 tracking-wider">
+                <div style={{ marginTop: '0.35rem', fontWeight: 700, fontSize: '0.78rem', color: '#2563eb', letterSpacing: '0.04em' }}>
                   STUDENT FEE PAYMENT RECEIPT (AUTONOMOUS DEMAND)
                 </div>
               </div>
 
-              <div className="flex justify-between text-xs py-1">
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
                 <div>
                   <strong>Receipt No:</strong> {printableReceipt.receiptNo}
                 </div>
@@ -1482,69 +1929,71 @@ export default function AccountsStudentFinanceTab({
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Student Name:</span>
+              <div style={{ padding: '0.85rem', background: '#f8fafc', borderRadius: '0.55rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.78rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Student Name:</span>
                   <strong>{printableReceipt.studentName}</strong>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Registration ID:</span>
-                  <span className="font-mono font-bold">{printableReceipt.studentId}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Registration ID:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{printableReceipt.studentId}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Department:</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Department:</span>
                   <span>{printableReceipt.department}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Fee Head:</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Fee Head:</span>
                   <span>{printableReceipt.feeHead}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Payment Mode:</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Payment Mode:</span>
                   <span>{printableReceipt.mode}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Transaction Reference:</span>
-                  <span className="font-mono">{printableReceipt.reference}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Transaction Reference:</span>
+                  <span style={{ fontFamily: 'monospace' }}>{printableReceipt.reference}</span>
                 </div>
               </div>
 
-              <div className="p-3 bg-emerald-50 rounded border border-emerald-200 flex justify-between items-center text-sm">
-                <span className="font-bold text-emerald-950">Amount Received:</span>
-                <strong className="text-emerald-900 text-base">₹{printableReceipt.amount.toLocaleString('en-IN')}.00</strong>
+              <div style={{ padding: '0.85rem', background: '#ecfdf5', borderRadius: '0.55rem', border: '1px solid #a7f3d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 700, color: '#065f46' }}>Amount Received:</span>
+                <strong style={{ color: '#065f46', fontSize: '1.05rem', fontWeight: 800 }}>
+                  ₹{printableReceipt.amount.toLocaleString('en-IN')}.00
+                </strong>
               </div>
 
-              <div className="pt-6 flex justify-between items-end text-xs">
+              <div style={{ paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.72rem' }}>
                 <div>
-                  <div className="h-8 flex items-center justify-center font-mono text-[10px] text-slate-400">
+                  <div style={{ height: '1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', fontSize: '0.69rem', color: '#94a3b8' }}>
                     [SBI/HDFC Treasury Stamp]
                   </div>
-                  <div className="border-t border-slate-400 pt-0.5 text-center text-[10px] text-slate-500">
+                  <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '2px', textAlign: 'center', fontSize: '0.69rem', color: '#64748b' }}>
                     System Generated Receipt
                   </div>
                 </div>
 
-                <div className="text-center">
-                  <div className="h-8 flex items-center justify-center italic text-blue-900 font-bold">
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ height: '1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontStyle: 'italic', color: '#0f172a', fontWeight: 700 }}>
                     Mr. S. K. Roy
                   </div>
-                  <div className="border-t border-slate-400 pt-0.5 text-center font-bold text-slate-800 text-[10px]">
+                  <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '2px', textAlign: 'center', fontWeight: 700, color: '#334155', fontSize: '0.69rem' }}>
                     Authorized Accounts Officer
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2 no-print">
+            <div className="asf-modal-footer no-print">
               <button
                 onClick={() => setPrintableReceipt(null)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg text-xs"
+                className="asf-btn-secondary"
               >
                 Close
               </button>
               <button
                 onClick={handlePrint}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs flex items-center gap-1.5"
+                className="asf-btn-primary asf-btn-emerald"
               >
                 <Printer size={13} /> Print Official Receipt
               </button>
@@ -1555,119 +2004,119 @@ export default function AccountsStudentFinanceTab({
 
       {/* Add Fee Structure Modal */}
       {isCreateStructureOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
-              <h3 className="font-bold text-sm flex items-center gap-2">
-                <PlusCircle size={16} className="text-blue-400" />
+        <div className="asf-modal-overlay">
+          <div className="asf-modal-card">
+            <div className="asf-modal-header">
+              <h3 style={{ fontWeight: 700, fontSize: '0.88rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <PlusCircle size={16} color="#60a5fa" />
                 Configure Program Fee Tariff
               </h3>
-              <button onClick={() => setIsCreateStructureOpen(false)} className="p-1 text-slate-400 hover:text-white">
+              <button onClick={() => setIsCreateStructureOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.2rem' }}>
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateStructure} className="p-5 overflow-y-auto space-y-3 text-xs">
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Program / Degree Title</label>
+            <form onSubmit={handleCreateStructure} className="asf-modal-body">
+              <div className="asf-form-group">
+                <label>Program / Degree Title</label>
                 <input
                   type="text"
                   value={structureForm.program}
                   onChange={(e) => setStructureForm({ ...structureForm, program: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                  className="asf-form-input"
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Course Code</label>
+              <div className="asf-form-2col">
+                <div className="asf-form-group">
+                  <label>Course Code</label>
                   <input
                     type="text"
                     value={structureForm.courseCode}
                     onChange={(e) => setStructureForm({ ...structureForm, courseCode: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                    className="asf-form-input"
                     required
                   />
                 </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Academic Session</label>
+                <div className="asf-form-group">
+                  <label>Academic Session</label>
                   <input
                     type="text"
                     value={structureForm.academicYear}
                     onChange={(e) => setStructureForm({ ...structureForm, academicYear: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                    className="asf-form-input"
                     required
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Tuition Fee (₹)</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                <div className="asf-form-group">
+                  <label>Tuition (₹)</label>
                   <input
                     type="number"
                     value={structureForm.tuitionFee}
                     onChange={(e) => setStructureForm({ ...structureForm, tuitionFee: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                    className="asf-form-input"
                     required
                   />
                 </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Development (₹)</label>
+                <div className="asf-form-group">
+                  <label>Development (₹)</label>
                   <input
                     type="number"
                     value={structureForm.developmentFee}
                     onChange={(e) => setStructureForm({ ...structureForm, developmentFee: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                    className="asf-form-input"
                     required
                   />
                 </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Lab/Library (₹)</label>
+                <div className="asf-form-group">
+                  <label>Lab/Library (₹)</label>
                   <input
                     type="number"
                     value={structureForm.labLibraryFee}
                     onChange={(e) => setStructureForm({ ...structureForm, labLibraryFee: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                    className="asf-form-input"
                     required
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Exam Fee (₹)</label>
+              <div className="asf-form-2col">
+                <div className="asf-form-group">
+                  <label>Exam Fee (₹)</label>
                   <input
                     type="number"
                     value={structureForm.examinationFee}
                     onChange={(e) => setStructureForm({ ...structureForm, examinationFee: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                    className="asf-form-input"
                     required
                   />
                 </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Hostel &amp; Mess (₹)</label>
+                <div className="asf-form-group">
+                  <label>Hostel &amp; Mess (₹)</label>
                   <input
                     type="number"
                     value={structureForm.hostelMessFee}
                     onChange={(e) => setStructureForm({ ...structureForm, hostelMessFee: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-xs outline-none"
+                    className="asf-form-input"
                   />
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex justify-end gap-2 -mx-5 -mb-5 mt-4">
+              <div className="asf-modal-footer" style={{ margin: '0.5rem -1.25rem -1.25rem -1.25rem' }}>
                 <button
                   type="button"
                   onClick={() => setIsCreateStructureOpen(false)}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg text-xs"
+                  className="asf-btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs shadow-xs"
+                  className="asf-btn-primary"
                 >
                   Save Fee Tariff
                 </button>

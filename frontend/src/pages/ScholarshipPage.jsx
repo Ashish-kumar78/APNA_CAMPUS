@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Award,
   BookOpen,
-  Briefcase,
   Calendar,
   Check,
   CheckCircle2,
@@ -10,8 +9,8 @@ import {
   ChevronRight,
   ChevronUp,
   Clock,
-  Compass,
   DollarSign,
+  Download,
   ExternalLink,
   Eye,
   FileCheck,
@@ -19,20 +18,23 @@ import {
   Filter,
   GraduationCap,
   Heart,
-  Home,
+  HelpCircle,
   Layers,
+  LayoutGrid,
+  List,
+  Plus,
   Printer,
   RotateCcw,
   Search,
   Send,
   ShieldCheck,
   Sparkles,
-  Star,
   Target,
   TrendingUp,
   UploadCloud,
+  User,
   Users,
-  Building,
+  Building2,
   X
 } from 'lucide-react';
 import './ScholarshipPage.css';
@@ -44,43 +46,6 @@ import {
   SCHOLARSHIP_OFFICER
 } from '../components/ScholarshipModules/scholarshipData.js';
 import { getActiveStudent } from '../services/studentStore.js';
-
-// Authority / Organization Crest & Logo helper
-function AuthorityCrest({ type, provider = '', name = '' }) {
-  const p = (provider + ' ' + name).toLowerCase();
-
-  let crest = 'AC';
-  let bg = '#5a2a8a'; // Institutional purple
-
-  if (p.includes('odisha') || p.includes('prerana') || p.includes('medhabruti') || p.includes('sudakshya')) {
-    crest = 'OD';
-    bg = '#1a5276';
-  } else if (p.includes('ministry of education') || p.includes('moe') || p.includes('national scholarship') || p.includes('nsp')) {
-    crest = 'IN';
-    bg = '#007DC6';
-  } else if (p.includes('aicte') || p.includes('pragati')) {
-    crest = 'AICTE';
-    bg = '#005eb8';
-  } else if (p.includes('tata')) {
-    crest = 'TT';
-    bg = '#1e3a8a';
-  } else if (p.includes('infosys')) {
-    crest = 'INF';
-    bg = '#0284c7';
-  } else if (p.includes('alumni')) {
-    crest = 'ALM';
-    bg = '#6D28D9';
-  } else if (p.includes('need') || p.includes('hardship') || p.includes('waiver')) {
-    crest = 'AC';
-    bg = '#059669';
-  }
-
-  return (
-    <div className="company-logo sch-logo" style={{ background: bg }} title={provider}>
-      {crest}
-    </div>
-  );
-}
 
 export default function ScholarshipPage({ account }) {
   // Retrieve Active Student from Store / Account
@@ -135,7 +100,7 @@ export default function ScholarshipPage({ account }) {
     }
   });
 
-  // Synchronize to localStorage
+  // Persist State
   useEffect(() => {
     try {
       localStorage.setItem('apna_saved_scholarships', JSON.stringify(savedSchemeIds));
@@ -148,25 +113,25 @@ export default function ScholarshipPage({ account }) {
     } catch {}
   }, [applications]);
 
-  // Current Main View: 'catalog' | 'my-applications'
-  const [currentView, setCurrentView] = useState('catalog');
+  // Active Tab: 'available' | 'my_applications' | 'guidelines' | 'saved'
+  const [activeTab, setActiveTab] = useState('available');
 
-  // Active Tab: 'all' | 'govt' | 'inst' | 'need' | 'csr' | 'saved' | 'my-applications'
-  const [activeTab, setActiveTab] = useState('all');
+  // View Mode: 'table' | 'grid'
+  const [viewMode, setViewMode] = useState('table');
 
-  // Search & Secondary Filters
+  // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
-  const [educationLevelFilter, setEducationLevelFilter] = useState('All');
-  const [cgpaRequirementFilter, setCgpaRequirementFilter] = useState('All');
-  const [onlyEligibleToggle, setOnlyEligibleToggle] = useState(false);
-  const [onlySavedToggle, setOnlySavedToggle] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [degreeFilter, setDegreeFilter] = useState('All');
+  const [cgpaFilter, setCgpaFilter] = useState('All');
+  const [onlyEligible, setOnlyEligible] = useState(false);
 
   // Modals State
   const [selectedSchemeForDetails, setSelectedSchemeForDetails] = useState(null);
   const [detailTab, setDetailTab] = useState('overview');
   const [expandedFaqIndex, setExpandedFaqIndex] = useState(0);
 
-  // Apply Wizard Modal State
+  // Application Modal State
   const [applyingScheme, setApplyingScheme] = useState(null);
   const [applyStep, setApplyStep] = useState(1);
   const [applyFormData, setApplyFormData] = useState({
@@ -187,11 +152,11 @@ export default function ScholarshipPage({ account }) {
   });
   const [submittedApplicationRef, setSubmittedApplicationRef] = useState(null);
 
-  // Toast notification
+  // Toast
   const [toastMessage, setToastMessage] = useState(null);
   const showToast = (msg) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3800);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   // Student's Submitted Applications
@@ -201,7 +166,7 @@ export default function ScholarshipPage({ account }) {
     );
   }, [applications, studentRoll, student.name]);
 
-  // Derived Metrics for Summary Strip
+  // Derived Summary Metric Counts
   const availableCount = schemes.filter((s) => s.status !== 'Closed').length;
   const eligibleCount = useMemo(() => {
     return schemes.filter((s) => {
@@ -217,11 +182,7 @@ export default function ScholarshipPage({ account }) {
         a.reviewStatus === 'Submitted' ||
         a.verificationStatus?.includes('Scrutiny') ||
         a.verificationStatus?.includes('Verification')
-    ).length || (myApplications.length > 0 ? myApplications.length : 0);
-  }, [myApplications]);
-
-  const approvedCount = useMemo(() => {
-    return myApplications.filter((a) => a.reviewStatus === 'Approved').length;
+    ).length;
   }, [myApplications]);
 
   // Bookmark Toggle
@@ -232,13 +193,17 @@ export default function ScholarshipPage({ account }) {
       showToast('Removed from saved scholarships.');
     } else {
       setSavedSchemeIds([...savedSchemeIds, schemeId]);
-      showToast('Added to your saved scholarships bookmarks!');
+      showToast('Added to saved scholarships bookmarks!');
     }
   };
 
   // Filter Logic
   const filteredSchemes = useMemo(() => {
     return schemes.filter((s) => {
+      if (activeTab === 'saved') {
+        if (!savedSchemeIds.includes(s.id)) return false;
+      }
+
       // Search Query
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase();
@@ -251,56 +216,51 @@ export default function ScholarshipPage({ account }) {
         if (!matchesQuery) return false;
       }
 
-      // Tab Filtering
-      if (activeTab === 'govt' && s.type !== 'Government') return false;
-      if (activeTab === 'inst' && s.type !== 'Institutional') return false;
-      if (activeTab === 'need' && !s.category?.includes('Need') && s.type !== 'Need-Based') return false;
-      if (activeTab === 'csr' && !s.type?.includes('Private') && !s.type?.includes('Sponsored') && !s.sponsorName?.includes('Tata') && !s.sponsorName?.includes('Infosys')) return false;
-      if (activeTab === 'saved' && !savedSchemeIds.includes(s.id)) return false;
+      // Category Filter
+      if (categoryFilter !== 'All') {
+        if (categoryFilter === 'Government' && s.type !== 'Government') return false;
+        if (categoryFilter === 'Institutional' && s.type !== 'Institutional') return false;
+        if (categoryFilter === 'Need' && !s.category?.includes('Need') && s.type !== 'Need-Based') return false;
+        if (categoryFilter === 'CSR' && !s.type?.includes('Private') && !s.type?.includes('Sponsored')) return false;
+      }
 
-      // Degree Level Filter
-      if (educationLevelFilter !== 'All') {
-        if (s.educationLevels && !s.educationLevels.includes(educationLevelFilter)) return false;
+      // Degree Filter
+      if (degreeFilter !== 'All') {
+        if (s.educationLevels && !s.educationLevels.includes(degreeFilter)) return false;
       }
 
       // CGPA Cutoff Filter
-      if (cgpaRequirementFilter !== 'All') {
-        const cutoff = parseFloat(cgpaRequirementFilter);
+      if (cgpaFilter !== 'All') {
+        const cutoff = parseFloat(cgpaFilter);
         if (s.minCgpa && s.minCgpa > cutoff) return false;
       }
 
       // Only Eligible Toggle
-      if (onlyEligibleToggle) {
+      if (onlyEligible) {
         if (s.minCgpa && studentCgpa < s.minCgpa) return false;
-      }
-
-      // Only Saved Toggle
-      if (onlySavedToggle) {
-        if (!savedSchemeIds.includes(s.id)) return false;
       }
 
       return true;
     });
   }, [
     schemes,
-    searchTerm,
     activeTab,
-    educationLevelFilter,
-    cgpaRequirementFilter,
-    onlyEligibleToggle,
-    onlySavedToggle,
-    studentCgpa,
-    savedSchemeIds
+    savedSchemeIds,
+    searchTerm,
+    categoryFilter,
+    degreeFilter,
+    cgpaFilter,
+    onlyEligible,
+    studentCgpa
   ]);
 
   // Reset Filters
   const handleResetFilters = () => {
     setSearchTerm('');
-    setActiveTab('all');
-    setEducationLevelFilter('All');
-    setCgpaRequirementFilter('All');
-    setOnlyEligibleToggle(false);
-    setOnlySavedToggle(false);
+    setCategoryFilter('All');
+    setDegreeFilter('All');
+    setCgpaFilter('All');
+    setOnlyEligible(false);
   };
 
   // Open Details Modal
@@ -315,8 +275,7 @@ export default function ScholarshipPage({ account }) {
     const existing = myApplications.find((a) => a.schemeId === scheme.id);
     if (existing) {
       showToast(`You have already submitted an application (${existing.id}) for this scheme.`);
-      setCurrentView('my-applications');
-      setActiveTab('my-applications');
+      setActiveTab('my_applications');
       return;
     }
 
@@ -345,7 +304,7 @@ export default function ScholarshipPage({ account }) {
   const handleSubmitApplication = (e) => {
     e.preventDefault();
     if (!applyFormData.agreedToTerms) {
-      alert('Please check and confirm the mandatory declaration before submitting.');
+      alert('Please check and confirm the declaration before submitting.');
       return;
     }
 
@@ -395,368 +354,200 @@ export default function ScholarshipPage({ account }) {
     showToast(`Application ${newAppId} successfully submitted!`);
   };
 
-  // Helper for Status Badge Class
-  const getStatusBadge = (status, isApplied = false) => {
-    if (isApplied) {
-      return <span className="sch-badge sch-badge-applied"><Check size={11} /> Application Submitted</span>;
-    }
-    switch (status) {
-      case 'Open':
-        return <span className="sch-badge sch-badge-open">Open for Applications</span>;
-      case 'Closing Soon':
-        return <span className="sch-badge sch-badge-closing">Closing Soon</span>;
-      case 'Approved':
-        return <span className="sch-badge sch-badge-approved">Approved</span>;
-      case 'Under Review':
-        return <span className="sch-badge sch-badge-review">Under Review</span>;
-      case 'Pending':
-        return <span className="sch-badge sch-badge-pending">Pending Review</span>;
-      case 'Rejected':
-        return <span className="sch-badge sch-badge-rejected">Rejected</span>;
-      case 'Closed':
-        return <span className="sch-badge sch-badge-closed">Applications Closed</span>;
-      default:
-        return <span className="sch-badge sch-badge-open">{status || 'Active'}</span>;
-    }
-  };
-
   return (
-    <div className="placement-page sch-page">
-      {/* ─── 1. BREADCRUMB & PAGE HEADER (Placement Style) ───────────────────────── */}
-      <div className="sch-breadcrumb">
-        <Home size={12} />
-        <span>Home</span>
-        <span>/</span>
-        <span>Campus</span>
-        <span>/</span>
-        <strong className="sch-breadcrumb-active">Scholarships &amp; Financial Aid</strong>
-      </div>
-
-      <div className="placement-header sch-header">
+    <div className="scholarship-page">
+      {/* ─── 1. UNIFORM PORTAL HEADER ─────────────────────────────────────────── */}
+      <div className="scholarship-header">
         <div>
-          <p className="placement-kicker sch-kicker">
-            <Award size={13} /> SCHOLARSHIPS &amp; FINANCIAL AID
-          </p>
-          <h2>Scholarships &amp; Financial Aid</h2>
-          <p className="placement-caption">
-            Discover institutional fellowships, government statutory aid (PRERANA, NSP), and corporate CSR endowments designed to support your education.
+          <h1 className="scholarship-title">Scholarships &amp; Financial Aid</h1>
+          <p className="scholarship-subtitle">
+            Explore state statutory grants (PRERANA, NSP), institutional merit fellowships, and track online verification.
           </p>
         </div>
 
-        <div className="sch-header-right">
-          <div className="placement-eligibility sch-eligibility">
-            <Check size={16} />
-            <div>
-              <strong>Scholarship Eligible</strong>
-              <small>CGPA {studentCgpa} · All Requirements Met · Active</small>
-            </div>
+        <div className="scholarship-header-actions">
+          <button
+            type="button"
+            className="btn-pay-now"
+            onClick={() => {
+              const openScheme = schemes.find((s) => s.status === 'Open') || schemes[0];
+              handleOpenApplyModal(openScheme);
+            }}
+          >
+            <Plus size={16} /> Apply for Scholarship
+          </button>
+
+          <button
+            type="button"
+            className="btn-receipt"
+            onClick={() => setActiveTab('my_applications')}
+          >
+            <Clock size={15} /> Track My Applications ({myApplications.length})
+          </button>
+        </div>
+      </div>
+
+      {/* ─── 2. UNIFORM KPI METRICS STRIP ─────────────────────────────────────── */}
+      <div className="scholarship-metrics">
+        {/* Metric 1 */}
+        <div
+          className="scholarship-metric-card interactive"
+          onClick={() => {
+            setActiveTab('available');
+            handleResetFilters();
+          }}
+          title="Click to view all available schemes"
+        >
+          <div className="scholarship-metric-icon blue">
+            <Award size={22} />
           </div>
+          <div className="scholarship-metric-body">
+            <h4>Available Schemes</h4>
+            <div className="metric-val">{schemes.length} Schemes</div>
+            <div className="metric-sub">Govt + Institutional + CSR</div>
+          </div>
+        </div>
 
-          <div className="sch-header-cta-group">
-            <button
-              type="button"
-              className={`sch-btn-header-cta ${currentView === 'catalog' && activeTab === 'all' ? 'active' : ''}`}
-              onClick={() => {
-                setCurrentView('catalog');
-                setActiveTab('all');
-              }}
-            >
-              <Compass size={14} />
-              <span>Explore Scholarships</span>
-            </button>
+        {/* Metric 2 */}
+        <div
+          className="scholarship-metric-card interactive"
+          onClick={() => {
+            setActiveTab('available');
+            setOnlyEligible(!onlyEligible);
+          }}
+          title="Click to filter scholarships matched to your CGPA"
+        >
+          <div className="scholarship-metric-icon green">
+            <CheckCircle2 size={22} />
+          </div>
+          <div className="scholarship-metric-body">
+            <h4>Eligible for You</h4>
+            <div className="metric-val">{eligibleCount} Matched</div>
+            <div className="metric-sub">Matched to {studentCgpa} CGPA</div>
+          </div>
+        </div>
 
-            <button
-              type="button"
-              className={`sch-btn-header-cta ${currentView === 'my-applications' || activeTab === 'my-applications' ? 'active' : ''}`}
-              onClick={() => {
-                setCurrentView('my-applications');
-                setActiveTab('my-applications');
-              }}
-            >
-              <Clock size={14} />
-              <span>Track My Applications</span>
-              {myApplications.length > 0 && (
-                <span className="sch-header-badge-count">{myApplications.length}</span>
-              )}
-            </button>
+        {/* Metric 3 */}
+        <div
+          className="scholarship-metric-card interactive"
+          onClick={() => setActiveTab('my_applications')}
+          title="Click to track your submitted applications"
+        >
+          <div className="scholarship-metric-icon purple">
+            <Clock size={22} />
+          </div>
+          <div className="scholarship-metric-body">
+            <h4>My Applications</h4>
+            <div className="metric-val">{myApplications.length} Submissions</div>
+            <div className="metric-sub">{inReviewCount > 0 ? `${inReviewCount} In Scrutiny` : 'Up to Date'}</div>
+          </div>
+        </div>
+
+        {/* Metric 4 */}
+        <div
+          className="scholarship-metric-card interactive"
+          onClick={() => {
+            setActiveTab('available');
+            showToast('Annual Direct Benefit Transfer (DBT) aid pool.');
+          }}
+          title="Total Sanctioned Aid Pool"
+        >
+          <div className="scholarship-metric-icon amber">
+            <DollarSign size={22} />
+          </div>
+          <div className="scholarship-metric-body">
+            <h4>Direct Aid Pool</h4>
+            <div className="metric-val">₹2.8 Cr+</div>
+            <div className="metric-sub">100% DBT Bank Credit</div>
           </div>
         </div>
       </div>
 
-      {/* ─── 2. OFFICIAL SCHOLARSHIP BROADCAST CHANNEL BANNER ───────────────────── */}
-      <div className="sch-broadcast-banner">
-        <div className="sch-broadcast-left">
-          <div className="sch-broadcast-icon">
-            <Sparkles size={18} />
-          </div>
-          <div>
-            <div className="sch-broadcast-title-row">
-              <span className="sch-broadcast-tag">Active Cycle 2026–2027</span>
-              <strong>📢 Featured Scholarship Opportunities &amp; Deadlines</strong>
-            </div>
-            <span className="sch-broadcast-sub">
-              State &amp; Central statutory portal verification is active. PRERANA Post-Matric &amp; National Scholarship Portal (NSP) applications close on 30 Nov 2026.
-            </span>
-          </div>
-        </div>
+      {/* ─── 3. UNIFORM NAVIGATION TABS ───────────────────────────────────────── */}
+      <div className="scholarship-tabs">
+        <button
+          type="button"
+          className={`scholarship-tab-btn ${activeTab === 'available' ? 'active' : ''}`}
+          onClick={() => setActiveTab('available')}
+        >
+          Available Scholarship Schemes ({schemes.length})
+        </button>
 
         <button
           type="button"
-          className="sch-broadcast-btn"
-          onClick={() => {
-            setCurrentView('catalog');
-            setActiveTab('govt');
-            showToast('Showing state and central government scholarship schemes.');
-          }}
+          className={`scholarship-tab-btn ${activeTab === 'my_applications' ? 'active' : ''}`}
+          onClick={() => setActiveTab('my_applications')}
         >
-          Explore Opportunities <ChevronRight size={13} />
+          My Applications &amp; Status ({myApplications.length})
+        </button>
+
+        <button
+          type="button"
+          className={`scholarship-tab-btn ${activeTab === 'guidelines' ? 'active' : ''}`}
+          onClick={() => setActiveTab('guidelines')}
+        >
+          Eligibility &amp; Document Guidelines
+        </button>
+
+        <button
+          type="button"
+          className={`scholarship-tab-btn ${activeTab === 'saved' ? 'active' : ''}`}
+          onClick={() => setActiveTab('saved')}
+        >
+          Saved Bookmarks ({savedSchemeIds.length})
         </button>
       </div>
 
-      {/* ─── 3. COLORFUL OVERVIEW SUMMARY METRICS ROW ───────────────────────────── */}
-      <div className="sch-summary-grid">
-        {/* Card 1: Available */}
-        <div
-          className={`sch-summary-card sch-summary-blue ${activeTab === 'all' && currentView === 'catalog' ? 'active-filter' : ''}`}
-          onClick={() => {
-            setCurrentView('catalog');
-            handleResetFilters();
-          }}
-          title="Click to view all available scholarships"
-        >
-          <div className="sch-summary-icon-box">
-            <Layers size={18} />
-          </div>
-          <div className="sch-summary-info">
-            <strong>{availableCount} Schemes</strong>
-            <small>Available Scholarships</small>
-          </div>
-        </div>
-
-        {/* Card 2: Eligible */}
-        <div
-          className={`sch-summary-card sch-summary-emerald ${onlyEligibleToggle ? 'active-filter' : ''}`}
-          onClick={() => {
-            setCurrentView('catalog');
-            setOnlyEligibleToggle(!onlyEligibleToggle);
-          }}
-          title="Click to filter scholarships you qualify for"
-        >
-          <div className="sch-summary-icon-box">
-            <CheckCircle2 size={18} />
-          </div>
-          <div className="sch-summary-info">
-            <strong>{eligibleCount} Schemes</strong>
-            <small>Eligible for {studentCgpa} CGPA</small>
-          </div>
-        </div>
-
-        {/* Card 3: Submitted */}
-        <div
-          className={`sch-summary-card sch-summary-purple ${currentView === 'my-applications' ? 'active-filter' : ''}`}
-          onClick={() => {
-            setCurrentView('my-applications');
-            setActiveTab('my-applications');
-          }}
-          title="Click to view your submitted applications"
-        >
-          <div className="sch-summary-icon-box">
-            <Send size={18} />
-          </div>
-          <div className="sch-summary-info">
-            <strong>{myApplications.length} Dossiers</strong>
-            <small>Applications Submitted</small>
-          </div>
-        </div>
-
-        {/* Card 4: Under Review */}
-        <div
-          className="sch-summary-card sch-summary-amber"
-          onClick={() => {
-            setCurrentView('my-applications');
-            setActiveTab('my-applications');
-          }}
-          title="Applications in verification pipeline"
-        >
-          <div className="sch-summary-icon-box">
-            <Clock size={18} />
-          </div>
-          <div className="sch-summary-info">
-            <strong>{inReviewCount} Active</strong>
-            <small>Applications Under Review</small>
-          </div>
-        </div>
-
-        {/* Card 5: Award Pool */}
-        <div
-          className="sch-summary-card sch-summary-indigo"
-          onClick={() => {
-            setCurrentView('catalog');
-            showToast('Direct Benefit Transfer pool for Academic Session 2026–2027.');
-          }}
-          title="Total Aid Allocated"
-        >
-          <div className="sch-summary-icon-box">
-            <Award size={18} />
-          </div>
-          <div className="sch-summary-info">
-            <strong>₹2.8 Cr+</strong>
-            <small>Direct DBT Aid Pool</small>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── 4. MODERN PLACEMENT-STYLE TABS ─────────────────────────────────────── */}
-      <div className="placement-tabs sch-tabs" role="tablist">
-        {[
-          { key: 'all', label: `All Scholarships (${schemes.length})` },
-          { key: 'govt', label: '🏛️ Government Schemes' },
-          { key: 'inst', label: '🎓 Institutional Merit' },
-          { key: 'need', label: '🤝 Need-Based Aid' },
-          { key: 'csr', label: '🏢 Corporate CSR & Alumni' },
-          { key: 'my-applications', label: `📋 My Applications (${myApplications.length})` },
-          { key: 'saved', label: `❤️ Saved (${savedSchemeIds.length})` },
-        ].map(({ key, label }) => (
-          <button
-            key={key}
-            className={(currentView === 'my-applications' && key === 'my-applications') || (currentView === 'catalog' && activeTab === key) ? 'active' : ''}
-            role="tab"
-            onClick={() => {
-              if (key === 'my-applications') {
-                setCurrentView('my-applications');
-                setActiveTab('my-applications');
-              } else {
-                setCurrentView('catalog');
-                setActiveTab(key);
-              }
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* ─── VIEW 1: MY APPLICATIONS TRACKER ───────────────────────────────────── */}
-      {currentView === 'my-applications' || activeTab === 'my-applications' ? (
-        <div className="sch-tracker-section">
-          <div className="sch-tracker-head">
+      {/* ─── TAB 1 & 4: AVAILABLE & SAVED SCHEMES ──────────────────────────────── */}
+      {(activeTab === 'available' || activeTab === 'saved') && (
+        <div className="scholarship-section-card">
+          {/* Header & Controls Toolbar */}
+          <div className="scholarship-sec-header">
             <div>
-              <h3>Submitted Applications &amp; Verification Tracker</h3>
-              <p>Track your student dossier scrutiny, committee sanction, and Direct Benefit Transfer (DBT) disbursement status.</p>
+              <h3>
+                {activeTab === 'saved'
+                  ? `Saved Scholarship Bookmarks (${filteredSchemes.length})`
+                  : `Active Scholarship Schemes (${filteredSchemes.length})`}
+              </h3>
+              <p className="sec-sub">
+                Official funding opportunities for Academic Session 2026–2027. Review eligibility criteria and submit verified dossiers.
+              </p>
             </div>
-            <button
-              type="button"
-              className="sch-btn-secondary"
-              onClick={() => {
-                setCurrentView('catalog');
-                setActiveTab('all');
-              }}
-            >
-              Browse Catalog <ChevronRight size={13} />
-            </button>
-          </div>
 
-          {myApplications.length === 0 ? (
-            <div className="sch-empty-state">
-              <div className="sch-empty-icon">
-                <FileText size={28} />
-              </div>
-              <h4>No Applications on Record</h4>
-              <p>You haven't submitted any scholarship applications for Academic Session 2026–2027 yet. Explore available schemes and apply before deadlines.</p>
+            <div className="view-mode-toggle">
               <button
                 type="button"
-                className="company-register-btn"
-                style={{ margin: '12px auto 0' }}
-                onClick={() => {
-                  setCurrentView('catalog');
-                  setActiveTab('all');
-                }}
+                className={`view-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+                onClick={() => setViewMode('table')}
+                title="Table View"
               >
-                Explore Available Scholarships <ChevronRight size={13} />
+                <List size={16} /> Table
+              </button>
+              <button
+                type="button"
+                className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => setViewMode('grid')}
+                title="Grid Cards View"
+              >
+                <LayoutGrid size={16} /> Cards
               </button>
             </div>
-          ) : (
-            <div className="placement-drive-list sch-drive-list">
-              {myApplications.map((app) => (
-                <div key={app.id} className="company-card sch-app-card">
-                  <AuthorityCrest provider={app.schemeName} name={app.schemeName} />
+          </div>
 
-                  <div className="company-body sch-card-body">
-                    <div className="sch-app-card-title-line">
-                      <span className="sch-app-ref-tag">Ref: {app.id}</span>
-                      <h3>{app.schemeName}</h3>
-                      {getStatusBadge(app.reviewStatus)}
-                    </div>
-
-                    <div className="company-meta sch-card-meta">
-                      <span><User size={11} />Applicant: <strong>{app.studentName}</strong></span>
-                      <span><DollarSign size={11} />Sanctioned: <strong style={{ color: '#059669' }}>₹{(app.finalAwardAmount || app.recommendedAmount || 0).toLocaleString('en-IN')}</strong></span>
-                      <span><Calendar size={11} />Submitted: <strong>{app.submissionDate}</strong></span>
-                      <span><Clock size={11} />Stage: <strong>{app.approvalStage || 'Scrutiny'}</strong></span>
-                    </div>
-
-                    {/* Visual 4-Step Verification Stepper */}
-                    <div className="sch-stepper-strip">
-                      <div className="sch-stepper-step completed">
-                        <span className="sch-step-bullet">✓</span>
-                        <span className="sch-step-label">Submitted</span>
-                      </div>
-                      <div className="sch-step-line completed" />
-                      <div className={`sch-stepper-step ${app.verificationStatus === 'Verified' ? 'completed' : 'active'}`}>
-                        <span className="sch-step-bullet">{app.verificationStatus === 'Verified' ? '✓' : '2'}</span>
-                        <span className="sch-step-label">{app.verificationStatus || 'Document Scrutiny'}</span>
-                      </div>
-                      <div className="sch-step-line" />
-                      <div className={`sch-stepper-step ${app.reviewStatus === 'Approved' ? 'completed' : app.reviewStatus === 'Under Review' ? 'active' : ''}`}>
-                        <span className="sch-step-bullet">{app.reviewStatus === 'Approved' ? '✓' : '3'}</span>
-                        <span className="sch-step-label">Directorate Review</span>
-                      </div>
-                      <div className="sch-step-line" />
-                      <div className={`sch-stepper-step ${app.disbursementStatus?.includes('Disbursed') ? 'completed' : ''}`}>
-                        <span className="sch-step-bullet">4</span>
-                        <span className="sch-step-label">{app.disbursementStatus || 'DBT Sanction'}</span>
-                      </div>
-                    </div>
-
-                    {app.reviewerRemarks && (
-                      <div className="sch-app-remarks">
-                        <strong>Directorate Notes:</strong> {app.reviewerRemarks}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="company-action sch-card-action">
-                    <button
-                      type="button"
-                      className="sch-btn-receipt"
-                      onClick={() => window.print()}
-                      title="Download official receipt"
-                    >
-                      <Printer size={13} /> Receipt
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        /* ─── VIEW 2: SCHOLARSHIPS CATALOG ───────────────────────────────────── */
-        <div className="sch-catalog-section">
-          {/* Search and Secondary Filter Controls Strip */}
-          <div className="sch-filter-strip">
-            <div className="sch-search-input-wrap">
-              <Search size={14} className="sch-search-ico" />
+          {/* Unified Filter Toolbar */}
+          <div className="scholarship-filter-bar">
+            <div className="scholarship-search-wrap">
+              <Search size={15} className="search-icon" />
               <input
                 type="text"
-                placeholder="Search scholarships by scheme name, sponsor, category, or degree program..."
+                placeholder="Search by scheme name, awarding body, or keywords..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               {searchTerm && (
                 <button
                   type="button"
-                  className="sch-search-clear"
+                  className="search-clear-btn"
                   onClick={() => setSearchTerm('')}
                 >
                   <X size={13} />
@@ -764,199 +555,297 @@ export default function ScholarshipPage({ account }) {
               )}
             </div>
 
-            <div className="sch-select-wrap">
-              <GraduationCap size={13} />
-              <select
-                value={educationLevelFilter}
-                onChange={(e) => setEducationLevelFilter(e.target.value)}
-              >
-                <option value="All">All Degree Levels</option>
-                <option value="B.Tech">B.Tech (Undergraduate)</option>
-                <option value="M.Tech">M.Tech (Postgraduate)</option>
-                <option value="BCA">BCA</option>
-                <option value="MCA">MCA</option>
-                <option value="Diploma">Diploma Engineering</option>
-              </select>
-            </div>
+            <select
+              className="scholarship-select"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="All">All Funding Categories</option>
+              <option value="Government">Government (State &amp; Central)</option>
+              <option value="Institutional">Institutional (Apna Campus)</option>
+              <option value="Need">Need-Based &amp; Welfare</option>
+              <option value="CSR">Corporate CSR &amp; Alumni</option>
+            </select>
 
-            <div className="sch-select-wrap">
-              <Target size={13} />
-              <select
-                value={cgpaRequirementFilter}
-                onChange={(e) => setCgpaRequirementFilter(e.target.value)}
-              >
-                <option value="All">All CGPA Requirements</option>
-                <option value="6.5">Minimum 6.5 CGPA</option>
-                <option value="7.0">Minimum 7.0 CGPA</option>
-                <option value="7.5">Minimum 7.5 CGPA</option>
-                <option value="8.0">Minimum 8.0 CGPA</option>
-                <option value="9.0">Distinction (≥ 9.0)</option>
-              </select>
-            </div>
+            <select
+              className="scholarship-select"
+              value={degreeFilter}
+              onChange={(e) => setDegreeFilter(e.target.value)}
+            >
+              <option value="All">All Degree Levels</option>
+              <option value="B.Tech">B.Tech (Undergraduate)</option>
+              <option value="M.Tech">M.Tech (Postgraduate)</option>
+              <option value="MCA">MCA</option>
+              <option value="Diploma">Diploma Engineering</option>
+            </select>
+
+            <select
+              className="scholarship-select"
+              value={cgpaFilter}
+              onChange={(e) => setCgpaFilter(e.target.value)}
+            >
+              <option value="All">All CGPA Requirements</option>
+              <option value="6.5">Minimum 6.5 CGPA</option>
+              <option value="7.0">Minimum 7.0 CGPA</option>
+              <option value="7.5">Minimum 7.5 CGPA</option>
+              <option value="8.0">Minimum 8.0 CGPA</option>
+            </select>
 
             <button
               type="button"
-              className={`sch-filter-pill-btn ${onlyEligibleToggle ? 'active' : ''}`}
-              onClick={() => setOnlyEligibleToggle(!onlyEligibleToggle)}
+              className={`filter-pill-btn ${onlyEligible ? 'active' : ''}`}
+              onClick={() => setOnlyEligible(!onlyEligible)}
             >
-              <Check size={12} />
-              <span>Eligible for my {studentCgpa} CGPA</span>
+              <Check size={13} /> Only schemes I qualify for ({studentCgpa} CGPA)
             </button>
 
-            <button
-              type="button"
-              className={`sch-filter-pill-btn ${onlySavedToggle ? 'active' : ''}`}
-              onClick={() => setOnlySavedToggle(!onlySavedToggle)}
-            >
-              <Heart size={12} className={onlySavedToggle ? 'fill-current' : ''} />
-              <span>Saved ({savedSchemeIds.length})</span>
-            </button>
-
-            {(searchTerm ||
-              activeTab !== 'all' ||
-              educationLevelFilter !== 'All' ||
-              cgpaRequirementFilter !== 'All' ||
-              onlyEligibleToggle ||
-              onlySavedToggle) && (
+            {(searchTerm || categoryFilter !== 'All' || degreeFilter !== 'All' || cgpaFilter !== 'All' || onlyEligible) && (
               <button
                 type="button"
-                className="sch-btn-reset-filters"
+                className="btn-reset-filters"
                 onClick={handleResetFilters}
               >
-                <RotateCcw size={12} />
-                <span>Reset</span>
+                <RotateCcw size={13} /> Reset
               </button>
             )}
           </div>
 
-          {/* Scheme Listings Stream */}
+          {/* LISTINGS PRESENTATION */}
           {filteredSchemes.length === 0 ? (
-            <div className="sch-empty-state">
-              <div className="sch-empty-icon">
-                <Filter size={28} />
+            <div className="scholarship-empty-state">
+              <div className="empty-icon-wrap">
+                <Filter size={26} />
               </div>
               <h4>No Scholarships Match Your Filter</h4>
-              <p>We couldn't find any scholarships matching your active search and filter combination. Try resetting your criteria.</p>
+              <p>We couldn't find any scholarships matching your search criteria. Try clearing your filters or selecting All Categories.</p>
               <button
                 type="button"
-                className="company-register-btn"
-                style={{ margin: '12px auto 0' }}
+                className="btn-receipt"
+                style={{ marginTop: '12px' }}
                 onClick={handleResetFilters}
               >
-                Clear All Filters <RotateCcw size={13} />
+                <RotateCcw size={14} /> Clear All Filters
               </button>
             </div>
+          ) : viewMode === 'table' ? (
+            /* TABLE VIEW (Standard ERP Table) */
+            <div className="scholarship-table-wrap">
+              <table className="scholarship-table">
+                <thead>
+                  <tr>
+                    <th>Scheme Name &amp; Provider</th>
+                    <th>Category</th>
+                    <th>Academic Eligibility</th>
+                    <th>Sanction Grant</th>
+                    <th>Application Deadline</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSchemes.map((scheme) => {
+                    const isBookmarked = savedSchemeIds.includes(scheme.id);
+                    const isApplied = myApplications.some((a) => a.schemeId === scheme.id);
+                    const meetsCgpa = !scheme.minCgpa || studentCgpa >= scheme.minCgpa;
+
+                    return (
+                      <tr key={scheme.id}>
+                        <td>
+                          <div className="scheme-title-col">
+                            <strong>{scheme.name}</strong>
+                            <span className="scheme-provider-sub">
+                              {scheme.provider || scheme.sponsorName}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td>
+                          <span className={`cat-tag ${scheme.type === 'Government' ? 'gov' : scheme.type === 'Institutional' ? 'inst' : 'csr'}`}>
+                            {scheme.category || scheme.type}
+                          </span>
+                        </td>
+
+                        <td>
+                          <div className="eligibility-col">
+                            <span className={meetsCgpa ? 'pass' : 'fail'}>
+                              {meetsCgpa ? '✓ ' : ''}Min. {scheme.minCgpa || '6.0'} CGPA
+                            </span>
+                            <small>{scheme.educationLevels?.slice(0, 2).join(', ') || 'All Degrees'}</small>
+                          </div>
+                        </td>
+
+                        <td>
+                          <div className="amount-col">
+                            <strong>₹{scheme.awardAmount?.toLocaleString('en-IN')}</strong>
+                            <small>{scheme.awardType?.includes('Month') ? '/ Month' : '/ Year'}</small>
+                          </div>
+                        </td>
+
+                        <td>
+                          <div className="deadline-col">
+                            <span>{scheme.closingDate}</span>
+                            <small>{scheme.status === 'Closing Soon' ? 'Closing Soon' : 'Academic Cycle'}</small>
+                          </div>
+                        </td>
+
+                        <td>
+                          <span
+                            className={`scholarship-badge ${
+                              isApplied
+                                ? 'applied'
+                                : scheme.status === 'Open'
+                                ? 'open'
+                                : scheme.status === 'Closing Soon'
+                                ? 'closing'
+                                : 'closed'
+                            }`}
+                          >
+                            {isApplied ? 'Applied' : scheme.status}
+                          </span>
+                        </td>
+
+                        <td>
+                          <div className="table-actions-cell">
+                            <button
+                              type="button"
+                              className={`btn-bookmark ${isBookmarked ? 'active' : ''}`}
+                              onClick={(e) => handleToggleBookmark(e, scheme.id)}
+                              title={isBookmarked ? 'Remove bookmark' : 'Bookmark scheme'}
+                            >
+                              <Heart size={14} className={isBookmarked ? 'fill-current' : ''} />
+                            </button>
+
+                            <button
+                              type="button"
+                              className="btn-details"
+                              onClick={() => handleOpenDetails(scheme)}
+                            >
+                              Details
+                            </button>
+
+                            {isApplied ? (
+                              <button
+                                type="button"
+                                className="btn-applied-pill"
+                                onClick={() => setActiveTab('my_applications')}
+                              >
+                                <Check size={12} /> Applied
+                              </button>
+                            ) : scheme.status === 'Closed' ? (
+                              <span className="btn-closed-pill">Closed</span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn-apply-primary"
+                                onClick={() => handleOpenApplyModal(scheme)}
+                              >
+                                Apply Now <ChevronRight size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           ) : (
-            <div className="placement-drive-list sch-drive-list">
+            /* GRID CARDS VIEW (Standard Card Layout) */
+            <div className="scholarship-grid-cards">
               {filteredSchemes.map((scheme) => {
                 const isBookmarked = savedSchemeIds.includes(scheme.id);
                 const isApplied = myApplications.some((a) => a.schemeId === scheme.id);
                 const meetsCgpa = !scheme.minCgpa || studentCgpa >= scheme.minCgpa;
 
                 return (
-                  <div key={scheme.id} className="company-card sch-card">
-                    {/* Left: Crest Avatar */}
-                    <AuthorityCrest
-                      type={scheme.type}
-                      provider={scheme.provider || scheme.sponsorName}
-                      name={scheme.name}
-                    />
-
-                    {/* Center: Main Info & Metadata */}
-                    <div className="company-body sch-card-body">
-                      <div className="sch-card-head-line">
-                        <h3>{scheme.name}</h3>
-                        <span className="sch-card-provider-pill">
-                          {scheme.provider || scheme.sponsorName}
+                  <div key={scheme.id} className="scholarship-card-item">
+                    <div className="card-top-bar">
+                      <span className={`cat-tag ${scheme.type === 'Government' ? 'gov' : scheme.type === 'Institutional' ? 'inst' : 'csr'}`}>
+                        {scheme.category || scheme.type}
+                      </span>
+                      <div className="card-top-right">
+                        <span
+                          className={`scholarship-badge ${
+                            isApplied
+                              ? 'applied'
+                              : scheme.status === 'Open'
+                              ? 'open'
+                              : scheme.status === 'Closing Soon'
+                              ? 'closing'
+                              : 'closed'
+                          }`}
+                        >
+                          {isApplied ? 'Applied' : scheme.status}
                         </span>
-                      </div>
-
-                      <p className="sch-card-desc">{scheme.description}</p>
-
-                      <div className="company-meta sch-card-meta">
-                        <span className="sch-meta-amount">
-                          <DollarSign size={11} />
-                          <strong>₹{scheme.awardAmount?.toLocaleString('en-IN') || '0'}</strong> {scheme.awardType?.includes('Month') ? '/ Month' : '/ Year'}
-                        </span>
-
-                        <span>
-                          <GraduationCap size={11} />
-                          {scheme.educationLevels?.slice(0, 2).join(', ') || 'All Degrees'}
-                        </span>
-
-                        <span className={meetsCgpa ? 'sch-meta-eligible' : ''}>
-                          <Target size={11} />
-                          {meetsCgpa ? '✓ ' : ''}Min CGPA: {scheme.minCgpa || '6.0'}
-                        </span>
-
-                        <span>
-                          <Calendar size={11} />
-                          Deadline: <strong>{scheme.closingDate}</strong>
-                        </span>
-
-                        {scheme.incomeCeiling ? (
-                          <span>
-                            <Building size={11} />
-                            Income ≤ ₹{(scheme.incomeCeiling / 100000).toFixed(1)}L
-                          </span>
-                        ) : (
-                          <span>
-                            <Award size={11} />
-                            {scheme.category || scheme.type}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right: Status Badges & Action Buttons */}
-                    <div className="company-action sch-card-action">
-                      <div className="sch-card-action-top">
-                        {getStatusBadge(scheme.status, isApplied)}
-
                         <button
                           type="button"
-                          className={`sch-heart-btn ${isBookmarked ? 'active' : ''}`}
+                          className={`btn-bookmark ${isBookmarked ? 'active' : ''}`}
                           onClick={(e) => handleToggleBookmark(e, scheme.id)}
-                          title={isBookmarked ? 'Remove bookmark' : 'Bookmark scholarship'}
                         >
                           <Heart size={14} className={isBookmarked ? 'fill-current' : ''} />
                         </button>
                       </div>
+                    </div>
 
-                      <div className="sch-card-action-buttons">
+                    <h4 className="card-scheme-title">{scheme.name}</h4>
+                    <span className="card-provider-name">{scheme.provider || scheme.sponsorName}</span>
+
+                    <p className="card-scheme-desc">{scheme.description}</p>
+
+                    <div className="card-info-box">
+                      <div className="card-info-row">
+                        <span>Grant Amount:</span>
+                        <strong className="text-grant">
+                          ₹{scheme.awardAmount?.toLocaleString('en-IN')}{' '}
+                          <small>{scheme.awardType?.includes('Month') ? '/mo' : '/yr'}</small>
+                        </strong>
+                      </div>
+                      <div className="card-info-row">
+                        <span>Min. CGPA:</span>
+                        <strong className={meetsCgpa ? 'text-pass' : 'text-fail'}>
+                          {meetsCgpa ? '✓ ' : ''}{scheme.minCgpa || '6.0'}
+                        </strong>
+                      </div>
+                      <div className="card-info-row">
+                        <span>Deadline:</span>
+                        <span>{scheme.closingDate}</span>
+                      </div>
+                    </div>
+
+                    <div className="card-actions-row">
+                      <button
+                        type="button"
+                        className="btn-details"
+                        style={{ flex: 1 }}
+                        onClick={() => handleOpenDetails(scheme)}
+                      >
+                        View Details
+                      </button>
+
+                      {isApplied ? (
                         <button
                           type="button"
-                          className="sch-btn-details"
-                          onClick={() => handleOpenDetails(scheme)}
+                          className="btn-applied-pill"
+                          style={{ flex: 1, justifyContent: 'center' }}
+                          onClick={() => setActiveTab('my_applications')}
                         >
-                          View Details
+                          <Check size={13} /> Applied
                         </button>
-
-                        {isApplied ? (
-                          <button
-                            type="button"
-                            className="sch-btn-applied-pill"
-                            onClick={() => {
-                              setCurrentView('my-applications');
-                              setActiveTab('my-applications');
-                            }}
-                          >
-                            <Check size={12} /> Applied
-                          </button>
-                        ) : scheme.status === 'Closed' ? (
-                          <span className="sch-btn-closed-pill">
-                            Closed
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="company-register-btn sch-btn-apply-now"
-                            onClick={() => handleOpenApplyModal(scheme)}
-                          >
-                            Apply Now <ChevronRight size={13} />
-                          </button>
-                        )}
-                      </div>
+                      ) : scheme.status === 'Closed' ? (
+                        <span className="btn-closed-pill" style={{ flex: 1, textAlign: 'center' }}>
+                          Closed
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-apply-primary"
+                          style={{ flex: 1, justifyContent: 'center' }}
+                          onClick={() => handleOpenApplyModal(scheme)}
+                        >
+                          Apply Now <ChevronRight size={13} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -966,291 +855,385 @@ export default function ScholarshipPage({ account }) {
         </div>
       )}
 
-      {/* ─── 5. REFINED PROSPECTUS DETAILS MODAL ───────────────────────────────── */}
+      {/* ─── TAB 2: MY APPLICATIONS & STATUS TRACKER ──────────────────────────── */}
+      {activeTab === 'my_applications' && (
+        <div className="scholarship-section-card">
+          <div className="scholarship-sec-header">
+            <div>
+              <h3>Submitted Scholarship Applications &amp; Verification Tracker</h3>
+              <p className="sec-sub">
+                Track your student dossier scrutiny, committee sanction, and Direct Benefit Transfer (DBT) disbursement status.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="btn-receipt"
+              onClick={() => setActiveTab('available')}
+            >
+              <Plus size={14} /> Apply for New Scheme
+            </button>
+          </div>
+
+          {myApplications.length === 0 ? (
+            <div className="scholarship-empty-state">
+              <div className="empty-icon-wrap">
+                <FileText size={26} />
+              </div>
+              <h4>No Applications on Record</h4>
+              <p>You haven't submitted any scholarship applications for Academic Session 2026–2027 yet. Explore available schemes and apply before upcoming deadlines.</p>
+              <button
+                type="button"
+                className="btn-pay-now"
+                style={{ marginTop: '14px' }}
+                onClick={() => setActiveTab('available')}
+              >
+                Browse Scholarships Catalog <ChevronRight size={14} />
+              </button>
+            </div>
+          ) : (
+            <div className="scholarship-table-wrap">
+              <table className="scholarship-table">
+                <thead>
+                  <tr>
+                    <th>Application Ref &amp; Date</th>
+                    <th>Scholarship Scheme</th>
+                    <th>Sanctioned Grant</th>
+                    <th>Verification Stage</th>
+                    <th>Status</th>
+                    <th>Official Receipt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {myApplications.map((app) => (
+                    <tr key={app.id}>
+                      <td>
+                        <div className="scheme-title-col">
+                          <strong className="ref-code">{app.id}</strong>
+                          <span className="scheme-provider-sub">Submitted: {app.submissionDate}</span>
+                        </div>
+                      </td>
+
+                      <td>
+                        <div className="scheme-title-col">
+                          <strong>{app.schemeName}</strong>
+                          <span className="scheme-provider-sub">Applicant: {app.studentName} ({app.studentId})</span>
+                        </div>
+                      </td>
+
+                      <td>
+                        <span className="text-grant" style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                          ₹{(app.finalAwardAmount || app.recommendedAmount || 0).toLocaleString('en-IN')}
+                        </span>
+                      </td>
+
+                      <td>
+                        <div className="stage-stepper-wrap">
+                          <span className="stage-name">{app.approvalStage || 'Document Scrutiny'}</span>
+                          <div className="mini-stepper">
+                            <span className="step-dot completed" title="Application Submitted">1</span>
+                            <span className={`step-bar ${app.verificationStatus === 'Verified' ? 'completed' : ''}`} />
+                            <span className={`step-dot ${app.verificationStatus === 'Verified' ? 'completed' : 'active'}`} title="Document Verification">2</span>
+                            <span className={`step-bar ${app.reviewStatus === 'Approved' ? 'completed' : ''}`} />
+                            <span className={`step-dot ${app.reviewStatus === 'Approved' ? 'completed' : ''}`} title="Directorate Review">3</span>
+                            <span className="step-bar" />
+                            <span className="step-dot" title="DBT Sanction">4</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td>
+                        <span
+                          className={`scholarship-badge ${
+                            app.reviewStatus === 'Approved'
+                              ? 'open'
+                              : app.reviewStatus === 'Under Review'
+                              ? 'applied'
+                              : 'closing'
+                          }`}
+                        >
+                          {app.reviewStatus}
+                        </span>
+                      </td>
+
+                      <td>
+                        <button
+                          type="button"
+                          className="btn-receipt"
+                          onClick={() => window.print()}
+                          title="Print submission acknowledgement slip"
+                        >
+                          <Printer size={13} /> Print Receipt
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── TAB 3: ELIGIBILITY & DOCUMENT GUIDELINES ──────────────────────────── */}
+      {activeTab === 'guidelines' && (
+        <div className="scholarship-section-card">
+          <div className="scholarship-sec-header">
+            <div>
+              <h3>Scholarship Verification &amp; Document Guidelines</h3>
+              <p className="sec-sub">
+                Autonomous College Student Welfare Directorate standards for online scrutiny, revenue certificate verification, and DBT disbursement.
+              </p>
+            </div>
+          </div>
+
+          <div className="guidelines-grid">
+            <div className="guideline-card">
+              <div className="guideline-icon blue">
+                <FileCheck size={22} />
+              </div>
+              <h4>Mandatory Revenue Documents</h4>
+              <p>
+                Income certificates must be issued by a Revenue Authority not below the rank of Additional Tehsildar, valid for Financial Year 2026–2027.
+              </p>
+              <ul>
+                <li>Annual income certificate in original PDF.</li>
+                <li>Permanent resident domicile certificate.</li>
+                <li>Valid caste certificate for SC/ST/OBC categories.</li>
+              </ul>
+            </div>
+
+            <div className="guideline-card">
+              <div className="guideline-icon green">
+                <ShieldCheck size={22} />
+              </div>
+              <h4>Academic Compliance</h4>
+              <p>
+                Students must have passed all preceding semester examinations with zero standing active backlogs at the time of scrutiny.
+              </p>
+              <ul>
+                <li>Autonomous Controller of Examinations verified marksheets.</li>
+                <li>Minimum aggregate biometric attendance of 75%.</li>
+                <li>No active disciplinary suspension on record.</li>
+              </ul>
+            </div>
+
+            <div className="guideline-card">
+              <div className="guideline-icon amber">
+                <DollarSign size={22} />
+              </div>
+              <h4>Direct Benefit Transfer (DBT)</h4>
+              <p>
+                Government grants and statutory fellowships are disbursed strictly through NPCI Aadhaar Payment Bridge (APB) to seeded bank accounts.
+              </p>
+              <ul>
+                <li>Savings bank account must be actively linked with Aadhaar.</li>
+                <li>Joint accounts and minor accounts are strictly disallowed.</li>
+                <li>Branch IFSC code must be verified on bank passbook.</li>
+              </ul>
+            </div>
+
+            <div className="guideline-card">
+              <div className="guideline-icon purple">
+                <HelpCircle size={22} />
+              </div>
+              <h4>Welfare Directorate Helpdesk</h4>
+              <p>
+                In case of document discrepancy or rectification notices, report to the Student Welfare Complex in Academic Block 1.
+              </p>
+              <ul>
+                <li>Nodal Officer: <strong>{SCHOLARSHIP_OFFICER.name}</strong></li>
+                <li>Office: {SCHOLARSHIP_OFFICER.office}</li>
+                <li>Helpdesk Email: {SCHOLARSHIP_OFFICER.email}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 4. PROSPECTUS DETAILS MODAL ───────────────────────────────────────── */}
       {selectedSchemeForDetails && (
         <div
-          className="sch-modal-backdrop"
+          className="payment-modal-backdrop"
           onClick={() => setSelectedSchemeForDetails(null)}
           role="dialog"
           aria-modal="true"
         >
-          <div className="sch-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="sch-modal-header">
-              <div>
-                <span className="sch-modal-kicker">
-                  {selectedSchemeForDetails.provider || selectedSchemeForDetails.sponsorName}
+          <div className="payment-modal" style={{ maxWidth: '680px' }} onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="payment-modal-close"
+              onClick={() => setSelectedSchemeForDetails(null)}
+            >
+              <X size={20} />
+            </button>
+
+            <div className="modal-head-row">
+              <span className="modal-sub-kicker">
+                {selectedSchemeForDetails.provider || selectedSchemeForDetails.sponsorName}
+              </span>
+              <h2 className="modal-main-title">{selectedSchemeForDetails.name}</h2>
+            </div>
+
+            {/* 4-Stat Strip */}
+            <div className="modal-stats-row">
+              <div className="modal-stat-box">
+                <span className="lbl">Grant Amount</span>
+                <span className="val" style={{ color: '#059669' }}>
+                  ₹{selectedSchemeForDetails.awardAmount?.toLocaleString('en-IN')}
                 </span>
-                <h2>{selectedSchemeForDetails.name}</h2>
               </div>
-
-              <div className="sch-modal-actions-right">
-                <button
-                  type="button"
-                  className={`sch-heart-btn ${savedSchemeIds.includes(selectedSchemeForDetails.id) ? 'active' : ''}`}
-                  onClick={(e) => handleToggleBookmark(e, selectedSchemeForDetails.id)}
-                  title="Bookmark scheme"
-                >
-                  <Heart size={16} className={savedSchemeIds.includes(selectedSchemeForDetails.id) ? 'fill-current' : ''} />
-                </button>
-                <button
-                  type="button"
-                  className="sch-modal-close-x"
-                  onClick={() => setSelectedSchemeForDetails(null)}
-                  title="Close modal"
-                >
-                  <X size={18} />
-                </button>
+              <div className="modal-stat-box">
+                <span className="lbl">Min. CGPA</span>
+                <span className="val">≥ {selectedSchemeForDetails.minCgpa || '6.0'}</span>
+              </div>
+              <div className="modal-stat-box">
+                <span className="lbl">Income Cap</span>
+                <span className="val">
+                  {selectedSchemeForDetails.incomeCeiling
+                    ? `≤ ₹${(selectedSchemeForDetails.incomeCeiling / 100000).toFixed(1)}L`
+                    : 'No Cap'}
+                </span>
+              </div>
+              <div className="modal-stat-box">
+                <span className="lbl">Deadline</span>
+                <span className="val" style={{ color: '#d97706' }}>
+                  {selectedSchemeForDetails.closingDate}
+                </span>
               </div>
             </div>
 
-            <div className="sch-modal-body">
-              {/* 4-Stat Strip */}
-              <div className="placement-stats-strip sch-modal-stats-strip">
-                <div>
-                  <strong style={{ color: '#2563EB' }}>
-                    ₹{selectedSchemeForDetails.awardAmount?.toLocaleString('en-IN')}
-                  </strong>
-                  <small>Grant Amount ({selectedSchemeForDetails.awardType?.includes('Month') ? 'Monthly' : 'Per Year'})</small>
-                </div>
-                <div>
-                  <strong>≥ {selectedSchemeForDetails.minCgpa || '6.0'}</strong>
-                  <small>Minimum CGPA</small>
-                </div>
-                <div>
-                  <strong>
-                    {selectedSchemeForDetails.incomeCeiling
-                      ? `≤ ₹${(selectedSchemeForDetails.incomeCeiling / 100000).toFixed(1)}L`
-                      : 'No Income Cap'}
-                  </strong>
-                  <small>Annual Family Income</small>
-                </div>
-                <div>
-                  <strong style={{ color: '#d97706' }}>
-                    {selectedSchemeForDetails.closingDate}
-                  </strong>
-                  <small>Application Deadline</small>
-                </div>
-              </div>
-
-              {/* Modal Tabs */}
-              <div className="placement-tabs sch-modal-tabs">
-                {[
-                  { key: 'overview', label: 'Overview & Coverage' },
-                  { key: 'eligibility', label: 'Eligibility Checklist' },
-                  { key: 'documents', label: 'Required Documents' },
-                  { key: 'timeline', label: 'Disbursement Process' },
-                  { key: 'faqs', label: 'FAQs & Helpdesk' }
-                ].map(({ key, label }) => (
-                  <button
-                    key={key}
-                    className={detailTab === key ? 'active' : ''}
-                    onClick={() => setDetailTab(key)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab: Overview */}
-              {detailTab === 'overview' && (
-                <div className="sch-modal-tab-content">
-                  <div>
-                    <h4>Program Scope &amp; Purpose</h4>
-                    <p>{selectedSchemeForDetails.description}</p>
-                  </div>
-
-                  <div>
-                    <h4>Financial Coverage Breakdown</h4>
-                    <ul className="sch-benefits-list">
-                      {(
-                        selectedSchemeForDetails.benefits || [
-                          'Direct tuition fee reimbursement credited to student bank account or institutional ledger.',
-                          'Annual book and learning materials allowance included in grant.',
-                          'Exemption from selected campus laboratory and examination fees.',
-                          'Renewable throughout the normal program duration subject to academic progress.'
-                        ]
-                      ).map((item, idx) => (
-                        <li key={idx}>
-                          <CheckCircle2 size={15} color="#059669" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="sch-awarding-authority-box">
-                    <div>
-                      <small>Awarding Authority</small>
-                      <strong>{selectedSchemeForDetails.fundingSource || selectedSchemeForDetails.provider}</strong>
-                    </div>
-
-                    {selectedSchemeForDetails.applicationUrl && (
-                      <a
-                        href={selectedSchemeForDetails.applicationUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="sch-btn-official"
-                      >
-                        <ExternalLink size={13} />
-                        <span>Official Portal</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab: Eligibility */}
-              {detailTab === 'eligibility' && (
-                <div className="sch-modal-tab-content">
-                  <h4>Mandatory Qualification Criteria</h4>
-                  <div className="sch-checklist-stack">
-                    <div className="sch-check-item">
-                      <CheckCircle2 size={16} color="#059669" />
-                      <div>
-                        <strong>Academic Performance: </strong>
-                        Minimum CGPA of <strong>≥ {selectedSchemeForDetails.minCgpa || '6.0'}</strong> in preceding semester evaluations with zero standing backlogs.
-                        <div className={`sch-inline-eval ${studentCgpa >= (selectedSchemeForDetails.minCgpa || 6.0) ? 'pass' : 'fail'}`}>
-                          {studentCgpa >= (selectedSchemeForDetails.minCgpa || 6.0)
-                            ? `✓ You qualify! Your current CGPA is ${studentCgpa}`
-                            : `✕ Minimum required is ${selectedSchemeForDetails.minCgpa}, your current CGPA is ${studentCgpa}`}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="sch-check-item">
-                      <CheckCircle2 size={16} color="#059669" />
-                      <div>
-                        <strong>Annual Family Income Limit: </strong>
-                        {selectedSchemeForDetails.incomeCeiling
-                          ? `Total annual gross income from all sources must not exceed ₹${(selectedSchemeForDetails.incomeCeiling / 100000).toFixed(2)} Lakhs per annum.`
-                          : 'No income ceiling applicable. Pure merit-based fellowship.'}
-                      </div>
-                    </div>
-
-                    <div className="sch-check-item">
-                      <CheckCircle2 size={16} color="#059669" />
-                      <div>
-                        <strong>Eligible Programs &amp; Semesters: </strong>
-                        Enrolled in regular full-time {selectedSchemeForDetails.educationLevels?.join(', ') || 'B.Tech/M.Tech'} · {selectedSchemeForDetails.eligibleSemesters?.join(', ') || 'All Semesters'}.
-                      </div>
-                    </div>
-
-                    <div className="sch-check-item">
-                      <CheckCircle2 size={16} color="#059669" />
-                      <div>
-                        <strong>Attendance Compliance: </strong>
-                        Must have maintained at least 75% aggregate biometric class attendance during the term.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab: Documents */}
-              {detailTab === 'documents' && (
-                <div className="sch-modal-tab-content">
-                  <h4>Documents Required for Verification</h4>
-                  <p className="sch-tab-sub">Please ensure clear scanned copies in PDF or JPG format (maximum 2MB per document) are ready:</p>
-                  <ul className="sch-benefits-list">
-                    {(selectedSchemeForDetails.requiredDocs || [
-                      'Latest Tehsildar Certified Annual Income Certificate (FY 2026-27)',
-                      'Autonomous Controller of Examinations Verified Grade Sheets',
-                      'Active Savings Bank Account Passbook Copy with visible IFSC Code',
-                      'Student Aadhaar Card and College Identity Card Copy',
-                      'Permanent Resident / Domicile Certificate'
-                    ]).map((doc, idx) => (
-                      <li key={idx}>
-                        <FileCheck size={15} color="#2563EB" />
-                        <span>{doc}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Tab: Timeline */}
-              {detailTab === 'timeline' && (
-                <div className="sch-modal-tab-content">
-                  <h4>Application &amp; Sanction Timeline</h4>
-                  <div className="sch-timeline-stack">
-                    {(
-                      selectedSchemeForDetails.timeline || [
-                        { step: 1, title: 'Step 1: Online Application', desc: 'Submit your profile disclosure and verified credentials online', date: selectedSchemeForDetails.openingDate + ' – ' + selectedSchemeForDetails.closingDate },
-                        { step: 2, title: 'Step 2: Nodal Directorate Scrutiny', desc: 'Verification of marksheets and revenue certificates by College Welfare Directorate', date: 'Within 7 working days' },
-                        { step: 3, title: 'Step 3: Executive Sanction', desc: 'Merit ranking validation and executive council approval', date: 'December 2026' },
-                        { step: 4, title: 'Step 4: Fund Disbursement', desc: 'Direct Benefit Transfer (DBT) credit into Aadhaar-seeded bank account', date: 'January 2027' }
-                      ]
-                    ).map((t) => (
-                      <div key={t.step} className="sch-timeline-row">
-                        <div className="sch-timeline-step-badge">{t.step}</div>
-                        <div>
-                          <strong>{t.title}</strong>
-                          <p>{t.desc}</p>
-                          <small>{t.date}</small>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab: FAQs */}
-              {detailTab === 'faqs' && (
-                <div className="sch-modal-tab-content">
-                  <h4>Frequently Asked Questions</h4>
-                  <div className="sch-faq-stack">
-                    {(
-                      selectedSchemeForDetails.faqs || [
-                        {
-                          q: 'Can I apply for more than one scholarship concurrently?',
-                          a: 'Students may apply for multiple schemes. However, as per government statutory norms, a student can typically draw only one government tuition assistance grant at a time.'
-                        },
-                        {
-                          q: 'How will I receive the sanctioned scholarship amount?',
-                          a: 'Government grants are directly credited to your Aadhaar-seeded bank account via NPCI DBT. Institutional fellowships are credited against your tuition fee balance.'
-                        },
-                        {
-                          q: 'What should I do if my document verification fails?',
-                          a: 'You will receive a notification in your student dashboard detailing the discrepancy. You may upload a rectified document within 7 calendar days.'
-                        }
-                      ]
-                    ).map((faq, idx) => {
-                      const isExpanded = expandedFaqIndex === idx;
-                      return (
-                        <div key={idx} className="sch-faq-item">
-                          <button
-                            type="button"
-                            className="sch-faq-question"
-                            onClick={() => setExpandedFaqIndex(isExpanded ? -1 : idx)}
-                          >
-                            <span>{faq.q}</span>
-                            {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                          </button>
-                          {isExpanded && <div className="sch-faq-answer">{faq.a}</div>}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Nodal Officer Contact Card */}
-                  <div className="sch-officer-contact-box">
-                    <div className="sch-officer-avatar">
-                      <Users size={18} />
-                    </div>
-                    <div>
-                      <small>Welfare Directorate Nodal Desk</small>
-                      <strong>{SCHOLARSHIP_OFFICER.name} · {SCHOLARSHIP_OFFICER.designation}</strong>
-                      <p>Email: {SCHOLARSHIP_OFFICER.email} · Phone: {SCHOLARSHIP_OFFICER.phone}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="sch-modal-footer">
+            {/* Modal Tabs */}
+            <div className="scholarship-tabs" style={{ marginBottom: '14px' }}>
               <button
                 type="button"
-                className="sch-btn-secondary"
+                className={`scholarship-tab-btn ${detailTab === 'overview' ? 'active' : ''}`}
+                onClick={() => setDetailTab('overview')}
+              >
+                Overview
+              </button>
+              <button
+                type="button"
+                className={`scholarship-tab-btn ${detailTab === 'eligibility' ? 'active' : ''}`}
+                onClick={() => setDetailTab('eligibility')}
+              >
+                Eligibility
+              </button>
+              <button
+                type="button"
+                className={`scholarship-tab-btn ${detailTab === 'documents' ? 'active' : ''}`}
+                onClick={() => setDetailTab('documents')}
+              >
+                Documents
+              </button>
+              <button
+                type="button"
+                className={`scholarship-tab-btn ${detailTab === 'faqs' ? 'active' : ''}`}
+                onClick={() => setDetailTab('faqs')}
+              >
+                FAQs
+              </button>
+            </div>
+
+            {/* Tab: Overview */}
+            {detailTab === 'overview' && (
+              <div className="modal-tab-body">
+                <h4>Program Overview</h4>
+                <p>{selectedSchemeForDetails.description}</p>
+
+                <h4>Financial Coverage &amp; Benefits</h4>
+                <ul className="modal-bullets">
+                  {(
+                    selectedSchemeForDetails.benefits || [
+                      'Direct tuition fee reimbursement credited to student bank account.',
+                      'Annual book and stationery grant allowance included.',
+                      'Exemption from selected college laboratory and assessment fees.'
+                    ]
+                  ).map((b, i) => (
+                    <li key={i}>
+                      <CheckCircle2 size={15} color="#059669" />
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Tab: Eligibility */}
+            {detailTab === 'eligibility' && (
+              <div className="modal-tab-body">
+                <h4>Qualification Checklist</h4>
+                <ul className="modal-bullets">
+                  <li>
+                    <CheckCircle2 size={15} color="#059669" />
+                    <span>Academic CGPA: Minimum ≥ {selectedSchemeForDetails.minCgpa || '6.0'} with zero active backlogs.</span>
+                  </li>
+                  <li>
+                    <CheckCircle2 size={15} color="#059669" />
+                    <span>
+                      {selectedSchemeForDetails.incomeCeiling
+                        ? `Annual Family Income: Gross total income must not exceed ₹${(selectedSchemeForDetails.incomeCeiling / 100000).toFixed(1)} Lakhs.`
+                        : 'No family income limit applicable.'}
+                    </span>
+                  </li>
+                  <li>
+                    <CheckCircle2 size={15} color="#059669" />
+                    <span>Degree Programs: Enrolled in regular full-time {selectedSchemeForDetails.educationLevels?.join(', ')}.</span>
+                  </li>
+                </ul>
+              </div>
+            )}
+
+            {/* Tab: Documents */}
+            {detailTab === 'documents' && (
+              <div className="modal-tab-body">
+                <h4>Required Verification Documents</h4>
+                <ul className="modal-bullets">
+                  {(selectedSchemeForDetails.requiredDocs || [
+                    'Income Certificate (Certified by Revenue Authority for FY 2026-27)',
+                    'Autonomous Semester Grade Marksheets',
+                    'Aadhaar-Seeded Bank Passbook Copy with IFSC Code',
+                    'College Identity Card Copy'
+                  ]).map((doc, idx) => (
+                    <li key={idx}>
+                      <FileCheck size={15} color="#2563eb" />
+                      <span>{doc}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Tab: FAQs */}
+            {detailTab === 'faqs' && (
+              <div className="modal-tab-body">
+                <h4>Frequently Asked Questions</h4>
+                <div className="faqs-stack">
+                  {(
+                    selectedSchemeForDetails.faqs || [
+                      {
+                        q: 'Can I apply for multiple scholarships simultaneously?',
+                        a: 'You can apply for multiple schemes. However, government statutory norms allow receiving only one tuition fee subsidy at a time.'
+                      },
+                      {
+                        q: 'When will the scholarship be credited?',
+                        a: 'Government grants are credited via DBT within 60 to 90 days after institutional scrutiny and district approval.'
+                      }
+                    ]
+                  ).map((f, i) => (
+                    <div key={i} className="faq-box">
+                      <strong>{f.q}</strong>
+                      <p>{f.a}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="modal-footer-row">
+              <button
+                type="button"
+                className="btn-receipt"
                 onClick={() => setSelectedSchemeForDetails(null)}
               >
                 Close
@@ -1258,272 +1241,275 @@ export default function ScholarshipPage({ account }) {
 
               <button
                 type="button"
-                className="company-register-btn"
+                className="btn-pay-now"
                 disabled={selectedSchemeForDetails.status === 'Closed'}
                 onClick={() => {
-                  const scheme = selectedSchemeForDetails;
+                  const s = selectedSchemeForDetails;
                   setSelectedSchemeForDetails(null);
-                  handleOpenApplyModal(scheme);
+                  handleOpenApplyModal(s);
                 }}
               >
-                Apply for Scholarship <ChevronRight size={13} />
+                Apply for Scholarship <ChevronRight size={14} />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── 6. MULTI-STEP APPLICATION WIZARD MODAL ─────────────────────────────── */}
+      {/* ─── 5. 4-STEP APPLICATION WIZARD MODAL ─────────────────────────────────── */}
       {applyingScheme && (
         <div
-          className="sch-modal-backdrop"
+          className="payment-modal-backdrop"
           onClick={() => setApplyingScheme(null)}
           role="dialog"
           aria-modal="true"
         >
-          <div className="sch-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="sch-modal-header">
-              <div>
-                <span className="sch-modal-kicker">Application Form · Academic Session 2026–2027</span>
-                <h2>{applyingScheme.name}</h2>
-              </div>
-              <button
-                type="button"
-                className="sch-modal-close-x"
-                onClick={() => setApplyingScheme(null)}
-              >
-                <X size={18} />
-              </button>
+          <div className="payment-modal" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="payment-modal-close"
+              onClick={() => setApplyingScheme(null)}
+            >
+              <X size={20} />
+            </button>
+
+            <div className="modal-head-row">
+              <span className="modal-sub-kicker">Application Form · Academic Session 2026–2027</span>
+              <h2 className="modal-main-title">{applyingScheme.name}</h2>
             </div>
 
-            <div className="sch-modal-body">
-              {/* Stepper */}
-              {applyStep <= 4 && (
-                <div className="sch-stepper-strip" style={{ marginBottom: '16px' }}>
-                  <div className={`sch-stepper-step ${applyStep === 1 ? 'active' : applyStep > 1 ? 'completed' : ''}`}>
-                    <span className="sch-step-bullet">{applyStep > 1 ? '✓' : '1'}</span>
-                    <span className="sch-step-label">Dossier</span>
-                  </div>
-                  <div className={`sch-step-line ${applyStep > 1 ? 'completed' : ''}`} />
+            {/* Step Wizard Header */}
+            {applyStep <= 4 && (
+              <div className="wizard-stepper-bar">
+                <div className={`wizard-step ${applyStep === 1 ? 'active' : applyStep > 1 ? 'done' : ''}`}>
+                  <span>{applyStep > 1 ? '✓' : '1'}</span> Dossier
+                </div>
+                <div className={`wizard-step-line ${applyStep > 1 ? 'done' : ''}`} />
+                <div className={`wizard-step ${applyStep === 2 ? 'active' : applyStep > 2 ? 'done' : ''}`}>
+                  <span>{applyStep > 2 ? '✓' : '2'}</span> Income &amp; Bank
+                </div>
+                <div className={`wizard-step-line ${applyStep > 2 ? 'done' : ''}`} />
+                <div className={`wizard-step ${applyStep === 3 ? 'active' : applyStep > 3 ? 'done' : ''}`}>
+                  <span>{applyStep > 3 ? '✓' : '3'}</span> Documents
+                </div>
+                <div className={`wizard-step-line ${applyStep > 3 ? 'done' : ''}`} />
+                <div className={`wizard-step ${applyStep === 4 ? 'active' : ''}`}>
+                  <span>4</span> Declaration
+                </div>
+              </div>
+            )}
 
-                  <div className={`sch-stepper-step ${applyStep === 2 ? 'active' : applyStep > 2 ? 'completed' : ''}`}>
-                    <span className="sch-step-bullet">{applyStep > 2 ? '✓' : '2'}</span>
-                    <span className="sch-step-label">Income &amp; Bank</span>
+            {/* STEP 1: Dossier */}
+            {applyStep === 1 && (
+              <div className="modal-form-stack">
+                <div className="form-grid-2">
+                  <div>
+                    <label className="field-lbl">Student Full Name</label>
+                    <input type="text" className="fee-input" value={applyFormData.fullName} readOnly />
                   </div>
-                  <div className={`sch-step-line ${applyStep > 2 ? 'completed' : ''}`} />
-
-                  <div className={`sch-stepper-step ${applyStep === 3 ? 'active' : applyStep > 3 ? 'completed' : ''}`}>
-                    <span className="sch-step-bullet">{applyStep > 3 ? '✓' : '3'}</span>
-                    <span className="sch-step-label">Documents</span>
-                  </div>
-                  <div className={`sch-step-line ${applyStep > 3 ? 'completed' : ''}`} />
-
-                  <div className={`sch-stepper-step ${applyStep === 4 ? 'active' : ''}`}>
-                    <span className="sch-step-bullet">4</span>
-                    <span className="sch-step-label">Declaration</span>
+                  <div>
+                    <label className="field-lbl">Registration Number</label>
+                    <input type="text" className="fee-input" value={applyFormData.rollNumber} readOnly />
                   </div>
                 </div>
-              )}
 
-              {/* STEP 1: Student Dossier */}
-              {applyStep === 1 && (
-                <div className="sch-form-grid">
-                  <div className="sch-form-field">
-                    <label>Student Full Name</label>
-                    <input type="text" value={applyFormData.fullName} readOnly />
+                <div className="form-grid-2">
+                  <div>
+                    <label className="field-lbl">Department</label>
+                    <input type="text" className="fee-input" value={applyFormData.department} readOnly />
                   </div>
-                  <div className="sch-form-field">
-                    <label>Registration / Roll Number</label>
-                    <input type="text" value={applyFormData.rollNumber} readOnly />
-                  </div>
-                  <div className="sch-form-field">
-                    <label>Department &amp; Program</label>
-                    <input type="text" value={applyFormData.department} readOnly />
-                  </div>
-                  <div className="sch-form-field">
-                    <label>Semester &amp; CGPA</label>
-                    <input type="text" value={`${applyFormData.semester} · ${applyFormData.cgpa} CGPA`} readOnly />
-                  </div>
-                  <div className="sch-form-field" style={{ gridColumn: '1 / -1' }}>
-                    <label>Social / Reservation Category</label>
-                    <input
-                      type="text"
-                      value={applyFormData.category}
-                      onChange={(e) => setApplyFormData({ ...applyFormData, category: e.target.value })}
-                    />
+                  <div>
+                    <label className="field-lbl">Semester &amp; CGPA</label>
+                    <input type="text" className="fee-input" value={`${applyFormData.semester} · ${applyFormData.cgpa} CGPA`} readOnly />
                   </div>
                 </div>
-              )}
 
-              {/* STEP 2: Income & Bank */}
-              {applyStep === 2 && (
-                <div className="sch-form-grid">
-                  <div className="sch-form-field">
-                    <label>Father's / Guardian's Full Name</label>
+                <div>
+                  <label className="field-lbl">Social / Affirmative Category</label>
+                  <input
+                    type="text"
+                    className="fee-input"
+                    value={applyFormData.category}
+                    onChange={(e) => setApplyFormData({ ...applyFormData, category: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: Income & Bank */}
+            {applyStep === 2 && (
+              <div className="modal-form-stack">
+                <div className="form-grid-2">
+                  <div>
+                    <label className="field-lbl">Father's Full Name</label>
                     <input
                       type="text"
+                      className="fee-input"
                       value={applyFormData.fatherName}
                       onChange={(e) => setApplyFormData({ ...applyFormData, fatherName: e.target.value })}
                       required
                     />
                   </div>
-                  <div className="sch-form-field">
-                    <label>Father's Occupation</label>
+                  <div>
+                    <label className="field-lbl">Father's Occupation</label>
                     <input
                       type="text"
+                      className="fee-input"
                       value={applyFormData.fatherOccupation}
                       onChange={(e) => setApplyFormData({ ...applyFormData, fatherOccupation: e.target.value })}
                       required
                     />
                   </div>
-                  <div className="sch-form-field">
-                    <label>Annual Family Income (INR)</label>
+                </div>
+
+                <div className="form-grid-2">
+                  <div>
+                    <label className="field-lbl">Annual Family Income (INR)</label>
                     <input
                       type="number"
+                      className="fee-input"
                       value={applyFormData.familyIncome}
                       onChange={(e) => setApplyFormData({ ...applyFormData, familyIncome: e.target.value })}
                       required
                     />
                   </div>
-                  <div className="sch-form-field">
-                    <label>Ration Card / BPL Number (Optional)</label>
+                  <div>
+                    <label className="field-lbl">Ration Card / BPL Number (Optional)</label>
                     <input
                       type="text"
+                      className="fee-input"
                       value={applyFormData.rationCardNo}
                       onChange={(e) => setApplyFormData({ ...applyFormData, rationCardNo: e.target.value })}
                     />
                   </div>
-                  <div className="sch-form-field">
-                    <label>Aadhaar-Linked Bank Account Number</label>
+                </div>
+
+                <div className="form-grid-2">
+                  <div>
+                    <label className="field-lbl">Aadhaar-Seeded Bank Account</label>
                     <input
                       type="text"
+                      className="fee-input"
                       value={applyFormData.bankAccount}
                       onChange={(e) => setApplyFormData({ ...applyFormData, bankAccount: e.target.value })}
                       required
                     />
                   </div>
-                  <div className="sch-form-field">
-                    <label>Bank IFSC Code</label>
+                  <div>
+                    <label className="field-lbl">Bank IFSC Code</label>
                     <input
                       type="text"
+                      className="fee-input"
                       value={applyFormData.bankIfsc}
                       onChange={(e) => setApplyFormData({ ...applyFormData, bankIfsc: e.target.value })}
                       required
                     />
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* STEP 3: Documents Checklist */}
-              {applyStep === 3 && (
-                <div className="sch-upload-container">
-                  <div
-                    className="sch-dropzone"
-                    onClick={() => showToast('Attached additional supporting document successfully!')}
+            {/* STEP 3: Documents */}
+            {applyStep === 3 && (
+              <div className="modal-form-stack">
+                <div
+                  className="upload-dropzone"
+                  onClick={() => showToast('Attached additional supporting document successfully!')}
+                >
+                  <UploadCloud size={26} color="#2563eb" />
+                  <strong>Click to upload additional verified documents</strong>
+                  <small>PDF or JPG format (Max 2MB per document)</small>
+                </div>
+
+                <div className="verified-docs-stack">
+                  <div className="verified-doc-item">
+                    <FileCheck size={16} color="#059669" />
+                    <span>Income Certificate (Revenue Authority FY 2026-27).pdf</span>
+                    <strong className="verified-tag">✓ Verified</strong>
+                  </div>
+                  <div className="verified-doc-item">
+                    <FileCheck size={16} color="#059669" />
+                    <span>Previous Semester Grade Marksheet (Autonomous Cell).pdf</span>
+                    <strong className="verified-tag">✓ Verified</strong>
+                  </div>
+                  <div className="verified-doc-item">
+                    <FileCheck size={16} color="#059669" />
+                    <span>Bank Passbook Copy (Aadhaar Seeded).jpg</span>
+                    <strong className="verified-tag">✓ Verified</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 4: Declaration */}
+            {applyStep === 4 && (
+              <div className="modal-form-stack">
+                <div className="summary-preview-card">
+                  <strong>Application Dossier Summary</strong>
+                  <p>Scheme: <strong>{applyingScheme.name}</strong></p>
+                  <p>Applicant: <strong>{applyFormData.fullName}</strong> ({applyFormData.rollNumber})</p>
+                  <p>Program: <strong>{applyFormData.department}</strong> · CGPA: <strong>{applyFormData.cgpa}</strong></p>
+                  <p>Annual Income: <strong>₹{Number(applyFormData.familyIncome).toLocaleString('en-IN')}</strong></p>
+                  <p>DBT Account: <strong>{applyFormData.bankAccount}</strong> (IFSC: {applyFormData.bankIfsc})</p>
+                </div>
+
+                <label className="declaration-check-row">
+                  <input
+                    type="checkbox"
+                    checked={applyFormData.agreedToTerms}
+                    onChange={(e) => setApplyFormData({ ...applyFormData, agreedToTerms: e.target.checked })}
+                  />
+                  <span>
+                    I hereby solemnly declare that all information furnished above and documents attached are true, correct, and complete to the best of my knowledge. I understand that any false disclosure shall render my scholarship liable to instant forfeiture and disciplinary proceedings under college rules.
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {/* STEP 5: Success Receipt */}
+            {applyStep === 5 && submittedApplicationRef && (
+              <div className="modal-success-pane">
+                <div className="success-icon-wrap">
+                  <CheckCircle2 size={36} color="#059669" />
+                </div>
+                <h3>Application Successfully Submitted!</h3>
+                <p>Your scholarship application has been transmitted to the Directorate of Student Welfare &amp; Financial Aid for online document scrutiny.</p>
+
+                <div className="ref-id-pill">
+                  <small>OFFICIAL REFERENCE ID</small>
+                  <strong>{submittedApplicationRef}</strong>
+                </div>
+
+                <div className="modal-success-actions">
+                  <button
+                    type="button"
+                    className="btn-receipt"
+                    onClick={() => window.print()}
                   >
-                    <UploadCloud size={24} color="#2563EB" />
-                    <strong>Click to attach additional supporting documents</strong>
-                    <small>PDF or JPG format (Max 2MB per file)</small>
-                  </div>
+                    <Printer size={14} /> Print Receipt
+                  </button>
 
-                  <div className="sch-doc-list">
-                    <div className="sch-doc-item">
-                      <div className="sch-doc-name">
-                        <FileCheck size={15} color="#059669" />
-                        <span>Income Certificate (Revenue Authority FY 2026-27).pdf</span>
-                      </div>
-                      <span className="sch-doc-tag">✓ Verified</span>
-                    </div>
-
-                    <div className="sch-doc-item">
-                      <div className="sch-doc-name">
-                        <FileCheck size={15} color="#059669" />
-                        <span>Previous Semester Grade Marksheet (Autonomous Cell).pdf</span>
-                      </div>
-                      <span className="sch-doc-tag">✓ Verified</span>
-                    </div>
-
-                    <div className="sch-doc-item">
-                      <div className="sch-doc-name">
-                        <FileCheck size={15} color="#059669" />
-                        <span>Bank Passbook Copy (Aadhaar Seeded).jpg</span>
-                      </div>
-                      <span className="sch-doc-tag">✓ Verified</span>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    className="btn-pay-now"
+                    onClick={() => {
+                      setApplyingScheme(null);
+                      setActiveTab('my_applications');
+                    }}
+                  >
+                    Track in My Applications <ChevronRight size={14} />
+                  </button>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* STEP 4: Declaration */}
-              {applyStep === 4 && (
-                <div className="sch-declaration-box">
-                  <div className="sch-summary-preview">
-                    <strong>Application Dossier Summary</strong>
-                    <p>Scheme: <strong>{applyingScheme.name}</strong></p>
-                    <p>Applicant: <strong>{applyFormData.fullName}</strong> ({applyFormData.rollNumber})</p>
-                    <p>Program: <strong>{applyFormData.department}</strong> · CGPA: <strong>{applyFormData.cgpa}</strong></p>
-                    <p>Annual Income: <strong>₹{Number(applyFormData.familyIncome).toLocaleString('en-IN')}</strong></p>
-                    <p>DBT Account: <strong>{applyFormData.bankAccount}</strong> (IFSC: {applyFormData.bankIfsc})</p>
-                  </div>
-
-                  <label className="sch-affirmation-label">
-                    <input
-                      type="checkbox"
-                      checked={applyFormData.agreedToTerms}
-                      onChange={(e) => setApplyFormData({ ...applyFormData, agreedToTerms: e.target.checked })}
-                    />
-                    <span>
-                      I hereby solemnly declare that all information furnished above and documents attached are true, correct, and complete to the best of my knowledge. I understand that any false disclosure shall render my scholarship liable to instant forfeiture and disciplinary proceedings under college rules.
-                    </span>
-                  </label>
-                </div>
-              )}
-
-              {/* STEP 5: Success Receipt */}
-              {applyStep === 5 && submittedApplicationRef && (
-                <div className="sch-success-view">
-                  <div className="sch-success-icon">
-                    <CheckCircle2 size={32} />
-                  </div>
-                  <h3>Application Successfully Submitted!</h3>
-                  <p>Your scholarship application has been transmitted to the Directorate of Student Welfare &amp; Financial Aid for document scrutiny.</p>
-
-                  <div className="sch-ref-card">
-                    <small>Official Reference ID</small>
-                    <strong>{submittedApplicationRef}</strong>
-                  </div>
-
-                  <div className="sch-success-buttons">
-                    <button
-                      type="button"
-                      className="sch-btn-secondary"
-                      onClick={() => window.print()}
-                    >
-                      <Printer size={13} /> Print Submission Receipt
-                    </button>
-
-                    <button
-                      type="button"
-                      className="company-register-btn"
-                      onClick={() => {
-                        setApplyingScheme(null);
-                        setCurrentView('my-applications');
-                        setActiveTab('my-applications');
-                      }}
-                    >
-                      Track in My Applications <ChevronRight size={13} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
+            {/* Footer Buttons */}
             {applyStep <= 4 && (
-              <div className="sch-modal-footer">
+              <div className="modal-footer-row">
                 {applyStep > 1 && (
                   <button
                     type="button"
-                    className="sch-btn-secondary"
+                    className="btn-receipt"
                     onClick={() => setApplyStep(applyStep - 1)}
                   >
                     Back
@@ -1533,19 +1519,19 @@ export default function ScholarshipPage({ account }) {
                 {applyStep < 4 ? (
                   <button
                     type="button"
-                    className="company-register-btn"
+                    className="btn-pay-now"
                     onClick={() => setApplyStep(applyStep + 1)}
                   >
-                    Continue to Step {applyStep + 1} <ChevronRight size={13} />
+                    Continue to Step {applyStep + 1} <ChevronRight size={14} />
                   </button>
                 ) : (
                   <button
                     type="button"
-                    className="company-register-btn"
+                    className="btn-pay-now"
                     disabled={!applyFormData.agreedToTerms}
                     onClick={handleSubmitApplication}
                   >
-                    Submit Official Application <ChevronRight size={13} />
+                    Submit Official Application <ChevronRight size={14} />
                   </button>
                 )}
               </div>
@@ -1554,10 +1540,10 @@ export default function ScholarshipPage({ account }) {
         </div>
       )}
 
-      {/* ─── 7. FLOATING TOAST ALERT ────────────────────────────────────────────── */}
+      {/* ─── 6. FLOATING TOAST NOTIFICATION ─────────────────────────────────────── */}
       {toastMessage && (
-        <div className="placement-register-msg sch-toast" role="alert">
-          <Check size={14} />
+        <div className="fees-toast" role="status" aria-live="polite">
+          <CheckCircle2 size={16} />
           <span>{toastMessage}</span>
         </div>
       )}

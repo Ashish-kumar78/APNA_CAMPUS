@@ -32,6 +32,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 import './ScholarshipPortal.css';
+import './AccountsModules/AccountsPortalUtilities.css';
 
 // Master Data & Submodules
 import {
@@ -646,7 +647,7 @@ export default function ScholarshipPortal({ account, onLogout, onSwitchRole }) {
       pageSubtitle={meta.subtitle}
       breadcrumbs={meta.crumbs}
     >
-      <div className="scholarship-portal-root">
+      <div className="scholarship-portal-root accounts-content-root">
         {renderContent()}
       </div>
     </AppLayout>

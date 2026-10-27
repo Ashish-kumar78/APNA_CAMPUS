@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Calendar,
+  CalendarCheck,
   CheckCircle2,
   XCircle,
   Clock,
@@ -20,7 +21,7 @@ import {
 import { mockLeaveApplications } from './hostelData.js';
 import './HostelExtraSections.css';
 
-export default function HostelLeaveSection() {
+export default function HostelLeaveSection({ onNavigateApplyLeave }) {
   const [leaves, setLeaves] = useState(mockLeaveApplications);
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'Pending' | 'Approved' | 'Rejected'
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,6 +109,15 @@ export default function HostelLeaveSection() {
           <p>Overnight Outstation Leaves · Parent/Guardian Consent Verification · Return Confirmation</p>
         </div>
         <div style={{ display: 'flex', gap: '0.65rem' }}>
+          {onNavigateApplyLeave && (
+            <button
+              className="h-btn h-btn-primary"
+              onClick={onNavigateApplyLeave}
+              title="Apply Staff / Warden Leave & View Institutional Guidelines"
+            >
+              <CalendarCheck size={14} /> Apply Staff Leave &amp; Rules
+            </button>
+          )}
           <button
             className="h-btn h-btn-secondary"
             onClick={() => {

@@ -1,4 +1,4 @@
-import { Building2, CalendarDays, UsersRound, Megaphone } from 'lucide-react';
+import { Building2, CalendarDays, CalendarCheck, UsersRound, Megaphone } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
 import { AppLayout } from './Navigation';
 import {
@@ -93,6 +93,7 @@ import HostelInspectionSection from './hostel/HostelInspectionSection.jsx';
 import HostelEmergencyContactsSection from './hostel/HostelEmergencyContactsSection.jsx';
 import HostelSettingsRulesSection from './hostel/HostelSettingsRulesSection.jsx';
 import WardenEmployeeProfile from './hostel/WardenEmployeeProfile.jsx';
+import HostelApplyLeaveModule from './hostel/HostelApplyLeaveModule.jsx';
 
 
 export default function HostelPortal({ account, onLogout }) {
@@ -730,6 +731,7 @@ export default function HostelPortal({ account, onLogout }) {
       title: 'LEAVES & DIGITAL PASSES',
       items: [
         { id: 'leave-mgmt', label: 'Hostel Leaves', icon: CalendarDays },
+        { id: 'apply-leave', label: 'Apply Leave', icon: CalendarCheck },
         { id: 'gatepasses', label: 'Digital Gate Passes', icon: ShieldCheck },
         { id: 'visitors', label: 'Visitor Logs', icon: Users },
         { id: 'disciplinary', label: 'Disciplinary Records', icon: AlertTriangle },
@@ -779,6 +781,11 @@ export default function HostelPortal({ account, onLogout }) {
         return {
           title: 'Room Allotment & Bed Capacity Manager',
           subtitle: 'Block-wise bed occupancy, vacancy monitoring, and student room transfers.'
+        };
+      case 'apply-leave':
+        return {
+          title: 'Staff & Warden Leave Application & ERP Guidelines',
+          subtitle: 'Institutional Leave Policy, Entitlement Summary, Admissibility Clauses & Hostel Admin Approval'
         };
       case 'mess-dining':
         return {
@@ -2120,7 +2127,15 @@ export default function HostelPortal({ account, onLogout }) {
 
           {/* TAB 11: LEAVE MANAGEMENT */}
           {activeTab === 'leave-mgmt' && (
-            <HostelLeaveSection />
+            <HostelLeaveSection onNavigateApplyLeave={() => setActiveTab('apply-leave')} />
+          )}
+
+          {/* TAB: APPLY LEAVE & INSTRUCTIONS */}
+          {activeTab === 'apply-leave' && (
+            <HostelApplyLeaveModule
+              account={account}
+              onNavigateLeaves={() => setActiveTab('leave-mgmt')}
+            />
           )}
 
           {/* TAB 12: MESS & DINING MANAGEMENT */}

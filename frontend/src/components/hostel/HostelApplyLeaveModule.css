@@ -70,6 +70,29 @@
   text-transform: uppercase;
 }
 
+.hal-role-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  margin-bottom: 0.65rem;
+}
+
+.hal-role-indicator.admin {
+  background: rgba(220, 38, 38, 0.28);
+  border: 1px solid rgba(254, 202, 202, 0.45);
+  color: #ffffff;
+}
+
+.hal-role-indicator.warden {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+}
+
 .hal-hero-title {
   font-size: 1.65rem;
   font-weight: 800;

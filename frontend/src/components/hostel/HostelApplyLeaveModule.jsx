@@ -23,7 +23,9 @@ import {
   User,
   Info,
   Layers,
-  Sparkles
+  Sparkles,
+  UserCheck,
+  ShieldAlert
 } from 'lucide-react';
 import {
   getLeaveSummary,
@@ -35,24 +37,70 @@ import {
 } from '../../services/hostelStaffLeaveStore.js';
 import './HostelApplyLeaveModule.css';
 
-export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
-  // Tabs: 'apply' | 'instructions' | 'approvals'
-  const [activeTab, setActiveTab] = useState('apply');
+export default function HostelApplyLeaveModule({
+  account,
+  initialTab,
+  isHostelAdminMode,
+  onNavigateLeaves
+}) {
+  // Determine if viewing as Hostel Admin vs Warden
+  const detectedIsAdmin = Boolean(
+    account?.role === 'hostel_admin' ||
+    account?.role === 'admin' ||
+    account?.role === 'super_admin' ||
+    account?.identity === 'WRD-ADM-01' ||
+    account?.detail?.toLowerCase().includes('administrator')
+  );
+
+  // Role mode state: allows explicit prop or role override toggle
+  const [roleMode, setRoleMode] = useState(() => {
+    if (typeof isHostelAdminMode === 'boolean') {
+      return isHostelAdminMode ? 'hostel_admin' : 'warden';
+    }
+    return detectedIsAdmin ? 'hostel_admin' : 'warden';
+  });
+
+  const isHostelAdmin = roleMode === 'hostel_admin';
+
+  // Tabs:
+  // For Hostel Admin: 'approvals' | 'instructions' | 'apply'
+  // For Warden: 'apply' | 'instructions' | 'my_applications'
+  const [activeTab, setActiveTab] = useState(() => {
+    if (initialTab) {
+      if (!isHostelAdmin && initialTab === 'approvals') return 'my_applications';
+      return initialTab;
+    }
+    return isHostelAdmin ? 'approvals' : 'apply';
+  });
+
+  // Keep active tab valid if role mode changes
+  useEffect(() => {
+    if (!isHostelAdmin && activeTab === 'approvals') {
+      setActiveTab('my_applications');
+    }
+  }, [isHostelAdmin, activeTab]);
+
   const [summary, setSummary] = useState(() => getLeaveSummary());
   const [leaves, setLeaves] = useState(() => getAllStaffLeaves());
-  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'Pending Approval' | 'Approved by Hostel Admin' | 'Rejected by Hostel Admin'
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const [selectedApplicationModal, setSelectedApplicationModal] = useState(null);
 
-  // Approval modal state
+  // Approval modal state (Hostel Admin only)
   const [approvalModal, setApprovalModal] = useState(null); // { application, action: 'approve' | 'reject' }
   const [adminRemarksInput, setAdminRemarksInput] = useState('');
 
   // Apply Form State
-  const defaultApplicantName = account?.name || 'Mr. Tanmaya Kumar Routray';
-  const defaultEmployeeId = account?.employeeId || account?.id || 'EMP-HST-140';
-  const defaultDesignation = account?.role === 'warden' ? 'Hostel Supervisor / Warden' : 'Hostel Resident Staff';
+  const defaultApplicantName = isHostelAdmin
+    ? (account?.name || 'Mr. Rajesh Jena')
+    : (account?.name || 'Mrs. Nibedita Das');
+  const defaultEmployeeId = isHostelAdmin
+    ? (account?.identity || 'WRD-ADM-01')
+    : (account?.employeeId || account?.identity || 'WRD-004');
+  const defaultDesignation = isHostelAdmin
+    ? 'Hostel Chief Administrator & Housing Ops'
+    : 'Chief Resident Warden (Girls Residence)';
 
   const [applyForm, setApplyForm] = useState({
     applicantName: defaultApplicantName,
@@ -65,10 +113,10 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
     days: 2,
     session: 'Full Day',
     reason: '',
-    alternativeArrangement: 'Assistant Warden / Block Caretaker will supervise roll-call and gate passes during absence.',
+    alternativeArrangement: 'Assistant Warden / Caretaker will supervise night roll call and gate attendance.',
     stationLeaving: 'Yes',
-    contactAddress: 'Residential Quarters / Native Place',
-    contactPhone: account?.phone || '+91 78730 08197'
+    contactAddress: 'Campus Staff Quarters Type-B',
+    contactPhone: account?.phone || '+91 94370 00120'
   });
 
   const showToast = (msg) => {
@@ -102,15 +150,20 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
     setLeaves(updatedLeaves);
     setSummary(newSummary);
     showToast(`Leave application #${newApplication.id} submitted! Awaiting Hostel Admin approval.`);
-    
-    // Reset form reason
+
+    // Reset reason
     setApplyForm(prev => ({
       ...prev,
       reason: ''
     }));
 
-    // Switch to approvals tab to see the queued application
-    setActiveTab('approvals');
+    // If warden: go to My Applications status view
+    // If admin: go to Approvals
+    if (isHostelAdmin) {
+      setActiveTab('approvals');
+    } else {
+      setActiveTab('my_applications');
+    }
   };
 
   const handleOpenApprovalModal = (app, action) => {
@@ -125,7 +178,7 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
   const handleConfirmApproval = () => {
     if (!approvalModal) return;
     const { application, action } = approvalModal;
-    const approver = account?.name ? `${account.name} (Hostel Admin)` : 'Hostel Admin';
+    const approver = account?.name ? `${account.name} (Hostel Admin)` : 'Mr. Rajesh Jena (Hostel Admin)';
 
     if (action === 'approve') {
       const { updatedLeaves, summary: newSummary } = approveStaffLeave(application.id, adminRemarksInput, approver);
@@ -176,20 +229,60 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
         </div>
       )}
 
-      {/* Top Hero Banner */}
+      {/* Top Hero Banner with Active Role Indicator */}
       <div className="hal-hero-banner">
         <div className="hal-hero-left">
-          <div className="hal-hero-tag">
-            <Sparkles size={13} />
-            <span>INSTITUTIONAL HUMAN RESOURCES &amp; RESIDENCE WELFARE</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
+            <div className="hal-hero-tag">
+              <Sparkles size={13} />
+              <span>INSTITUTIONAL HUMAN RESOURCES &amp; RESIDENCE WELFARE</span>
+            </div>
+
+            {/* Role indicator tag */}
+            {isHostelAdmin ? (
+              <span className="hal-role-indicator admin" title="Operating with Hostel Admin sanction authority">
+                <ShieldCheck size={13} /> Active Role: <strong>Hostel Admin (Sanction Authority)</strong>
+              </span>
+            ) : (
+              <span className="hal-role-indicator warden" title="Operating with Warden staff leave privileges">
+                <User size={13} /> Active Role: <strong>Warden (Applicant)</strong>
+              </span>
+            )}
           </div>
-          <h1 className="hal-hero-title">Hostel Staff &amp; Warden Leave Management</h1>
+
+          <h1 className="hal-hero-title">
+            {isHostelAdmin
+              ? 'Hostel Admin — Leave Approvals & Sanction Registry'
+              : 'Hostel Warden — Staff Leave Application & ERP Guidelines'}
+          </h1>
           <p className="hal-hero-subtitle">
-            Apply for leave, review entitlement balances, examine official institutional leave conditions, and process Hostel Admin sanctions.
+            {isHostelAdmin
+              ? 'Sanction authority console for Hostel Administration. Review staff leave applications, evaluate reasons & handovers, and grant official sanctions.'
+              : 'Apply for leave, monitor session entitlement balances, study official institutional conditions, and track sanction status from Hostel Admin.'}
           </p>
         </div>
 
         <div className="hal-hero-actions">
+          {/* Role Preview Switcher */}
+          <button
+            type="button"
+            className="hal-btn hal-btn-outline"
+            onClick={() => {
+              const newMode = isHostelAdmin ? 'warden' : 'hostel_admin';
+              setRoleMode(newMode);
+              if (newMode === 'warden' && activeTab === 'approvals') {
+                setActiveTab('apply');
+              } else if (newMode === 'hostel_admin') {
+                setActiveTab('approvals');
+              }
+              showToast(`Switched view to ${newMode === 'hostel_admin' ? 'Hostel Admin' : 'Warden'} role.`);
+            }}
+            title="Toggle between Warden (Applicant) and Hostel Admin (Sanctioner) view"
+          >
+            <ShieldCheck size={14} />
+            <span>Switch to {isHostelAdmin ? 'Warden View' : 'Hostel Admin View'}</span>
+          </button>
+
           {onNavigateLeaves && (
             <button
               type="button"
@@ -201,6 +294,7 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
               <span>Resident Leaves</span>
             </button>
           )}
+
           <button
             type="button"
             className="hal-btn hal-btn-outline"
@@ -264,8 +358,27 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
         </div>
       </section>
 
-      {/* Main Tab Switcher */}
+      {/* ==============================================================
+          MAIN TAB SWITCHER
+          Notice: "Hostel Admin Approvals" is ONLY rendered for Hostel Admin.
+          It is completely DELETED from the Warden role as requested!
+          ============================================================== */}
       <div className="hal-tabs-bar" role="tablist">
+        {/* HOSTEL ADMIN ONLY: "Hostel Admin Approvals" (Deleted from Warden role) */}
+        {isHostelAdmin && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'approvals'}
+            className={`hal-tab-btn ${activeTab === 'approvals' ? 'active' : ''}`}
+            onClick={() => setActiveTab('approvals')}
+          >
+            <ShieldCheck size={16} />
+            <span>Hostel Admin Approvals</span>
+            {stats.pending > 0 && <span className="hal-pending-badge">{stats.pending}</span>}
+          </button>
+        )}
+
         <button
           type="button"
           role="tab"
@@ -288,17 +401,19 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
           <span>Leave Rules &amp; Admissibility (Instructions)</span>
         </button>
 
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'approvals'}
-          className={`hal-tab-btn ${activeTab === 'approvals' ? 'active' : ''}`}
-          onClick={() => setActiveTab('approvals')}
-        >
-          <ShieldCheck size={16} />
-          <span>Hostel Admin Approvals</span>
-          {stats.pending > 0 && <span className="hal-pending-badge">{stats.pending}</span>}
-        </button>
+        {/* WARDEN ONLY: "My Applications Status" (Tracks status without admin approval buttons) */}
+        {!isHostelAdmin && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'my_applications'}
+            className={`hal-tab-btn ${activeTab === 'my_applications' ? 'active' : ''}`}
+            onClick={() => setActiveTab('my_applications')}
+          >
+            <Clock size={16} />
+            <span>My Applications Status</span>
+          </button>
+        )}
       </div>
 
       {/* ==============================================================
@@ -438,7 +553,7 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
                   </div>
                 </div>
 
-                {/* Reason for Leave (MANDATORY AS REQUESTED) */}
+                {/* Reason for Leave (MANDATORY REQUIREMENT) */}
                 <div className="hal-form-group">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <label className="hal-required-label">Reason for Leave *</label>
@@ -613,15 +728,27 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  className="hal-btn hal-btn-outline"
-                  style={{ width: '100%', marginTop: '0.85rem' }}
-                  onClick={() => setActiveTab('approvals')}
-                >
-                  <Eye size={14} />
-                  <span>Open Hostel Admin Sanction Console</span>
-                </button>
+                {isHostelAdmin ? (
+                  <button
+                    type="button"
+                    className="hal-btn hal-btn-outline"
+                    style={{ width: '100%', marginTop: '0.85rem' }}
+                    onClick={() => setActiveTab('approvals')}
+                  >
+                    <Eye size={14} />
+                    <span>Open Hostel Admin Sanction Console</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="hal-btn hal-btn-outline"
+                    style={{ width: '100%', marginTop: '0.85rem' }}
+                    onClick={() => setActiveTab('my_applications')}
+                  >
+                    <Clock size={14} />
+                    <span>View My Application Status</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -851,9 +978,9 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
       )}
 
       {/* ==============================================================
-          TAB 3: HOSTEL ADMIN APPROVALS & LEAVE APPLICATIONS
+          TAB 3 (HOSTEL ADMIN ONLY): HOSTEL ADMIN APPROVALS CONSOLE
           ============================================================== */}
-      {activeTab === 'approvals' && (
+      {isHostelAdmin && activeTab === 'approvals' && (
         <div className="hal-tab-content">
           <div className="hal-approvals-card">
             {/* Header Strip */}
@@ -861,7 +988,7 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
               <div>
                 <h3 className="hal-card-title">Hostel Admin Sanction &amp; Applications Console</h3>
                 <p className="hal-card-subtitle">
-                  Review applicant details, evaluate reasons &amp; alternative arrangements, and grant or reject leave sanctions.
+                  Review staff &amp; warden leave applications, inspect reasons &amp; alternative arrangements, and grant official sanctions.
                 </p>
               </div>
 
@@ -956,7 +1083,7 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
                             <strong className="hal-days-badge">{leave.days} d</strong>
                           </td>
 
-                          {/* REASON FOR LEAVE (MANDATORY REQUIREMENT) */}
+                          {/* REASON FOR LEAVE */}
                           <td>
                             <div className="hal-reason-box" title={leave.reason}>
                               {leave.reason}
@@ -1036,6 +1163,138 @@ export default function HostelApplyLeaveModule({ account, onNavigateLeaves }) {
                                 </>
                               )}
                             </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==============================================================
+          TAB 4 (WARDEN ONLY): MY APPLICATIONS STATUS (NO APPROVAL BUTTONS)
+          ============================================================== */}
+      {!isHostelAdmin && activeTab === 'my_applications' && (
+        <div className="hal-tab-content">
+          <div className="hal-approvals-card">
+            <div className="hal-approvals-header">
+              <div>
+                <h3 className="hal-card-title">My Leave Applications &amp; Status</h3>
+                <p className="hal-card-subtitle">
+                  Track your submitted leave requests, approval progress from Hostel Admin, and official remarks.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="hal-btn hal-btn-primary"
+                onClick={() => setActiveTab('apply')}
+              >
+                <CalendarCheck size={14} />
+                <span>+ Apply New Leave</span>
+              </button>
+            </div>
+
+            <div className="hal-table-wrap">
+              <table className="hal-leaves-table">
+                <thead>
+                  <tr>
+                    <th>App ID</th>
+                    <th>Leave Type &amp; Dates</th>
+                    <th>Days</th>
+                    <th style={{ minWidth: '240px' }}>Reason for Leave</th>
+                    <th>Handover Colleague</th>
+                    <th>Hostel Admin Status</th>
+                    <th style={{ textAlign: 'center' }}>Dossier</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaves.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                        No leave applications recorded yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    leaves.map(leave => {
+                      const isPending = leave.status === 'Pending Approval';
+                      const isApproved = leave.status === 'Approved by Hostel Admin';
+                      const isRejected = leave.status === 'Rejected by Hostel Admin';
+
+                      return (
+                        <tr key={leave.id}>
+                          <td>
+                            <strong className="hal-id-code">{leave.id}</strong>
+                            <div className="hal-date-sub">{leave.appliedOn}</div>
+                          </td>
+
+                          <td>
+                            <div className="hal-leave-type-tag">{leave.leaveType}</div>
+                            <div className="hal-date-range">
+                              {leave.startDate} → {leave.endDate}
+                            </div>
+                            <span className="hal-session-sub">{leave.session}</span>
+                          </td>
+
+                          <td>
+                            <strong className="hal-days-badge">{leave.days} d</strong>
+                          </td>
+
+                          <td>
+                            <div className="hal-reason-box" title={leave.reason}>
+                              {leave.reason}
+                            </div>
+                          </td>
+
+                          <td>
+                            <div className="hal-handover-box">
+                              {leave.alternativeArrangement || 'Standard duties delegated'}
+                            </div>
+                          </td>
+
+                          <td>
+                            {isPending && (
+                              <span className="hal-status-badge pending">
+                                <Clock size={12} /> Awaiting Hostel Admin Sanction
+                              </span>
+                            )}
+                            {isApproved && (
+                              <div>
+                                <span className="hal-status-badge approved">
+                                  <CheckCircle2 size={12} /> Sanctioned by Admin
+                                </span>
+                                {leave.approvedAt && (
+                                  <div className="hal-approver-sub">
+                                    Sanctioned on: {leave.approvedAt}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {isRejected && (
+                              <div>
+                                <span className="hal-status-badge rejected">
+                                  <XCircle size={12} /> Not Sanctioned
+                                </span>
+                                <div className="hal-approver-sub">
+                                  {leave.adminRemarks || 'Rejected by Admin'}
+                                </div>
+                              </div>
+                            )}
+                          </td>
+
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              className="hal-btn-action view"
+                              onClick={() => setSelectedApplicationModal(leave)}
+                            >
+                              <Eye size={13} />
+                              <span>View Slip</span>
+                            </button>
                           </td>
                         </tr>
                       );

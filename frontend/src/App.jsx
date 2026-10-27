@@ -195,7 +195,14 @@ const accounts = {
     detail: 'Chief Resident Warden',
   },
   'hostel_admin': {
-    role: 'warden',
+    role: 'hostel_admin',
+    name: 'Mr. Rajesh Jena',
+    identity: 'WRD-ADM-01',
+    department: 'Hostel Administration Office',
+    detail: 'Hostel Chief Administrator & Housing Ops',
+  },
+  'wrd-adm-01': {
+    role: 'hostel_admin',
     name: 'Mr. Rajesh Jena',
     identity: 'WRD-ADM-01',
     department: 'Hostel Administration Office',

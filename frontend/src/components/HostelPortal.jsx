@@ -97,6 +97,14 @@ import HostelApplyLeaveModule from './hostel/HostelApplyLeaveModule.jsx';
 
 
 export default function HostelPortal({ account, onLogout }) {
+  const isHostelAdmin = Boolean(
+    account?.role === 'hostel_admin' ||
+    account?.role === 'admin' ||
+    account?.role === 'super_admin' ||
+    account?.identity === 'WRD-ADM-01' ||
+    account?.detail?.toLowerCase().includes('administrator')
+  );
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -730,6 +738,9 @@ export default function HostelPortal({ account, onLogout }) {
     {
       title: 'LEAVES & DIGITAL PASSES',
       items: [
+        ...(isHostelAdmin ? [
+          { id: 'hostel-admin-approvals', label: 'Hostel Admin Approvals', icon: ShieldCheck, badge: 2 }
+        ] : []),
         { id: 'leave-mgmt', label: 'Hostel Leaves', icon: CalendarDays },
         { id: 'apply-leave', label: 'Apply Leave', icon: CalendarCheck },
         { id: 'gatepasses', label: 'Digital Gate Passes', icon: ShieldCheck },
@@ -784,8 +795,15 @@ export default function HostelPortal({ account, onLogout }) {
         };
       case 'apply-leave':
         return {
-          title: 'Staff & Warden Leave Application & ERP Guidelines',
+          title: isHostelAdmin
+            ? 'Hostel Admin Leave Management & ERP Policy'
+            : 'Staff & Warden Leave Application & ERP Guidelines',
           subtitle: 'Institutional Leave Policy, Entitlement Summary, Admissibility Clauses & Hostel Admin Approval'
+        };
+      case 'hostel-admin-approvals':
+        return {
+          title: 'Hostel Admin Leave Approvals & Sanction Console',
+          subtitle: 'Review staff & warden leave applications, inspect reasons & alternative arrangements, and grant official sanctions.'
         };
       case 'mess-dining':
         return {
@@ -2130,10 +2148,22 @@ export default function HostelPortal({ account, onLogout }) {
             <HostelLeaveSection onNavigateApplyLeave={() => setActiveTab('apply-leave')} />
           )}
 
+          {/* TAB: HOSTEL ADMIN APPROVALS (Only for Hostel Admin) */}
+          {activeTab === 'hostel-admin-approvals' && (
+            <HostelApplyLeaveModule
+              account={account}
+              initialTab="approvals"
+              isHostelAdminMode={true}
+              onNavigateLeaves={() => setActiveTab('leave-mgmt')}
+            />
+          )}
+
           {/* TAB: APPLY LEAVE & INSTRUCTIONS */}
           {activeTab === 'apply-leave' && (
             <HostelApplyLeaveModule
               account={account}
+              initialTab="apply"
+              isHostelAdminMode={isHostelAdmin}
               onNavigateLeaves={() => setActiveTab('leave-mgmt')}
             />
           )}

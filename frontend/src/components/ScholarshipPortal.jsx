@@ -54,6 +54,7 @@ import ScholarshipDisbursementsTab from './ScholarshipModules/ScholarshipDisburs
 import ScholarshipRenewalsTab from './ScholarshipModules/ScholarshipRenewalsTab.jsx';
 import ScholarshipReportsTab from './ScholarshipModules/ScholarshipReportsTab.jsx';
 import ScholarshipSettingsTab from './ScholarshipModules/ScholarshipSettingsTab.jsx';
+import BonafideReviewQueue from './Bonafide/BonafideReviewQueue.jsx';
 
 export default function ScholarshipPortal({ account, onLogout, onSwitchRole }) {
   // Current Tab
@@ -246,6 +247,7 @@ export default function ScholarshipPortal({ account, onLogout, onSwitchRole }) {
       collapsible: true,
       defaultCollapsed: false,
       items: [
+        { id: 'bonafide_applications', label: 'Bonafide Applications Queue', icon: FileCheck },
         { id: 'verif_screening', label: 'Eligibility Screening', icon: ShieldCheck },
         { id: 'verif_academic', label: 'Academic Verification', icon: GraduationCap },
         { id: 'verif_income', label: 'Income Certificate Check', icon: DollarSign },
@@ -532,6 +534,10 @@ export default function ScholarshipPortal({ account, onLogout, onSwitchRole }) {
     }
 
     // D. Eligibility and Verification
+    if (activeTab === 'bonafide_applications') {
+      return <BonafideReviewQueue role="scholarship" account={account} />;
+    }
+
     if (activeTab.startsWith('verif_')) {
       return (
         <ScholarshipVerificationTab

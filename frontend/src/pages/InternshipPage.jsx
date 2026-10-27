@@ -29,6 +29,7 @@ import {
   Building2,
 } from 'lucide-react'
 import InternshipStudentProfile from '../components/InternshipStudentProfile.jsx'
+import ErrorBoundary from '../components/Common/ErrorBoundary.jsx'
 import './InternshipPage.css'
 import placementStore from '../services/placementStore.js'
 
@@ -138,12 +139,11 @@ const ListIcon = ({ size = 20, className = '' }) => (
   </svg>
 )
 
-// ── The 7 Sections with Published Drives matching User Requirements ──
+// ── The Internship Sub-Sections matching User Requirements ──
 const INTERNSHIP_SECTIONS = [
   { id: 'dashboard', label: 'Dashboard', prefix: '»' },
   { id: 'opportunities', label: 'Internship Drives', prefix: '»' },
   { id: 'enrollment', label: 'Enrollment', prefix: '»' },
-  { id: 'bonafide', label: 'Apply Internship Bonafide', prefix: '»' },
   { id: 'feedback', label: 'Feedback', prefix: '»' },
   { id: 'certificate', label: 'Certificate', prefix: '»' },
   { id: 'quiz', label: 'Quiz', prefix: '»' },
@@ -156,22 +156,32 @@ export default function InternshipPage({ account }) {
   const [toastMsg, setToastMsg] = useState('')
   const [selectedInternDetail, setSelectedInternDetail] = useState(null)
   const [internshipsList, setInternshipsList] = useState(() => {
-    const published = placementStore.getPublishedInternships()
-    return published.length > 0 ? published : internships
+    try {
+      const published = placementStore?.getPublishedInternships ? placementStore.getPublishedInternships() : []
+      return Array.isArray(published) && published.length > 0 ? published : internships
+    } catch {
+      return internships
+    }
   })
 
   // Synchronize live with Placement Cell published internships
   useEffect(() => {
     const syncInternships = () => {
-      const published = placementStore.getPublishedInternships()
-      if (published.length > 0) {
-        setInternshipsList(published)
+      try {
+        const published = placementStore?.getPublishedInternships ? placementStore.getPublishedInternships() : []
+        if (Array.isArray(published) && published.length > 0) {
+          setInternshipsList(published)
+        }
+      } catch (err) {
+        console.warn('Sync internships notice:', err)
       }
     }
-    const unsub = placementStore.subscribe(syncInternships)
+    const unsub = (placementStore?.subscribe && typeof placementStore.subscribe === 'function')
+      ? placementStore.subscribe(syncInternships)
+      : () => {}
     window.addEventListener('cms_placement_updated', syncInternships)
     return () => {
-      unsub()
+      if (typeof unsub === 'function') unsub()
       window.removeEventListener('cms_placement_updated', syncInternships)
     }
   }, [])
@@ -189,63 +199,9 @@ export default function InternshipPage({ account }) {
   const studentBranch = 'Computer Science & Engineering (Sem 5)'
 
   // ── Modal & Preview States ──
-  const [showBonafideModal, setShowBonafideModal] = useState(false)
   const [showCertUploadModal, setShowCertUploadModal] = useState(false)
   const [showEnrollModal, setShowEnrollModal] = useState(false)
-  const [selectedBonafidePreview, setSelectedBonafidePreview] = useState(null)
   const [selectedCertPreview, setSelectedCertPreview] = useState(null)
-
-  // ─────────────────────────────────────────────────────────────
-  // 1. BONAFIDE CERTIFICATE STATE (MATCHING IMAGE 1)
-  // ─────────────────────────────────────────────────────────────
-  const [bonafideRecords, setBonafideRecords] = useState([])
-  const [bonafideFilters, setBonafideFilters] = useState({
-    studentName: '',
-    parentName: '',
-    remark: '',
-    status: '',
-    download: '',
-  })
-  const [bonafideForm, setBonafideForm] = useState({
-    studentName: studentDisplayName,
-    parentName: studentParentName,
-    company: 'Central Tool Room and Training Center',
-    remark: 'Required for SIP Onboarding',
-    purpose: 'Winter / Summer Industrial Internship Training',
-    validUntil: '30-10-2026',
-    undertaking: true,
-  })
-
-  const filteredBonafideRecords = bonafideRecords.filter((item) => {
-    if (bonafideFilters.studentName && !item.studentName?.toLowerCase().includes(bonafideFilters.studentName.toLowerCase())) return false
-    if (bonafideFilters.parentName && !item.parentName?.toLowerCase().includes(bonafideFilters.parentName.toLowerCase())) return false
-    if (bonafideFilters.remark && !item.remark?.toLowerCase().includes(bonafideFilters.remark.toLowerCase())) return false
-    if (bonafideFilters.status && !item.status?.toLowerCase().includes(bonafideFilters.status.toLowerCase())) return false
-    return true
-  })
-
-  const handleApplyBonafide = (e) => {
-    e.preventDefault()
-    if (!bonafideForm.studentName || !bonafideForm.parentName) {
-      showToast('Please provide Student and Parent names.')
-      return
-    }
-    const newRecord = {
-      id: bonafideRecords.length + 1,
-      studentName: bonafideForm.studentName,
-      parentName: bonafideForm.parentName,
-      remark: bonafideForm.remark || 'Required for Summer Industrial Internship (SIP)',
-      status: 'Approved',
-      company: bonafideForm.company || 'Central Tool Room and Training Center',
-      appliedDate: '18-10-2026',
-      validUntil: bonafideForm.validUntil || '30-10-2026',
-      purpose: bonafideForm.purpose,
-      refNo: `CET/T&P/BONAFIDE/2026/${Math.floor(100 + Math.random() * 900)}`,
-    }
-    setBonafideRecords((prev) => [...prev, newRecord])
-    setShowBonafideModal(false)
-    showToast(`Bonafide Certificate applied & approved for ${bonafideForm.studentName}!`)
-  }
 
   // ─────────────────────────────────────────────────────────────
   // 2. CERTIFICATE STATE (MATCHING IMAGE 2)
@@ -561,7 +517,7 @@ export default function InternshipPage({ account }) {
         <div>
           <p className="internship-kicker"><Briefcase size={13} />TRAINING &amp; PLACEMENT CELL · CSE</p>
           <h2>Internship Portal</h2>
-          <p className="internship-caption">Manage enrollments, apply for bonafide certificates, complete evaluations, quizzes, and viva defense.</p>
+          <p className="internship-caption">Manage enrollments, track industry internship drives, complete evaluations, quizzes, and viva defense.</p>
         </div>
         <div className="internship-stats">
           <div><strong>1</strong><small>Enrolled Active</small></div>
@@ -572,7 +528,7 @@ export default function InternshipPage({ account }) {
 
       {/* ─────────────────────────────────────────────────────────────
           ROW FORMAT MENU (EXACT SCREENSHOT MATCH)
-          `(o) Internship v`  |  `» Dashboard`  `» Enrollment`  `» Apply Internship Bonafide`  `» Feedback`  `» Certificate`  `» Quiz`  `🔔 Online Examination`
+          `(o) Internship v`  |  `» Dashboard`  `» Internship Drives`  `» Enrollment`  `» Feedback`  `» Certificate`  `» Quiz`
           ───────────────────────────────────────────────────────────── */}
       <div className="internship-row-nav-wrapper">
         <div className="internship-row-nav-bar" role="navigation" aria-label="Internship Sections">
@@ -628,7 +584,12 @@ export default function InternshipPage({ account }) {
       {activeSection === 'dashboard' && (
         <div className="internship-dashboard-section">
           {/* Exact match to User Screenshots: Info, Attendance, Evaluation & Marks, ID Card */}
-          <InternshipStudentProfile account={account} />
+          <ErrorBoundary
+            title="Internship Profile Unavailable"
+            message="An error occurred while displaying the student internship profile. Try refreshing or switching tabs."
+          >
+            <InternshipStudentProfile account={account} />
+          </ErrorBoundary>
         </div>
       )}
 
@@ -891,123 +852,6 @@ export default function InternshipPage({ account }) {
                           {item.status}
                         </span>
                       </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          SECTION 3: APPLY INTERNSHIP BONAFIDE (EXACT MATCH IMAGE 1)
-          ───────────────────────────────────────────────────────────── */}
-      {activeSection === 'bonafide' && (
-        <div className="erp-bonafide-container">
-          {/* Header matching Image 1: ✹ My Bonafide Certificate with right-aligned action button */}
-          <div className="erp-bonafide-header-row">
-            <div className="erp-bonafide-title">
-              <StarburstIcon size={20} className="erp-starburst-icon" />
-              <span>My Bonafide Certificate</span>
-            </div>
-            <button
-              type="button"
-              className="erp-btn-primary-action"
-              onClick={() => setShowBonafideModal(true)}
-            >
-              + Apply for Bonafide Certificate
-            </button>
-          </div>
-
-          {/* Cyan / Light-Blue Divider Line matching Image 1 */}
-          <div className="erp-cyan-divider" />
-
-          {/* Table matching Image 1 */}
-          <div className="erp-table-responsive">
-            <table className="erp-portal-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '40px', textAlign: 'center' }}>#</th>
-                  <th>STUDENT NAME</th>
-                  <th>PARENT NAME</th>
-                  <th>REMARK</th>
-                  <th>STATUS</th>
-                  <th>DOWNLOAD</th>
-                  <th style={{ width: '30px' }}></th>
-                </tr>
-                <tr className="erp-table-filter-row">
-                  <td></td>
-                  <td>
-                    <input
-                      type="text"
-                      className="erp-table-filter-input"
-                      value={bonafideFilters.studentName}
-                      onChange={(e) => setBonafideFilters({ ...bonafideFilters, studentName: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      className="erp-table-filter-input"
-                      value={bonafideFilters.parentName}
-                      onChange={(e) => setBonafideFilters({ ...bonafideFilters, parentName: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      className="erp-table-filter-input"
-                      value={bonafideFilters.remark}
-                      onChange={(e) => setBonafideFilters({ ...bonafideFilters, remark: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      className="erp-table-filter-input"
-                      value={bonafideFilters.status}
-                      onChange={(e) => setBonafideFilters({ ...bonafideFilters, status: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      className="erp-table-filter-input"
-                      value={bonafideFilters.download}
-                      onChange={(e) => setBonafideFilters({ ...bonafideFilters, download: e.target.value })}
-                    />
-                  </td>
-                  <td></td>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredBonafideRecords.length === 0 ? (
-                  <tr className="erp-no-results-row">
-                    <td colSpan={7}>No results found.</td>
-                  </tr>
-                ) : (
-                  filteredBonafideRecords.map((item, idx) => (
-                    <tr key={item.id}>
-                      <td style={{ textAlign: 'center' }}>{idx + 1}</td>
-                      <td>{item.studentName}</td>
-                      <td>{item.parentName}</td>
-                      <td>{item.remark}</td>
-                      <td>
-                        <span className={`erp-badge-status ${item.status.toLowerCase()}`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="erp-btn-blue"
-                          onClick={() => setSelectedBonafidePreview(item)}
-                        >
-                          Download
-                        </button>
-                      </td>
-                      <td></td>
                     </tr>
                   ))
                 )}
@@ -1339,223 +1183,6 @@ export default function InternshipPage({ account }) {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-
-
-      {/* ═════════════════════════════════════════════════════════════
-          MODAL 1: APPLY BONAFIDE CERTIFICATE (INTERNSHIP CELL)
-          ═════════════════════════════════════════════════════════════ */}
-      {showBonafideModal && (
-        <div className="erp-modal-overlay" onClick={() => setShowBonafideModal(false)}>
-          <div className="erp-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="erp-modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <StarburstIcon size={18} className="erp-starburst-icon" />
-                <h4 style={{ margin: 0, fontSize: '15px', color: '#1e3a5f' }}>
-                  Apply for Internship Bonafide Certificate
-                </h4>
-              </div>
-              <button
-                type="button"
-                className="erp-modal-close"
-                onClick={() => setShowBonafideModal(false)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="erp-modal-notice">
-              🛡️ <strong>Internship Cell Clearance:</strong> This application requests an official college bonafide certificate / NOC for corporate internship joining, approved by the Training &amp; Placement Cell.
-            </div>
-
-            <form onSubmit={handleApplyBonafide}>
-              <div className="erp-form-grid">
-                <div className="erp-form-group">
-                  <label>Student Name *</label>
-                  <input
-                    type="text"
-                    className="erp-form-input"
-                    value={bonafideForm.studentName}
-                    onChange={(e) => setBonafideForm({ ...bonafideForm, studentName: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="erp-form-group">
-                  <label>Parent / Guardian Name *</label>
-                  <input
-                    type="text"
-                    className="erp-form-input"
-                    value={bonafideForm.parentName}
-                    onChange={(e) => setBonafideForm({ ...bonafideForm, parentName: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="erp-form-group">
-                  <label>Target Internship Company *</label>
-                  <input
-                    type="text"
-                    className="erp-form-input"
-                    value={bonafideForm.company}
-                    onChange={(e) => setBonafideForm({ ...bonafideForm, company: e.target.value })}
-                    placeholder="e.g. Central Tool Room and Training Center"
-                    required
-                  />
-                </div>
-                <div className="erp-form-group">
-                  <label>Valid Up To Date</label>
-                  <input
-                    type="text"
-                    className="erp-form-input"
-                    value={bonafideForm.validUntil}
-                    onChange={(e) => setBonafideForm({ ...bonafideForm, validUntil: e.target.value })}
-                    placeholder="30-10-2026"
-                  />
-                </div>
-                <div className="erp-form-group" style={{ gridColumn: 'span 2' }}>
-                  <label>Remark / Purpose *</label>
-                  <input
-                    type="text"
-                    className="erp-form-input"
-                    value={bonafideForm.remark}
-                    onChange={(e) => setBonafideForm({ ...bonafideForm, remark: e.target.value })}
-                    placeholder="e.g. Required for Summer Industrial Internship (SIP)"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="erp-form-checkbox-row">
-                <input
-                  type="checkbox"
-                  id="bonafide-undertaking"
-                  checked={bonafideForm.undertaking}
-                  onChange={(e) => setBonafideForm({ ...bonafideForm, undertaking: e.target.checked })}
-                  required
-                />
-                <label htmlFor="bonafide-undertaking">
-                  I confirm that all particulars provided are accurate and will be officially endorsed by the College Internship Cell.
-                </label>
-              </div>
-
-              <div className="erp-modal-footer">
-                <button
-                  type="button"
-                  className="erp-btn-secondary"
-                  onClick={() => setShowBonafideModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="erp-btn-primary">
-                  <CheckCircle2 size={14} /> Submit Application for Approval
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ═════════════════════════════════════════════════════════════
-          MODAL 2: OFFICIAL BONAFIDE CERTIFICATE PREVIEW / PRINT
-          ═════════════════════════════════════════════════════════════ */}
-      {selectedBonafidePreview && (
-        <div className="erp-modal-overlay" onClick={() => setSelectedBonafidePreview(null)}>
-          <div className="erp-modal-card erp-cert-preview-card" onClick={(e) => e.stopPropagation()}>
-            <div className="erp-modal-header no-print">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileCheck size={18} color="#16a34a" />
-                <h4 style={{ margin: 0, fontSize: '15px', color: '#1e3a5f' }}>
-                  Official Bonafide Certificate Document
-                </h4>
-              </div>
-              <button
-                type="button"
-                className="erp-modal-close"
-                onClick={() => setSelectedBonafidePreview(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Certificate Paper */}
-            <div className="bonafide-document-sheet">
-              <div className="bonafide-doc-header">
-                <div className="bonafide-college-logo">🎓</div>
-                <div className="bonafide-college-meta">
-                  <h3>APNA CAMPUS INSTITUTE OF TECHNOLOGY &amp; MANAGEMENT</h3>
-                  <p>Approved by AICTE, Affiliated to BPUT, Accredited Grade 'A' by NAAC</p>
-                  <small>Chandrasekharpur, Bhubaneswar, Odisha – 751024 · Training &amp; Placement Cell</small>
-                </div>
-              </div>
-              <hr className="bonafide-doc-line" />
-
-              <div className="bonafide-doc-ref-row">
-                <span>Ref No: <strong>{selectedBonafidePreview.refNo || 'CET/T&P/BONAFIDE/2026/0412'}</strong></span>
-                <span>Date: <strong>{selectedBonafidePreview.appliedDate || '18-10-2026'}</strong></span>
-              </div>
-
-              <div className="bonafide-doc-title">
-                <h2>BONAFIDE &amp; NO OBJECTION CERTIFICATE</h2>
-                <span>(FOR INDUSTRIAL INTERNSHIP TRAINING)</span>
-              </div>
-
-              <div className="bonafide-doc-body">
-                <p>
-                  This is to certify that <strong>{selectedBonafidePreview.studentName}</strong>,
-                  son/daughter of <strong>{selectedBonafidePreview.parentName}</strong>,
-                  bearing College Registration / Roll No. <strong>{studentRoll}</strong>, is a bonafide student
-                  of this institution pursuing <strong>Bachelor of Technology (B.Tech)</strong> in
-                  the Department of <strong>Computer Science &amp; Engineering</strong> for the academic session 2026–2027.
-                </p>
-                <p>
-                  The institution has <strong>No Objection</strong> to the student undergoing industrial internship training / project work at
-                  {' '}<strong>{selectedBonafidePreview.company}</strong> as per the curriculum norms prescribed by the academic council and approved by the Internship Cell.
-                </p>
-                <p>
-                  <strong>Remark:</strong> {selectedBonafidePreview.remark || 'Required for Summer Industrial Internship Training (SIP)'}.
-                </p>
-                <p style={{ marginTop: '14px' }}>
-                  This certificate is issued on the specific request of the student for official internship verification and is valid up to <strong>{selectedBonafidePreview.validUntil || '30-10-2026'}</strong>.
-                </p>
-              </div>
-
-              <div className="bonafide-doc-sign-strip">
-                <div className="bonafide-seal-box">
-                  <div className="official-round-seal">
-                    <span>★ TRAINING &amp; PLACEMENT ★</span>
-                    <strong>COLLEGE SEAL</strong>
-                    <small>BHUBANESWAR</small>
-                  </div>
-                </div>
-                <div className="bonafide-signature-box">
-                  <div className="signature-font">Prof. Dr. A. K. Behera</div>
-                  <strong style={{ display: 'block', fontSize: '12px', color: '#0f172a' }}>Training &amp; Placement Officer</strong>
-                  <span style={{ fontSize: '10.5px', color: '#64748b' }}>Head, Internship &amp; Industry Relations Cell</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="erp-modal-footer no-print">
-              <button
-                type="button"
-                className="erp-btn-secondary"
-                onClick={() => setSelectedBonafidePreview(null)}
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                className="erp-btn-primary"
-                onClick={() => {
-                  window.print()
-                  showToast('Printing / Saving Bonafide Certificate PDF...')
-                }}
-              >
-                <Printer size={14} /> Print / Save PDF
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

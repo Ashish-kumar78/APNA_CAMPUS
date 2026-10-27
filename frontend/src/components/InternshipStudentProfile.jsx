@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   GraduationCap,
@@ -17,7 +17,11 @@ import {
   ShieldCheck,
   MapPin,
   CheckCircle2,
+  Printer,
+  Sparkles,
 } from 'lucide-react';
+import { api } from '../services/api';
+import IdCardVerificationView from './InternshipCell/IdCardVerificationView.jsx';
 import './InternshipStudentProfile.css';
 
 // Default Student Profile data matching the exact format from screenshots
@@ -149,30 +153,74 @@ export const EVALUATION_ITEMS = [
 export default function InternshipStudentProfile({ account, onBack }) {
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'attendance' | 'marks' | 'idcard'
   const [showDayWise, setShowDayWise] = useState(true);
+  const [dbStudent, setDbStudent] = useState(null);
+  const [activeCard, setActiveCard] = useState(null);
+  const [verifyingToken, setVerifyingToken] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
-  // Derive student profile dynamically from account or clean random name
+  // Derive target registration number
+  const targetReg = account?.registrationNumber || account?.rollNumber || account?.rollNo || account?.regNo || '2401432265';
+
+  // Fetch real verified student record and active card from backend
+  useEffect(() => {
+    let isMounted = true;
+    async function loadData() {
+      try {
+        if (api && typeof api.getInternshipStudent === 'function') {
+          const res = await api.getInternshipStudent(targetReg);
+          if (isMounted && res?.success && res?.data) {
+            setDbStudent(res.data);
+            if (res.data.activeCard) {
+              setActiveCard(res.data.activeCard);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Backend student fetch notice:', err?.message || err);
+      }
+    }
+    loadData();
+    return () => { isMounted = false; };
+  }, [targetReg]);
+
+  // Derive student profile dynamically with DB fallback
   const student = {
     prefix: DEFAULT_INTERNSHIP_PROFILE.prefix,
-    name: account?.name ? account.name.toUpperCase() : DEFAULT_INTERNSHIP_PROFILE.name.toUpperCase(),
-    regNo: account?.rollNo || account?.regNo || DEFAULT_INTERNSHIP_PROFILE.regNo,
-    course: account?.department ? `B.Tech ${account.department}` : DEFAULT_INTERNSHIP_PROFILE.course,
-    batch: account?.batch || DEFAULT_INTERNSHIP_PROFILE.batch,
-    email: account?.email || (account?.name ? `${account.name.toLowerCase().replace(/\s+/g, '')}2007@gmail.com` : DEFAULT_INTERNSHIP_PROFILE.email),
-    mobile: account?.phone || account?.mobile || DEFAULT_INTERNSHIP_PROFILE.mobile,
-    session: DEFAULT_INTERNSHIP_PROFILE.session,
-    company: DEFAULT_INTERNSHIP_PROFILE.company,
-    courseDetails: DEFAULT_INTERNSHIP_PROFILE.courseDetails,
-    section: DEFAULT_INTERNSHIP_PROFILE.section,
+    name: dbStudent?.name || (account?.name ? account.name.toUpperCase() : DEFAULT_INTERNSHIP_PROFILE.name.toUpperCase()),
+    regNo: dbStudent?.registrationNo || targetReg,
+    course: dbStudent?.course || (account?.department ? `B.Tech ${account.department}` : DEFAULT_INTERNSHIP_PROFILE.course),
+    batch: dbStudent?.batch || account?.batch || DEFAULT_INTERNSHIP_PROFILE.batch,
+    email: dbStudent?.email || account?.email || DEFAULT_INTERNSHIP_PROFILE.email,
+    mobile: dbStudent?.phone || account?.phone || account?.mobile || DEFAULT_INTERNSHIP_PROFILE.mobile,
+    session: dbStudent?.academicSession || DEFAULT_INTERNSHIP_PROFILE.session,
+    company: activeCard?.company || dbStudent?.company || DEFAULT_INTERNSHIP_PROFILE.company,
+    courseDetails: dbStudent?.course || DEFAULT_INTERNSHIP_PROFILE.courseDetails,
+    section: dbStudent?.section || DEFAULT_INTERNSHIP_PROFILE.section,
     facultyCoordinator: DEFAULT_INTERNSHIP_PROFILE.facultyCoordinator,
     batchGuide: DEFAULT_INTERNSHIP_PROFILE.batchGuide,
     studentGuide: DEFAULT_INTERNSHIP_PROFILE.studentGuide,
     subBatch: DEFAULT_INTERNSHIP_PROFILE.subBatch,
     specialBatch: DEFAULT_INTERNSHIP_PROFILE.specialBatch,
-    photoUrl: account?.avatar || DEFAULT_INTERNSHIP_PROFILE.photoUrl,
+    photoUrl: dbStudent?.photoUrl || account?.avatar || DEFAULT_INTERNSHIP_PROFILE.photoUrl,
+    activeCard: activeCard || dbStudent?.activeCard,
   };
 
-  const handleDownloadIdCard = () => {
-    alert(`Downloading Official Internship ID Card for ${student.prefix} ${student.name} (Reg: ${student.regNo})...`);
+  const handleDownloadIdCard = async () => {
+    if (student.activeCard?.id) {
+      setDownloading(true);
+      try {
+        await api.downloadInternshipIdCardPdf(
+          student.activeCard.id,
+          `Internship_ID_Card_${student.regNo}_${student.activeCard.cardNumber}.pdf`
+        );
+      } catch (err) {
+        alert(err.message || 'Download failed. Please try again.');
+      } finally {
+        setDownloading(false);
+      }
+    } else {
+      alert(`Official ID Card for ${student.prefix} ${student.name} (Reg: ${student.regNo}) is currently pending issuance by the Internship Cell.\n\nPlease contact the Internship Cell to authorize your official card.`);
+    }
   };
 
   return (
@@ -554,19 +602,30 @@ export default function InternshipStudentProfile({ account, onBack }) {
               ───────────────────────────────────────────────────────────── */}
           {activeTab === 'idcard' && (
             <div className="isp-idcard-tab-wrap">
-              <div className="isp-idcard-top-action">
+              <div className="isp-idcard-top-action" style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                {student.activeCard?.verificationToken && (
+                  <button
+                    type="button"
+                    className="isp-btn-download-idcard"
+                    style={{ background: '#0284c7' }}
+                    onClick={() => setVerifyingToken(student.activeCard.verificationToken)}
+                  >
+                    <ShieldCheck size={14} /> Verify Credential
+                  </button>
+                )}
                 <button
                   type="button"
                   className="isp-btn-download-idcard"
                   onClick={handleDownloadIdCard}
+                  disabled={downloading}
                 >
-                  <Download size={14} /> Download ID Card
+                  <Download size={14} /> {downloading ? 'Downloading...' : 'Download ID Card'}
                 </button>
               </div>
 
               <div className="isp-idcard-center-stage">
                 {/* Physical ID Card Badge Graphic */}
-                <div className="isp-id-badge">
+                <div className="isp-id-badge" style={{ position: 'relative' }}>
                   {/* Top Header */}
                   <div className="isp-id-badge-header">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffffff" style={{ flexShrink: 0 }}>
@@ -579,7 +638,7 @@ export default function InternshipStudentProfile({ account, onBack }) {
                   </div>
 
                   {/* Body with Portrait & Fields */}
-                  <div className="isp-id-badge-body">
+                  <div className="isp-id-badge-body" style={{ position: 'relative' }}>
                     <div className="isp-id-photo-frame">
                       <svg viewBox="0 0 100 120" className="isp-id-photo">
                         <rect width="100" height="120" fill="#e0f2fe" />
@@ -606,12 +665,42 @@ export default function InternshipStudentProfile({ account, onBack }) {
                         <strong>Course:</strong> {student.courseDetails}
                       </div>
                       <div>
-                        <strong>Batch:</strong> N/A
+                        <strong>Batch:</strong> {student.batch || 'N/A'}
                       </div>
                       <div>
                         <strong>Mobile:</strong> {student.mobile}
                       </div>
                     </div>
+
+                    {/* QR Code if issued */}
+                    {student.activeCard?.qrCodeDataUrl && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          background: '#ffffff',
+                          padding: '3px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                        }}
+                        onClick={() => setVerifyingToken(student.activeCard.verificationToken)}
+                        title="Click to authenticate card credentials"
+                      >
+                        <img
+                          src={student.activeCard.qrCodeDataUrl}
+                          alt="Verification QR"
+                          style={{ width: '42px', height: '42px', display: 'block' }}
+                        />
+                        <span style={{ fontSize: '0.45rem', fontWeight: 800, color: '#0f2b48', marginTop: '1px' }}>
+                          VERIFY
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Bottom Red Banner */}
@@ -627,6 +716,14 @@ export default function InternshipStudentProfile({ account, onBack }) {
           )}
         </section>
       </div>
+
+      {/* Verification Modal */}
+      {verifyingToken && (
+        <IdCardVerificationView
+          token={verifyingToken}
+          onClose={() => setVerifyingToken(null)}
+        />
+      )}
     </div>
   );
 }

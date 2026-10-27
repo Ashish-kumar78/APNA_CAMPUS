@@ -37,7 +37,8 @@ import {
   Info,
   Wrench,
   History,
-  CreditCard
+  CreditCard,
+  FileCheck
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
@@ -52,6 +53,7 @@ import PrincipalAccreditationModule from './PrincipalModules/PrincipalAccreditat
 import PrincipalGrievanceModule from './PrincipalModules/PrincipalGrievanceModule.jsx';
 import PrincipalCalendarModule from './PrincipalModules/PrincipalCalendarModule.jsx';
 import PrincipalAuditModule from './PrincipalModules/PrincipalAuditModule.jsx';
+import BonafideReviewQueue from './Bonafide/BonafideReviewQueue.jsx';
 import './PrincipalPortal.css';
 import './SuperAdminPortal.css';
 import { api } from '../services/api.js';
@@ -583,11 +585,23 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole }) {
               >
                 <History size={15} /> Audit Trail
               </button>
+              <button
+                className={`principal-quick-btn ${activeTab === 'bonafide_approvals' ? 'active' : ''}`}
+                onClick={() => setActiveTab('bonafide_approvals')}
+              >
+                <FileCheck size={15} /> Bonafide Approvals
+              </button>
             </div>
 
           {/* ======================================================== */}
           {/* TAB 1: CAMPUS GOVERNANCE OVERVIEW                       */}
           {/* ======================================================== */}
+          {activeTab === 'bonafide_approvals' && (
+            <div style={{ marginTop: '16px' }}>
+              <BonafideReviewQueue role="principal" account={account} />
+            </div>
+          )}
+
           {activeTab === 'governance' && (
             <div>
               {/* Primary KPI Grid */}

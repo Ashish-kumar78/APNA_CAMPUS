@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -32,6 +33,10 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(AppModule);
+
+  // Increase payload limit for supportive documents (PDFs, images)
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
 
   // 1. Global API Prefix with root exclusions so GET / and GET /health are always reachable
   app.setGlobalPrefix('api', {

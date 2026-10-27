@@ -40,6 +40,7 @@ import {
   MapPin,
   Award,
   Maximize2,
+  FileCheck,
 } from 'lucide-react'
 import './StudentPortal.css'
 import './DashboardHome.css'
@@ -49,6 +50,7 @@ import AcademicsPage from './pages/AcademicsPage.jsx'
 import ExaminationPage from './pages/ExaminationPage.jsx'
 import FeedbackPage from './pages/FeedbackPage.jsx'
 import InternshipPage from './pages/InternshipPage.jsx'
+import ErrorBoundary from './components/Common/ErrorBoundary.jsx'
 import LibraryPage from './pages/LibraryPage.jsx'
 import OnlineExamPage from './pages/OnlineExamPage.jsx'
 import PlacementPage from './pages/PlacementPage.jsx'
@@ -63,6 +65,7 @@ import BiometricPage from './pages/BiometricPage.jsx'
 import CanteenPage from './pages/CanteenPage.jsx'
 import StudentHostelPage from './pages/StudentHostelPage.jsx'
 import ClassNotesPage from './pages/ClassNotesPage.jsx'
+import BonafidePage from './pages/BonafidePage.jsx'
 import CampusConnect from './components/CampusConnect/CampusConnect.jsx'
 import AcademicResourcesSection from './components/CampusConnect/AcademicResourcesSection.jsx'
 import LeadershipScoreboardSection from './components/CampusConnect/LeadershipScoreboardSection.jsx'
@@ -126,6 +129,7 @@ const studentNavSections = [
     items: [
       { label: 'Academics', icon: BookOpen, page: 'academics' },
       { label: 'Online Examination', icon: ClipboardList, page: 'online-exam' },
+      { label: 'Bonafide Certificate', icon: FileCheck, page: 'bonafide' },
     ]
   },
   {
@@ -724,8 +728,13 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'notices' && <NoticesPage />}
               {activePage === 'idcard' && <IDCardPage />}
               {activePage === 'library' && <LibraryPage />}
-              {activePage === 'internship' && <InternshipPage account={account} />}
+              {activePage === 'internship' && (
+                <ErrorBoundary title="Internship Portal Error">
+                  <InternshipPage account={account} />
+                </ErrorBoundary>
+              )}
               {activePage === 'online-exam' && <OnlineExamPage />}
+              {activePage === 'bonafide' && <BonafidePage account={account} />}
               {activePage === 'placement' && <PlacementPage />}
               {activePage === 'feedback' && (
                 <FeedbackPage

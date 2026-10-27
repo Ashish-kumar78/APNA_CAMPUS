@@ -1229,11 +1229,147 @@ export const api = {
     request(`/notifications/faculty/${id}`, {
       method: 'DELETE',
     }),
-  getStudentNotifications: () => request('/notifications/student'),
-  markStudentNotificationRead: (id) =>
-    request(`/notifications/student/${id}/read`, {
+  // 32. Internship Cell & Automatic ID Card Generation
+  getInternshipStats: () => request('/internship/stats'),
+  getInternshipStudents: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([_, v]) => v !== undefined && v !== '' && v !== 'ALL')
+    ).toString();
+    return request(`/internship/students${q ? '?' + q : ''}`);
+  },
+  getInternshipStudent: (registrationNo) =>
+    request(`/internship/students/${encodeURIComponent(registrationNo)}`),
+  getInternshipIdCards: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([_, v]) => v !== undefined && v !== '' && v !== 'ALL')
+    ).toString();
+    return request(`/internship/id-cards${q ? '?' + q : ''}`);
+  },
+  getInternshipIdCardById: (id) => request(`/internship/id-cards/${encodeURIComponent(id)}`),
+  previewInternshipIdCard: (payload) =>
+    request('/internship/id-cards/preview', {
       method: 'POST',
+      body: JSON.stringify(payload),
     }),
+  issueInternshipIdCard: (payload) =>
+    request('/internship/id-cards', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  reissueInternshipIdCard: (id, payload) =>
+    request(`/internship/id-cards/${encodeURIComponent(id)}/reissue`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  renewInternshipIdCard: (id, payload) =>
+    request(`/internship/id-cards/${encodeURIComponent(id)}/renew`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  revokeInternshipIdCard: (id, payload) =>
+    request(`/internship/id-cards/${encodeURIComponent(id)}/revoke`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  verifyInternshipIdCard: (token) =>
+    request(`/internship/id-cards/verify/${encodeURIComponent(token)}`),
+  downloadInternshipIdCardPdf: async (id, filename = 'Internship_ID_Card.pdf') => {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('collegeflow_token') : null;
+    const url = `${API_BASE_URL}/internship/id-cards/${encodeURIComponent(id)}/pdf`;
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to download ID Card PDF (HTTP ${response.status})`);
+    }
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+    return true;
+  },
+
+  // ── 25. Bonafide Certificate Management System ──
+  getBonafideStats: () => request('/bonafide/stats'),
+  getMyBonafideApplications: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/bonafide/my${q ? '?' + q : ''}`);
+  },
+  getBonafideReviewQueue: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/bonafide/queue${q ? '?' + q : ''}`);
+  },
+  getBonafideApplicationById: (id) =>
+    request(`/bonafide/${encodeURIComponent(id)}`),
+  createBonafideApplication: (payload) =>
+    request('/bonafide', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateBonafideDraft: (id, payload) =>
+    request(`/bonafide/${encodeURIComponent(id)}/draft`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  resubmitBonafideApplication: (id, payload) =>
+    request(`/bonafide/${encodeURIComponent(id)}/resubmit`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  withdrawBonafideApplication: (id, payload) =>
+    request(`/bonafide/${encodeURIComponent(id)}/withdraw`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  reviewBonafideApplication: (id, payload) =>
+    request(`/bonafide/${encodeURIComponent(id)}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getBonafideFeeStructures: () => request('/bonafide/fee-structures'),
+  verifyBonafideCertificate: (token) =>
+    request(`/bonafide/verify/${encodeURIComponent(token)}`),
+  downloadBonafideCertificatePdf: async (id, filename = 'Bonafide_Certificate.pdf') => {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('collegeflow_token') : null;
+    const url = `${API_BASE_URL}/bonafide/${encodeURIComponent(id)}/certificate`;
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => null);
+      throw new Error(errJson?.message || `Failed to download certificate PDF (HTTP ${response.status})`);
+    }
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+    return true;
+  },
+  previewBonafidePdf: async (id, filename = 'Bonafide_Draft_Preview.pdf') => {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('collegeflow_token') : null;
+    const url = `${API_BASE_URL}/bonafide/${encodeURIComponent(id)}/preview`;
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => null);
+      throw new Error(errJson?.message || `Failed to preview certificate PDF (HTTP ${response.status})`);
+    }
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+    return true;
+  },
 };
 
 

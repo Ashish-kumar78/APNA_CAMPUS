@@ -3,9 +3,146 @@ import {
   ClipboardCheck, Clock, Calendar, CheckSquare, Square,
   CheckCircle2, XCircle, Users, UserCheck, AlertCircle,
   ArrowRight, Check, X, RotateCcw, Edit3, Eye, FileText,
-  ChevronDown, Send, Sparkles, BookOpen
+  ChevronDown, Send, Sparkles, BookOpen, Mic, Presentation,
+  Award, ClipboardList, Info, HelpCircle, Tag, Filter, Search,
+  Layers, FileCheck, Building2, History, ListFilter
 } from 'lucide-react';
+import { facultyApi } from '../../services/facultyApi.js';
 import './TakeAttendanceModule.css';
+
+// Academic Activity Types Configuration (Exact requirements: Regular Class, Seminar, Internal Examination, Semester Examination, Other Academic Activity)
+export const ACADEMIC_ACTIVITY_TYPES = [
+  {
+    id: 'Regular Class',
+    label: 'Regular Class',
+    badge: 'Curriculum Class',
+    tag: 'REGULAR',
+    icon: BookOpen,
+    color: '#2563eb',
+    bgColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+    description: 'Standard curriculum lecture, classroom session, or laboratory tutorial',
+    detailsRequired: false,
+    placeholder: ''
+  },
+  {
+    id: 'Seminar',
+    label: 'Seminar',
+    badge: 'Academic Seminar',
+    tag: 'SEMINAR',
+    icon: Mic,
+    color: '#7c3aed',
+    bgColor: '#f5f3ff',
+    borderColor: '#ddd6fe',
+    description: 'Technical symposium, guest speaker lecture, research presentation, or academic seminar',
+    detailsRequired: true,
+    placeholder: 'e.g., Guest Lecture on "Distributed Graph Computing & High-Performance AI" by Dr. K. Sharma (IIT), Auditorium Hall A'
+  },
+  {
+    id: 'Internal Examination',
+    label: 'Internal Examination',
+    badge: 'CIA / Modular Exam',
+    tag: 'INTERNAL EXAM',
+    icon: ClipboardList,
+    color: '#d97706',
+    bgColor: '#fffbeb',
+    borderColor: '#fde68a',
+    description: 'Continuous Internal Assessment (CIA-I/II), Modular Exam, Mid-Term, or Internal Lab Test',
+    detailsRequired: true,
+    placeholder: 'e.g., Continuous Internal Assessment 1 (CIA-I) — Units 1 & 2 (Max Marks: 30), Hall 302'
+  },
+  {
+    id: 'Semester Examination',
+    label: 'Semester Examination',
+    badge: 'University / End-Term',
+    tag: 'SEMESTER EXAM',
+    icon: Award,
+    color: '#dc2626',
+    bgColor: '#fef2f2',
+    borderColor: '#fecaca',
+    description: 'Autonomous end-semester theory exam slot, practical viva slot, or external university evaluation',
+    detailsRequired: true,
+    placeholder: 'e.g., Autumn End-Semester Theory Examination 2026 — Slot A (Paper Code: CS501)'
+  },
+  {
+    id: 'Other Academic Activity',
+    label: 'Other Academic Activity',
+    badge: 'Special Activity',
+    tag: 'SPECIAL ACTIVITY',
+    icon: Sparkles,
+    color: '#0891b2',
+    bgColor: '#ecfeff',
+    borderColor: '#a5f3fc',
+    description: 'Workshop, industrial visit debrief, remedial class, doubt clearing, or project milestone review',
+    detailsRequired: true,
+    placeholder: 'e.g., Full-Day Hands-on DevOps & Cloud CI/CD Workshop / Capstone Major Project Milestone 2 Review'
+  }
+];
+
+// Fast Quick-Fill Presets for Activities
+export const ACTIVITY_PRESETS = {
+  'Seminar': [
+    'Guest Lecture by Visiting Scientist',
+    'Industry Expert Technical Seminar',
+    'Departmental Research Colloquium',
+    'IEEE Student Branch Symposium'
+  ],
+  'Internal Examination': [
+    'Continuous Internal Assessment 1 (CIA-I)',
+    'Continuous Internal Assessment 2 (CIA-II)',
+    'Mid-Semester Modular Examination',
+    'Lab Continuous Internal Evaluation'
+  ],
+  'Semester Examination': [
+    'Autonomous End-Semester Theory Slot',
+    'Autonomous Practical Lab Viva & Evaluation',
+    'University External Examination Slot',
+    'Supplementary / Backlog Examination Slot'
+  ],
+  'Other Academic Activity': [
+    'Hands-on DevOps & Cloud Workshop',
+    'Capstone Project Architecture Review',
+    'Remedial / Doubt-Clearing Session',
+    'Industrial Visit Briefing & Orientation',
+    'Hackathon Mentoring & Code Sprint'
+  ]
+};
+
+// Course / Program Subject Offerings
+export const PROGRAM_SUBJECTS = {
+  'B.Tech': [
+    { code: 'CS501', name: 'Data Structures & Algorithms', branch: 'CSE' },
+    { code: 'CS502', name: 'Operating Systems', branch: 'CSE' },
+    { code: 'CS503', name: 'Database Management Systems', branch: 'CSE' },
+    { code: 'CS504', name: 'Artificial Intelligence & Neural Nets', branch: 'CSE' },
+    { code: 'CS505', name: 'Machine Learning Foundations', branch: 'CSE' },
+    { code: 'CS506', name: 'Software Engineering & Agile Methods', branch: 'CSE' },
+    { code: 'AI501', name: 'Deep Learning & Natural Language Processing', branch: 'CSE (AI)' },
+    { code: 'EC501', name: 'Digital Signal Processing & Microcontrollers', branch: 'ECE' },
+    { code: 'EE501', name: 'Power Electronics & Drive Systems', branch: 'EE' },
+    { code: 'ME501', name: 'Applied Thermodynamics & Fluid Dynamics', branch: 'Mechanical' },
+  ],
+  'M.Tech': [
+    { code: 'CS701', name: 'Advanced Algorithms & Graph Theory', branch: 'Computer Science' },
+    { code: 'CS702', name: 'Cloud Architecture & Distributed Computing', branch: 'Computer Science' },
+    { code: 'VL701', name: 'VLSI Subsystem Design & Verification', branch: 'VLSI & Embedded Systems' },
+  ],
+  'BCA': [
+    { code: 'BCA101', name: 'Fundamentals of Computing & IT', branch: 'Computer Applications' },
+    { code: 'BCA102', name: 'Digital Electronics & Logic Design', branch: 'Computer Applications' },
+    { code: 'BCA301', name: 'Web Programming & Full-Stack Tools', branch: 'Computer Applications' },
+    { code: 'BCA302', name: 'Cloud Computing Principles', branch: 'Cloud & Mobile Tech' },
+  ],
+  'MCA': [
+    { code: 'MCA501', name: 'Enterprise Cloud Architecture & Microservices', branch: 'Software Architecture' },
+    { code: 'MCA502', name: 'Advanced Big Data Analytics & Mining', branch: 'Data Science & Analytics' },
+  ],
+  'MBA': [
+    { code: 'MBA101', name: 'Organizational Behavior & HR Dynamics', branch: 'Human Resources' },
+    { code: 'MBA102', name: 'Managerial Economics & Decisions', branch: 'Finance' },
+    { code: 'MBA103', name: 'Marketing Management & Strategic Positioning', branch: 'Marketing' },
+  ]
+};
 
 // Academic Data Configurations
 const ACADEMIC_PROGRAMS = {
@@ -71,6 +208,17 @@ function generateStudentsForSection(course, batch, branch, section) {
 }
 
 export default function TakeAttendanceModule({ account, role = 'faculty', onBackToDashboard }) {
+  // Navigation Tab State inside Module: 'register' | 'history'
+  const [activeModuleTab, setActiveModuleTab] = useState('register');
+
+  // Academic Activity Type State
+  const [activityType, setActivityType] = useState('Regular Class');
+  const [activityDetails, setActivityDetails] = useState('');
+
+  // Subject State
+  const [subjectCode, setSubjectCode] = useState('CS501');
+  const [subjectName, setSubjectName] = useState('Data Structures & Algorithms');
+
   // Form State
   const [course, setCourse] = useState('B.Tech');
   const [batch, setBatch] = useState('2023–2027');
@@ -100,6 +248,12 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
   const [submittedSession, setSubmittedSession] = useState(null);
   const [showViewAttendanceTable, setShowViewAttendanceTable] = useState(true);
 
+  // Past Sessions Log State
+  const [pastSessions, setPastSessions] = useState([]);
+  const [historyFilter, setHistoryFilter] = useState('All');
+  const [historySearch, setHistorySearch] = useState('');
+  const [selectedPastSession, setSelectedPastSession] = useState(null);
+
   // Notifications
   const [alertBanner, setAlertBanner] = useState(null);
 
@@ -123,6 +277,49 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     return (course && ACADEMIC_PROGRAMS[course]?.sections) || [];
   }, [course]);
 
+  const availableSubjects = useMemo(() => {
+    const list = PROGRAM_SUBJECTS[course] || [];
+    if (!branch) return list;
+    const branchMatches = list.filter(s => s.branch === branch);
+    return branchMatches.length > 0 ? branchMatches : list;
+  }, [course, branch]);
+
+  // Load Past Recorded Sessions on Mount and Subject/Section change
+  useEffect(() => {
+    let mounted = true;
+    facultyApi.getAttendanceSessions(subjectCode, section).then((sessions) => {
+      if (mounted && Array.isArray(sessions)) {
+        setPastSessions(sessions);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [subjectCode, section]);
+
+  // Current selected activity metadata
+  const currentActivityConfig = useMemo(() => {
+    return ACADEMIC_ACTIVITY_TYPES.find(a => a.id === activityType) || ACADEMIC_ACTIVITY_TYPES[0];
+  }, [activityType]);
+
+  // Filtered past sessions for history view
+  const filteredPastSessions = useMemo(() => {
+    return pastSessions.filter(session => {
+      const matchType = historyFilter === 'All' || session.activityType === historyFilter;
+      if (!historySearch.trim()) return matchType;
+      const q = historySearch.toLowerCase();
+      const matchSearch =
+        (session.subjectCode && session.subjectCode.toLowerCase().includes(q)) ||
+        (session.subjectName && session.subjectName.toLowerCase().includes(q)) ||
+        (session.activityType && session.activityType.toLowerCase().includes(q)) ||
+        (session.activityDetails && session.activityDetails.toLowerCase().includes(q)) ||
+        (session.topicsCovered && session.topicsCovered.toLowerCase().includes(q)) ||
+        (session.date && session.date.includes(q)) ||
+        (session.section && session.section.toLowerCase().includes(q));
+      return matchType && matchSearch;
+    });
+  }, [pastSessions, historyFilter, historySearch]);
+
   // Dependent dropdown handlers
   const handleCourseChange = (e) => {
     const val = e.target.value;
@@ -130,9 +327,18 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     const batches = ACADEMIC_PROGRAMS[val]?.batches || [];
     const branches = ACADEMIC_PROGRAMS[val]?.branches || [];
     const sections = ACADEMIC_PROGRAMS[val]?.sections || [];
+    const nextBranch = branches[0] || '';
     setBatch(batches[0] || '');
-    setBranch(branches[0] || '');
+    setBranch(nextBranch);
     setSection(sections[0] || '');
+
+    const subList = PROGRAM_SUBJECTS[val] || [];
+    const matchedSub = subList.find(s => s.branch === nextBranch) || subList[0];
+    if (matchedSub) {
+      setSubjectCode(matchedSub.code);
+      setSubjectName(matchedSub.name);
+    }
+
     setAttendanceMap({});
     setIsSubmitted(false);
     setIsEditing(false);
@@ -143,8 +349,17 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     setBatch(val);
     const branches = ACADEMIC_PROGRAMS[course]?.branches || [];
     const sections = ACADEMIC_PROGRAMS[course]?.sections || [];
-    setBranch(branches[0] || '');
+    const nextBranch = branches[0] || '';
+    setBranch(nextBranch);
     setSection(sections[0] || '');
+
+    const subList = PROGRAM_SUBJECTS[course] || [];
+    const matchedSub = subList.find(s => s.branch === nextBranch) || subList[0];
+    if (matchedSub) {
+      setSubjectCode(matchedSub.code);
+      setSubjectName(matchedSub.name);
+    }
+
     setAttendanceMap({});
     setIsSubmitted(false);
     setIsEditing(false);
@@ -155,6 +370,14 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     setBranch(val);
     const sections = ACADEMIC_PROGRAMS[course]?.sections || [];
     setSection(sections[0] || '');
+
+    const subList = PROGRAM_SUBJECTS[course] || [];
+    const matchedSub = subList.find(s => s.branch === val) || subList[0];
+    if (matchedSub) {
+      setSubjectCode(matchedSub.code);
+      setSubjectName(matchedSub.name);
+    }
+
     setAttendanceMap({});
     setIsSubmitted(false);
     setIsEditing(false);
@@ -166,6 +389,15 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     setAttendanceMap({});
     setIsSubmitted(false);
     setIsEditing(false);
+  };
+
+  const handleSubjectChange = (e) => {
+    const code = e.target.value;
+    setSubjectCode(code);
+    const found = availableSubjects.find(s => s.code === code);
+    if (found) {
+      setSubjectName(found.name);
+    }
   };
 
   // Student list generated for the selected class cohort
@@ -256,10 +488,23 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     setIsTimePickerOpen(false);
   };
 
+  // Quick Preset click for Activity Details
+  const handleApplyActivityPreset = (presetText) => {
+    if (!activityDetails) {
+      setActivityDetails(presetText);
+    } else if (!activityDetails.includes(presetText)) {
+      setActivityDetails(`${activityDetails} · ${presetText}`);
+    }
+  };
+
   // Submit Validation and Trigger
   const handleInitiateSubmit = () => {
     if (!course || !batch || !branch || !section) {
       setAlertBanner({ type: 'error', message: 'Please select Course, Batch, Branch, and Section before submitting.' });
+      return;
+    }
+    if (!subjectCode) {
+      setAlertBanner({ type: 'error', message: 'Please select or specify a Subject for this academic session.' });
       return;
     }
     if (!date) {
@@ -268,10 +513,6 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     }
     if (!fromTime || !toTime) {
       setAlertBanner({ type: 'error', message: 'Please specify both class start time (From) and end time (To).' });
-      return;
-    }
-    if (!topicsCovered.trim()) {
-      setAlertBanner({ type: 'error', message: 'Please enter the topics covered during this class session.' });
       return;
     }
     if (studentsList.length === 0) {
@@ -284,32 +525,57 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
   };
 
   // Final Submission Confirmed
-  const handleConfirmSubmit = () => {
+  const handleConfirmSubmit = async () => {
     setShowConfirmModal(false);
     const sessionRecord = {
+      id: `att-${Date.now()}`,
       course,
       batch,
       branch,
       section,
+      subjectCode,
+      subjectName,
+      activityType,
+      activityDetails: activityType === 'Regular Class' ? '' : activityDetails,
       date,
       fromTime,
       toTime,
       classTime,
+      period: classTime,
       topicsCovered,
       totalStudents,
       presentCount,
       absentCount,
+      totalEnrolled: totalStudents,
+      percentage: totalStudents > 0 ? Number(((presentCount / totalStudents) * 100).toFixed(1)) : 100,
+      status: 'Finalized',
       attendanceMap: { ...attendanceMap },
       submittedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       facultyName: account?.name || 'Dr. S. Mohanty'
     };
+
     setSubmittedSession(sessionRecord);
     setIsSubmitted(true);
     setIsEditing(false);
     setShowViewAttendanceTable(true);
+
+    // Add to past sessions state
+    setPastSessions(prev => [sessionRecord, ...prev.filter(s => s.id !== sessionRecord.id)]);
+
+    // Call facultyApi to sync to backend and local storage
+    try {
+      await facultyApi.submitAttendanceSession({
+        ...sessionRecord,
+        facultyName: account?.name || 'Dr. S. Mohanty'
+      });
+    } catch (err) {
+      console.warn('API sync warning:', err);
+    }
+
+    const activityLabel = activityType !== 'Regular Class' ? ` [Activity: ${activityType}]` : '';
     setAlertBanner({
       type: 'success',
-      message: `Attendance successfully submitted for ${course} ${branch} (${section}) · ${presentCount} Present, ${absentCount} Absent.`
+      message: `Attendance & academic activity successfully recorded for ${subjectCode} (${section})${activityLabel} · ${presentCount} Present, ${absentCount} Absent.`
     });
   };
 
@@ -320,7 +586,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     setShowViewAttendanceTable(true);
     setAlertBanner({
       type: 'info',
-      message: 'Editing mode active: Modify individual student statuses or use bulk actions, then click Save Changes.'
+      message: 'Editing mode active: Modify academic activity type, details, or student statuses, then click Save Changes.'
     });
   };
 
@@ -330,7 +596,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
   };
 
   // Confirm Update
-  const handleConfirmUpdate = () => {
+  const handleConfirmUpdate = async () => {
     setShowUpdateConfirmModal(false);
     const updatedRecord = {
       ...submittedSession,
@@ -338,23 +604,38 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
       batch,
       branch,
       section,
+      subjectCode,
+      subjectName,
+      activityType,
+      activityDetails: activityType === 'Regular Class' ? '' : activityDetails,
       date,
       fromTime,
       toTime,
       classTime,
+      period: classTime,
       topicsCovered,
       totalStudents,
       presentCount,
       absentCount,
+      totalEnrolled: totalStudents,
+      percentage: totalStudents > 0 ? Number(((presentCount / totalStudents) * 100).toFixed(1)) : 100,
       attendanceMap: { ...attendanceMap },
       updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
+
     setSubmittedSession(updatedRecord);
     setIsSubmitted(true);
     setIsEditing(false);
+
+    setPastSessions(prev => [updatedRecord, ...prev.filter(s => s.id !== updatedRecord.id)]);
+
+    try {
+      await facultyApi.submitAttendanceSession(updatedRecord);
+    } catch {}
+
     setAlertBanner({
       type: 'success',
-      message: `Attendance record updated successfully! Total Present: ${presentCount}, Absent: ${absentCount}.`
+      message: `Attendance record updated successfully! Total Present: ${presentCount}, Absent: ${absentCount} [Activity: ${activityType}].`
     });
   };
 
@@ -362,7 +643,11 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
   const handleCancelUpdate = () => {
     if (submittedSession) {
       setAttendanceMap({ ...submittedSession.attendanceMap });
-      setTopicsCovered(submittedSession.topicsCovered);
+      setTopicsCovered(submittedSession.topicsCovered || '');
+      setActivityType(submittedSession.activityType || 'Regular Class');
+      setActivityDetails(submittedSession.activityDetails || '');
+      if (submittedSession.subjectCode) setSubjectCode(submittedSession.subjectCode);
+      if (submittedSession.subjectName) setSubjectName(submittedSession.subjectName);
       if (submittedSession.fromTime && submittedSession.toTime) {
         setFromTime(submittedSession.fromTime);
         setToTime(submittedSession.toTime);
@@ -389,8 +674,34 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     setIsEditing(false);
     setSubmittedSession(null);
     setAttendanceMap({});
-    setTopicsCovered('');
+    setTopicsCovered('Binary Search Trees, AVL Rotations & Balancing Factors');
+    setActivityType('Regular Class');
+    setActivityDetails('');
     setAlertBanner(null);
+  };
+
+  // Load a past session into view
+  const handleLoadPastSession = (sess) => {
+    if (sess.course) setCourse(sess.course);
+    if (sess.batch) setBatch(sess.batch);
+    if (sess.branch) setBranch(sess.branch);
+    if (sess.section) setSection(sess.section);
+    if (sess.subjectCode) setSubjectCode(sess.subjectCode);
+    if (sess.subjectName) setSubjectName(sess.subjectName);
+    if (sess.date) setDate(sess.date);
+    if (sess.activityType) setActivityType(sess.activityType);
+    if (sess.activityDetails) setActivityDetails(sess.activityDetails);
+    if (sess.topicsCovered) setTopicsCovered(sess.topicsCovered);
+    if (sess.attendanceMap) setAttendanceMap(sess.attendanceMap);
+
+    setSubmittedSession(sess);
+    setIsSubmitted(true);
+    setIsEditing(false);
+    setActiveModuleTab('register');
+    setAlertBanner({
+      type: 'info',
+      message: `Viewing past record: ${sess.subjectCode} (${sess.section}) · Activity: ${sess.activityType} on ${sess.date} (${sess.period || sess.classTime}).`
+    });
   };
 
   // Role display label
@@ -411,6 +722,25 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
         </div>
       </div>
 
+      {/* Top Module Navigation: Register vs Session History */}
+      <div className="attendance-module-tabs">
+        <button
+          type="button"
+          className={`module-tab-btn ${activeModuleTab === 'register' ? 'active' : ''}`}
+          onClick={() => setActiveModuleTab('register')}
+        >
+          <ClipboardCheck size={16} /> Take Attendance Register
+        </button>
+        <button
+          type="button"
+          className={`module-tab-btn ${activeModuleTab === 'history' ? 'active' : ''}`}
+          onClick={() => setActiveModuleTab('history')}
+        >
+          <History size={16} /> Academic Activity &amp; Past Sessions
+          <span className="module-tab-badge">{pastSessions.length}</span>
+        </button>
+      </div>
+
       {/* Alert / Notification Banner */}
       {alertBanner && (
         <div className={`attendance-alert-banner ${alertBanner.type}`}>
@@ -428,457 +758,801 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
         </div>
       )}
 
-      {/* ── FINAL ATTENDANCE SUMMARY PANEL (SHOWN AFTER SUBMISSION) ── */}
-      {isSubmitted && submittedSession && !isEditing && (
-        <div className="final-summary-card">
-          <div className="final-summary-header">
-            <div className="final-summary-header-left">
-              <div className="final-summary-badge">
-                <CheckCircle2 size={24} />
+      {/* ====================================================================
+          TAB 1: TAKE ATTENDANCE REGISTER
+          ==================================================================== */}
+      {activeModuleTab === 'register' && (
+        <>
+          {/* ── FINAL ATTENDANCE SUMMARY PANEL (SHOWN AFTER SUBMISSION) ── */}
+          {isSubmitted && submittedSession && !isEditing && (
+            <div className="final-summary-card">
+              <div className="final-summary-header">
+                <div className="final-summary-header-left">
+                  <div className="final-summary-badge">
+                    <CheckCircle2 size={24} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                      <h3 style={{ margin: 0 }}>Official Attendance Record Finalized</h3>
+                      {/* Activity Badge Pill */}
+                      <span className={`activity-badge-pill ${
+                        submittedSession.activityType === 'Seminar' ? 'seminar' :
+                        submittedSession.activityType === 'Internal Examination' ? 'internal' :
+                        submittedSession.activityType === 'Semester Examination' ? 'semester' :
+                        submittedSession.activityType === 'Other Academic Activity' ? 'other' : 'regular'
+                      }`}>
+                        {submittedSession.activityType || 'Regular Class'}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0 }}>
+                      Submitted on {submittedSession.date} at {submittedSession.submittedAt || submittedSession.classTime}
+                      {submittedSession.updatedAt ? ` (Updated at ${submittedSession.updatedAt})` : ''} · Recorded by {submittedSession.facultyName}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h3>Official Attendance Record Finalized</h3>
-                <p>
-                  Submitted on {submittedSession.date} at {submittedSession.submittedAt || submittedSession.classTime}
-                  {submittedSession.updatedAt ? ` (Updated at ${submittedSession.updatedAt})` : ''} · Recorded by {submittedSession.facultyName}
-                </p>
-              </div>
-            </div>
-          </div>
 
-          <div className="final-meta-grid">
-            <div className="final-meta-item">
-              <span>Course</span>
-              <strong>{submittedSession.course}</strong>
-            </div>
-            <div className="final-meta-item">
-              <span>Batch</span>
-              <strong>{submittedSession.batch}</strong>
-            </div>
-            <div className="final-meta-item">
-              <span>Branch</span>
-              <strong>{submittedSession.branch}</strong>
-            </div>
-            <div className="final-meta-item">
-              <span>Section</span>
-              <strong>{submittedSession.section}</strong>
-            </div>
-            <div className="final-meta-item">
-              <span>Lecture Date</span>
-              <strong>{submittedSession.date}</strong>
-            </div>
-            <div className="final-meta-item">
-              <span>Class Time</span>
-              <strong>{submittedSession.classTime}</strong>
-            </div>
-            <div className="final-meta-item" style={{ gridColumn: 'span 2' }}>
-              <span>Topics Covered</span>
-              <strong>{submittedSession.topicsCovered || 'Regular Syllabus Lecture'}</strong>
-            </div>
-          </div>
-
-          {/* Statistics Progress Bar */}
-          <div className="final-stats-bar">
-            <div className="final-stats-bar-header">
-              <span style={{ color: '#16a34a' }}>
-                Present: {submittedSession.presentCount} ({totalStudents > 0 ? ((submittedSession.presentCount / totalStudents) * 100).toFixed(1) : 0}%)
-              </span>
-              <span style={{ color: '#64748b' }}>
-                Total Enrolled: {totalStudents}
-              </span>
-              <span style={{ color: '#dc2626' }}>
-                Absent: {submittedSession.absentCount} ({totalStudents > 0 ? ((submittedSession.absentCount / totalStudents) * 100).toFixed(1) : 0}%)
-              </span>
-            </div>
-            <div className="final-progress-track">
-              <div
-                className="final-progress-present"
-                style={{ width: `${totalStudents > 0 ? (submittedSession.presentCount / totalStudents) * 100 : 0}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="final-actions-row">
-            <button
-              type="button"
-              className="btn-view-attendance"
-              onClick={() => setShowViewAttendanceTable(prev => !prev)}
-            >
-              <Eye size={16} />
-              {showViewAttendanceTable ? 'Hide Attendance List' : 'View Attendance List'}
-            </button>
-            <button
-              type="button"
-              className="btn-update-attendance"
-              onClick={handleStartUpdate}
-            >
-              <Edit3 size={16} />
-              Update Attendance
-            </button>
-            <button
-              type="button"
-              className="btn-new-attendance"
-              onClick={handleRecordNewSession}
-            >
-              <RotateCcw size={16} />
-              Record New Attendance
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── 2. CLASS DETAILS FORM ── */}
-      {(!isSubmitted || isEditing) && (
-        <div className="attendance-card">
-          <div className="attendance-card-header">
-            <div>
-              <h3><BookOpen size={18} color="#2563eb" /> Class Details &amp; Schedule</h3>
-              <p>Configure course, batch, branch, section, and lecture topic.</p>
-            </div>
-            {isEditing && (
-              <span style={{ background: '#fef3c7', color: '#92400e', fontSize: '0.78rem', fontWeight: 800, padding: '4px 10px', borderRadius: '6px' }}>
-                EDITING SESSION
-              </span>
-            )}
-          </div>
-          <div className="attendance-card-body">
-            <div className="class-details-grid">
-              {/* Course */}
-              <div className="form-group">
-                <label>Course <span className="required-star">*</span></label>
-                <select
-                  className="form-control-select"
-                  value={course}
-                  onChange={handleCourseChange}
+              {/* Special Activity Details Callout (If non-regular class) */}
+              {submittedSession.activityType && submittedSession.activityType !== 'Regular Class' && submittedSession.activityDetails && (
+                <div
+                  className="final-activity-callout"
+                  style={{
+                    backgroundColor: currentActivityConfig.bgColor,
+                    borderColor: currentActivityConfig.borderColor
+                  }}
                 >
-                  {Object.keys(ACADEMIC_PROGRAMS).map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                  <div
+                    className="final-activity-callout-icon"
+                    style={{
+                      backgroundColor: '#ffffff',
+                      color: currentActivityConfig.color,
+                      border: `1.5px solid ${currentActivityConfig.borderColor}`
+                    }}
+                  >
+                    {React.createElement(currentActivityConfig.icon || Sparkles, { size: 18 })}
+                  </div>
+                  <div className="final-activity-callout-content">
+                    <h4 style={{ color: currentActivityConfig.color }}>
+                      Special Academic Activity: {submittedSession.activityType}
+                    </h4>
+                    <p><strong>Activity Details:</strong> {submittedSession.activityDetails}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="final-meta-grid">
+                <div className="final-meta-item">
+                  <span>Subject</span>
+                  <strong>{submittedSession.subjectCode} — {submittedSession.subjectName}</strong>
+                </div>
+                <div className="final-meta-item">
+                  <span>Activity Type</span>
+                  <strong style={{ color: currentActivityConfig.color }}>{submittedSession.activityType || 'Regular Class'}</strong>
+                </div>
+                <div className="final-meta-item">
+                  <span>Course</span>
+                  <strong>{submittedSession.course}</strong>
+                </div>
+                <div className="final-meta-item">
+                  <span>Batch &amp; Branch</span>
+                  <strong>{submittedSession.branch} ({submittedSession.batch})</strong>
+                </div>
+                <div className="final-meta-item">
+                  <span>Section</span>
+                  <strong>{submittedSession.section}</strong>
+                </div>
+                <div className="final-meta-item">
+                  <span>Lecture Date</span>
+                  <strong>{submittedSession.date}</strong>
+                </div>
+                <div className="final-meta-item">
+                  <span>Class Time Slot</span>
+                  <strong>{submittedSession.classTime}</strong>
+                </div>
+                <div className="final-meta-item" style={{ gridColumn: 'span 2' }}>
+                  <span>{submittedSession.activityType === 'Regular Class' ? 'Topics Covered' : 'Session Agenda / Syllabus'}</span>
+                  <strong>{submittedSession.topicsCovered || 'Regular Syllabus Lecture'}</strong>
+                </div>
               </div>
 
-              {/* Batch */}
-              <div className="form-group">
-                <label>Batch <span className="required-star">*</span></label>
-                <select
-                  className="form-control-select"
-                  value={batch}
-                  onChange={handleBatchChange}
-                >
-                  {availableBatches.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
+              {/* Statistics Progress Bar */}
+              <div className="final-stats-bar">
+                <div className="final-stats-bar-header">
+                  <span style={{ color: '#16a34a' }}>
+                    Present: {submittedSession.presentCount} ({totalStudents > 0 ? ((submittedSession.presentCount / totalStudents) * 100).toFixed(1) : 0}%)
+                  </span>
+                  <span style={{ color: '#64748b' }}>
+                    Total Enrolled: {totalStudents}
+                  </span>
+                  <span style={{ color: '#dc2626' }}>
+                    Absent: {submittedSession.absentCount} ({totalStudents > 0 ? ((submittedSession.absentCount / totalStudents) * 100).toFixed(1) : 0}%)
+                  </span>
+                </div>
+                <div className="final-progress-track">
+                  <div
+                    className="final-progress-present"
+                    style={{ width: `${totalStudents > 0 ? (submittedSession.presentCount / totalStudents) * 100 : 0}%` }}
+                  />
+                </div>
               </div>
 
-              {/* Branch */}
-              <div className="form-group">
-                <label>Branch <span className="required-star">*</span></label>
-                <select
-                  className="form-control-select"
-                  value={branch}
-                  onChange={handleBranchChange}
-                >
-                  {availableBranches.map(br => (
-                    <option key={br} value={br}>{br}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Section */}
-              <div className="form-group">
-                <label>Section <span className="required-star">*</span></label>
-                <select
-                  className="form-control-select"
-                  value={section}
-                  onChange={handleSectionChange}
-                >
-                  {availableSections.map(sec => (
-                    <option key={sec} value={sec}>{sec}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Date */}
-              <div className="form-group">
-                <label>Date <span className="required-star">*</span></label>
-                <input
-                  type="date"
-                  className="form-control-input"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
-              </div>
-
-              {/* Class Time - From Time and To Time */}
-              <div className="form-group">
-                <label>Class Time (From) <span className="required-star">*</span></label>
+              {/* Action Buttons */}
+              <div className="final-actions-row">
                 <button
                   type="button"
-                  className="form-control-time-btn"
-                  onClick={() => openTimePicker('from')}
-                  title="Click to select lecture Start Time (From)"
+                  className="btn-view-attendance"
+                  onClick={() => setShowViewAttendanceTable(prev => !prev)}
                 >
-                  <span className={fromTime ? 'time-val' : 'time-placeholder'}>
-                    {fromTime || 'Select From Time'}
-                  </span>
-                  <Clock size={16} color="#2563eb" />
+                  <Eye size={16} />
+                  {showViewAttendanceTable ? 'Hide Attendance List' : 'View Attendance List'}
                 </button>
-              </div>
-
-              <div className="form-group">
-                <label>Class Time (To) <span className="required-star">*</span></label>
                 <button
                   type="button"
-                  className="form-control-time-btn"
-                  onClick={() => openTimePicker('to')}
-                  title="Click to select lecture End Time (To)"
+                  className="btn-update-attendance"
+                  onClick={handleStartUpdate}
                 >
-                  <span className={toTime ? 'time-val' : 'time-placeholder'}>
-                    {toTime || 'Select To Time'}
-                  </span>
-                  <Clock size={16} color="#2563eb" />
+                  <Edit3 size={16} />
+                  Update Attendance
+                </button>
+                <button
+                  type="button"
+                  className="btn-new-attendance"
+                  onClick={handleRecordNewSession}
+                >
+                  <RotateCcw size={16} />
+                  Record New Attendance
                 </button>
               </div>
             </div>
+          )}
 
-            {/* Topics Covered */}
-            <div className="form-group" style={{ marginTop: '12px' }}>
-              <label>Topics Covered <span className="required-star">*</span></label>
-              <textarea
-                className="form-control-textarea"
-                rows={2}
-                placeholder="Enter lecture topics taught during this session (e.g., Graph Traversals: BFS & DFS Implementations)..."
-                value={topicsCovered}
-                onChange={(e) => setTopicsCovered(e.target.value)}
-              />
+          {/* ── CLASS DETAILS, SUBJECT & SCHEDULE ── */}
+          {(!isSubmitted || isEditing) && (
+            <div className="attendance-card">
+              <div className="attendance-card-header">
+                <div>
+                  <h3>
+                    <BookOpen size={18} color="#2563eb" /> Class Details, Subject &amp; Schedule
+                  </h3>
+                  <p>Configure subject, cohort, section, time slot, academic activity, and syllabus topics.</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className={`activity-badge-pill ${
+                    activityType === 'Seminar' ? 'seminar' :
+                    activityType === 'Internal Examination' ? 'internal' :
+                    activityType === 'Semester Examination' ? 'semester' :
+                    activityType === 'Other Academic Activity' ? 'other' : 'regular'
+                  }`}>
+                    {React.createElement(currentActivityConfig.icon || BookOpen, { size: 14 })}
+                    {activityType}
+                  </span>
+                  {isEditing && (
+                    <span style={{ background: '#fef3c7', color: '#92400e', fontSize: '0.78rem', fontWeight: 800, padding: '4px 10px', borderRadius: '6px' }}>
+                      EDITING SESSION
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="attendance-card-body">
+                <div className="class-details-grid">
+                  {/* Subject Selection */}
+                  <div className="form-group form-group-subject" style={{ gridColumn: 'span 2' }}>
+                    <label>
+                      Subject / Course Paper <span className="required-star">*</span>
+                    </label>
+                    <select
+                      className="form-control-select"
+                      value={subjectCode}
+                      onChange={handleSubjectChange}
+                    >
+                      {availableSubjects.map((sub) => (
+                        <option key={sub.code} value={sub.code}>
+                          {sub.code} — {sub.name} ({sub.branch || 'Core'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Course */}
+                  <div className="form-group">
+                    <label>Course <span className="required-star">*</span></label>
+                    <select
+                      className="form-control-select"
+                      value={course}
+                      onChange={handleCourseChange}
+                    >
+                      {Object.keys(ACADEMIC_PROGRAMS).map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Batch */}
+                  <div className="form-group">
+                    <label>Batch <span className="required-star">*</span></label>
+                    <select
+                      className="form-control-select"
+                      value={batch}
+                      onChange={handleBatchChange}
+                    >
+                      {availableBatches.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Branch */}
+                  <div className="form-group">
+                    <label>Branch <span className="required-star">*</span></label>
+                    <select
+                      className="form-control-select"
+                      value={branch}
+                      onChange={handleBranchChange}
+                    >
+                      {availableBranches.map(br => (
+                        <option key={br} value={br}>{br}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Section */}
+                  <div className="form-group">
+                    <label>Section <span className="required-star">*</span></label>
+                    <select
+                      className="form-control-select"
+                      value={section}
+                      onChange={handleSectionChange}
+                    >
+                      {availableSections.map(sec => (
+                        <option key={sec} value={sec}>{sec}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Date */}
+                  <div className="form-group">
+                    <label>Date <span className="required-star">*</span></label>
+                    <input
+                      type="date"
+                      className="form-control-input"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Class Time - From Time and To Time */}
+                  <div className="form-group">
+                    <label>Class Time (From) <span className="required-star">*</span></label>
+                    <button
+                      type="button"
+                      className="form-control-time-btn"
+                      onClick={() => openTimePicker('from')}
+                      title="Click to select lecture Start Time (From)"
+                    >
+                      <span className={fromTime ? 'time-val' : 'time-placeholder'}>
+                        {fromTime || 'Select From Time'}
+                      </span>
+                      <Clock size={16} color="#2563eb" />
+                    </button>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Class Time (To) <span className="required-star">*</span></label>
+                    <button
+                      type="button"
+                      className="form-control-time-btn"
+                      onClick={() => openTimePicker('to')}
+                      title="Click to select lecture End Time (To)"
+                    >
+                      <span className={toTime ? 'time-val' : 'time-placeholder'}>
+                        {toTime || 'Select To Time'}
+                      </span>
+                      <Clock size={16} color="#2563eb" />
+                    </button>
+                  </div>
+
+                  {/* Academic Activity Type Dropdown (Right beside Class Time To) */}
+                  <div className="form-group">
+                    <label>
+                      Academic Activity Type <span className="required-star">*</span>
+                    </label>
+                    <select
+                      className="form-control-select"
+                      value={activityType}
+                      onChange={(e) => setActivityType(e.target.value)}
+                    >
+                      <option value="Regular Class">Regular Class</option>
+                      <option value="Seminar">Seminar</option>
+                      <option value="Internal Examination">Internal Examination</option>
+                      <option value="Semester Examination">Semester Examination</option>
+                      <option value="Other Academic Activity">Other Academic Activity</option>
+                    </select>
+                  </div>
+
+                  {/* Specification Box for Special Activities (Seminar, Internal Exam, Semester Exam, Other) */}
+                  {activityType !== 'Regular Class' && (
+                    <div
+                      className="special-activity-details-panel"
+                      style={{
+                        gridColumn: '1 / -1',
+                        backgroundColor: currentActivityConfig.bgColor,
+                        borderColor: currentActivityConfig.borderColor,
+                        marginTop: '4px',
+                        marginBottom: '6px'
+                      }}
+                    >
+                      <div className="special-activity-details-header">
+                        <h4 style={{ color: currentActivityConfig.color }}>
+                          {React.createElement(currentActivityConfig.icon || Sparkles, { size: 16 })}
+                          Specify {activityType} Details
+                        </h4>
+                        <span className="special-activity-hint">
+                          Recorded against {subjectCode} on {date} ({classTime})
+                        </span>
+                      </div>
+
+                      <input
+                        type="text"
+                        className="form-control-input"
+                        placeholder={currentActivityConfig.placeholder || `Enter ${activityType.toLowerCase()} details, agenda, or topics...`}
+                        value={activityDetails}
+                        onChange={(e) => setActivityDetails(e.target.value)}
+                        style={{
+                          borderColor: currentActivityConfig.borderColor,
+                          backgroundColor: '#ffffff'
+                        }}
+                      />
+
+                      {/* Quick-Fill Preset Chips */}
+                      {ACTIVITY_PRESETS[activityType] && (
+                        <div className="activity-presets-row" style={{ marginTop: '8px' }}>
+                          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b' }}>
+                            Quick Presets:
+                          </span>
+                          {ACTIVITY_PRESETS[activityType].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              className="activity-preset-chip"
+                              onClick={() => handleApplyActivityPreset(preset)}
+                              title="Click to populate details"
+                            >
+                              <Plus size={12} /> {preset}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Topics Covered / Session Agenda */}
+                <div className="form-group" style={{ marginTop: '14px' }}>
+                  <label>
+                    {activityType === 'Regular Class'
+                      ? 'Topics Covered / Syllabus Taught'
+                      : activityType === 'Seminar'
+                      ? 'Seminar Agenda & Key Learning Outcomes'
+                      : activityType === 'Internal Examination'
+                      ? 'Examination Units & Syllabus Evaluated'
+                      : activityType === 'Semester Examination'
+                      ? 'Autonomous Paper Syllabus Scope'
+                      : 'Special Activity Agenda & Objectives'}{' '}
+                    <span className="required-star">*</span>
+                  </label>
+                  <textarea
+                    className="form-control-textarea"
+                    rows={2}
+                    placeholder={
+                      activityType === 'Seminar'
+                        ? 'e.g., Key discussion topics, guest speaker presentation slides, Q&A points...'
+                        : activityType === 'Internal Examination'
+                        ? 'e.g., Modules 1 & 2 Question Paper, Section A (Short) & Section B (Long Answer)...'
+                        : activityType === 'Semester Examination'
+                        ? 'e.g., Autonomous End-Semester Theory Paper Units 1 to 5, Invigilation Report...'
+                        : activityType === 'Other Academic Activity'
+                        ? 'e.g., Hands-on lab exercises, project milestone verification, student participation...'
+                        : 'Enter lecture topics taught during this session (e.g., Binary Search Trees, AVL Rotations & Balancing Factors)...'
+                    }
+                    value={topicsCovered}
+                    onChange={(e) => setTopicsCovered(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+
+          {/* ── 3. LIVE ATTENDANCE SUMMARY CARDS ── */}
+          {studentsList.length > 0 && (!isSubmitted || isEditing || showViewAttendanceTable) && (
+            <div className="attendance-summary-deck">
+              {/* Total Students */}
+              <div className="summary-card total">
+                <div className="summary-card-copy">
+                  <span>Total Students</span>
+                  <strong>{totalStudents}</strong>
+                  <small>Enrolled in {section}</small>
+                </div>
+                <div className="summary-card-icon">
+                  <Users size={22} />
+                </div>
+              </div>
+
+              {/* Present */}
+              <div className="summary-card present">
+                <div className="summary-card-copy">
+                  <span>Present</span>
+                  <strong>{presentCount}</strong>
+                  <small>
+                    {totalStudents > 0 ? ((presentCount / totalStudents) * 100).toFixed(1) : 0}% Attendance Rate
+                  </small>
+                </div>
+                <div className="summary-card-icon">
+                  <CheckCircle2 size={24} />
+                </div>
+              </div>
+
+              {/* Absent */}
+              <div className="summary-card absent">
+                <div className="summary-card-copy">
+                  <span>Absent</span>
+                  <strong>{absentCount}</strong>
+                  <small>
+                    {totalStudents > 0 ? ((absentCount / totalStudents) * 100).toFixed(1) : 0}% Absent Rate
+                  </small>
+                </div>
+                <div className="summary-card-icon">
+                  <XCircle size={24} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── 4 & 5. STUDENT ATTENDANCE TABLE ── */}
+          {studentsList.length === 0 ? (
+            <div className="attendance-card">
+              <div className="attendance-empty-state">
+                <AlertCircle size={40} />
+                <h4>No Class Selected</h4>
+                <p>Please select Course, Batch, Branch, and Section above to generate the student attendance roster.</p>
+              </div>
+            </div>
+          ) : (!isSubmitted || isEditing || showViewAttendanceTable) ? (
+            <div className="attendance-card">
+              <div className="attendance-card-header">
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <h3>
+                      <Users size={18} color="#2563eb" />
+                      Student Roster · {course} {branch} ({section}) · {subjectCode}
+                    </h3>
+                    <span className={`activity-badge-pill ${
+                      activityType === 'Seminar' ? 'seminar' :
+                      activityType === 'Internal Examination' ? 'internal' :
+                      activityType === 'Semester Examination' ? 'semester' :
+                      activityType === 'Other Academic Activity' ? 'other' : 'regular'
+                    }`}>
+                      {activityType}
+                    </span>
+                  </div>
+                  <p>Default status is ABSENT. Check student box to mark PRESENT (green tick).</p>
+                </div>
+                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                  {isSubmitted && !isEditing ? 'ReadOnly Attendance Record' : 'Live Interactive Draft'}
+                </span>
+              </div>
+
+              <div className="attendance-card-body">
+                {/* Table Toolbar (Mark All / Clear All / Search) */}
+                {(!isSubmitted || isEditing) && (
+                  <div className="attendance-toolbar">
+                    <div className="attendance-quick-buttons">
+                      <button
+                        type="button"
+                        className="btn-mark-all-present"
+                        onClick={handleMarkAllPresent}
+                        title="Mark all students present"
+                      >
+                        <Check size={16} /> Mark All Present
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-clear-all"
+                        onClick={handleClearAll}
+                        title="Clear all checkboxes (mark all absent)"
+                      >
+                        <RotateCcw size={15} /> Clear All
+                      </button>
+                    </div>
+
+                    <div className="attendance-search-box">
+                      <input
+                        type="text"
+                        placeholder="Search name or roll no..."
+                        value={tableSearch}
+                        onChange={(e) => setTableSearch(e.target.value)}
+                      />
+                      {tableSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setTableSearch('')}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Table */}
+                <div className="attendance-table-container">
+                  <table className="attendance-table">
+                    <thead>
+                      <tr>
+                        <th className="col-present">Present</th>
+                        <th>Sl. No. / Roll No.</th>
+                        <th>Registration No.</th>
+                        <th>Student Name</th>
+                        <th>Branch</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredStudents.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
+                            No students match your filter "{tableSearch}".
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredStudents.map((std) => {
+                          const isPresent = Boolean(attendanceMap[std.id]);
+                          const isDisabled = isSubmitted && !isEditing;
+                          return (
+                            <tr
+                              key={std.id}
+                              className={isPresent ? 'row-present' : ''}
+                              onClick={() => {
+                                if (!isDisabled) handleToggleStudent(std.id);
+                              }}
+                            >
+                              {/* Present Column - Square Checkbox with Green Tick */}
+                              <td className="col-present" onClick={(e) => e.stopPropagation()}>
+                                <div className="att-checkbox-wrapper">
+                                  <button
+                                    type="button"
+                                    className={`att-square-checkbox ${isPresent ? 'checked' : ''}`}
+                                    disabled={isDisabled}
+                                    onClick={() => handleToggleStudent(std.id)}
+                                    aria-label={`Mark ${std.name} as ${isPresent ? 'absent' : 'present'}`}
+                                    title={isPresent ? 'Click to mark Absent' : 'Click to mark Present'}
+                                  >
+                                    {isPresent && <Check size={16} strokeWidth={3} />}
+                                  </button>
+                                </div>
+                              </td>
+
+                              {/* Roll Number */}
+                              <td>
+                                <strong>{std.rollNumber}</strong>
+                              </td>
+
+                              {/* Registration Number */}
+                              <td style={{ fontFamily: 'monospace', color: '#475569', fontWeight: 600 }}>
+                                {std.registrationNumber}
+                              </td>
+
+                              {/* Student Name */}
+                              <td>
+                                <span style={{ fontWeight: 600, color: '#0f172a' }}>{std.name}</span>
+                              </td>
+
+                              {/* Branch */}
+                              <td>
+                                <span style={{ color: '#64748b' }}>{std.branch}</span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Submit / Save Actions Footer */}
+                {!isSubmitted && (
+                  <div className="attendance-submit-footer">
+                    <button
+                      type="button"
+                      className="btn-submit-attendance"
+                      onClick={handleInitiateSubmit}
+                    >
+                      <Send size={18} /> Submit Attendance
+                    </button>
+                  </div>
+                )}
+
+                {isEditing && (
+                  <div className="attendance-submit-footer">
+                    <button
+                      type="button"
+                      className="btn-clear-all"
+                      onClick={handleCancelUpdate}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-submit-attendance"
+                      onClick={handleInitiateUpdateSave}
+                      style={{ background: '#16a34a' }}
+                    >
+                      <CheckCircle2 size={18} /> Save Changes
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </>
       )}
 
-      {/* ── 7. LIVE ATTENDANCE SUMMARY CARDS ── */}
-      {studentsList.length > 0 && (!isSubmitted || isEditing || showViewAttendanceTable) && (
-        <div className="attendance-summary-deck">
-          {/* Total Students */}
-          <div className="summary-card total">
-            <div className="summary-card-copy">
-              <span>Total Students</span>
-              <strong>{totalStudents}</strong>
-              <small>Enrolled in {section}</small>
-            </div>
-            <div className="summary-card-icon">
-              <Users size={22} />
-            </div>
-          </div>
-
-          {/* Present */}
-          <div className="summary-card present">
-            <div className="summary-card-copy">
-              <span>Present</span>
-              <strong>{presentCount}</strong>
-              <small>
-                {totalStudents > 0 ? ((presentCount / totalStudents) * 100).toFixed(1) : 0}% Attendance Rate
-              </small>
-            </div>
-            <div className="summary-card-icon">
-              <CheckCircle2 size={24} />
-            </div>
-          </div>
-
-          {/* Absent */}
-          <div className="summary-card absent">
-            <div className="summary-card-copy">
-              <span>Absent</span>
-              <strong>{absentCount}</strong>
-              <small>
-                {totalStudents > 0 ? ((absentCount / totalStudents) * 100).toFixed(1) : 0}% Absent Rate
-              </small>
-            </div>
-            <div className="summary-card-icon">
-              <XCircle size={24} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 4 & 5. STUDENT ATTENDANCE TABLE ── */}
-      {studentsList.length === 0 ? (
-        <div className="attendance-card">
-          <div className="attendance-empty-state">
-            <AlertCircle size={40} />
-            <h4>No Class Selected</h4>
-            <p>Please select Course, Batch, Branch, and Section above to generate the student attendance roster.</p>
-          </div>
-        </div>
-      ) : (!isSubmitted || isEditing || showViewAttendanceTable) ? (
+      {/* ====================================================================
+          TAB 2: ACADEMIC ACTIVITY & PAST SESSIONS LOG
+          ==================================================================== */}
+      {activeModuleTab === 'history' && (
         <div className="attendance-card">
           <div className="attendance-card-header">
             <div>
               <h3>
-                <Users size={18} color="#2563eb" />
-                Student Roster · {course} {branch} ({section})
+                <History size={18} color="#2563eb" /> Academic Activity &amp; Attendance Records
               </h3>
-              <p>Default status is ABSENT. Check student box to mark PRESENT (green tick).</p>
+              <p>Historical audit log of regular classes, seminars, internal exams, and special activities.</p>
             </div>
-            <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
-              {isSubmitted && !isEditing ? 'ReadOnly Attendance Record' : 'Live Interactive Draft'}
-            </span>
+            <button
+              type="button"
+              className="btn-new-attendance"
+              onClick={() => {
+                handleRecordNewSession();
+                setActiveModuleTab('register');
+              }}
+            >
+              <RotateCcw size={15} /> Record New Session
+            </button>
           </div>
 
           <div className="attendance-card-body">
-            {/* Table Toolbar (Mark All / Clear All / Search) */}
-            {(!isSubmitted || isEditing) && (
-              <div className="attendance-toolbar">
-                <div className="attendance-quick-buttons">
-                  <button
-                    type="button"
-                    className="btn-mark-all-present"
-                    onClick={handleMarkAllPresent}
-                    title="Mark all students present"
-                  >
-                    <Check size={16} /> Mark All Present
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-clear-all"
-                    onClick={handleClearAll}
-                    title="Clear all checkboxes (mark all absent)"
-                  >
-                    <RotateCcw size={15} /> Clear All
-                  </button>
-                </div>
-
-                <div className="attendance-search-box">
-                  <input
-                    type="text"
-                    placeholder="Search name or roll no..."
-                    value={tableSearch}
-                    onChange={(e) => setTableSearch(e.target.value)}
-                  />
-                  {tableSearch && (
+            {/* Filter Bar */}
+            <div className="history-filters-bar">
+              <div className="history-filter-chips">
+                {[
+                  { id: 'All', label: 'All Activities' },
+                  { id: 'Regular Class', label: 'Regular Classes', chipClass: 'chip-regular' },
+                  { id: 'Seminar', label: 'Seminars', chipClass: 'chip-seminar' },
+                  { id: 'Internal Examination', label: 'Internal Exams', chipClass: 'chip-internal' },
+                  { id: 'Semester Examination', label: 'Semester Exams', chipClass: 'chip-semester' },
+                  { id: 'Other Academic Activity', label: 'Special Activities', chipClass: 'chip-other' }
+                ].map((flt) => {
+                  const count = flt.id === 'All'
+                    ? pastSessions.length
+                    : pastSessions.filter(s => s.activityType === flt.id).length;
+                  const isAct = historyFilter === flt.id;
+                  return (
                     <button
+                      key={flt.id}
                       type="button"
-                      onClick={() => setTableSearch('')}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                      className={`history-filter-chip ${isAct ? `active ${flt.chipClass || ''}` : ''}`}
+                      onClick={() => setHistoryFilter(flt.id)}
                     >
-                      <X size={14} />
+                      {flt.label}
+                      <span className="history-filter-badge">{count}</span>
                     </button>
-                  )}
-                </div>
+                  );
+                })}
               </div>
-            )}
 
-            {/* Table */}
-            <div className="attendance-table-container">
-              <table className="attendance-table">
-                <thead>
-                  <tr>
-                    <th className="col-present">Present</th>
-                    <th>Sl. No. / Roll No.</th>
-                    <th>Registration No.</th>
-                    <th>Student Name</th>
-                    <th>Branch</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStudents.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
-                        No students match your filter "{tableSearch}".
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredStudents.map((std, idx) => {
-                      const isPresent = Boolean(attendanceMap[std.id]);
-                      const isDisabled = isSubmitted && !isEditing;
-                      return (
-                        <tr
-                          key={std.id}
-                          className={isPresent ? 'row-present' : ''}
-                          onClick={() => {
-                            if (!isDisabled) handleToggleStudent(std.id);
-                          }}
-                        >
-                          {/* Present Column - Square Checkbox with Green Tick */}
-                          <td className="col-present" onClick={(e) => e.stopPropagation()}>
-                            <div className="att-checkbox-wrapper">
-                              <button
-                                type="button"
-                                className={`att-square-checkbox ${isPresent ? 'checked' : ''}`}
-                                disabled={isDisabled}
-                                onClick={() => handleToggleStudent(std.id)}
-                                aria-label={`Mark ${std.name} as ${isPresent ? 'absent' : 'present'}`}
-                                title={isPresent ? 'Click to mark Absent' : 'Click to mark Present'}
-                              >
-                                {isPresent && <Check size={16} strokeWidth={3} />}
-                              </button>
-                            </div>
-                          </td>
-
-                          {/* Roll Number */}
-                          <td>
-                            <strong>{std.rollNumber}</strong>
-                          </td>
-
-                          {/* Registration Number */}
-                          <td style={{ fontFamily: 'monospace', color: '#475569', fontWeight: 600 }}>
-                            {std.registrationNumber}
-                          </td>
-
-                          {/* Student Name */}
-                          <td>
-                            <span style={{ fontWeight: 600, color: '#0f172a' }}>{std.name}</span>
-                          </td>
-
-                          {/* Branch */}
-                          <td>
-                            <span style={{ color: '#64748b' }}>{std.branch}</span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+              <input
+                type="text"
+                className="history-search-input"
+                placeholder="Search subject, activity, date..."
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+              />
             </div>
 
-            {/* Submit / Save Actions Footer */}
-            {!isSubmitted && (
-              <div className="attendance-submit-footer">
-                <button
-                  type="button"
-                  className="btn-submit-attendance"
-                  onClick={handleInitiateSubmit}
-                >
-                  <Send size={18} /> Submit Attendance
-                </button>
+            {/* Sessions Grid */}
+            {filteredPastSessions.length === 0 ? (
+              <div className="attendance-empty-state" style={{ padding: '40px 20px' }}>
+                <FileText size={40} color="#94a3b8" />
+                <h4>No Sessions Found</h4>
+                <p>No academic activity sessions match the filter "{historyFilter}".</p>
               </div>
-            )}
+            ) : (
+              <div className="past-sessions-grid">
+                {filteredPastSessions.map((sess) => {
+                  const actClass =
+                    sess.activityType === 'Seminar' ? 'seminar' :
+                    sess.activityType === 'Internal Examination' ? 'internal' :
+                    sess.activityType === 'Semester Examination' ? 'semester' :
+                    sess.activityType === 'Other Academic Activity' ? 'other' : 'regular';
+                  const total = sess.totalEnrolled || 32;
+                  const pres = sess.presentCount || 0;
+                  const pct = total > 0 ? ((pres / total) * 100).toFixed(1) : 0;
 
-            {isEditing && (
-              <div className="attendance-submit-footer">
-                <button
-                  type="button"
-                  className="btn-clear-all"
-                  onClick={handleCancelUpdate}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn-submit-attendance"
-                  onClick={handleInitiateUpdateSave}
-                  style={{ background: '#16a34a' }}
-                >
-                  <CheckCircle2 size={18} /> Save Changes
-                </button>
+                  return (
+                    <div key={sess.id} className="past-session-card">
+                      <div>
+                        <div className="past-session-card-header">
+                          <div>
+                            <h4 className="past-session-card-title">
+                              {sess.subjectCode} — {sess.subjectName || 'Course Paper'}
+                            </h4>
+                            <div className="past-session-card-cohort">
+                              {sess.course || 'B.Tech'} {sess.branch || 'CSE'} ({sess.section || 'Section A'})
+                            </div>
+                          </div>
+                          <span className={`activity-badge-pill ${actClass}`}>
+                            {sess.activityType || 'Regular Class'}
+                          </span>
+                        </div>
+
+                        {/* Special Activity Details Box */}
+                        {sess.activityDetails && (
+                          <div className="past-session-details-box">
+                            <strong>Activity Details:</strong>
+                            {sess.activityDetails}
+                          </div>
+                        )}
+
+                        <div className="past-session-meta-row">
+                          <span className="past-session-meta-item">
+                            <Calendar size={13} /> {sess.date}
+                          </span>
+                          <span className="past-session-meta-item">
+                            <Clock size={13} /> {sess.period || sess.classTime}
+                          </span>
+                        </div>
+
+                        {sess.topicsCovered && (
+                          <p style={{ fontSize: '0.8rem', color: '#475569', margin: '0 0 10px 0', lineHeight: 1.35 }}>
+                            <strong>Agenda:</strong> {sess.topicsCovered}
+                          </p>
+                        )}
+
+                        {/* Attendance Bar */}
+                        <div className="past-session-stats-row">
+                          <span style={{ color: '#16a34a' }}>
+                            {pres} Present / {total} Total
+                          </span>
+                          <span style={{ color: '#2563eb' }}>
+                            {pct}% Rate
+                          </span>
+                        </div>
+                        <div className="past-session-progress-bar">
+                          <div
+                            className="past-session-progress-fill"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="past-session-footer">
+                        <span>Recorded by {sess.recordedBy || 'Faculty'}</span>
+                        <button
+                          type="button"
+                          className="past-session-load-btn"
+                          onClick={() => handleLoadPastSession(sess)}
+                        >
+                          <Eye size={13} /> View Roster
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
-      ) : null}
+      )}
 
       {/* ── 3. INTERACTIVE CLOCK-STYLE TIME PICKER MODAL ── */}
       {isTimePickerOpen && (
@@ -994,7 +1668,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
           <div className="attendance-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="attendance-modal-header">
               <h3>
-                <CheckCircle2 size={20} color="#2563eb" /> Confirm Class Attendance Submission
+                <CheckCircle2 size={20} color="#2563eb" /> Confirm Attendance &amp; Academic Activity
               </h3>
               <button
                 type="button"
@@ -1007,10 +1681,20 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
 
             <div className="attendance-modal-body">
               <p style={{ margin: '0 0 16px 0', fontSize: '0.92rem', color: '#475569' }}>
-                Are you sure you want to submit the attendance for this lecture session? Review the session details below:
+                Are you sure you want to submit the attendance for this session? Review the session details below:
               </p>
 
               <div className="final-meta-grid" style={{ marginBottom: '16px' }}>
+                <div className="final-meta-item">
+                  <span>Academic Activity</span>
+                  <strong style={{ color: currentActivityConfig.color }}>
+                    {activityType}
+                  </strong>
+                </div>
+                <div className="final-meta-item">
+                  <span>Subject</span>
+                  <strong>{subjectCode} — {subjectName}</strong>
+                </div>
                 <div className="final-meta-item">
                   <span>Class Cohort</span>
                   <strong>{course} · {branch}</strong>
@@ -1020,13 +1704,21 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
                   <strong>{section} ({batch})</strong>
                 </div>
                 <div className="final-meta-item">
-                  <span>Date &amp; Time</span>
+                  <span>Date &amp; Time Slot</span>
                   <strong>{date} at {classTime}</strong>
                 </div>
                 <div className="final-meta-item">
-                  <span>Topics Covered</span>
-                  <strong style={{ fontSize: '0.84rem' }}>{topicsCovered}</strong>
+                  <span>{activityType === 'Regular Class' ? 'Topics' : 'Session Agenda'}</span>
+                  <strong style={{ fontSize: '0.84rem' }}>{topicsCovered || 'Syllabus Session'}</strong>
                 </div>
+                {activityType !== 'Regular Class' && activityDetails && (
+                  <div className="final-meta-item" style={{ gridColumn: 'span 2' }}>
+                    <span>Activity Details</span>
+                    <strong style={{ fontSize: '0.84rem', color: currentActivityConfig.color }}>
+                      {activityDetails}
+                    </strong>
+                  </div>
+                )}
               </div>
 
               {/* Counts Grid */}
@@ -1072,7 +1764,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
           <div className="attendance-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="attendance-modal-header">
               <h3>
-                <Edit3 size={20} color="#f59e0b" /> Confirm Attendance Update
+                <Edit3 size={20} color="#f59e0b" /> Confirm Attendance &amp; Activity Update
               </h3>
               <button
                 type="button"
@@ -1085,7 +1777,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
 
             <div className="attendance-modal-body">
               <p style={{ margin: '0 0 16px 0', fontSize: '0.92rem', color: '#475569' }}>
-                Save updated attendance record for <strong>{course} {branch} ({section})</strong>?
+                Save updated record for <strong>{subjectCode} · {course} {branch} ({section})</strong> [Activity: <strong>{activityType}</strong>]?
               </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', textAlign: 'center', marginBottom: '14px' }}>

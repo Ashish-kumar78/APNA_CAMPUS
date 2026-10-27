@@ -33,6 +33,7 @@ import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import FacultyClassSelector from './FacultyClassSelector.jsx';
 import FacultyComplaintsModule from './FacultyComplaintsModule.jsx';
 import FacultyNotificationsModule from './FacultyNotificationsModule.jsx';
+import FacultyNoteSharingModule from './Notes/FacultyNoteSharingModule.jsx';
 
 // CSV Export Helper
 function exportToCsv(filename, rows) {
@@ -790,6 +791,7 @@ export default function FacultyPortal({ account, onLogout }) {
     {
       title: 'CAMPUS CONNECT & RESOURCES',
       items: [
+        { id: 'note-sharing', label: 'Note Sharing', icon: FileText, badge: 'Active' },
         { id: 'awaiting-verification', label: 'Resources Awaiting Verification', icon: ShieldCheck },
         { id: 'notes-moderation', label: 'Notes Moderation', icon: ShieldCheck },
         { id: 'complaints', label: 'Student Grievances', icon: ShieldAlert },
@@ -801,6 +803,11 @@ export default function FacultyPortal({ account, onLogout }) {
 
   const getFacultyHeading = () => {
     switch (activeTab) {
+      case 'note-sharing':
+        return {
+          title: 'Faculty Study Material & Note Sharing',
+          subtitle: 'Upload, manage, and distribute lecture notes, syllabus materials, question papers, and presentations to students.'
+        };
       case 'dashboard':
         return {
           title: `Welcome, ${getGreetingDisplayName(account?.name || 'Professor')}`,
@@ -851,6 +858,13 @@ export default function FacultyPortal({ account, onLogout }) {
         pageSubtitle={facultyHeading.subtitle}
       >
         <div className="faculty-portal-content-wrap">
+          {/* NOTE SHARING & STUDY MATERIALS TAB */}
+          {activeTab === 'note-sharing' && (
+            <div style={{ marginBottom: '24px' }}>
+              <FacultyNoteSharingModule account={account} />
+            </div>
+          )}
+
           {/* STUDENT COMPLAINTS TAB */}
           {activeTab === 'complaints' && (
             <div style={{ marginBottom: '24px' }}>

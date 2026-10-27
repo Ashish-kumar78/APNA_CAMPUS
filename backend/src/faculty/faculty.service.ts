@@ -579,80 +579,216 @@ export class FacultyService {
     };
   }
 
+  private attendanceSessions: Array<{
+    id: string;
+    date: string;
+    period: string;
+    subjectCode: string;
+    subjectName?: string;
+    course?: string;
+    batch?: string;
+    branch?: string;
+    section: string;
+    activityType: string;
+    activityDetails?: string;
+    topicsCovered?: string;
+    totalEnrolled: number;
+    presentCount: number;
+    absentCount: number;
+    percentage: number;
+    status: string;
+    recordedBy: string;
+    submittedAt?: string;
+  }> = [
+    {
+      id: 'att-sess-1',
+      date: '2026-10-09',
+      period: '10:30 AM to 11:30 AM',
+      subjectCode: 'CS501',
+      subjectName: 'Data Structures & Algorithms',
+      course: 'B.Tech',
+      batch: '2023–2027',
+      branch: 'CSE',
+      section: 'Section A',
+      activityType: 'Regular Class',
+      activityDetails: '',
+      topicsCovered: 'AVL Trees, Rotations & Balance Factors',
+      totalEnrolled: 32,
+      presentCount: 30,
+      absentCount: 2,
+      percentage: 93.75,
+      status: 'Finalized',
+      recordedBy: 'Dr. S. Mohanty',
+      submittedAt: '11:32 AM'
+    },
+    {
+      id: 'att-sess-2',
+      date: '2026-10-08',
+      period: '02:00 PM to 04:00 PM',
+      subjectCode: 'CS501',
+      subjectName: 'Data Structures & Algorithms',
+      course: 'B.Tech',
+      batch: '2023–2027',
+      branch: 'CSE',
+      section: 'Section A',
+      activityType: 'Seminar',
+      activityDetails: 'Guest Technical Seminar on "Distributed Graph Databases & High-Performance Concurrency" by Dr. K. Sharma (Visiting Scientist)',
+      topicsCovered: 'Distributed Graph Traversal & Large-Scale Indexing',
+      totalEnrolled: 32,
+      presentCount: 29,
+      absentCount: 3,
+      percentage: 90.63,
+      status: 'Finalized',
+      recordedBy: 'Dr. S. Mohanty',
+      submittedAt: '04:05 PM'
+    },
+    {
+      id: 'att-sess-3',
+      date: '2026-10-07',
+      period: '09:00 AM to 10:00 AM',
+      subjectCode: 'CS502',
+      subjectName: 'Operating Systems',
+      course: 'B.Tech',
+      batch: '2023–2027',
+      branch: 'CSE',
+      section: 'Section A',
+      activityType: 'Internal Examination',
+      activityDetails: 'Continuous Internal Assessment 1 (CIA-I) — Units 1 & 2 (Max Marks: 30)',
+      topicsCovered: 'Process Scheduling, Deadlocks & Memory Management Unit Test',
+      totalEnrolled: 32,
+      presentCount: 31,
+      absentCount: 1,
+      percentage: 96.88,
+      status: 'Finalized',
+      recordedBy: 'Dr. S. Mohanty',
+      submittedAt: '10:02 AM'
+    },
+    {
+      id: 'att-sess-4',
+      date: '2026-10-05',
+      period: '11:15 AM to 12:15 PM',
+      subjectCode: 'CS501',
+      subjectName: 'Data Structures & Algorithms',
+      course: 'B.Tech',
+      batch: '2023–2027',
+      branch: 'CSE',
+      section: 'Section A',
+      activityType: 'Semester Examination',
+      activityDetails: 'Autonomous Mid-Semester Practical Viva & Lab Examination Slot B',
+      topicsCovered: 'Practical Graph & Tree Implementation Evaluation',
+      totalEnrolled: 32,
+      presentCount: 32,
+      absentCount: 0,
+      percentage: 100.0,
+      status: 'Finalized',
+      recordedBy: 'Dr. S. Mohanty',
+      submittedAt: '12:20 PM'
+    },
+    {
+      id: 'att-sess-5',
+      date: '2026-10-03',
+      period: '03:00 PM to 04:30 PM',
+      subjectCode: 'CS501',
+      subjectName: 'Data Structures & Algorithms',
+      course: 'B.Tech',
+      batch: '2023–2027',
+      branch: 'CSE',
+      section: 'Section A',
+      activityType: 'Other Academic Activity',
+      activityDetails: 'Departmental Hackathon & Project Architecture Review Mentoring Session',
+      topicsCovered: 'Code Review & Performance Profiling of Student Projects',
+      totalEnrolled: 32,
+      presentCount: 28,
+      absentCount: 4,
+      percentage: 87.5,
+      status: 'Finalized',
+      recordedBy: 'Dr. S. Mohanty',
+      submittedAt: '04:35 PM'
+    }
+  ];
+
   /**
    * Attendance Sessions & Submission
    */
-  async getAttendanceSessions(subjectCode: string = 'CS501', section: string = 'Section A') {
-    return [
-      {
-        id: 'att-sess-1',
-        date: '2026-10-09',
-        period: 'Period 1 (09:00 - 10:00 AM)',
-        subjectCode,
-        section,
-        totalEnrolled: 32,
-        presentCount: 30,
-        absentCount: 2,
-        percentage: 93.75,
-        status: 'Finalized',
-        recordedBy: 'Dr. S. Mohanty'
-      },
-      {
-        id: 'att-sess-2',
-        date: '2026-10-08',
-        period: 'Period 2 (10:00 - 11:00 AM)',
-        subjectCode,
-        section,
-        totalEnrolled: 32,
-        presentCount: 29,
-        absentCount: 3,
-        percentage: 90.63,
-        status: 'Finalized',
-        recordedBy: 'Dr. S. Mohanty'
-      },
-      {
-        id: 'att-sess-3',
-        date: '2026-10-07',
-        period: 'Period 1 (09:00 - 10:00 AM)',
-        subjectCode,
-        section,
-        totalEnrolled: 32,
-        presentCount: 31,
-        absentCount: 1,
-        percentage: 96.88,
-        status: 'Finalized',
-        recordedBy: 'Dr. S. Mohanty'
-      }
-    ];
+  async getAttendanceSessions(subjectCode?: string, section?: string) {
+    if (!subjectCode && !section) return this.attendanceSessions;
+    const filtered = this.attendanceSessions.filter(s => {
+      const matchSub = !subjectCode || s.subjectCode.toLowerCase() === subjectCode.toLowerCase();
+      const matchSec = !section || s.section.toLowerCase() === section.toLowerCase();
+      return matchSub && matchSec;
+    });
+    return filtered.length > 0 ? filtered : this.attendanceSessions;
   }
 
   async submitAttendanceSession(payload: {
     subjectCode: string;
-    subjectName: string;
+    subjectName?: string;
+    course?: string;
+    batch?: string;
+    branch?: string;
     section: string;
     date: string;
-    period: string;
+    period?: string;
+    fromTime?: string;
+    toTime?: string;
+    classTime?: string;
+    activityType?: string;
+    activityDetails?: string;
+    topicsCovered?: string;
     attendanceMap: Record<string, boolean>;
     facultyName?: string;
   }) {
-    const rolls = Object.keys(payload.attendanceMap);
+    const rolls = Object.keys(payload.attendanceMap || {});
     const presentRolls = rolls.filter(r => payload.attendanceMap[r]);
     const totalCount = rolls.length || 32;
     const presentCount = presentRolls.length;
     const pct = totalCount > 0 ? Number(((presentCount / totalCount) * 100).toFixed(1)) : 100;
+    const activityType = payload.activityType || 'Regular Class';
+    const activityDetails = payload.activityDetails || '';
+    const periodDisplay = payload.period || payload.classTime || (payload.fromTime && payload.toTime ? `${payload.fromTime} to ${payload.toTime}` : 'Regular Class Hours');
+
+    // Create a new session record
+    const newSession = {
+      id: `att-${Date.now()}`,
+      date: payload.date,
+      period: periodDisplay,
+      subjectCode: payload.subjectCode,
+      subjectName: payload.subjectName || (payload.subjectCode === 'CS502' ? 'Operating Systems' : 'Data Structures & Algorithms'),
+      course: payload.course || 'B.Tech',
+      batch: payload.batch || '2023–2027',
+      branch: payload.branch || 'CSE',
+      section: payload.section,
+      activityType,
+      activityDetails,
+      topicsCovered: payload.topicsCovered || '',
+      totalEnrolled: totalCount,
+      presentCount,
+      absentCount: totalCount - presentCount,
+      percentage: pct,
+      status: 'Finalized',
+      recordedBy: payload.facultyName || 'Dr. S. Mohanty',
+      submittedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    // Prepend to in-memory attendanceSessions
+    this.attendanceSessions.unshift(newSession);
 
     // Log in database AuditLog
     try {
+      const activityReasonSuffix = activityType !== 'Regular Class'
+        ? ` [Activity: ${activityType}${activityDetails ? ` - ${activityDetails}` : ''}]`
+        : '';
+
       await this.prisma.auditLog.create({
         data: {
           user: payload.facultyName || 'Dr. S. Mohanty',
           role: 'FACULTY',
           subject: payload.subjectCode,
-          assessment: 'PERIOD_ATTENDANCE',
+          assessment: activityType !== 'Regular Class' ? `ACADEMIC_${activityType.toUpperCase().replace(/\s+/g, '_')}` : 'PERIOD_ATTENDANCE',
           oldMark: 'Unrecorded Period',
           newMark: `${presentCount} Present / ${totalCount} Enrolled (${pct}%)`,
           changedAt: new Date().toISOString(),
-          reason: `Attendance recorded for ${payload.subjectCode} (${payload.section}) on ${payload.date} ${payload.period}`
+          reason: `Attendance recorded for ${payload.subjectCode} (${payload.section}) on ${payload.date} ${periodDisplay}${activityReasonSuffix}`
         }
       });
     } catch {
@@ -663,10 +799,11 @@ export class FacultyService {
     const absentRolls = rolls.filter(r => !payload.attendanceMap[r]);
     if (absentRolls.length > 0) {
       try {
+        const notifPrefix = activityType !== 'Regular Class' ? `[${activityType}] ` : '';
         await this.notificationsService.dispatch({
           eventType: NotificationEventType.ATTENDANCE_LOW_THRESHOLD,
           title: `Attendance Alert: ${payload.subjectCode}`,
-          message: `You were marked absent in ${payload.subjectCode} on ${payload.date} (${payload.period}). Maintain minimum 75% attendance to prevent autonomous exam detention.`,
+          message: `You were marked absent in ${notifPrefix}${payload.subjectCode} on ${payload.date} (${periodDisplay}). Maintain minimum 75% attendance to prevent autonomous exam detention.`,
           category: NotificationCategory.ACADEMIC,
           priority: NotificationPriority.HIGH,
           sourceModule: 'Academic Attendance',
@@ -688,15 +825,17 @@ export class FacultyService {
 
     return {
       success: true,
-      sessionId: `att-${Date.now()}`,
+      sessionId: newSession.id,
       date: payload.date,
-      period: payload.period,
+      period: periodDisplay,
       subjectCode: payload.subjectCode,
+      activityType,
+      activityDetails,
       totalCount,
       presentCount,
       absentCount: totalCount - presentCount,
       percentage: pct,
-      message: `Attendance session successfully logged for ${payload.subjectCode} (${payload.section}).`
+      message: `Attendance session successfully logged for ${payload.subjectCode} (${payload.section}) [Activity: ${activityType}].`
     };
   }
 

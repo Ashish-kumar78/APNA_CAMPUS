@@ -27,15 +27,19 @@ import { notesApi } from '../services/notesApi'
 import './ClassNotesPage.css'
 
 export const CLASS_NOTE_SUBJECTS = [
-  'Artificial Intelligence',
-  'Machine Learning',
-  'Cloud Computing',
-  'Compiler Design',
-  'Operating Systems',
-  'Algorithms',
+  'Data Structures & Algorithms',
   'Data Structures',
+  'Operating Systems',
+  'Object Oriented Programming with Java',
+  'Problem Solving & C Programming',
   'Computer Networks',
   'Database Systems',
+  'Design & Analysis of Algorithms',
+  'Artificial Intelligence',
+  'Machine Learning',
+  'Compiler Design & Automata',
+  'Compiler Design',
+  'Cloud Computing',
   'Theory of Computation',
   'Web Technologies',
   'Discrete Mathematics',
@@ -46,6 +50,7 @@ export const CLASS_NOTE_SUBJECTS = [
 export default function ClassNotesPage({ account, initialSubject = 'ALL', onNotesUpdated }) {
   const [notesList, setNotesList] = useState([])
   const [subjectFilter, setSubjectFilter] = useState(initialSubject || 'ALL')
+  const [materialTypeFilter, setMaterialTypeFilter] = useState('ALL')
   const [dateFilter, setDateFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [missedClasses, setMissedClasses] = useState([])
@@ -91,10 +96,13 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
 
   useEffect(() => {
     loadNotes()
-  }, [subjectFilter, dateFilter, searchQuery])
+  }, [subjectFilter, materialTypeFilter, dateFilter, searchQuery])
 
   useEffect(() => {
     loadMissedClasses()
+    const handleRefresh = () => loadNotes()
+    window.addEventListener('apna_campus_materials_updated', handleRefresh)
+    return () => window.removeEventListener('apna_campus_materials_updated', handleRefresh)
   }, [])
 
   const loadMissedClasses = async () => {
@@ -109,6 +117,7 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
   const loadNotes = async () => {
     const data = await notesApi.getClassNotes({
       subject: subjectFilter,
+      materialType: materialTypeFilter,
       date: dateFilter,
       search: searchQuery
     })
@@ -357,6 +366,23 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
         </div>
 
         <div className="filter-group">
+          <label><Layers size={14} /> Material Type</label>
+          <select 
+            className="filter-select"
+            value={materialTypeFilter}
+            onChange={(e) => setMaterialTypeFilter(e.target.value)}
+          >
+            <option value="ALL">All Types &amp; Notes</option>
+            <option value="Lecture Notes">Lecture Notes</option>
+            <option value="PPT / Presentation Slides">PPT / Slides</option>
+            <option value="Question Paper">Question Paper</option>
+            <option value="Assignment Sheet">Assignment Sheet</option>
+            <option value="Lab Manual">Lab Manual</option>
+            <option value="Reference Material">Reference Material</option>
+          </select>
+        </div>
+
+        <div className="filter-group">
           <label><Calendar size={14} /> Lecture Date</label>
           <input 
             type="date"
@@ -377,12 +403,13 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
           />
         </div>
 
-        {(subjectFilter !== 'ALL' || dateFilter || searchQuery) && (
+        {(subjectFilter !== 'ALL' || materialTypeFilter !== 'ALL' || dateFilter || searchQuery) && (
           <button 
             type="button"
             className="btn-clear-filters"
             onClick={() => {
               setSubjectFilter('ALL')
+              setMaterialTypeFilter('ALL')
               setDateFilter('')
               setSearchQuery('')
             }}
@@ -447,7 +474,11 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
                     <span className="note-subject-pill">{primaryNote.subject}</span>
                     <h3 className="note-topic-title">{primaryNote.topic}</h3>
                   </div>
-                  {primaryNote.isFacultyVerified ? (
+                  {primaryNote.isFacultyMaterial ? (
+                    <span className="badge-faculty-verified" style={{ background: '#eef2ff', color: '#4338ca', border: '1px solid #c7d2fe', fontWeight: 700 }} title={`Official study material uploaded by ${primaryNote.uploadedBy?.name}`}>
+                      <Sparkles size={13} /> Official Faculty Material · {primaryNote.materialType || 'Lecture Notes'}
+                    </span>
+                  ) : primaryNote.isFacultyVerified ? (
                     <span className="badge-faculty-verified" title={`Verified by ${primaryNote.verifiedBy}`}>
                       <ShieldCheck size={13} /> Faculty Verified
                     </span>

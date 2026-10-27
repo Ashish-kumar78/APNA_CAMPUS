@@ -19,16 +19,19 @@ export const INITIAL_SCHOLARSHIP_SCHEMES = [
   {
     id: 'SCH-SCHEME-01',
     name: 'PRERANA Post-Matric State Scholarship',
+    provider: 'Government of Odisha (ST & SC Development Department)',
     type: 'Government',
     fundingSource: 'State Government (ST & SC Development Dept)',
     sponsorName: 'Govt. of Odisha / National Portal',
     category: 'Category-Based',
+    educationLevels: ['B.Tech', 'M.Tech', 'MCA', 'Diploma'],
     academicYear: '2026-27',
     eligibleDepts: ['All Departments'],
     eligibleSemesters: ['Sem 1', 'Sem 3', 'Sem 5', 'Sem 7'],
     incomeCeiling: 250000, // ₹2.50 Lakhs
     minCgpa: 6.5,
-    awardAmount: 45000, // ₹45,000 / year
+    awardAmount: 45000,
+    fundingRange: '₹45,000 / Year',
     awardType: 'Fixed Annual Grant',
     totalSlots: 120,
     filledSlots: 94,
@@ -36,22 +39,59 @@ export const INITIAL_SCHOLARSHIP_SCHEMES = [
     closingDate: '30 Nov 2026',
     status: 'Open',
     renewable: true,
-    requiredDocs: ['Income Certificate', 'Caste Certificate', 'Previous Marksheet', 'Bank Passbook Copy', 'Aadhaar Card'],
-    description: 'Statutory tuition & maintenance grant for meritorious students from affirmative action categories.',
+    requiredDocs: [
+      'Tehsildar Certified Income Certificate (Valid for FY 2026-27)',
+      'Permanent Caste Certificate issued by competent revenue authority',
+      'Previous Semester / Class XII Marksheet (Self-attested)',
+      'Active Bank Passbook Copy (Aadhaar Seeded)',
+      'Student Aadhaar Card Copy & College ID Card'
+    ],
+    description: 'Statutory tuition & maintenance grant for meritorious students from affirmative action categories to pursue degree and diploma engineering programs.',
+    benefits: [
+      'Direct Tuition Fee reimbursement of up to ₹45,000 per academic year directly into student bank account.',
+      'Monthly maintenance allowance credited via Direct Benefit Transfer (DBT).',
+      'Annual book and stationery grant included in the disbursement.',
+      'Valid for full duration of the degree subject to academic continuity.'
+    ],
+    timeline: [
+      { step: 1, title: 'Portal Registration', desc: 'Online application on State Scholarship Portal', date: '01 Aug – 30 Nov 2026' },
+      { step: 2, title: 'Institutional Verification', desc: 'Verification of academic & caste credentials by College Nodal Officer', date: 'Within 7 days of submission' },
+      { step: 3, title: 'District Welfare Scrutiny', desc: 'Approval by District Welfare Officer (DWO)', date: '15 Dec 2026' },
+      { step: 4, title: 'DBT Sanction', desc: 'Direct credit to Aadhaar-linked bank account', date: 'January 2027' }
+    ],
+    faqs: [
+      {
+        q: 'Who is eligible for the PRERANA scholarship?',
+        a: 'Students belonging to SC/ST/OBC/SEBC categories enrolled in regular B.Tech, M.Tech, MCA, or Diploma programs with an annual family income not exceeding ₹2,50,000.'
+      },
+      {
+        q: 'Is Aadhaar seeding with bank account mandatory?',
+        a: 'Yes, funds are strictly released via NPCI Aadhaar Payment Bridge (APB). Your bank account must be actively linked with Aadhaar.'
+      },
+      {
+        q: 'Can I renew this scholarship next year?',
+        a: 'Yes, existing awardees must submit renewal applications at the start of each academic year with passed semester marksheets.'
+      }
+    ],
+    applicationUrl: 'https://scholarship.odisha.gov.in',
+    officialLink: 'https://scholarship.odisha.gov.in'
   },
   {
     id: 'SCH-SCHEME-02',
     name: 'National Scholarship Portal (NSP) Central Sector Scheme',
+    provider: 'Ministry of Education (MoE), Government of India',
     type: 'Government',
     fundingSource: 'Ministry of Education (MoE), New Delhi',
     sponsorName: 'Department of Higher Education, Govt. of India',
     category: 'Merit-Based',
+    educationLevels: ['B.Tech', 'M.Tech', 'MCA'],
     academicYear: '2026-27',
     eligibleDepts: ['CSE', 'AIML', 'ECE', 'EEE', 'MECH', 'CIVIL'],
     eligibleSemesters: ['Sem 1', 'Sem 3', 'Sem 5'],
     incomeCeiling: 450000,
     minCgpa: 8.0,
     awardAmount: 60000,
+    fundingRange: '₹60,000 / Year',
     awardType: 'Direct DBT Transfer',
     totalSlots: 60,
     filledSlots: 48,
@@ -59,22 +99,54 @@ export const INITIAL_SCHOLARSHIP_SCHEMES = [
     closingDate: '15 Nov 2026',
     status: 'Open',
     renewable: true,
-    requiredDocs: ['Class 12 Top 20th Percentile Rank Certificate', 'Income Certificate', 'Aadhaar Linked Bank Account Proof'],
-    description: 'Central sector financial aid for university top rankers in engineering & technical sciences.',
+    requiredDocs: [
+      'Class 12 Top 20th Percentile Rank Certificate or Entrance Rank Card',
+      'Income Certificate issued by competent revenue authority (<= ₹4.5L)',
+      'Aadhaar Linked Bank Account Passbook Proof',
+      'Bonafide Student Certificate issued by Head of Institution',
+      'Current Semester Fee Receipt Copy'
+    ],
+    description: 'Central sector financial aid for university top rankers in engineering & technical sciences across recognized Indian universities.',
+    benefits: [
+      '₹12,000 per annum for the first three years of graduation, elevated to ₹20,000 per annum at post-graduate level.',
+      'Direct Benefit Transfer (DBT) credit directly into student bank account.',
+      'Recognition as a Ministry of Education Central Sector Scholar.'
+    ],
+    timeline: [
+      { step: 1, title: 'NSP Registration', desc: 'Submit application via National Scholarship Portal', date: '15 Jul – 15 Nov 2026' },
+      { step: 2, title: 'Institute Verification', desc: 'Nodal officer biometric and record verification', date: 'Within 10 days' },
+      { step: 3, title: 'State Nodal Verification', desc: 'State education directorate validation', date: '30 Nov 2026' },
+      { step: 4, title: 'Ministry Release', desc: 'Central sanction and DBT credit', date: 'December 2026' }
+    ],
+    faqs: [
+      {
+        q: 'What is the cutoff rank for Central Sector Scheme?',
+        a: 'Students scoring above the 80th percentile in the respective state board higher secondary examinations are eligible.'
+      },
+      {
+        q: 'Can I avail other state scholarships simultaneously?',
+        a: 'No, students receiving Central Sector assistance cannot draw any other government scholarship for the same course.'
+      }
+    ],
+    applicationUrl: 'https://scholarships.gov.in',
+    officialLink: 'https://scholarships.gov.in'
   },
   {
     id: 'SCH-SCHEME-03',
     name: "Chairman's Autonomous Academic Excellence Fellowship",
+    provider: 'Apna Campus Governing Board Endowment Trust',
     type: 'Institutional',
     fundingSource: 'Apna Campus Governing Board Endowment Fund',
     sponsorName: 'Prof. (Dr.) S. P. Panda Chairman Fellowship',
     category: 'Merit-Based',
+    educationLevels: ['B.Tech', 'M.Tech', 'BCA', 'MCA'],
     academicYear: '2026-27',
     eligibleDepts: ['All Departments'],
     eligibleSemesters: ['Sem 3', 'Sem 5', 'Sem 7'],
     incomeCeiling: null, // Pure Merit
-    minCgpa: 9.2,
+    minCgpa: 9.0,
     awardAmount: 50000,
+    fundingRange: '₹50,000 / Year (Tuition Fee Waiver)',
     awardType: 'Tuition Fee Waiver',
     totalSlots: 40,
     filledSlots: 32,
@@ -82,22 +154,54 @@ export const INITIAL_SCHOLARSHIP_SCHEMES = [
     closingDate: '20 Nov 2026',
     status: 'Open',
     renewable: true,
-    requiredDocs: ['Autonomous Controller of Exams Verified Marksheet', 'HOD Recommendation Letter'],
-    description: 'Prestige scholarship awarded to departmental semester toppers maintaining distinction CGPA.',
+    requiredDocs: [
+      'Autonomous Controller of Examinations Verified Grade Sheet',
+      'HOD Academic Conduct and Character Recommendation Letter',
+      'Certificate of Academic Distinction / Department Rank Certificate',
+      'Updated Resume and Co-curricular Activity Summary'
+    ],
+    description: 'Prestige fellowship awarded to departmental semester toppers maintaining distinction CGPA (>= 9.0) with outstanding campus academic integrity.',
+    benefits: [
+      'Direct 50% to 100% tuition fee waiver adjusted directly in institutional fee ledger.',
+      'Special citation and gold medallion presented at Annual University Convocation.',
+      'Priority access to autonomous research laboratories and innovation grants.',
+      'Mentorship pairing with eminent industry leaders and visiting professors.'
+    ],
+    timeline: [
+      { step: 1, title: 'Department Nominations', desc: 'HOD scrutiny and ranking of top 5% batch toppers', date: '01 Sep – 20 Nov 2026' },
+      { step: 2, title: 'Academic Senate Review', desc: 'Scrutiny by Dean Academics & Controller of Examinations', date: '25 Nov 2026' },
+      { step: 3, title: 'Trustee Sanction', desc: 'Approval by Governing Board Chairman', date: '05 Dec 2026' },
+      { step: 4, title: 'Fee Ledger Credit', desc: 'Automatic credit note posted to student ERP account', date: '15 Dec 2026' }
+    ],
+    faqs: [
+      {
+        q: 'Is there an income ceiling for this fellowship?',
+        a: 'No. This is a pure merit fellowship based solely on academic excellence and top percentile rank in semester evaluations.'
+      },
+      {
+        q: 'Can backlogs be excused?',
+        a: 'No, candidates must have cleared all enrolled theory and lab subjects in the first attempt without any arrears.'
+      }
+    ],
+    applicationUrl: '#internal-apply',
+    officialLink: '#internal-apply'
   },
   {
     id: 'SCH-SCHEME-04',
     name: 'Dr. A. P. J. Abdul Kalam Need-cum-Opportunity Aid',
+    provider: 'Apna Campus Student Benevolent & Welfare Fund',
     type: 'Institutional',
     fundingSource: 'Apna Campus Student Benevolent Fund',
     sponsorName: 'Institutional Welfare Trust',
     category: 'Need-Based',
+    educationLevels: ['B.Tech', 'M.Tech', 'BCA', 'MCA', 'Diploma'],
     academicYear: '2026-27',
     eligibleDepts: ['All Departments'],
     eligibleSemesters: ['All Semesters'],
     incomeCeiling: 180000,
     minCgpa: 7.0,
     awardAmount: 35000,
+    fundingRange: '₹35,000 / Year',
     awardType: 'Fee Concession Credit',
     totalSlots: 50,
     filledSlots: 41,
@@ -105,22 +209,48 @@ export const INITIAL_SCHOLARSHIP_SCHEMES = [
     closingDate: '10 Dec 2026',
     status: 'Open',
     renewable: true,
-    requiredDocs: ['Tehsildar Certified Income Document', 'Ration Card / BPL Proof', 'Semester Clearance Record'],
-    description: 'Institutional financial bridge supporting deserving students facing unforeseen economic hardship.',
+    requiredDocs: [
+      'Tehsildar Certified Income Document (< ₹1.80 Lakhs/annum)',
+      'Ration Card / BPL Proof / Antyodaya Card',
+      'Semester Clearance Record and Attendance Statement (>= 75%)',
+      'Personal Statement of Economic Circumstances & Academic Commitment'
+    ],
+    description: 'Institutional financial bridge supporting deserving students facing unforeseen economic hardship, parental demise, or agricultural loss.',
+    benefits: [
+      'Direct fee concession of ₹35,000 credited to semester tuition balance.',
+      'Emergency semester installment deferral without late fines.',
+      'Free access to book bank facilities across all semesters.'
+    ],
+    timeline: [
+      { step: 1, title: 'Application & Interview', desc: 'Online submission and confidential committee interaction', date: '10 Aug – 10 Dec 2026' },
+      { step: 2, title: 'Welfare Inspection', desc: 'Discreet verification by Student Welfare Committee', date: 'Rolling basis' },
+      { step: 3, title: 'Sanction Order', desc: 'Approval by Principal & Welfare Directorate', date: 'Within 14 days' }
+    ],
+    faqs: [
+      {
+        q: 'Can I apply if my family experienced sudden medical or financial distress?',
+        a: 'Yes, extraordinary hardship cases receive special compassionate review with immediate partial fee relief.'
+      }
+    ],
+    applicationUrl: '#internal-apply',
+    officialLink: '#internal-apply'
   },
   {
     id: 'SCH-SCHEME-05',
     name: 'Tata Trust Technical Education Grant for Women Engineers',
+    provider: 'Tata Community Initiatives Trust (CSR Directorate)',
     type: 'Private/Sponsored',
     fundingSource: 'Tata Education and Development Trust',
     sponsorName: 'Tata Community Initiatives Trust',
     category: 'Merit-cum-Need',
+    educationLevels: ['B.Tech'],
     academicYear: '2026-27',
-    eligibleDepts: ['CSE', 'AIML', 'ECE', 'EEE'],
+    eligibleDepts: ['CSE', 'AIML', 'ECE', 'EEE', 'MECH', 'CIVIL'],
     eligibleSemesters: ['Sem 3', 'Sem 5'],
     incomeCeiling: 360000,
     minCgpa: 7.8,
     awardAmount: 75000,
+    fundingRange: '₹75,000 / Year',
     awardType: 'Corporate CSR Direct Grant',
     totalSlots: 25,
     filledSlots: 20,
@@ -128,22 +258,48 @@ export const INITIAL_SCHOLARSHIP_SCHEMES = [
     closingDate: '05 Nov 2026',
     status: 'Closing Soon',
     renewable: true,
-    requiredDocs: ['College Enrollment Proof', 'Income Statement', 'Statement of Purpose / Project Dossier'],
-    description: 'Special corporate grant promoting women in core technical domains, coding and electronics.',
+    requiredDocs: [
+      'College Bonafide Enrollment & Fee Structure Proof',
+      'Family Income Statement / Form 16 / Income Certificate',
+      'Statement of Purpose (SOP) & Technical Project Dossier',
+      'Recommendation by Senior Women Faculty / Dean'
+    ],
+    description: 'Special corporate grant promoting women in core technical domains, coding, electronics, and emerging AI technologies.',
+    benefits: [
+      '₹75,000 annual scholarship covering tuition, technical workshops, and laptop purchase assistance.',
+      'Direct invitation to Tata Group tech symposiums and mentoring webinars.',
+      'Fast-track internship consideration across Tata Digital and Tata Technologies.'
+    ],
+    timeline: [
+      { step: 1, title: 'Online Submission', desc: 'Portal dossier submission with Statement of Purpose', date: '01 Aug – 05 Nov 2026' },
+      { step: 2, title: 'Technical Screening', desc: 'Shortlisting based on CGPA and technical portfolio', date: '12 Nov 2026' },
+      { step: 3, title: 'Award Declaration', desc: 'Final list announced and grant disbursed', date: '25 Nov 2026' }
+    ],
+    faqs: [
+      {
+        q: 'Is this scholarship limited to female students?',
+        a: 'Yes, this CSR initiative is dedicated exclusively to supporting women in undergraduate engineering.'
+      }
+    ],
+    applicationUrl: 'https://tatatrusts.org/grants',
+    officialLink: 'https://tatatrusts.org/grants'
   },
   {
     id: 'SCH-SCHEME-06',
     name: 'Global Alumni Golden Jubilee Memorial Scholarship',
+    provider: 'Apna Campus North America & Europe Alumni Chapter',
     type: 'Private/Sponsored',
     fundingSource: 'Apna Campus North America & Europe Alumni Chapter',
     sponsorName: 'Alumni Association Global Trust',
     category: 'Merit-cum-Need',
+    educationLevels: ['B.Tech'],
     academicYear: '2026-27',
     eligibleDepts: ['MECH', 'CIVIL', 'EEE', 'CSE'],
     eligibleSemesters: ['Sem 5', 'Sem 7'],
     incomeCeiling: 300000,
     minCgpa: 8.2,
     awardAmount: 40000,
+    fundingRange: '₹40,000 / Year',
     awardType: 'Direct Fellowship',
     totalSlots: 20,
     filledSlots: 15,
@@ -151,9 +307,226 @@ export const INITIAL_SCHOLARSHIP_SCHEMES = [
     closingDate: '25 Nov 2026',
     status: 'Open',
     renewable: false,
-    requiredDocs: ['Innovation Prototype / Project Abstract', 'Income Verification', 'Faculty Recommendation'],
-    description: 'Funded by prominent alumni entrepreneurs to support final-year capstone innovators.',
+    requiredDocs: [
+      'Innovation Prototype / Capstone Project Abstract',
+      'Income Verification Document',
+      'Faculty Supervisor Recommendation Letter'
+    ],
+    description: 'Funded by prominent global alumni entrepreneurs to support final-year capstone innovators and student-led startup initiatives.',
+    benefits: [
+      '₹40,000 direct prototyping and education fellowship grant.',
+      '1-on-1 monthly mentorship with alumni tech executives in Silicon Valley and Europe.',
+      'Opportunity to showcase prototype during the Annual Alumni Homecoming Gala.'
+    ],
+    timeline: [
+      { step: 1, title: 'Project Submission', desc: 'Submit abstract & academic dossier', date: '15 Aug – 25 Nov 2026' },
+      { step: 2, title: 'Alumni Panel Pitch', desc: 'Virtual demo presentation to Alumni Selection Board', date: '02 Dec 2026' },
+      { step: 3, title: 'Grant Release', desc: 'Disbursement of funds for prototyping', date: '15 Dec 2026' }
+    ],
+    faqs: [
+      {
+        q: 'Can a team apply together?',
+        a: 'The financial award is issued per student, but project teams may submit joint project descriptions.'
+      }
+    ],
+    applicationUrl: '#internal-apply',
+    officialLink: '#internal-apply'
   },
+  {
+    id: 'SCH-SCHEME-07',
+    name: 'AICTE Pragati Scholarship for Girl Students',
+    provider: 'All India Council for Technical Education (AICTE), New Delhi',
+    type: 'Government',
+    fundingSource: 'AICTE Central Technical Education Fund',
+    sponsorName: 'AICTE Student Development Cell',
+    category: 'Merit-cum-Need',
+    educationLevels: ['B.Tech', 'Diploma'],
+    academicYear: '2026-27',
+    eligibleDepts: ['All Departments'],
+    eligibleSemesters: ['Sem 1', 'Sem 3'],
+    incomeCeiling: 800000, // ₹8 Lakhs
+    minCgpa: 6.5,
+    awardAmount: 50000,
+    fundingRange: '₹50,000 / Year',
+    awardType: 'Direct DBT Transfer',
+    totalSlots: 80,
+    filledSlots: 54,
+    openingDate: '01 Sep 2026',
+    closingDate: '31 Dec 2026',
+    status: 'Open',
+    renewable: true,
+    requiredDocs: [
+      'AICTE Approved College Admission Allotment Letter',
+      'Income Certificate of Family (< ₹8.00 Lakhs/annum)',
+      'Tuition Fee Payment Proof & Bank Account Passbook',
+      'Aadhaar Card Copy & High School Marksheet'
+    ],
+    description: 'Government scheme providing advancement support for young women pursuing AICTE-accredited technical degree and diploma education.',
+    benefits: [
+      '₹50,000 per annum paid as a lump sum amount towards college fees, purchase of computer, books, and equipment.',
+      'Maximum 2 girl children per family eligible.',
+      'Renewable throughout the normal duration of the degree.'
+    ],
+    timeline: [
+      { step: 1, title: 'National Portal Submission', desc: 'Apply via National Scholarship Portal', date: '01 Sep – 31 Dec 2026' },
+      { step: 2, title: 'AICTE Scrutiny', desc: 'Central Council verification and merit list publishing', date: 'January 2027' },
+      { step: 3, title: 'Direct Credit', desc: 'DBT transfer to student savings account', date: 'February 2027' }
+    ],
+    faqs: [
+      {
+        q: 'Is there a limit on family income?',
+        a: 'Yes, the total family income must be less than ₹8 Lakh per annum.'
+      }
+    ],
+    applicationUrl: 'https://scholarships.gov.in',
+    officialLink: 'https://www.aicte-india.org/schemes/students-development-schemes'
+  },
+  {
+    id: 'SCH-SCHEME-08',
+    name: 'Post-Graduate GATE / Research Fellowship',
+    provider: 'Ministry of Education & AICTE Directorate',
+    type: 'Government',
+    fundingSource: 'Ministry of Education Technical Education Allocation',
+    sponsorName: 'AICTE Post-Graduate Scholarship Cell',
+    category: 'Merit-Based',
+    educationLevels: ['M.Tech'],
+    academicYear: '2026-27',
+    eligibleDepts: ['CSE', 'AIML', 'ECE', 'EEE', 'MECH', 'CIVIL'],
+    eligibleSemesters: ['Sem 1', 'Sem 3'],
+    incomeCeiling: null, // Pure Merit via GATE
+    minCgpa: 7.5,
+    awardAmount: 148800,
+    fundingRange: '₹12,400 / Month (₹1.48L/Yr)',
+    awardType: 'Monthly Research Stipend',
+    totalSlots: 30,
+    filledSlots: 22,
+    openingDate: '15 Aug 2026',
+    closingDate: '15 Dec 2026',
+    status: 'Open',
+    renewable: true,
+    requiredDocs: [
+      'Valid GATE Score Card & Hall Ticket',
+      'Autonomous College M.Tech Admission Slip',
+      'Aadhaar Linked Bank Passbook Copy',
+      'No-Objection / Department Teaching Assistantship Form'
+    ],
+    description: 'Mandatory central teaching and research assistantship stipend for GATE-qualified scholars pursuing regular post-graduate M.Tech programs.',
+    benefits: [
+      'Monthly financial stipend of ₹12,400 credited for 24 months.',
+      'Exemption from institutional tuition fees as an autonomous research fellow.',
+      'Travel grant support for presenting papers in indexed international conferences.'
+    ],
+    timeline: [
+      { step: 1, title: 'GATE ID Verification', desc: 'Upload scorecard on AICTE PG Portal', date: '15 Aug – 15 Dec 2026' },
+      { step: 2, title: 'HOD Verification', desc: 'Monthly 8-hour teaching assistantship certification', date: 'Monthly' },
+      { step: 3, title: 'Monthly Stipend', desc: 'Direct credit by 5th of every month', date: 'Monthly' }
+    ],
+    faqs: [
+      {
+        q: 'Can sponsored or part-time M.Tech candidates apply?',
+        a: 'No, this fellowship is strictly for regular, full-time GATE-qualified candidates.'
+      }
+    ],
+    applicationUrl: 'https://pgscholarship.aicte-india.org',
+    officialLink: 'https://pgscholarship.aicte-india.org'
+  },
+  {
+    id: 'SCH-SCHEME-09',
+    name: 'Infosys Foundation STEM Stars Scholarship',
+    provider: 'Infosys Foundation CSR Initiative',
+    type: 'Private/Sponsored',
+    fundingSource: 'Infosys Foundation Corporate Trust',
+    sponsorName: 'Infosys Foundation STEM Initiative',
+    category: 'Merit-cum-Need',
+    educationLevels: ['B.Tech', 'BCA', 'MCA'],
+    academicYear: '2026-27',
+    eligibleDepts: ['CSE', 'AIML', 'ECE', 'EEE'],
+    eligibleSemesters: ['Sem 1', 'Sem 3', 'Sem 5'],
+    incomeCeiling: 800000,
+    minCgpa: 7.5,
+    awardAmount: 100000,
+    fundingRange: '₹1,00,000 / Year',
+    awardType: 'Corporate CSR Direct Grant',
+    totalSlots: 20,
+    filledSlots: 14,
+    openingDate: '01 Sep 2026',
+    closingDate: '30 Nov 2026',
+    status: 'Open',
+    renewable: true,
+    requiredDocs: [
+      'College Admission Fee Receipt & Id Card',
+      'Income Certificate (<= ₹8 Lakhs)',
+      'Class 12 / Degree Marksheet (Minimum 75% or 7.5 CGPA)',
+      'Statement of Purpose describing career aspirations in STEM'
+    ],
+    description: 'Flagship corporate philanthropic scholarship covering tuition, living expenses, and study materials for meritorious computing students.',
+    benefits: [
+      'Up to ₹1,00,000 per year covering tuition fees, study materials, and hostel expenses.',
+      'Mentorship sessions with senior engineering leaders at Infosys.',
+      'Free access to Infosys Springboard premium certification platform.'
+    ],
+    timeline: [
+      { step: 1, title: 'Online Registration', desc: 'Apply through Infosys Foundation portal', date: '01 Sep – 30 Nov 2026' },
+      { step: 2, title: 'Shortlisting & Assessment', desc: 'Cognitive and academic assessment', date: '15 Dec 2026' },
+      { step: 3, title: 'Disbursement', desc: 'Fund release to selected scholars', date: 'January 2027' }
+    ],
+    faqs: [
+      {
+        q: 'Is there any service bond with Infosys upon graduation?',
+        a: 'No. This is a purely philanthropic educational grant with zero employment obligations or bonds.'
+      }
+    ],
+    applicationUrl: 'https://www.infosys.com/infosys-foundation',
+    officialLink: 'https://www.infosys.com/infosys-foundation'
+  },
+  {
+    id: 'SCH-SCHEME-10',
+    name: 'Apna Campus Sports & Cultural Achievers Award',
+    provider: 'Apna Campus Department of Physical Education & Culture',
+    type: 'Institutional',
+    fundingSource: 'Apna Campus Student Development Council',
+    sponsorName: 'Sports & Cultural Council Endowed Fund',
+    category: 'Merit-Based',
+    educationLevels: ['B.Tech', 'M.Tech', 'BCA', 'MCA', 'Diploma'],
+    academicYear: '2026-27',
+    eligibleDepts: ['All Departments'],
+    eligibleSemesters: ['All Semesters'],
+    incomeCeiling: null,
+    minCgpa: 6.0,
+    awardAmount: 25000,
+    fundingRange: '₹25,000 / Year',
+    awardType: 'Merit Award & Fee Concession',
+    totalSlots: 30,
+    filledSlots: 18,
+    openingDate: '15 Aug 2026',
+    closingDate: '15 Dec 2026',
+    status: 'Open',
+    renewable: true,
+    requiredDocs: [
+      'State / National / Inter-University Sports or Cultural Participation Certificate',
+      'Recommendation Letter from Dean of Student Affairs / Physical Director',
+      'Current Semester Marksheet with Passing Grades'
+    ],
+    description: 'Recognizing outstanding student athletes, artists, and debaters representing Apna Campus in national and inter-university competitions.',
+    benefits: [
+      '₹25,000 annual scholarship credited against semester tuition.',
+      'Special academic grace marks in continuous evaluations as per autonomous university norms.',
+      'Fully sponsored sports kits and tournament travel expenses.'
+    ],
+    timeline: [
+      { step: 1, title: 'Certificate Submission', desc: 'Submit athletic or cultural awards dossier', date: '15 Aug – 15 Dec 2026' },
+      { step: 2, title: 'Sports Council Review', desc: 'Evaluation of competitive level and tournament ranking', date: '22 Dec 2026' },
+      { step: 3, title: 'Sanction', desc: 'Presentation during Annual Athletic Meet', date: 'January 2027' }
+    ],
+    faqs: [
+      {
+        q: 'What level of competition is eligible?',
+        a: 'Students representing the college at All India Inter-University, State, or National championships are eligible.'
+      }
+    ],
+    applicationUrl: '#internal-apply',
+    officialLink: '#internal-apply'
+  }
 ];
 
 // 2. Student Scholarship Applications

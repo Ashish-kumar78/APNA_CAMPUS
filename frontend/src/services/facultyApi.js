@@ -152,7 +152,131 @@ export const facultyApi = {
     };
   },
 
-  // 2. Attendance Logging
+  // 2. Attendance Logging & Session History
+  getAttendanceSessions: async (subjectCode = 'CS501', section = 'Section A') => {
+    try {
+      const res = await api.getFacultyAttendanceSessions(subjectCode, section);
+      if (res && res.success && Array.isArray(res.data)) return res.data;
+    } catch {
+      // Fallback
+    }
+    // Check localStorage cache
+    try {
+      const cached = localStorage.getItem('apna_campus_attendance_sessions');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [
+      {
+        id: 'att-sess-1',
+        date: '2026-10-09',
+        period: '10:30 AM to 11:30 AM',
+        subjectCode: subjectCode || 'CS501',
+        subjectName: 'Data Structures & Algorithms',
+        course: 'B.Tech',
+        batch: '2023–2027',
+        branch: 'CSE',
+        section: section || 'Section A',
+        activityType: 'Regular Class',
+        activityDetails: '',
+        topicsCovered: 'AVL Trees, Rotations & Balance Factors',
+        totalEnrolled: 32,
+        presentCount: 30,
+        absentCount: 2,
+        percentage: 93.75,
+        status: 'Finalized',
+        recordedBy: 'Dr. S. Mohanty',
+        submittedAt: '11:32 AM'
+      },
+      {
+        id: 'att-sess-2',
+        date: '2026-10-08',
+        period: '02:00 PM to 04:00 PM',
+        subjectCode: subjectCode || 'CS501',
+        subjectName: 'Data Structures & Algorithms',
+        course: 'B.Tech',
+        batch: '2023–2027',
+        branch: 'CSE',
+        section: section || 'Section A',
+        activityType: 'Seminar',
+        activityDetails: 'Guest Technical Seminar on "Distributed Graph Databases & High-Performance Concurrency" by Dr. K. Sharma (Visiting Scientist)',
+        topicsCovered: 'Distributed Graph Traversal & Large-Scale Indexing',
+        totalEnrolled: 32,
+        presentCount: 29,
+        absentCount: 3,
+        percentage: 90.63,
+        status: 'Finalized',
+        recordedBy: 'Dr. S. Mohanty',
+        submittedAt: '04:05 PM'
+      },
+      {
+        id: 'att-sess-3',
+        date: '2026-10-07',
+        period: '09:00 AM to 10:00 AM',
+        subjectCode: 'CS502',
+        subjectName: 'Operating Systems',
+        course: 'B.Tech',
+        batch: '2023–2027',
+        branch: 'CSE',
+        section: section || 'Section A',
+        activityType: 'Internal Examination',
+        activityDetails: 'Continuous Internal Assessment 1 (CIA-I) — Units 1 & 2 (Max Marks: 30)',
+        topicsCovered: 'Process Scheduling, Deadlocks & Memory Management Unit Test',
+        totalEnrolled: 32,
+        presentCount: 31,
+        absentCount: 1,
+        percentage: 96.88,
+        status: 'Finalized',
+        recordedBy: 'Dr. S. Mohanty',
+        submittedAt: '10:02 AM'
+      },
+      {
+        id: 'att-sess-4',
+        date: '2026-10-05',
+        period: '11:15 AM to 12:15 PM',
+        subjectCode: subjectCode || 'CS501',
+        subjectName: 'Data Structures & Algorithms',
+        course: 'B.Tech',
+        batch: '2023–2027',
+        branch: 'CSE',
+        section: section || 'Section A',
+        activityType: 'Semester Examination',
+        activityDetails: 'Autonomous Mid-Semester Practical Viva & Lab Examination Slot B',
+        topicsCovered: 'Practical Graph & Tree Implementation Evaluation',
+        totalEnrolled: 32,
+        presentCount: 32,
+        absentCount: 0,
+        percentage: 100.0,
+        status: 'Finalized',
+        recordedBy: 'Dr. S. Mohanty',
+        submittedAt: '12:20 PM'
+      },
+      {
+        id: 'att-sess-5',
+        date: '2026-10-03',
+        period: '03:00 PM to 04:30 PM',
+        subjectCode: subjectCode || 'CS501',
+        subjectName: 'Data Structures & Algorithms',
+        course: 'B.Tech',
+        batch: '2023–2027',
+        branch: 'CSE',
+        section: section || 'Section A',
+        activityType: 'Other Academic Activity',
+        activityDetails: 'Departmental Hackathon & Project Architecture Review Mentoring Session',
+        topicsCovered: 'Code Review & Performance Profiling of Student Projects',
+        totalEnrolled: 32,
+        presentCount: 28,
+        absentCount: 4,
+        percentage: 87.5,
+        status: 'Finalized',
+        recordedBy: 'Dr. S. Mohanty',
+        submittedAt: '04:35 PM'
+      }
+    ];
+  },
+
   submitAttendanceSession: async (payload) => {
     try {
       const res = await api.submitFacultyAttendance(payload);
@@ -162,12 +286,51 @@ export const facultyApi = {
     }
     const rolls = Object.keys(payload.attendanceMap || {});
     const presentCount = rolls.filter(r => payload.attendanceMap[r]).length;
+    const totalCount = rolls.length || 32;
+    const activityType = payload.activityType || 'Regular Class';
+    const activityDetails = payload.activityDetails || '';
+    const pct = totalCount > 0 ? Number(((presentCount / totalCount) * 100).toFixed(1)) : 100;
+    const periodDisplay = payload.period || payload.classTime || (payload.fromTime && payload.toTime ? `${payload.fromTime} to ${payload.toTime}` : 'Regular Class Hours');
+
+    const sessionObj = {
+      id: `att-${Date.now()}`,
+      date: payload.date,
+      period: periodDisplay,
+      subjectCode: payload.subjectCode || 'CS501',
+      subjectName: payload.subjectName || (payload.subjectCode === 'CS502' ? 'Operating Systems' : 'Data Structures & Algorithms'),
+      course: payload.course || 'B.Tech',
+      batch: payload.batch || '2023–2027',
+      branch: payload.branch || 'CSE',
+      section: payload.section || 'Section A',
+      activityType,
+      activityDetails,
+      topicsCovered: payload.topicsCovered || '',
+      totalEnrolled: totalCount,
+      presentCount,
+      absentCount: totalCount - presentCount,
+      percentage: pct,
+      status: 'Finalized',
+      recordedBy: payload.facultyName || 'Dr. S. Mohanty',
+      submittedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    // Store in localStorage cache
+    try {
+      const cached = localStorage.getItem('apna_campus_attendance_sessions');
+      const list = cached ? JSON.parse(cached) : [];
+      list.unshift(sessionObj);
+      localStorage.setItem('apna_campus_attendance_sessions', JSON.stringify(list.slice(0, 30)));
+    } catch {}
+
     return {
       success: true,
-      sessionId: `att-${Date.now()}`,
+      sessionId: sessionObj.id,
+      session: sessionObj,
       presentCount,
-      totalCount: rolls.length || 32,
-      message: `Attendance logged: ${presentCount}/${rolls.length} students present.`
+      totalCount,
+      activityType,
+      activityDetails,
+      message: `Attendance logged for ${payload.subjectCode || 'class'} [${activityType}]: ${presentCount}/${totalCount} students present.`
     };
   },
 

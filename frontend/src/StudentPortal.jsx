@@ -63,6 +63,7 @@ import BiometricPage from './pages/BiometricPage.jsx'
 import CanteenPage from './pages/CanteenPage.jsx'
 import StudentHostelPage from './pages/StudentHostelPage.jsx'
 import ClassNotesPage from './pages/ClassNotesPage.jsx'
+import ScholarshipPage from './pages/ScholarshipPage.jsx'
 import CampusConnect from './components/CampusConnect/CampusConnect.jsx'
 import AcademicResourcesSection from './components/CampusConnect/AcademicResourcesSection.jsx'
 import LeadershipScoreboardSection from './components/CampusConnect/LeadershipScoreboardSection.jsx'
@@ -133,6 +134,7 @@ const studentNavSections = [
     items: [
       { label: 'Hostel Residence', icon: Building2, page: 'hostel' },
       { label: 'Library', icon: LibraryBig, page: 'library' },
+      { label: 'Scholarships & Aid', icon: Award, page: 'scholarship' },
       { label: 'Self Development & Placement', icon: TrendingUp, page: 'placement' },
       { label: 'Internship', icon: Briefcase, page: 'internship' },
     ]
@@ -724,6 +726,7 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'notices' && <NoticesPage />}
               {activePage === 'idcard' && <IDCardPage />}
               {activePage === 'library' && <LibraryPage />}
+              {activePage === 'scholarship' && <ScholarshipPage account={account} />}
               {activePage === 'internship' && <InternshipPage account={account} />}
               {activePage === 'online-exam' && <OnlineExamPage />}
               {activePage === 'placement' && <PlacementPage />}

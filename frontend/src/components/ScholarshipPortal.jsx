@@ -54,6 +54,7 @@ import ScholarshipDisbursementsTab from './ScholarshipModules/ScholarshipDisburs
 import ScholarshipRenewalsTab from './ScholarshipModules/ScholarshipRenewalsTab.jsx';
 import ScholarshipReportsTab from './ScholarshipModules/ScholarshipReportsTab.jsx';
 import ScholarshipSettingsTab from './ScholarshipModules/ScholarshipSettingsTab.jsx';
+import ScholarshipPage from '../pages/ScholarshipPage.jsx';
 
 export default function ScholarshipPortal({ account, onLogout, onSwitchRole }) {
   // Current Tab
@@ -205,7 +206,8 @@ export default function ScholarshipPortal({ account, onLogout, onSwitchRole }) {
       title: 'A. Dashboard',
       collapsible: false,
       items: [
-        { id: 'dashboard', label: 'Scholarship Dashboard', icon: LayoutDashboard }
+        { id: 'dashboard', label: 'Scholarship Dashboard', icon: LayoutDashboard },
+        { id: 'public_portal', label: 'Scholarships & Aid (Student View)', icon: Eye }
       ]
     },
     {
@@ -341,6 +343,12 @@ export default function ScholarshipPortal({ account, onLogout, onSwitchRole }) {
   // Helper to map activeTab to pageTitle & breadcrumbs
   const getPageMeta = (tab) => {
     switch (tab) {
+      case 'public_portal':
+        return {
+          title: 'Scholarships & Financial Aid Catalog',
+          subtitle: 'Student Portal & Public Scheme Opportunities · Academic Session 2026–2027',
+          crumbs: ['Scholarship Directorate', 'Public Catalog']
+        };
       case 'dashboard':
         return {
           title: 'Scholarship Directorate Command Dashboard',
@@ -470,6 +478,11 @@ export default function ScholarshipPortal({ account, onLogout, onSwitchRole }) {
 
   // Render the appropriate submodule based on activeTab
   const renderContent = () => {
+    // Public / Student Portal View
+    if (activeTab === 'public_portal') {
+      return <ScholarshipPage account={account} />;
+    }
+
     // A. Dashboard
     if (activeTab === 'dashboard') {
       return (

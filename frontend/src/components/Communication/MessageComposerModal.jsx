@@ -233,27 +233,29 @@ export default function MessageComposerModal({
         estimatedCount: 180
       };
 
+      let dispatchedMsg = payload;
       if (isScheduled) {
-        communicationStore.scheduleMessage({
+        dispatchedMsg = communicationStore.scheduleMessage({
           ...payload,
           scheduledFor: `${scheduledDate}T${scheduledTime}:00`
         }, account);
         showToast('✓ Announcement scheduled for automated delivery');
       } else {
         const sentMsg = communicationStore.sendNewMessage(payload, account);
-        showToast(`✓ Notice #${sentMsg.id} dispatched across authorized channels!`);
+        dispatchedMsg = sentMsg || payload;
+        showToast(`✓ Notice #${dispatchedMsg.id || 'new'} dispatched across authorized channels!`);
       }
 
       if (initialDraft?.id) {
         communicationStore.deleteDraft(initialDraft.id);
       }
 
-      if (onMessageSent) onMessageSent();
+      if (onMessageSent) onMessageSent(dispatchedMsg);
       setTimeout(() => {
         setIsSubmitting(false);
         setIsConfirmOpen(false);
         onClose();
-      }, 1000);
+      }, 600);
     } catch (err) {
       setIsSubmitting(false);
       setValidationError(err.message || 'Dispatch failed');

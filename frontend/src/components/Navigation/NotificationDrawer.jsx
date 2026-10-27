@@ -287,7 +287,7 @@ export default function NotificationDrawer({
     }
   };
 
-  if (!isOpen && !selectedNotif) return null;
+  if (!isOpen && !selectedNotif && !isComposerOpen) return null;
 
   return (
     <>
@@ -345,7 +345,11 @@ export default function NotificationDrawer({
             <button
               type="button"
               className="comm-btn-create-msg"
-              onClick={() => handleOpenComposer()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleOpenComposer();
+              }}
               title="Create new institutional announcement or message"
             >
               <Plus size={15} />
@@ -355,7 +359,11 @@ export default function NotificationDrawer({
             <button
               type="button"
               className="apna-notif-close-btn"
-              onClick={() => setIsExpanded(prev => !prev)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsExpanded(prev => !prev);
+              }}
               aria-label={isExpanded ? 'Collapse studio' : 'Expand to studio workspace'}
               title={isExpanded ? 'Collapse to standard drawer' : 'Expand to Full-width Studio Workspace'}
             >
@@ -738,7 +746,7 @@ export default function NotificationDrawer({
           initialDraft={composerDraft}
           preAttachedFile={composerPreAttachment}
           onMessageSent={(newMsg) => {
-            showToast(`Announcement "${newMsg.title}" dispatched successfully!`);
+            showToast(`Announcement "${newMsg?.title || 'Notice'}" dispatched successfully!`);
             reloadNotifications();
           }}
         />

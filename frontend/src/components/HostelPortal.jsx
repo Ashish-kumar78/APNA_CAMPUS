@@ -810,6 +810,11 @@ export default function HostelPortal({ account, onLogout }) {
           title: 'Mess Nutrition, Meal Count & Menu Management',
           subtitle: 'Weekly rotational student menu, meal reservations, and kitchen hygiene audit.'
         };
+      case 'inventory-assets':
+        return {
+          title: 'Hostel Inventory & Requisition Management',
+          subtitle: 'Raise Indent / View Status, Custom Materials Requisition, and Recommendation Log.'
+        };
       default:
         return {
           title: (activeTab || 'Hostel Portal').replace(/-/g, ' ').toUpperCase(),
@@ -2195,7 +2200,7 @@ export default function HostelPortal({ account, onLogout }) {
 
           {/* TAB 17: INVENTORY & ASSETS */}
           {activeTab === 'inventory-assets' && (
-            <HostelInventorySection />
+            <HostelInventorySection account={account} isHostelAdmin={isHostelAdmin} />
           )}
 
           {/* TAB 18: HOSTEL NOTICES & ANNOUNCEMENTS */}

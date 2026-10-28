@@ -543,15 +543,14 @@ export default function RegisterStudentWizard({
 
     try {
       const all = getAllStudents();
-      const nextRoll = String(all.length + 1).padStart(2, '0');
       const admissionYear = new Date(formData.admissionDate || '2026-08-05').getFullYear();
-
-      // Auto-assign clean official Registration Number: 240143XXXX or 260520XXXX
-      const regNo = initialStudent?.registrationNumber ||
-        `2401432${(200 + all.length).toString().slice(-3)}`;
-      const studentId = initialStudent?.studentId || regNo;
-      const thumbId = formData.thumbId || `FP-${regNo.slice(-5)}`;
-      const defaultPassword = `GIFT@${admissionYear}`;
+      const deptCodeClean = (formData.deptCode || 'CSE').replace(/[^A-Z0-9]/g, '');
+      const yearStr = `${admissionYear}`;
+      const seqStr = String(100 + all.length).padStart(4, '0');
+      const institutionalRegNo = initialStudent?.registrationNumber || `AC/${yearStr}/${deptCodeClean}/00${seqStr}`;
+      const assignedRoll = initialStudent?.rollNumber || `${yearStr.slice(-2)}${deptCodeClean.slice(-3)}${seqStr.slice(-2)}`;
+      const studentId = initialStudent?.studentId || `STU-${yearStr.slice(-2)}-${seqStr}`;
+      const defaultPassword = `Apna@${admissionYear}`;
 
       const fullName = `${formData.firstName.trim()} ${formData.middleName.trim() ? formData.middleName.trim() + ' ' : ''}${formData.lastName.trim()}`;
 
@@ -561,10 +560,10 @@ export default function RegisterStudentWizard({
         id: initialStudent?.id || `std-${Date.now()}`,
         name: fullName,
         role: 'student',
-        registrationNumber: regNo,
-        rollNumber: initialStudent?.rollNumber || nextRoll,
+        registrationNumber: institutionalRegNo,
+        rollNumber: assignedRoll,
         studentId,
-        thumbId,
+        thumbId: formData.thumbId || `FP-${seqStr}`,
         defaultPassword,
         category: formData.studentType,
         lifecycleStatus: 'ADMITTED',
@@ -589,11 +588,69 @@ export default function RegisterStudentWizard({
         qual12thMarks: formData.qualifications.find(q => q.qualification === '12th')?.marks || ''
       };
 
-      // 1. Save to central studentStore
+      // 1. Asynchronously submit into Backend Admission REST API
+      try {
+        const appRes = await api.createApplicant({
+          name: fullName,
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          alternatePhone: formData.currPhone || null,
+          gender: formData.gender,
+          dob: formData.dob,
+          bloodGroup: formData.bloodGroup,
+          nationality: formData.nationality || 'Indian',
+          religion: formData.religion,
+          category: formData.admissionCategory || formData.caste || 'General',
+          programmeName: formData.appliedCourse || formData.course,
+          courseCode: deptCodeClean,
+          departmentCode: deptCodeClean,
+          academicYear: `${admissionYear}-${(admissionYear + 1).toString().slice(-2)}`,
+          tenthMarks: parseFloat(formData.qualifications.find(q => q.qualification === '10th')?.marks) || 85.0,
+          twelfthMarks: parseFloat(formData.qualifications.find(q => q.qualification === '12th')?.marks) || 82.0,
+          entranceExam: formData.entranceExam,
+          entranceRank: parseInt(formData.rank, 10) || null,
+          guardians: formData.guardians,
+          addressDetails: {
+            permanent: {
+              addressLine: formData.permAddress,
+              city: formData.permCity,
+              state: formData.permState,
+              country: formData.permCountry || 'India',
+              pincode: formData.permPin
+            },
+            correspondence: {
+              addressLine: formData.currAddress,
+              city: formData.currCity,
+              state: formData.currState,
+              country: formData.currCountry || 'India',
+              pincode: formData.currPin
+            }
+          },
+          qualifications: formData.qualifications,
+          hostelRequired: formData.hostel === 'Yes',
+          documents: formData.documentsList,
+          isDraft: false
+        });
+
+        if (appRes && appRes.data && appRes.data.id) {
+          const enrollRes = await api.approveAndEnrollApplicant(appRes.data.id);
+          if (enrollRes && enrollRes.data) {
+            studentPayload.registrationNumber = enrollRes.data.registrationNumber;
+            studentPayload.rollNumber = enrollRes.data.rollNumber;
+            studentPayload.studentId = enrollRes.data.studentId;
+            studentPayload.activationToken = enrollRes.data.activationToken;
+            studentPayload.activationUrl = enrollRes.data.activationUrl;
+          }
+        }
+      } catch (apiErr) {
+        console.warn('Backend admission sync fallback:', apiErr.message);
+      }
+
+      // 2. Save to central studentStore
       const savedStudent = saveStudent(studentPayload);
       setActiveStudent(savedStudent.id);
 
-      // 2. Save all uploaded documents into student repository
+      // 3. Save all uploaded documents into student repository
       if (formData.documentsList && formData.documentsList.length > 0) {
         formData.documentsList.forEach(doc => {
           addStudentDocument(savedStudent.id, {

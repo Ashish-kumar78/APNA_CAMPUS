@@ -511,6 +511,27 @@ export default function ApplicantRegistryTab({
               {/* TAB 1: OVERVIEW & PROFILE */}
               {activeDrawerTab === 'overview' && (
                 <div>
+                  {(selectedApplicant.permanentRegistrationNo || selectedApplicant.enrollmentRecord?.registrationNumber) && (
+                    <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '14px', borderRadius: '8px', marginBottom: '18px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <span style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 700, textTransform: 'uppercase' }}>
+                            Permanent College Registration Number
+                          </span>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#065f46', fontFamily: 'monospace', marginTop: '2px' }}>
+                            {selectedApplicant.permanentRegistrationNo || selectedApplicant.enrollmentRecord?.registrationNumber}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span className="adm-badge-pill green">Enrolled Student</span>
+                          <div style={{ fontSize: '0.75rem', color: '#047857', marginTop: '3px' }}>
+                            Roll: <strong>{selectedApplicant.enrollmentRecord?.rollNumber || selectedApplicant.assignedRollNumber || 'Assigned'}</strong> · {selectedApplicant.enrollmentRecord?.section || 'Section A'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '18px' }}>
                     <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                       <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Legal Name</span>

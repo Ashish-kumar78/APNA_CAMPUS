@@ -42,7 +42,7 @@ import BulkMarksUploadModal from './BulkMarksUploadModal'
 import FacultyClassSelector from '../components/FacultyClassSelector.jsx'
 import './MarksManagement.css'
 
-export default function MarksManagementModule({ initialRole = 'teacher', currentStudentId = 's-4' }) {
+export default function MarksManagementModule({ initialRole = 'teacher', currentStudentId = 's-4', allowStudentView = false }) {
   const isStudentOnly = initialRole === 'student'
 
   // Role Mode: 'teacher' | 'student'
@@ -200,7 +200,7 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
         </div>
 
         {/* Seamless Role View Switcher - Only visible to Teacher, HOD, Faculty, Admin (Hidden from Student) */}
-        {!isStudentOnly && (
+        {!isStudentOnly && allowStudentView && (
           <div className="mm-role-switcher" role="radiogroup" aria-label="Portal Mode">
             <button
               type="button"

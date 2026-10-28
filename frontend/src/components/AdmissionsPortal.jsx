@@ -156,6 +156,9 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
   // Actions passed down to modules
   const handleVerify = (id, name) => {
     admissionsStore.changeApplicationStatus(id, 'Verified', 'Prerequisites & credentials verified', 'Ms. Sasmita Mohapatra');
+    try {
+      api.updateApplicantStatus(id, 'VERIFIED', 'Prerequisites & credentials verified').catch(() => {});
+    } catch {}
     showToast(`Applicant ${name} marked as VERIFIED.`);
   };
 
@@ -172,6 +175,9 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
     const reason = window.prompt(`Please provide an official rejection reason for ${name}:`, 'Prerequisites not met');
     if (reason === null) return;
     admissionsStore.changeApplicationStatus(id, 'Rejected', reason, 'Ms. Sasmita Mohapatra');
+    try {
+      api.rejectApplicant(id, reason).catch(() => {});
+    } catch {}
     showToast(`Applicant ${name} marked as REJECTED.`);
   };
 

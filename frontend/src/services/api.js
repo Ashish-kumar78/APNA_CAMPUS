@@ -1539,6 +1539,49 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ action, remarks }),
     }),
+
+  // 33. Smart Admission & Student Lifecycle Management
+  getAdmissionStats: () => request('/admission/stats'),
+  getEligibilityRules: () => request('/admission/rules'),
+  getApplicants: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admission/applicants${q ? '?' + q : ''}`);
+  },
+  getApplicantById: (id) => request(`/admission/applicants/${encodeURIComponent(id)}`),
+  saveAdmissionDraft: (data) =>
+    request('/admission/applicants/draft', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  createApplicant: (data) =>
+    request('/admission/applicants', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  verifyApplicantDocument: (applicantId, docId, status, remarks = '') =>
+    request(`/admission/applicants/${encodeURIComponent(applicantId)}/documents/${encodeURIComponent(docId)}/verify`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, remarks }),
+    }),
+  updateApplicantStatus: (applicantId, status, reason = '') =>
+    request(`/admission/applicants/${encodeURIComponent(applicantId)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, reason }),
+    }),
+  verifyApplicantFee: (applicantId, feeData) =>
+    request(`/admission/applicants/${encodeURIComponent(applicantId)}/fees/verify`, {
+      method: 'POST',
+      body: JSON.stringify(feeData),
+    }),
+  rejectApplicant: (applicantId, reason = 'Criteria not met') =>
+    request(`/admission/applicants/${encodeURIComponent(applicantId)}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  approveAndEnrollApplicant: (applicantId) =>
+    request(`/admission/applicants/${encodeURIComponent(applicantId)}/approve`, {
+      method: 'POST',
+    }),
 };
 
 

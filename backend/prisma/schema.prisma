@@ -30,6 +30,22 @@ enum Role {
   NON_TEACHING
 }
 
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+enum MemberRole {
+  MEMBER
+  ADMIN
+  OWNER
+}
+
 enum DocumentStatus {
   UPLOADED
   PENDING_VERIFICATION
@@ -61,6 +77,10 @@ model User {
   designation     String?
   phone           String?
   detail          String?
+  campusIdentity  String?    @unique
+  displayName     String?
+  profileImageUrl String?
+  status          AccountStatus? @default(ACTIVE)
   permissions     String[]   @default([])
   lastLogin       DateTime?
   isActive        Boolean    @default(true)
@@ -81,6 +101,14 @@ model User {
   documentAuditEntries    DocumentAuditEntry[] @relation("DocumentAuditActor")
   approvalOwnerships      ApprovalWorkflow[] @relation("WorkflowOwner")
   approvalEvents          ApprovalWorkflowEvent[] @relation("ApprovalActor")
+  ChatSession             ChatSession[]
+  Conversation            Conversation[]
+  ConversationMember      ConversationMember[]
+  DirectPair_DirectPair_userHighIdToUser DirectPair[]         @relation("DirectPair_userHighIdToUser")
+  DirectPair_DirectPair_userLowIdToUser  DirectPair[]         @relation("DirectPair_userLowIdToUser")
+  Message                 Message[]
+  MessageHidden           MessageHidden[]
+  MessageReceipt          MessageReceipt[]
 
   @@index([identifier])
   @@index([email])
@@ -423,6 +451,12 @@ model AuditLog {
   id            String   @id @default(cuid())
   user          String
   role          String
+  action        String?
+  target        String?
+  oldValue      String?
+  newValue      String?
+  ipAddress     String?
+  status        String?  @default("Success")
   targetStudent String?
   subject       String?
   assessment    String?
@@ -431,6 +465,10 @@ model AuditLog {
   changedAt     String
   reason        String
   createdAt     DateTime @default(now())
+
+  @@index([user])
+  @@index([role])
+  @@index([createdAt])
 }
 
 model AttendanceRecord {
@@ -1699,6 +1737,254 @@ model BonafideAuditLog {
 
   @@index([applicationId])
   @@map("bonafide_audit_logs")
+}
+
+model SecurityIncident {
+  id              String    @id @default(cuid())
+  incidentCode    String    @unique
+  title           String
+  category        String
+  severity        String    // low, medium, high, critical
+  status          String    @default("open") // open, investigating, resolved, closed
+  affectedAccount String
+  sourceIp        String?
+  detectedAt      DateTime  @default(now())
+  evidence        String?
+  resolutionNotes String?
+  assignedTo      String?
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status])
+  @@index([severity])
+}
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  logCode   String?
+  timestamp DateTime @default(now())
+  level     String   // INFO, WARN, ERROR, DEBUG
+  component String
+  requestId String?
+  message   String
+  latencyMs Float?
+  ipAddress String?
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([level])
+  @@index([component])
+  @@index([timestamp])
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @default(cuid())
+  userId       String?
+  identifier   String
+  name         String
+  role         String
+  ipAddress    String
+  device       String
+  loginTime    DateTime @default(now())
+  expiresAt    DateTime
+  status       String   @default("Active") // Active, Revoked, Expired
+  isCurrent    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([identifier])
+  @@index([status])
+}
+
+model IntegrationConfig {
+  id         String   @id @default(cuid())
+  key        String   @unique // smtp, sms, payment, s3, ai_service, biometric
+  name       String
+  provider   String
+  endpoint   String
+  authType   String
+  status     String   @default("Operational")
+  latencyMs  Int      @default(20)
+  lastPing   DateTime @default(now())
+  lastError  String?
+  configJson Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([key])
+}
+
+model BackupSnapshot {
+  id              String   @id @default(cuid())
+  snapshotCode    String   @unique
+  fileName        String
+  snapshotType    String
+  size            String
+  databaseVersion String   @default("PostgreSQL 16.3")
+  status          String   @default("Completed")
+  checksum        String
+  retentionDays   Int      @default(90)
+  createdAt       DateTime @default(now())
+
+  @@index([status])
+}
+
+model AdministrativeApproval {
+  id              String    @id @default(cuid())
+  approvalCode    String    @unique
+  title           String
+  category        String
+  severity        String
+  status          String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  requesterName   String
+  requesterRole   String
+  requesterId     String
+  requestedAt     DateTime  @default(now())
+  scope           String
+  justification   String
+  impactStatement String?
+  actionHistory   Json      @default("[]")
+  decidedAt       DateTime?
+  decidedBy       String?
+  decisionReason  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status])
+}
+
+model ChatSession {
+  id         String    @id
+  secretHash String    @unique
+  userId     String
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastSeenAt DateTime  @default(now())
+  User       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt, revokedAt])
+  @@index([userId, expiresAt])
+}
+
+model Conversation {
+  id                 String               @id
+  type               ConversationType
+  title              String?
+  avatarUrl          String?
+  createdById        String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  User               User                 @relation(fields: [createdById], references: [id])
+  ConversationMember ConversationMember[]
+  DirectPair         DirectPair?
+  Message            Message[]
+
+  @@index([updatedAt])
+}
+
+model ConversationMember {
+  id             String       @id
+  conversationId String
+  userId         String
+  role           MemberRole   @default(MEMBER)
+  joinedAt       DateTime     @default(now())
+  leftAt         DateTime?
+  lastReadAt     DateTime?
+  isFavorite     Boolean      @default(false)
+  Conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  User           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId, leftAt])
+}
+
+model DirectPair {
+  id                               String       @id
+  userLowId                        String
+  userHighId                       String
+  conversationId                   String       @unique
+  Conversation                     Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  User_DirectPair_userHighIdToUser User         @relation("DirectPair_userHighIdToUser", fields: [userHighId], references: [id], onDelete: Cascade)
+  User_DirectPair_userLowIdToUser  User         @relation("DirectPair_userLowIdToUser", fields: [userLowId], references: [id], onDelete: Cascade)
+
+  @@unique([userLowId, userHighId])
+}
+
+model Message {
+  id                String             @id
+  conversationId    String
+  senderId          String
+  clientMessageId   String
+  body              String
+  createdAt         DateTime           @default(now())
+  editedAt          DateTime?
+  deletedAt         DateTime?
+  replyToId         String?
+  Conversation      Conversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  Message           Message?           @relation("MessageToMessage", fields: [replyToId], references: [id])
+  other_Message     Message[]          @relation("MessageToMessage")
+  User              User               @relation(fields: [senderId], references: [id])
+  MessageAttachment MessageAttachment?
+  MessageHidden     MessageHidden[]
+  MessageReceipt    MessageReceipt[]
+
+  @@unique([senderId, clientMessageId])
+  @@index([conversationId, createdAt, id])
+  @@index([replyToId])
+  @@index([senderId, createdAt])
+}
+
+model MessageAttachment {
+  id        String   @id
+  messageId String   @unique
+  fileName  String
+  mimeType  String
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now())
+  Message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model MessageHidden {
+  id        String   @id
+  messageId String
+  userId    String
+  createdAt DateTime @default(now())
+  Message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, messageId])
+}
+
+model MessageReceipt {
+  id          String    @id
+  messageId   String
+  userId      String
+  deliveredAt DateTime?
+  readAt      DateTime?
+  Message     Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, readAt])
+}
+
+model face_attendance_logs {
+  id           Int       @id @default(autoincrement())
+  roll_number  String    @db.VarChar(50)
+  student_name String    @db.VarChar(100)
+  date         String    @db.VarChar(20)
+  time         String    @db.VarChar(20)
+  status       String?   @default("PRESENT") @db.VarChar(20)
+  source       String?   @default("FACE_RECOGNITION_AI") @db.VarChar(50)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@unique([roll_number, date], map: "unique_roll_per_date")
 }
 
 

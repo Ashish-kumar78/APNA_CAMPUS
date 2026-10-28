@@ -399,11 +399,15 @@ export const api = {
       body: JSON.stringify({ confirmationCode }),
     }),
   getAdminApprovals: () => request('/admin/approvals'),
-  decideAdminApproval: (id, decision, reason) =>
-    request(`/admin/approvals/${id}/decide`, {
+  decideAdminApproval: (id, decision, reason) => {
+    const payload = typeof decision === 'object' && decision !== null
+      ? { decision: decision.decision, reason: decision.reason || decision.justification }
+      : { decision, reason };
+    return request(`/admin/approvals/${id}/decide`, {
       method: 'POST',
-      body: JSON.stringify({ decision, reason }),
-    }),
+      body: JSON.stringify(payload),
+    });
+  },
   saveAdminRbacPermissions: (roleKey, permissions) =>
     request('/admin/rbac/permissions', {
       method: 'POST',
@@ -1258,6 +1262,51 @@ export const api = {
   saveAdminSettings: (payload) =>
     request('/admin/settings', {
       method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getAdminSettings: (category = '') =>
+    request(`/admin/settings${category ? `?category=${encodeURIComponent(category)}` : ''}`),
+  getAdminRbacPermissions: () => request('/admin/rbac/permissions'),
+  getAdminFaculty: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/faculty${q ? '?' + q : ''}`);
+  },
+  createAdminFaculty: (payload) =>
+    request('/admin/faculty', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateAdminFaculty: (id, payload) =>
+    request(`/admin/faculty/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteAdminFaculty: (id) =>
+    request(`/admin/faculty/${id}`, {
+      method: 'DELETE',
+    }),
+  getAdminHods: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/hods${q ? '?' + q : ''}`);
+  },
+  createAdminHod: (payload) =>
+    request('/admin/hods', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateAdminHod: (id, payload) =>
+    request(`/admin/hods/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteAdminHod: (id) =>
+    request(`/admin/hods/${id}`, {
+      method: 'DELETE',
+    }),
+  getAdminMarkingSchemes: () => request('/admin/marking-schemes'),
+  updateAdminMarkingScheme: (id, payload) =>
+    request(`/admin/marking-schemes/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(payload),
     }),
   // 28. Enterprise Academic Reports

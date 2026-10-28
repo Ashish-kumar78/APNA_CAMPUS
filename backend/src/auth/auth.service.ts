@@ -11,12 +11,24 @@ export class AuthService {
   async login(dto: LoginDto) {
     const rawKey = dto.identifier.trim().toLowerCase();
     
-    // Find user by identifier or email
+    // Find user by identifier, email, or administrative alias
     const user = await this.prisma.user.findFirst({
       where: {
         OR: [
           { identifier: { equals: rawKey, mode: 'insensitive' } },
           { email: { equals: rawKey, mode: 'insensitive' } },
+          ...(rawKey === 'superadmin' || rawKey === 'super_admin'
+            ? [{ identifier: { equals: 'SYS-SUPER-01', mode: 'insensitive' as const } }, { role: 'SUPER_ADMIN' as const }]
+            : []),
+          ...(rawKey === 'admin'
+            ? [{ identifier: { equals: 'ADM-001', mode: 'insensitive' as const } }, { role: 'ADMIN' as const }]
+            : []),
+          ...(rawKey === 'management' || rawKey === 'director'
+            ? [{ identifier: { equals: 'GOV-CHAIR-01', mode: 'insensitive' as const } }, { role: 'MANAGEMENT' as const }]
+            : []),
+          ...(rawKey === 'principal'
+            ? [{ identifier: { equals: 'OFF-PRIN-01', mode: 'insensitive' as const } }, { role: 'PRINCIPAL' as const }]
+            : []),
         ],
       },
       include: {

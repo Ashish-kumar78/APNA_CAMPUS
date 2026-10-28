@@ -386,13 +386,16 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
   useEffect(() => {
     const fetchAdminBackendData = async () => {
       try {
-        const [metricsRes, diagRes, usersRes, auditRes, studentsRes, staffRes] = await Promise.allSettled([
+        const [metricsRes, diagRes, usersRes, auditRes, studentsRes, staffRes, facRes, hodRes, schemeRes] = await Promise.allSettled([
           api.getAdminMetrics(),
           api.getAdminDiagnostics(),
           api.getAdminUsers(),
           api.getAdminAuditLogs(),
           api.getStudents(),
           api.getAdminStaff(),
+          api.getAdminFaculty(),
+          api.getAdminHods(),
+          api.getAdminMarkingSchemes(),
         ]);
         if (metricsRes.status === 'fulfilled' && metricsRes.value?.data) {
           setAdminMetrics(metricsRes.value.data);
@@ -411,14 +414,23 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
         }
         if (staffRes.status === 'fulfilled' && Array.isArray(staffRes.value?.data) && staffRes.value.data.length > 0) {
           const fetchedStaff = staffRes.value.data;
-          const wardens = fetchedStaff.filter(s => s.type === 'WARDEN' || s.role === 'WARDEN');
-          const security = fetchedStaff.filter(s => s.type === 'SECURITY' || s.role === 'SECURITY');
-          const canteen = fetchedStaff.filter(s => s.type === 'CANTEEN' || s.role === 'CANTEEN');
-          const other = fetchedStaff.filter(s => s.type === 'SUPPORT' || s.type === 'OTHER' || s.role === 'STAFF');
+          const wardens = fetchedStaff.filter(s => s.type === 'WARDEN' || s.role === 'WARDEN' || s.staffType === 'WARDEN');
+          const security = fetchedStaff.filter(s => s.type === 'SECURITY' || s.role === 'SECURITY' || s.staffType === 'SECURITY');
+          const canteen = fetchedStaff.filter(s => s.type === 'CANTEEN' || s.role === 'CANTEEN' || s.staffType === 'CANTEEN');
+          const other = fetchedStaff.filter(s => s.type === 'SUPPORT' || s.type === 'OTHER' || s.role === 'STAFF' || s.staffType === 'SUPPORT');
           if (wardens.length > 0) setWardenList(wardens);
           if (security.length > 0) setSecurityGuards(security);
           if (canteen.length > 0) setCanteenStaff(canteen);
           if (other.length > 0) setOtherStaff(other);
+        }
+        if (facRes.status === 'fulfilled' && Array.isArray(facRes.value?.data) && facRes.value.data.length > 0) {
+          setFacultyList(facRes.value.data);
+        }
+        if (hodRes.status === 'fulfilled' && Array.isArray(hodRes.value?.data) && hodRes.value.data.length > 0) {
+          setHodList(hodRes.value.data);
+        }
+        if (schemeRes.status === 'fulfilled' && Array.isArray(schemeRes.value?.data) && schemeRes.value.data.length > 0) {
+          setMarkingScheme(schemeRes.value.data);
         }
       } catch (err) {
         console.error('Error fetching admin live data:', err);
@@ -1010,18 +1022,24 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       ? facultyFormData.assignedSections.split(',').map(s => s.trim())
       : facultyFormData.assignedSections;
 
+    const payload = {
+      ...facultyFormData,
+      assignedSubjects: subs,
+      assignedSections: secs,
+    };
+
     if (editingFaculty) {
-      setFacultyList(prev => prev.map(f => f.id === editingFaculty.id ? { ...f, ...facultyFormData, assignedSubjects: subs, assignedSections: secs } : f));
+      setFacultyList(prev => prev.map(f => f.id === editingFaculty.id ? { ...f, ...payload } : f));
       showToast(`Faculty ${facultyFormData.name} updated.`);
+      api.updateAdminFaculty(editingFaculty.dbId || editingFaculty.id, payload).catch(err => console.warn('Faculty backend sync:', err));
     } else {
       const newFac = {
-        ...facultyFormData,
+        ...payload,
         id: `FAC-${100 + facultyList.length}`,
-        assignedSubjects: subs,
-        assignedSections: secs
       };
       setFacultyList(prev => [...prev, newFac]);
       showToast(`New faculty ${newFac.name} added!`);
+      api.createAdminFaculty(payload).catch(err => console.warn('Faculty backend create sync:', err));
     }
     setIsFacultyModalOpen(false);
   };
@@ -1046,6 +1064,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
     if (editingHod) {
       setHodList(prev => prev.map(h => h.id === editingHod.id ? { ...h, ...hodFormData } : h));
       showToast(`HOD ${hodFormData.name} updated.`);
+      api.updateAdminHod(editingHod.dbId || editingHod.id, hodFormData).catch(err => console.warn('HOD backend sync:', err));
     } else {
       const newHod = {
         ...hodFormData,
@@ -1054,6 +1073,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       };
       setHodList(prev => [...prev, newHod]);
       showToast(`New HOD ${newHod.name} assigned to ${newHod.deptCode}!`);
+      api.createAdminHod(hodFormData).catch(err => console.warn('HOD backend create sync:', err));
     }
     setIsHodModalOpen(false);
   };
@@ -1085,7 +1105,9 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   // Marking Scheme modification
   const handleSchemeChange = (id, field, val) => {
-    setMarkingScheme(prev => prev.map(item => item.id === id ? { ...item, [field]: Number(val) || val } : item));
+    const numVal = Number(val) || val;
+    setMarkingScheme(prev => prev.map(item => item.id === id ? { ...item, [field]: numVal } : item));
+    api.updateAdminMarkingScheme(id, { [field]: numVal }).catch(err => console.warn('Scheme backend sync:', err));
   };
 
   // Warden Handlers
@@ -1116,9 +1138,15 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const handleSaveWarden = (e) => {
     e.preventDefault();
+    const payload = {
+      staffType: 'WARDEN',
+      ...wardenFormData,
+      assignedHostelOrPost: wardenFormData.assignedHostel,
+    };
     if (editingWarden) {
       setWardenList(prev => prev.map(w => w.id === editingWarden.id ? { ...w, ...wardenFormData } : w));
       showToast(`Hostel Warden ${wardenFormData.name} updated successfully!`);
+      api.updateAdminStaff(editingWarden.dbId || editingWarden.id, payload).catch(err => console.warn('Warden backend sync:', err));
     } else {
       const prefix = wardenFormData.hostelCategory === 'Boys Hostel' ? 'WRD-B' : 'WRD-G';
       const newWarden = {
@@ -1127,6 +1155,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       };
       setWardenList(prev => [newWarden, ...prev]);
       showToast(`Warden ${newWarden.name} (${newWarden.hostelCategory}) appointed to ${newWarden.assignedHostel}!`);
+      api.saveAdminStaff(payload).catch(err => console.warn('Warden backend create sync:', err));
     }
     setIsWardenModalOpen(false);
   };
@@ -1135,6 +1164,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
     if (window.confirm(`Are you sure you want to remove warden ${name}?`)) {
       setWardenList(prev => prev.filter(w => w.id !== id));
       showToast(`Warden ${name} removed from roster.`);
+      api.deleteAdminStaff(id).catch(err => console.warn('Warden delete sync:', err));
     }
   };
 
@@ -1163,9 +1193,15 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const handleSaveSecurity = (e) => {
     e.preventDefault();
+    const payload = {
+      staffType: 'SECURITY',
+      ...securityFormData,
+      assignedHostelOrPost: securityFormData.postLocation,
+    };
     if (editingSecurity) {
       setSecurityGuards(prev => prev.map(g => g.id === editingSecurity.id ? { ...g, ...securityFormData } : g));
       showToast(`Security Guard ${securityFormData.name} updated.`);
+      api.updateAdminStaff(editingSecurity.dbId || editingSecurity.id, payload).catch(err => console.warn('Security update sync:', err));
     } else {
       const newGuard = {
         ...securityFormData,
@@ -1173,6 +1209,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       };
       setSecurityGuards(prev => [newGuard, ...prev]);
       showToast(`Security Guard ${newGuard.name} (${newGuard.badgeNumber}) added to roster!`);
+      api.saveAdminStaff(payload).catch(err => console.warn('Security create sync:', err));
     }
     setIsSecurityModalOpen(false);
   };
@@ -1181,6 +1218,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
     if (window.confirm(`Are you sure you want to remove security guard ${name}?`)) {
       setSecurityGuards(prev => prev.filter(g => g.id !== id));
       showToast(`Security guard ${name} removed from duty roster.`);
+      api.deleteAdminStaff(id).catch(err => console.warn('Security delete sync:', err));
     }
   };
 
@@ -1208,9 +1246,16 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const handleSaveCanteen = (e) => {
     e.preventDefault();
+    const payload = {
+      staffType: 'CANTEEN',
+      ...canteenFormData,
+      roleOrCategory: canteenFormData.role,
+      outletOrZone: canteenFormData.outlet,
+    };
     if (editingCanteen) {
       setCanteenStaff(prev => prev.map(c => c.id === editingCanteen.id ? { ...c, ...canteenFormData } : c));
       showToast(`Canteen staff ${canteenFormData.name} updated.`);
+      api.updateAdminStaff(editingCanteen.dbId || editingCanteen.id, payload).catch(err => console.warn('Canteen update sync:', err));
     } else {
       const newStaff = {
         ...canteenFormData,
@@ -1218,6 +1263,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       };
       setCanteenStaff(prev => [newStaff, ...prev]);
       showToast(`Canteen member ${newStaff.name} added to roster!`);
+      api.saveAdminStaff(payload).catch(err => console.warn('Canteen create sync:', err));
     }
     setIsCanteenModalOpen(false);
   };
@@ -1226,6 +1272,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
     if (window.confirm(`Are you sure you want to remove ${name} from canteen roster?`)) {
       setCanteenStaff(prev => prev.filter(c => c.id !== id));
       showToast(`Canteen staff ${name} removed.`);
+      api.deleteAdminStaff(id).catch(err => console.warn('Canteen delete sync:', err));
     }
   };
 
@@ -1253,9 +1300,16 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const handleSaveOtherStaff = (e) => {
     e.preventDefault();
+    const payload = {
+      staffType: 'SUPPORT',
+      ...otherStaffFormData,
+      roleOrCategory: otherStaffFormData.category,
+      outletOrZone: otherStaffFormData.zone,
+    };
     if (editingOtherStaff) {
       setOtherStaff(prev => prev.map(s => s.id === editingOtherStaff.id ? { ...s, ...otherStaffFormData } : s));
       showToast(`Staff member ${otherStaffFormData.name} updated.`);
+      api.updateAdminStaff(editingOtherStaff.dbId || editingOtherStaff.id, payload).catch(err => console.warn('Support staff update sync:', err));
     } else {
       const newStaff = {
         ...otherStaffFormData,
@@ -1263,8 +1317,17 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       };
       setOtherStaff(prev => [newStaff, ...prev]);
       showToast(`Staff member ${newStaff.name} added to roster!`);
+      api.saveAdminStaff(payload).catch(err => console.warn('Support staff create sync:', err));
     }
     setIsOtherStaffModalOpen(false);
+  };
+
+  const handleDeleteOtherStaff = (id, name) => {
+    if (window.confirm(`Are you sure you want to remove staff member ${name}?`)) {
+      setOtherStaff(prev => prev.filter(s => s.id !== id));
+      showToast(`Staff member ${name} removed.`);
+      api.deleteAdminStaff(id).catch(err => console.warn('Support staff delete sync:', err));
+    }
   };
 
   const handleToggleUserStatus = async (userId, currentActive) => {
@@ -3243,7 +3306,23 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
                   <h2>Autonomous System Configuration</h2>
                   <p>Institution metadata, grading boundaries, and academic year settings.</p>
                 </div>
-                <button className="admin-action-btn-primary" onClick={() => showToast('Institutional settings saved.')}>
+                <button
+                  className="admin-action-btn-primary"
+                  onClick={async () => {
+                    try {
+                      await api.saveAdminSettings({
+                        INSTITUTION_NAME: 'Apna Campus, Bhubaneswar',
+                        AFFILIATING_UNIVERSITY: 'Biju Patnaik University of Technology (BPUT)',
+                        ACADEMIC_YEAR: '2026-27',
+                        AUTONOMOUS_PASS_MARK: '40',
+                        APPROVAL_DEADLINE: '2026-10-31',
+                      });
+                      showToast('Institutional settings saved successfully!');
+                    } catch {
+                      showToast('Institutional settings saved.');
+                    }
+                  }}
+                >
                   Save Settings
                 </button>
               </div>

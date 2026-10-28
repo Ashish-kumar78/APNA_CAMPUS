@@ -96,7 +96,28 @@ const accounts = {
     department: 'Enterprise IT & Security',
     detail: 'Super Administrator · Full System Scope',
   },
+  'sys-super-01': {
+    role: 'super_admin',
+    name: 'Chief Systems Architect',
+    identity: 'SYS-SUPER-01',
+    department: 'Enterprise IT & Security',
+    detail: 'Super Administrator · Full System Scope',
+  },
+  'SYS-SUPER-01': {
+    role: 'super_admin',
+    name: 'Chief Systems Architect',
+    identity: 'SYS-SUPER-01',
+    department: 'Enterprise IT & Security',
+    detail: 'Super Administrator · Full System Scope',
+  },
   'management': {
+    role: 'management',
+    name: 'Prof. (Dr.) S. P. Panda',
+    identity: 'GOV-CHAIR-01',
+    department: 'Governing Board / Trustees',
+    detail: 'Chairman & Governing Body Trustee',
+  },
+  'GOV-CHAIR-01': {
     role: 'management',
     name: 'Prof. (Dr.) S. P. Panda',
     identity: 'GOV-CHAIR-01',
@@ -111,6 +132,13 @@ const accounts = {
     detail: 'Chairman & Governing Body Trustee',
   },
   'principal': {
+    role: 'principal',
+    name: 'Dr. B. K. Sarap',
+    identity: 'OFF-PRIN-01',
+    department: 'Office of the Principal',
+    detail: 'Principal & Director · Autonomous Campus',
+  },
+  'OFF-PRIN-01': {
     role: 'principal',
     name: 'Dr. B. K. Sarap',
     identity: 'OFF-PRIN-01',
@@ -381,6 +409,7 @@ function App() {
   const [rememberMe, setRememberMe] = useState(true)
   const [account, setAccount] = useState(null)
   const [error, setError] = useState('')
+  const [autoFillNotice, setAutoFillNotice] = useState('')
   const [resetRequested, setResetRequested] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState('admin')
@@ -390,6 +419,74 @@ function App() {
   const [activationTokenInput, setActivationTokenInput] = useState('')
   const [showPublicTimetable, setShowPublicTimetable] = useState(false)
   const [verificationToken, setVerificationToken] = useState('')
+
+  const adminRoleCredentials = {
+    super_admin: {
+      identifier: 'SYS-SUPER-01',
+      password: 'gift123',
+      label: 'Super Admin',
+      roleName: 'Chief Systems Architect',
+    },
+    superadmin: {
+      identifier: 'SYS-SUPER-01',
+      password: 'gift123',
+      label: 'Super Admin',
+      roleName: 'Chief Systems Architect',
+    },
+    admin: {
+      identifier: 'ADM-001',
+      password: 'gift123',
+      label: 'Campus Admin',
+      roleName: 'Campus Administrator',
+    },
+    management: {
+      identifier: 'GOV-CHAIR-01',
+      password: 'gift123',
+      label: 'Management / Director',
+      roleName: 'Chairman & Governing Body',
+    },
+    principal: {
+      identifier: 'OFF-PRIN-01',
+      password: 'gift123',
+      label: 'Principal',
+      roleName: 'Office of the Principal',
+    },
+  }
+
+  function handleRoleSelect(roleKey, categoryId) {
+    clearUrlHash()
+    setError('')
+    setResetRequested(false)
+
+    // For Administration section (Super Admin, Admin, Management, Principal),
+    // auto-fill credentials and prompt user to click the "Login" button to authenticate.
+    const isAdminRole = categoryId === 'admin' || Boolean(adminRoleCredentials[roleKey])
+
+    if (isAdminRole) {
+      const creds = adminRoleCredentials[roleKey] || {
+        identifier: roleKey,
+        password: 'gift123',
+        label: roleKey,
+      }
+      setIdentifier(creds.identifier)
+      setPassword(creds.password)
+      setAutoFillNotice(
+        `✓ Credentials auto-filled for ${creds.label} (${creds.identifier}). Click "Login" below to sign in.`
+      )
+
+      setTimeout(() => {
+        const idInput = document.getElementById('identifier')
+        if (idInput) {
+          idInput.focus()
+          idInput.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 50)
+      return
+    }
+
+    // For non-administration categories, continue with standard quick demo login
+    handleQuickLogin(roleKey)
+  }
 
   useEffect(() => {
     // Session restoration across refreshes
@@ -456,6 +553,7 @@ function App() {
       localStorage.removeItem('apna_sidebar_collapsed')
     } catch {}
     setError('')
+    setAutoFillNotice('')
     setResetRequested(false)
     setIsSubmitting(true)
 
@@ -524,6 +622,7 @@ function App() {
     setIdentifier('2305201001')
     setPassword('gift123')
     setError('')
+    setAutoFillNotice('')
     setResetRequested(false)
   }
 
@@ -759,7 +858,7 @@ function App() {
                     autoComplete="username"
                     placeholder="College ID / Registration Number"
                     value={identifier}
-                    onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
+                    onChange={(e) => { setIdentifier(e.target.value); setError(''); setAutoFillNotice(''); }}
                     disabled={isSubmitting}
                     required
                   />
@@ -776,7 +875,7 @@ function App() {
                     autoComplete="current-password"
                     placeholder="Password"
                     value={password}
-                    onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                    onChange={(e) => { setPassword(e.target.value); setError(''); setAutoFillNotice(''); }}
                     disabled={isSubmitting}
                     required
                   />
@@ -824,6 +923,48 @@ function App() {
                     className="erp-alert-close"
                     onClick={() => { setError(''); setResetRequested(false); }}
                     aria-label="Dismiss notification"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+
+              {/* Auto-fill notification for Administration roles */}
+              {autoFillNotice && (
+                <div
+                  className="erp-alert-box is-autofill"
+                  style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #86efac',
+                    color: '#15803d',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    marginBottom: '14px',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    lineHeight: 1.4,
+                  }}
+                  role="status"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ShieldCheck size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+                    <span style={{ fontWeight: 500 }}>{autoFillNotice}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAutoFillNotice('')}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#15803d',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      lineHeight: 1,
+                      padding: '0 4px',
+                    }}
+                    aria-label="Dismiss notice"
                   >
                     ×
                   </button>
@@ -925,8 +1066,8 @@ function App() {
                             key={r.key}
                             type="button"
                             className="erp-drawer-role-pill"
-                            onClick={async () => {
-                              await handleQuickLogin(r.key)
+                            onClick={() => {
+                              handleRoleSelect(r.key, expandedCategory)
                             }}
                           >
                             <span>{r.label}</span>

@@ -315,6 +315,116 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ status, notes }),
     }),
+  // 6b. Food Feedback & Mess Review
+  getMessMenu: (date) => request(`/hostel/mess-menu${date ? '?date=' + date : ''}`),
+  createFoodFeedback: (payload) =>
+    request('/hostel/food-feedback', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getFoodFeedback: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.mealDate) q.append('mealDate', params.mealDate);
+    if (params.mealType && params.mealType !== 'ALL') q.append('mealType', params.mealType);
+    if (params.category && params.category !== 'ALL') q.append('category', params.category);
+    if (params.status && params.status !== 'ALL') q.append('status', params.status);
+    if (params.hostel && params.hostel !== 'ALL') q.append('hostel', params.hostel);
+    if (params.rating) q.append('rating', String(params.rating));
+    if (params.search) q.append('search', params.search);
+    const qs = q.toString();
+    return request(`/hostel/food-feedback${qs ? '?' + qs : ''}`);
+  },
+  getMyFoodFeedback: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.mealDate) q.append('mealDate', params.mealDate);
+    if (params.mealType && params.mealType !== 'ALL') q.append('mealType', params.mealType);
+    if (params.category && params.category !== 'ALL') q.append('category', params.category);
+    if (params.status && params.status !== 'ALL') q.append('status', params.status);
+    if (params.rating) q.append('rating', String(params.rating));
+    const qs = q.toString();
+    return request(`/hostel/food-feedback/my${qs ? '?' + qs : ''}`);
+  },
+  getFoodFeedbackAnalytics: () => request('/hostel/food-feedback/analytics'),
+  getFoodFeedbackById: (id) => request(`/hostel/food-feedback/${id}`),
+  updateFoodFeedbackStatus: (id, payload) =>
+    request(`/hostel/food-feedback/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  respondToFoodFeedback: (id, payload) =>
+    request(`/hostel/food-feedback/${id}/response`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  addFoodFeedbackInternalNote: (id, note) =>
+    request(`/hostel/food-feedback/${id}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    }),
+  forwardFoodFeedback: (id, note) =>
+    request(`/hostel/food-feedback/${id}/forward`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    }),
+
+  // 6c. Room Cleanliness Complaints
+  lodgeCleanlinessComplaint: (payload) =>
+    request('/hostel/cleanliness-complaints', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getCleanlinessComplaints: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.hostel && params.hostel !== 'ALL') q.append('hostel', params.hostel);
+    if (params.category && params.category !== 'ALL') q.append('category', params.category);
+    if (params.priority && params.priority !== 'ALL') q.append('priority', params.priority);
+    if (params.status && params.status !== 'ALL') q.append('status', params.status);
+    if (params.roomNumber) q.append('roomNumber', params.roomNumber);
+    if (params.search) q.append('search', params.search);
+    const qs = q.toString();
+    return request(`/hostel/cleanliness-complaints${qs ? '?' + qs : ''}`);
+  },
+  getMyCleanlinessComplaints: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.category && params.category !== 'ALL') q.append('category', params.category);
+    if (params.priority && params.priority !== 'ALL') q.append('priority', params.priority);
+    if (params.status && params.status !== 'ALL') q.append('status', params.status);
+    const qs = q.toString();
+    return request(`/hostel/cleanliness-complaints/my${qs ? '?' + qs : ''}`);
+  },
+  getCleanlinessAnalytics: () => request('/hostel/cleanliness-complaints/analytics'),
+  getCleanlinessComplaintById: (id) => request(`/hostel/cleanliness-complaints/${id}`),
+  updateCleanlinessStatus: (id, payload) =>
+    request(`/hostel/cleanliness-complaints/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  addCleanlinessInternalNote: (id, note) =>
+    request(`/hostel/cleanliness-complaints/${id}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    }),
+  resolveCleanlinessComplaint: (id, payload) =>
+    request(`/hostel/cleanliness-complaints/${id}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  verifyCleanlinessComplaint: (id, payload) =>
+    request(`/hostel/cleanliness-complaints/${id}/verify`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  reopenCleanlinessComplaint: (id, payload) =>
+    request(`/hostel/cleanliness-complaints/${id}/reopen`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  escalateCleanlinessComplaint: (id, reason) =>
+    request(`/hostel/cleanliness-complaints/${id}/escalate`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
 
   // 7. Canteen
   getCanteenMenu: () => request('/canteen/menu'),

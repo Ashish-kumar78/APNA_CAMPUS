@@ -95,6 +95,7 @@ import HostelFeedbackSection from './hostel/HostelFeedbackSection.jsx';
 import HostelInspectionSection from './hostel/HostelInspectionSection.jsx';
 import HostelEmergencyContactsSection from './hostel/HostelEmergencyContactsSection.jsx';
 import HostelSettingsRulesSection from './hostel/HostelSettingsRulesSection.jsx';
+import HostelCleanlinessManagementSection from './hostel/HostelCleanlinessManagementSection.jsx';
 import WardenEmployeeProfile from './hostel/WardenEmployeeProfile.jsx';
 import HostelApplyLeaveModule from './hostel/HostelApplyLeaveModule.jsx';
 import TakeHostelAttendance from './hostel/TakeHostelAttendance.jsx';
@@ -216,6 +217,7 @@ export default function HostelPortal({ account, onLogout }) {
   const [adminActionTab, setAdminActionTab] = useState('NOTE'); // 'NOTE' | 'REASSIGN' | 'CLOSE'
   const [adminNoteInput, setAdminNoteInput] = useState('');
   const [adminReassignStaffInput, setAdminReassignStaffInput] = useState('Mr. Suresh Mohapatra (Plumber)');
+  const [complaintsSubTab, setComplaintsSubTab] = useState('maintenance'); // 'maintenance' | 'cleanliness'
 
   const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
   const [complaintForm, setComplaintForm] = useState({
@@ -1187,8 +1189,9 @@ export default function HostelPortal({ account, onLogout }) {
     {
       title: 'SERVICES & ASSETS',
       items: [
-        { id: 'mess-dining', label: 'Mess & Dining Menu', icon: Utensils },
-        { id: 'complaints', label: 'Room Complaints', icon: Wrench },
+        { id: 'mess-dining', label: 'Mess & Food Feedback', icon: Utensils },
+        { id: 'cleanliness-complaints', label: 'Room Cleanliness Complaints', icon: Sparkles },
+        { id: 'complaints', label: 'Room Maintenance Complaints', icon: Wrench },
         { id: 'inventory-assets', label: 'Furniture & Inventory', icon: Layers },
         { id: 'staff-mgmt', label: 'Warden & Caretaker Roster', icon: UsersRound },
       ]
@@ -1246,10 +1249,11 @@ export default function HostelPortal({ account, onLogout }) {
     {
       title: 'SERVICES & ASSETS',
       items: [
+        { id: 'cleanliness-complaints', label: 'Room Cleanliness Complaints & SLA', icon: Sparkles },
         { id: 'complaints', label: 'Maintenance Complaints & SLA', icon: Wrench },
         { id: 'inventory-assets', label: 'Furniture & Inventory Requisitions', icon: Layers },
         { id: 'staff-mgmt', label: 'Staff & Caretaker Roster', icon: UsersRound },
-        { id: 'mess-dining', label: 'Mess & Dining Management', icon: Utensils },
+        { id: 'mess-dining', label: 'Mess & Food Feedback Management', icon: Utensils },
         { id: 'fees-dues', label: 'Hostel Fee Ledger', icon: CreditCard },
       ]
     },
@@ -1379,6 +1383,11 @@ export default function HostelPortal({ account, onLogout }) {
         return {
           title: 'Mess Nutrition, Meal Count & Menu Management',
           subtitle: 'Weekly rotational student menu, meal reservations, and kitchen hygiene audit.'
+        };
+      case 'cleanliness-complaints':
+        return {
+          title: 'Hostel Room Cleanliness Complaint Management & SLA',
+          subtitle: 'Live housekeeping workflows, assigned wardens, cleaning verification, and student sign-offs.'
         };
       case 'inventory-assets':
         return {
@@ -2501,7 +2510,61 @@ export default function HostelPortal({ account, onLogout }) {
           {/* TAB 4: COMPLAINTS */}
           {activeTab === 'complaints' && (
             <div>
-              <div className="admin-view-header">
+              {/* Complaints Desk Sub-Tab Switcher */}
+              <div style={{ display: 'flex', gap: '0.6rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setComplaintsSubTab('maintenance')}
+                  style={{
+                    padding: '0.55rem 1.1rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: complaintsSubTab === 'maintenance' ? '#2563eb' : '#f1f5f9',
+                    color: complaintsSubTab === 'maintenance' ? '#ffffff' : '#475569',
+                    boxShadow: complaintsSubTab === 'maintenance' ? '0 4px 12px rgba(37, 99, 235, 0.25)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Wrench size={15} /> General Maintenance Complaints
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setComplaintsSubTab('cleanliness')}
+                  style={{
+                    padding: '0.55rem 1.1rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: complaintsSubTab === 'cleanliness' ? '#d97706' : '#f1f5f9',
+                    color: complaintsSubTab === 'cleanliness' ? '#ffffff' : '#475569',
+                    boxShadow: complaintsSubTab === 'cleanliness' ? '0 4px 12px rgba(217, 119, 6, 0.25)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Sparkles size={15} /> Room Cleanliness Complaints &amp; SLA
+                </button>
+              </div>
+
+              {complaintsSubTab === 'cleanliness' ? (
+                <HostelCleanlinessManagementSection
+                  isHostelAdmin={isHostelAdmin}
+                  currentWardenName={account?.name || (isHostelAdmin ? 'Hostel Administrator' : 'Mrs. Nibedita Das')}
+                  assignedHostel={account?.hostelName || (isHostelAdmin ? 'ALL' : 'Sarojini Girls Residence')}
+                />
+              ) : (
+                <>
+                  <div className="admin-view-header">
                 <div>
                   <h2>Resident Maintenance Complaints Desk &amp; SLA Monitoring</h2>
                   <p>72-hour automated SLA resolution tracker, auto-warden assignment, student verification, and admin escalation.</p>
@@ -2938,8 +3001,10 @@ export default function HostelPortal({ account, onLogout }) {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </>
           )}
+        </div>
+      )}
 
           {/* TAB 5: VISITORS */}
           {activeTab === 'visitors' && (
@@ -3531,7 +3596,20 @@ export default function HostelPortal({ account, onLogout }) {
 
           {/* TAB 12: MESS & DINING MANAGEMENT */}
           {activeTab === 'mess-dining' && (
-            <HostelMessSection />
+            <HostelMessSection
+              isHostelAdmin={isHostelAdmin}
+              currentOfficerName={account?.name || (isHostelAdmin ? 'Hostel Administrator' : 'Mrs. Nibedita Das')}
+              assignedHostel={account?.hostelName || (isHostelAdmin ? 'ALL' : 'Sarojini Girls Residence')}
+            />
+          )}
+
+          {/* TAB: ROOM CLEANLINESS COMPLAINTS */}
+          {activeTab === 'cleanliness-complaints' && (
+            <HostelCleanlinessManagementSection
+              isHostelAdmin={isHostelAdmin}
+              currentWardenName={account?.name || (isHostelAdmin ? 'Hostel Administrator' : 'Mrs. Nibedita Das')}
+              assignedHostel={account?.hostelName || (isHostelAdmin ? 'ALL' : 'Sarojini Girls Residence')}
+            />
           )}
 
           {/* TAB 13: MAINTENANCE & REPAIRS */}

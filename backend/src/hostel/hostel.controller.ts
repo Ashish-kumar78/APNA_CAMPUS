@@ -496,4 +496,294 @@ export class HostelController {
     const updated = await this.hostelService.verifyDocument(id, body.status, user.name, body.notes);
     return { success: true, message: `Document marked as ${body.status}.`, data: updated };
   }
+
+  // ==========================================
+  // 8. FOOD FEEDBACK & MESS CONTROLLER
+  // ==========================================
+  @Get('mess-menu')
+  @ApiOperation({ summary: 'Get daily mess nutrition schedule and menu' })
+  async getDailyMessMenu(@Query('date') date?: string) {
+    const data = await this.hostelService.getDailyMessMenu(date);
+    return { success: true, data };
+  }
+
+  @Post('food-feedback')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Submit student food feedback and meal rating' })
+  async createFoodFeedback(@CurrentUser() user: any, @Body() body: any) {
+    const data = await this.hostelService.createFoodFeedback(user, body);
+    return { success: true, message: 'Food feedback submitted successfully.', data };
+  }
+
+  @Get('food-feedback')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get food feedback list with filters and role access' })
+  async getFoodFeedback(@CurrentUser() user: any, @Query() query: any) {
+    const data = await this.hostelService.getFoodFeedback(user, query);
+    return { success: true, count: data.length, data };
+  }
+
+  @Get('food-feedback/my')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get student self food feedback history' })
+  async getMyFoodFeedback(@CurrentUser() user: any, @Query() query: any) {
+    const studentUser = { ...user, role: 'student' };
+    const data = await this.hostelService.getFoodFeedback(studentUser, query);
+    return { success: true, count: data.length, data };
+  }
+
+  @Get('food-feedback/analytics')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get institutional food feedback analytics and rating trends' })
+  async getFoodFeedbackAnalytics(@CurrentUser() user: any) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Administrator privileges required.');
+    }
+    const data = await this.hostelService.getFoodFeedbackAnalytics(user);
+    return { success: true, data };
+  }
+
+  @Get('food-feedback/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get food feedback details' })
+  async getFoodFeedbackById(@CurrentUser() user: any, @Param('id') id: string) {
+    const data = await this.hostelService.getFoodFeedbackById(id, user);
+    return { success: true, data };
+  }
+
+  @Patch('food-feedback/:id/status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update food feedback status, priority or assigned warden' })
+  async updateFoodFeedbackStatus(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { status: string; priority?: string; assignedWarden?: string }
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Only Warden or Admin can update status.');
+    }
+    const data = await this.hostelService.updateFoodFeedbackStatus(id, user, body.status, body.priority, body.assignedWarden);
+    return { success: true, message: 'Status updated.', data };
+  }
+
+  @Post('food-feedback/:id/response')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Provide student-visible official response to food feedback' })
+  async respondToFoodFeedback(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { response: string; correctiveAction?: string }
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Only Warden or Admin can respond.');
+    }
+    const data = await this.hostelService.respondToFoodFeedback(id, user, body.response, body.correctiveAction);
+    return { success: true, message: 'Response submitted to student.', data };
+  }
+
+  @Post('food-feedback/:id/notes')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add internal administrative note to food feedback' })
+  async addFoodFeedbackInternalNote(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { note: string }
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
+    const data = await this.hostelService.addFoodFeedbackInternalNote(id, user, body.note);
+    return { success: true, message: 'Internal note saved.', data };
+  }
+
+  @Post('food-feedback/:id/forward')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Forward food feedback to Hostel Admin for executive action' })
+  async forwardFoodFeedback(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { note?: string }
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
+    const data = await this.hostelService.forwardFoodFeedback(id, user, body.note);
+    return { success: true, message: 'Forwarded to Hostel Administrator.', data };
+  }
+
+  // ==========================================
+  // 9. ROOM CLEANLINESS COMPLAINTS CONTROLLER
+  // ==========================================
+  @Post('cleanliness-complaints')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Submit new hostel room cleanliness complaint' })
+  async lodgeCleanlinessComplaint(@CurrentUser() user: any, @Body() body: any) {
+    const data = await this.hostelService.lodgeCleanlinessComplaint(user, body);
+    return { success: true, message: `Cleanliness complaint #${data.complaintCode} lodged successfully.`, data };
+  }
+
+  @Get('cleanliness-complaints')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get cleanliness complaints with filters and role authorization' })
+  async getCleanlinessComplaints(@CurrentUser() user: any, @Query() query: any) {
+    const data = await this.hostelService.getCleanlinessComplaints(user, query);
+    return { success: true, count: data.length, data };
+  }
+
+  @Get('cleanliness-complaints/my')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get student own cleanliness complaints' })
+  async getMyCleanlinessComplaints(@CurrentUser() user: any, @Query() query: any) {
+    const studentUser = { ...user, role: 'student' };
+    const data = await this.hostelService.getCleanlinessComplaints(studentUser, query);
+    return { success: true, count: data.length, data };
+  }
+
+  @Get('cleanliness-complaints/analytics')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get cleanliness insights analytics across hostels' })
+  async getCleanlinessAnalytics(@CurrentUser() user: any) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Administrator privileges required.');
+    }
+    const data = await this.hostelService.getCleanlinessAnalytics(user);
+    return { success: true, data };
+  }
+
+  @Get('cleanliness-complaints/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get cleanliness complaint details and status history' })
+  async getCleanlinessComplaintById(@CurrentUser() user: any, @Param('id') id: string) {
+    const data = await this.hostelService.getCleanlinessComplaintById(id, user);
+    return { success: true, data };
+  }
+
+  @Patch('cleanliness-complaints/:id/status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update cleanliness complaint status and assignments' })
+  async updateCleanlinessStatus(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: any
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin', 'staff'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
+    const data = await this.hostelService.updateCleanlinessStatus(id, user, body);
+    return { success: true, message: `Status updated to ${body.status}.`, data };
+  }
+
+  @Post('cleanliness-complaints/:id/notes')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add internal housekeeping note to cleanliness complaint' })
+  async addCleanlinessInternalNote(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { note: string }
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin', 'staff'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
+    const data = await this.hostelService.addCleanlinessInternalNote(id, user, body.note);
+    return { success: true, message: 'Internal note saved.', data };
+  }
+
+  @Post('cleanliness-complaints/:id/resolve')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Warden or staff marks cleaning completed; moves to Awaiting Verification' })
+  async resolveCleanlinessComplaint(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { notes?: string; cleaningInstructions?: string }
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin', 'staff'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
+    const data = await this.hostelService.resolveCleanlinessComplaint(id, user, body);
+    return { success: true, message: 'Work marked completed. Submitted for student verification.', data };
+  }
+
+  @Post('cleanliness-complaints/:id/verify')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Student verifies room cleanliness (Resolved) or marks unresolved (Reopened)' })
+  async verifyCleanlinessComplaint(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { result: 'Confirmed Cleaned' | 'Unresolved'; rating?: number; feedback?: string; reason?: string }
+  ) {
+    const data = await this.hostelService.verifyCleanlinessComplaint(id, user, body);
+    return {
+      success: true,
+      message: body.result === 'Confirmed Cleaned' ? 'Thank you! Complaint marked as Resolved.' : 'Complaint has been reopened for further action.',
+      data
+    };
+  }
+
+  @Post('cleanliness-complaints/:id/reopen')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reopen cleanliness complaint with reason' })
+  async reopenCleanlinessComplaint(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { reason: string; attachmentUrl?: string }
+  ) {
+    const data = await this.hostelService.reopenCleanlinessComplaint(id, user, body);
+    return { success: true, message: 'Complaint reopened successfully.', data };
+  }
+
+  @Post('cleanliness-complaints/:id/escalate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Escalate cleanliness complaint to Hostel Administrator' })
+  async escalateCleanlinessComplaint(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { reason: string }
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel', 'warden', 'admin', 'super_admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
+    const data = await this.hostelService.escalateCleanlinessComplaint(id, user, body.reason);
+    return { success: true, message: 'Complaint escalated to Hostel Administrator.', data };
+  }
+
 }

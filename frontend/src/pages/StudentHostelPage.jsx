@@ -25,7 +25,10 @@ import {
   Eye,
   Info,
   Building,
-  Printer
+  Printer,
+  Settings,
+  Utensils,
+  Sparkles
 } from 'lucide-react';
 import './StudentHostelPage.css';
 import { initialStudentHostelDetail, initialHostelComplaints } from '../data/collegeData.js';
@@ -40,6 +43,10 @@ import {
   createResidentLeave
 } from '../services/hostelResidentLeaveStore.js';
 import { getActiveStudent } from '../services/studentStore.js';
+import HostelSettingsRulesSection from '../components/hostel/HostelSettingsRulesSection.jsx';
+import StudentFoodFeedbackSection from '../components/hostel/StudentFoodFeedbackSection.jsx';
+import StudentCleanlinessSection from '../components/hostel/StudentCleanlinessSection.jsx';
+
 
 import { api } from '../services/api.js';
 import { getStudentRulesList, subscribeHostelRules } from '../services/hostelRulesStore.js';
@@ -561,6 +568,71 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
               {rejectedLeavesCount} Notice
             </span>
           )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('rules')}
+          style={{
+            padding: '0.6rem 1.2rem',
+            borderRadius: '10px',
+            border: 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: activeSubTab === 'rules' ? '#2563eb' : '#f1f5f9',
+            color: activeSubTab === 'rules' ? '#ffffff' : '#475569',
+            boxShadow: activeSubTab === 'rules' ? '0 4px 12px rgba(37, 99, 235, 0.25)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Settings size={17} /> Hostel Rules &amp; Curfew
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('food-feedback')}
+          style={{
+            padding: '0.6rem 1.2rem',
+            borderRadius: '10px',
+            border: 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: activeSubTab === 'food-feedback' ? '#059669' : '#f1f5f9',
+            color: activeSubTab === 'food-feedback' ? '#ffffff' : '#475569',
+            boxShadow: activeSubTab === 'food-feedback' ? '0 4px 12px rgba(5, 150, 105, 0.25)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Utensils size={17} /> Food Feedback
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('cleanliness')}
+          style={{
+            padding: '0.6rem 1.2rem',
+            borderRadius: '10px',
+            border: 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: activeSubTab === 'cleanliness' ? '#d97706' : '#f1f5f9',
+            color: activeSubTab === 'cleanliness' ? '#ffffff' : '#475569',
+            boxShadow: activeSubTab === 'cleanliness' ? '0 4px 12px rgba(217, 119, 6, 0.25)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Sparkles size={17} /> Room Cleanliness Complaints
         </button>
       </div>
 
@@ -1132,6 +1204,12 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
             </div>
           )}
         </div>
+      ) : activeSubTab === 'rules' ? (
+        <HostelSettingsRulesSection isHostelAdmin={false} />
+      ) : activeSubTab === 'food-feedback' ? (
+        <StudentFoodFeedbackSection />
+      ) : activeSubTab === 'cleanliness' ? (
+        <StudentCleanlinessSection />
       ) : (
         <>
           {/* Header */}

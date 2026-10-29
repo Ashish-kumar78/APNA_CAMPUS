@@ -135,6 +135,8 @@ const studentNavSections = [
     title: 'CAMPUS',
     items: [
       { label: 'Hostel Residence', icon: Building2, page: 'hostel' },
+      { label: 'Food Feedback', icon: Utensils, page: 'food-feedback' },
+      { label: 'Room Cleanliness', icon: Sparkles, page: 'cleanliness-complaints' },
       { label: 'Library', icon: LibraryBig, page: 'library' },
       { label: 'Self Development & Placement', icon: TrendingUp, page: 'placement' },
       { label: 'Internship', icon: Briefcase, page: 'internship' },
@@ -724,6 +726,8 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'marks' && <MarksPage initialRole="student" />}
               {activePage === 'hostel' && <StudentHostelPage defaultTab="overview" />}
               {activePage === 'gate-pass' && <StudentHostelPage defaultTab="gate-pass" />}
+              {activePage === 'food-feedback' && <StudentHostelPage defaultTab="food-feedback" />}
+              {activePage === 'cleanliness-complaints' && <StudentHostelPage defaultTab="cleanliness" />}
               {activePage === 'fees' && <FeesPage />}
               {activePage === 'canteen' && <CanteenPage account={account} />}
               {activePage === 'attendance' && <AttendancePage />}

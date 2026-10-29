@@ -602,6 +602,14 @@ model HostelComplaint {
   feedbackResolved   Boolean?
   feedbackAdminComments String? @db.Text
   feedbackSubmittedAt DateTime?
+  block                 String?
+  floor                 String?
+  preferredTime         String?
+  internalNotes         String?   @db.Text
+  cleaningInstructions  String?   @db.Text
+  rejectionReason       String?
+  resolvedBy            String?
+  studentVerificationResult String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -625,6 +633,56 @@ model HostelVisitor {
   passNumber  String   @unique
   purpose     String
   createdAt   DateTime @default(now())
+}
+
+model FoodFeedback {
+  id                   String    @id @default(cuid())
+  feedbackCode         String    @unique
+  studentId            String?
+  studentName          String
+  rollNumber           String
+  hostelId             String?
+  hostelName           String
+  mealDate             String
+  mealType             String    // Breakfast, Lunch, Evening Snacks, Dinner
+  foodItems            String
+  qualityRating        Int       @default(5)
+  tasteRating          Int       @default(5)
+  temperatureRating    Int       @default(5)
+  hygieneRating        Int       @default(5)
+  quantity             String    @default("Appropriate")
+  overallRating        Int       @default(5)
+  category             String    @default("Taste")
+  comments             String?   @db.Text
+  status               String    @default("Submitted")
+  priority             String    @default("Normal")
+  assignedWarden       String?
+  internalNotes        String?   @db.Text
+  response             String?   @db.Text
+  respondedBy          String?
+  respondedAt          DateTime?
+  correctiveAction     String?   @db.Text
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([rollNumber])
+  @@index([hostelName])
+  @@index([mealDate])
+  @@index([status])
+}
+
+model MessMenuSchedule {
+  id          String   @id @default(cuid())
+  dayOfWeek   String
+  mealType    String
+  items       String   @db.Text
+  timing      String
+  calories    String?
+  hostel      String?  @default("All Hostels")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([dayOfWeek, mealType])
 }
 
 model FoodItem {

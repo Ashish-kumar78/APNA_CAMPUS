@@ -197,4 +197,23 @@ describe('Apna Campus ERP - Admissions, Activation & RBAC Isolation Suite', () =
       expect(updatedHistory[2].semester).toBe('Semester 3');
     });
   });
+
+  describe('Admissions Portal Overview Dashboard Integration', () => {
+    it('verifies Admissions Portal includes OVERVIEW section with Admissions Dashboard and RoleDashboardLanding integration', async () => {
+      const fsMod = await import('fs');
+      const portalCode = fsMod.readFileSync('src/components/AdmissionsPortal.jsx', 'utf8');
+
+      // OVERVIEW section exists with Admissions Dashboard & Home icon
+      expect(portalCode).toContain("title: 'OVERVIEW'");
+      expect(portalCode).toContain("{ id: 'dashboard', label: 'Admissions Dashboard', icon: Home }");
+
+      // Renders RoleDashboardLanding with admissions roleKey
+      expect(portalCode).toContain('<RoleDashboardLanding');
+      expect(portalCode).toContain('roleKey="admissions"');
+
+      // Admissions Command mapped under ADMISSIONS PIPELINE
+      expect(portalCode).toContain("id: 'admissions_command', label: 'Admissions Command'");
+      expect(portalCode).toContain("activeView === 'admissions_command'");
+    });
+  });
 });

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from './Navigation';
 import {
+  Home,
   Users,
   UserCheck,
   CheckCircle2,
@@ -191,10 +192,16 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
   // 16 Sidebar Modules organized into 5 Collapsible Groups
   const admissionsNavSections = [
     {
+      title: 'OVERVIEW',
+      items: [
+        { id: 'dashboard', label: 'Admissions Dashboard', icon: Home },
+      ],
+    },
+    {
       title: 'ADMISSIONS PIPELINE',
       collapsible: true,
       items: [
-        { id: 'dashboard', label: 'Admissions Command', icon: GraduationCap },
+        { id: 'admissions_command', label: 'Admissions Command', icon: GraduationCap },
         { id: 'applicants', label: 'Applicant Registry', icon: Users, badge: `${applicants.length}` },
         { id: 'seat_matrix', label: 'Seat Matrix & Vacancy', icon: Layers, badge: '80 Vacant' },
       ],
@@ -241,6 +248,11 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
   const getAdmissionsHeading = () => {
     switch (activeView) {
       case 'dashboard':
+        return {
+          title: 'Admissions Officer Executive Dashboard',
+          subtitle: 'Institutional admissions intake, student registration metrics, counseling rounds, and holiday schedules.',
+        };
+      case 'admissions_command':
         return {
           title: 'Admissions Cell & Enrollment Directorate',
           subtitle: 'Executive command console, prospective student intake, and real-time admission progress.',
@@ -373,9 +385,32 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         )}
 
         {/* ======================================================== */}
-        {/* TAB 1: ADMISSIONS COMMAND EXECUTIVE DASHBOARD            */}
+        {/* TAB 0: ADMISSIONS EXECUTIVE DASHBOARD (ROLE LANDING)     */}
         {/* ======================================================== */}
         {activeView === 'dashboard' && (
+          <RoleDashboardLanding
+            roleKey="admissions"
+            account={account}
+            onLogout={onLogout}
+            onSwitchRole={onSwitchRole}
+            onNavigateTab={(target) => {
+              if (target === 'applicants' || target === 'review') setActiveView('applicants');
+              else if (target === 'seat_matrix' || target === 'seats') setActiveView('seat_matrix');
+              else if (target === 'app_processing') setActiveView('app_processing');
+              else if (target === 'doc_verification' || target === 'verify') setActiveView('doc_verification');
+              else if (target === 'counselling_allotment' || target === 'allotment') setActiveView('counselling_allotment');
+              else if (target === 'fee_verification' || target === 'fees') setActiveView('fee_verification');
+              else if (target === 'command' || target === 'admissions_command') setActiveView('admissions_command');
+              else if (target === 'calendar' || target === 'deadlines') setActiveView('calendar_config');
+              else if (target) setActiveView(target);
+            }}
+          />
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 1: ADMISSIONS COMMAND EXECUTIVE DASHBOARD            */}
+        {/* ======================================================== */}
+        {activeView === 'admissions_command' && (
           <AdmissionsCommandTab
             courses={courses}
             applicants={applicants}

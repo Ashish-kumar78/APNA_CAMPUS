@@ -612,6 +612,9 @@ describe('Hostel Administrator & Warden Supervisory Management Store', () => {
     const fsMod = await import('fs');
     const studentCode = fsMod.readFileSync('src/pages/StudentHostelPage.jsx', 'utf8');
 
+    // Ensure useMemo is imported from react
+    expect(studentCode).toMatch(/import\s+React,\s*\{[^}]*\buseMemo\b[^}]*\}\s+from\s+['"]react['"]/);
+
     // Ensure StudentHostelPage has defensive render for string and object rules
     expect(studentCode).toContain("typeof rule === 'string'");
 

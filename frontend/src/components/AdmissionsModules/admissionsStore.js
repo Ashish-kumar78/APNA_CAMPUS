@@ -13,6 +13,8 @@ import {
   INITIAL_COMMUNICATION_LOGS,
   EXECUTIVE_KPI,
 } from './admissionsData.js';
+import { api } from '../../services/api.js';
+import { saveStudent } from '../../services/studentStore.js';
 
 const STORAGE_KEYS = {
   COURSES: 'apna_admissions_courses_v1',
@@ -386,13 +388,16 @@ class AdmissionsStore {
     const app = this.getApplicantById(appId);
     if (!app) return { success: false, message: 'Applicant not found' };
 
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const assignedRoll = rollNumber || `26${app.courseCode?.slice(-3) || 'ENG'}${randomSuffix.toString().slice(-3)}`;
-    const studentId = `260520${randomSuffix}`;
-    const activationToken = `ACT-2026-${randomSuffix}-Z${Math.floor(100 + Math.random() * 900)}`;
+    const deptCode = (app.courseCode || 'CSE').replace(/[^A-Z0-9]/g, '');
+    const randomSuffix = Math.floor(100 + Math.random() * 900);
+    const assignedRoll = rollNumber || `26${deptCode.slice(-3) || 'CSE'}${randomSuffix}`;
+    const studentId = `STU-26-${randomSuffix}`;
+    const permanentRegNo = `AC/2026/${deptCode}/000${randomSuffix}`;
+    const activationToken = `ACT-2026-${randomSuffix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
     const enrollmentRecord = {
       studentId,
+      registrationNumber: permanentRegNo,
       rollNumber: assignedRoll,
       section: section || 'Section A',
       date: new Date().toLocaleDateString('en-GB'),
@@ -403,8 +408,57 @@ class AdmissionsStore {
 
     this.updateApplicant(appId, {
       admissionStatus: 'Enrolled',
+      permanentRegistrationNo: permanentRegNo,
       enrollmentRecord,
     });
+
+    // Provision canonical Student record in central studentStore
+    try {
+      saveStudent({
+        id: `std-${randomSuffix}`,
+        name: app.name,
+        email: app.email,
+        phone: app.phone,
+        gender: app.gender || 'Female',
+        role: 'student',
+        registrationNumber: permanentRegNo,
+        rollNumber: assignedRoll,
+        studentId,
+        department: app.appliedCourse || 'Computer Science & Engineering',
+        deptCode: deptCode,
+        semester: 'Semester 1',
+        section: section || 'Section A',
+        academicYear: '2026-27',
+        status: 'Active',
+        defaultPassword: 'Apna@' + new Date().getFullYear(),
+        category: app.category || 'General',
+        attendance: 100,
+        cgpa: 0.0,
+        walletBalance: 500.0,
+        hostelName: app.hostel ? 'Gandhi Boys Residence' : null,
+      });
+    } catch (err) {
+      console.warn('Local studentStore provisioning fallback:', err.message);
+    }
+
+    // Asynchronously synchronize with Backend REST API
+    try {
+      api.approveAndEnrollApplicant(appId).then((apiRes) => {
+        if (apiRes && apiRes.success && apiRes.data) {
+          this.updateApplicant(appId, {
+            permanentRegistrationNo: apiRes.data.registrationNumber,
+            enrollmentRecord: {
+              ...enrollmentRecord,
+              registrationNumber: apiRes.data.registrationNumber,
+              rollNumber: apiRes.data.rollNumber,
+              activationToken: apiRes.data.activationToken,
+            },
+          });
+        }
+      }).catch((e) => {
+        console.warn('Backend API enrollment background sync:', e.message);
+      });
+    } catch (e) {}
 
     // Update confirmed admissions count for course
     const course = this.courses.find((c) => c.code === app.courseCode || c.name === app.appliedCourse);
@@ -428,6 +482,7 @@ class AdmissionsStore {
       success: true,
       data: {
         name: app.name,
+        registrationNumber: permanentRegNo,
         rollNumber: assignedRoll,
         studentId,
         department: app.appliedCourse,

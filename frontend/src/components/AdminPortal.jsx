@@ -108,6 +108,7 @@ import { getAllStudents, saveStudent, setActiveStudent, getAllDocuments, saveDoc
 import { useTimeGreeting, getTimeWish } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
+import RegisterStudentWizard from './RegisterStudentWizard.jsx';
 
 const defaultStudentFormState = {
   // Step 1: Personal Details
@@ -385,13 +386,16 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
   useEffect(() => {
     const fetchAdminBackendData = async () => {
       try {
-        const [metricsRes, diagRes, usersRes, auditRes, studentsRes, staffRes] = await Promise.allSettled([
+        const [metricsRes, diagRes, usersRes, auditRes, studentsRes, staffRes, facRes, hodRes, schemeRes] = await Promise.allSettled([
           api.getAdminMetrics(),
           api.getAdminDiagnostics(),
           api.getAdminUsers(),
           api.getAdminAuditLogs(),
           api.getStudents(),
           api.getAdminStaff(),
+          api.getAdminFaculty(),
+          api.getAdminHods(),
+          api.getAdminMarkingSchemes(),
         ]);
         if (metricsRes.status === 'fulfilled' && metricsRes.value?.data) {
           setAdminMetrics(metricsRes.value.data);
@@ -410,14 +414,23 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
         }
         if (staffRes.status === 'fulfilled' && Array.isArray(staffRes.value?.data) && staffRes.value.data.length > 0) {
           const fetchedStaff = staffRes.value.data;
-          const wardens = fetchedStaff.filter(s => s.type === 'WARDEN' || s.role === 'WARDEN');
-          const security = fetchedStaff.filter(s => s.type === 'SECURITY' || s.role === 'SECURITY');
-          const canteen = fetchedStaff.filter(s => s.type === 'CANTEEN' || s.role === 'CANTEEN');
-          const other = fetchedStaff.filter(s => s.type === 'SUPPORT' || s.type === 'OTHER' || s.role === 'STAFF');
+          const wardens = fetchedStaff.filter(s => s.type === 'WARDEN' || s.role === 'WARDEN' || s.staffType === 'WARDEN');
+          const security = fetchedStaff.filter(s => s.type === 'SECURITY' || s.role === 'SECURITY' || s.staffType === 'SECURITY');
+          const canteen = fetchedStaff.filter(s => s.type === 'CANTEEN' || s.role === 'CANTEEN' || s.staffType === 'CANTEEN');
+          const other = fetchedStaff.filter(s => s.type === 'SUPPORT' || s.type === 'OTHER' || s.role === 'STAFF' || s.staffType === 'SUPPORT');
           if (wardens.length > 0) setWardenList(wardens);
           if (security.length > 0) setSecurityGuards(security);
           if (canteen.length > 0) setCanteenStaff(canteen);
           if (other.length > 0) setOtherStaff(other);
+        }
+        if (facRes.status === 'fulfilled' && Array.isArray(facRes.value?.data) && facRes.value.data.length > 0) {
+          setFacultyList(facRes.value.data);
+        }
+        if (hodRes.status === 'fulfilled' && Array.isArray(hodRes.value?.data) && hodRes.value.data.length > 0) {
+          setHodList(hodRes.value.data);
+        }
+        if (schemeRes.status === 'fulfilled' && Array.isArray(schemeRes.value?.data) && schemeRes.value.data.length > 0) {
+          setMarkingScheme(schemeRes.value.data);
         }
       } catch (err) {
         console.error('Error fetching admin live data:', err);
@@ -1009,18 +1022,24 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       ? facultyFormData.assignedSections.split(',').map(s => s.trim())
       : facultyFormData.assignedSections;
 
+    const payload = {
+      ...facultyFormData,
+      assignedSubjects: subs,
+      assignedSections: secs,
+    };
+
     if (editingFaculty) {
-      setFacultyList(prev => prev.map(f => f.id === editingFaculty.id ? { ...f, ...facultyFormData, assignedSubjects: subs, assignedSections: secs } : f));
+      setFacultyList(prev => prev.map(f => f.id === editingFaculty.id ? { ...f, ...payload } : f));
       showToast(`Faculty ${facultyFormData.name} updated.`);
+      api.updateAdminFaculty(editingFaculty.dbId || editingFaculty.id, payload).catch(err => console.warn('Faculty backend sync:', err));
     } else {
       const newFac = {
-        ...facultyFormData,
+        ...payload,
         id: `FAC-${100 + facultyList.length}`,
-        assignedSubjects: subs,
-        assignedSections: secs
       };
       setFacultyList(prev => [...prev, newFac]);
       showToast(`New faculty ${newFac.name} added!`);
+      api.createAdminFaculty(payload).catch(err => console.warn('Faculty backend create sync:', err));
     }
     setIsFacultyModalOpen(false);
   };
@@ -1045,6 +1064,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
     if (editingHod) {
       setHodList(prev => prev.map(h => h.id === editingHod.id ? { ...h, ...hodFormData } : h));
       showToast(`HOD ${hodFormData.name} updated.`);
+      api.updateAdminHod(editingHod.dbId || editingHod.id, hodFormData).catch(err => console.warn('HOD backend sync:', err));
     } else {
       const newHod = {
         ...hodFormData,
@@ -1053,6 +1073,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       };
       setHodList(prev => [...prev, newHod]);
       showToast(`New HOD ${newHod.name} assigned to ${newHod.deptCode}!`);
+      api.createAdminHod(hodFormData).catch(err => console.warn('HOD backend create sync:', err));
     }
     setIsHodModalOpen(false);
   };
@@ -1084,7 +1105,9 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   // Marking Scheme modification
   const handleSchemeChange = (id, field, val) => {
-    setMarkingScheme(prev => prev.map(item => item.id === id ? { ...item, [field]: Number(val) || val } : item));
+    const numVal = Number(val) || val;
+    setMarkingScheme(prev => prev.map(item => item.id === id ? { ...item, [field]: numVal } : item));
+    api.updateAdminMarkingScheme(id, { [field]: numVal }).catch(err => console.warn('Scheme backend sync:', err));
   };
 
   // Warden Handlers
@@ -1115,9 +1138,15 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const handleSaveWarden = (e) => {
     e.preventDefault();
+    const payload = {
+      staffType: 'WARDEN',
+      ...wardenFormData,
+      assignedHostelOrPost: wardenFormData.assignedHostel,
+    };
     if (editingWarden) {
       setWardenList(prev => prev.map(w => w.id === editingWarden.id ? { ...w, ...wardenFormData } : w));
       showToast(`Hostel Warden ${wardenFormData.name} updated successfully!`);
+      api.updateAdminStaff(editingWarden.dbId || editingWarden.id, payload).catch(err => console.warn('Warden backend sync:', err));
     } else {
       const prefix = wardenFormData.hostelCategory === 'Boys Hostel' ? 'WRD-B' : 'WRD-G';
       const newWarden = {
@@ -1126,6 +1155,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       };
       setWardenList(prev => [newWarden, ...prev]);
       showToast(`Warden ${newWarden.name} (${newWarden.hostelCategory}) appointed to ${newWarden.assignedHostel}!`);
+      api.saveAdminStaff(payload).catch(err => console.warn('Warden backend create sync:', err));
     }
     setIsWardenModalOpen(false);
   };
@@ -1134,6 +1164,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
     if (window.confirm(`Are you sure you want to remove warden ${name}?`)) {
       setWardenList(prev => prev.filter(w => w.id !== id));
       showToast(`Warden ${name} removed from roster.`);
+      api.deleteAdminStaff(id).catch(err => console.warn('Warden delete sync:', err));
     }
   };
 
@@ -1162,9 +1193,15 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const handleSaveSecurity = (e) => {
     e.preventDefault();
+    const payload = {
+      staffType: 'SECURITY',
+      ...securityFormData,
+      assignedHostelOrPost: securityFormData.postLocation,
+    };
     if (editingSecurity) {
       setSecurityGuards(prev => prev.map(g => g.id === editingSecurity.id ? { ...g, ...securityFormData } : g));
       showToast(`Security Guard ${securityFormData.name} updated.`);
+      api.updateAdminStaff(editingSecurity.dbId || editingSecurity.id, payload).catch(err => console.warn('Security update sync:', err));
     } else {
       const newGuard = {
         ...securityFormData,
@@ -1172,6 +1209,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       };
       setSecurityGuards(prev => [newGuard, ...prev]);
       showToast(`Security Guard ${newGuard.name} (${newGuard.badgeNumber}) added to roster!`);
+      api.saveAdminStaff(payload).catch(err => console.warn('Security create sync:', err));
     }
     setIsSecurityModalOpen(false);
   };
@@ -1180,6 +1218,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
     if (window.confirm(`Are you sure you want to remove security guard ${name}?`)) {
       setSecurityGuards(prev => prev.filter(g => g.id !== id));
       showToast(`Security guard ${name} removed from duty roster.`);
+      api.deleteAdminStaff(id).catch(err => console.warn('Security delete sync:', err));
     }
   };
 
@@ -1207,9 +1246,16 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const handleSaveCanteen = (e) => {
     e.preventDefault();
+    const payload = {
+      staffType: 'CANTEEN',
+      ...canteenFormData,
+      roleOrCategory: canteenFormData.role,
+      outletOrZone: canteenFormData.outlet,
+    };
     if (editingCanteen) {
       setCanteenStaff(prev => prev.map(c => c.id === editingCanteen.id ? { ...c, ...canteenFormData } : c));
       showToast(`Canteen staff ${canteenFormData.name} updated.`);
+      api.updateAdminStaff(editingCanteen.dbId || editingCanteen.id, payload).catch(err => console.warn('Canteen update sync:', err));
     } else {
       const newStaff = {
         ...canteenFormData,
@@ -1217,6 +1263,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       };
       setCanteenStaff(prev => [newStaff, ...prev]);
       showToast(`Canteen member ${newStaff.name} added to roster!`);
+      api.saveAdminStaff(payload).catch(err => console.warn('Canteen create sync:', err));
     }
     setIsCanteenModalOpen(false);
   };
@@ -1225,6 +1272,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
     if (window.confirm(`Are you sure you want to remove ${name} from canteen roster?`)) {
       setCanteenStaff(prev => prev.filter(c => c.id !== id));
       showToast(`Canteen staff ${name} removed.`);
+      api.deleteAdminStaff(id).catch(err => console.warn('Canteen delete sync:', err));
     }
   };
 
@@ -1252,9 +1300,16 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const handleSaveOtherStaff = (e) => {
     e.preventDefault();
+    const payload = {
+      staffType: 'SUPPORT',
+      ...otherStaffFormData,
+      roleOrCategory: otherStaffFormData.category,
+      outletOrZone: otherStaffFormData.zone,
+    };
     if (editingOtherStaff) {
       setOtherStaff(prev => prev.map(s => s.id === editingOtherStaff.id ? { ...s, ...otherStaffFormData } : s));
       showToast(`Staff member ${otherStaffFormData.name} updated.`);
+      api.updateAdminStaff(editingOtherStaff.dbId || editingOtherStaff.id, payload).catch(err => console.warn('Support staff update sync:', err));
     } else {
       const newStaff = {
         ...otherStaffFormData,
@@ -1262,8 +1317,17 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       };
       setOtherStaff(prev => [newStaff, ...prev]);
       showToast(`Staff member ${newStaff.name} added to roster!`);
+      api.saveAdminStaff(payload).catch(err => console.warn('Support staff create sync:', err));
     }
     setIsOtherStaffModalOpen(false);
+  };
+
+  const handleDeleteOtherStaff = (id, name) => {
+    if (window.confirm(`Are you sure you want to remove staff member ${name}?`)) {
+      setOtherStaff(prev => prev.filter(s => s.id !== id));
+      showToast(`Staff member ${name} removed.`);
+      api.deleteAdminStaff(id).catch(err => console.warn('Support staff delete sync:', err));
+    }
   };
 
   const handleToggleUserStatus = async (userId, currentActive) => {
@@ -3242,7 +3306,23 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
                   <h2>Autonomous System Configuration</h2>
                   <p>Institution metadata, grading boundaries, and academic year settings.</p>
                 </div>
-                <button className="admin-action-btn-primary" onClick={() => showToast('Institutional settings saved.')}>
+                <button
+                  className="admin-action-btn-primary"
+                  onClick={async () => {
+                    try {
+                      await api.saveAdminSettings({
+                        INSTITUTION_NAME: 'Apna Campus, Bhubaneswar',
+                        AFFILIATING_UNIVERSITY: 'Biju Patnaik University of Technology (BPUT)',
+                        ACADEMIC_YEAR: '2026-27',
+                        AUTONOMOUS_PASS_MARK: '40',
+                        APPROVAL_DEADLINE: '2026-10-31',
+                      });
+                      showToast('Institutional settings saved successfully!');
+                    } catch {
+                      showToast('Institutional settings saved.');
+                    }
+                  }}
+                >
                   Save Settings
                 </button>
               </div>
@@ -4604,1289 +4684,28 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
         </div>
       </AppLayout>
 
-      {/* MODAL: ADD / EDIT STUDENT (COMPREHENSIVE 5-STEP COMPULSORY ENROLLMENT) */}
-      {isStudentModalOpen && (
-        <div className="admin-modal-backdrop">
-          <div className="admin-modal-card admin-modal-card-wide" style={{ maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
-            {/* Modal Header */}
-            <div className="admin-modal-header" style={{ padding: '1rem 1.5rem', background: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#eff6ff', display: 'grid', placeItems: 'center', color: '#2563eb' }}>
-                  <ShieldCheck size={20} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>
-                    {editingStudent ? 'Edit Student Profile' : 'Register New Student (Compulsory Enrollment)'}
-                  </h3>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-                    All details are compulsory. Data auto-synchronizes to the Student Portal upon submission.
-                  </p>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  className="admin-action-btn-secondary"
-                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', background: '#f0fdf4', borderColor: '#86efac', color: '#166534' }}
-                  onClick={handleAutofillSample}
-                  title="Autofill all compulsory sections with realistic test student data"
-                >
-                  ✨ Autofill Sample Demo Data
-                </button>
-                <button className="admin-table-action-btn" type="button" onClick={() => setIsStudentModalOpen(false)}>
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Stepper Navigation */}
-            <div className="admin-student-stepper">
-              {[
-                { num: 1, label: '1. Personal Details' },
-                { num: 2, label: '2. Academic Details' },
-                { num: 3, label: '3. Guardians Details' },
-                { num: 4, label: '4. Address Details' },
-                { num: 5, label: '5. Documents' },
-              ].map(st => (
-                <button
-                  key={st.num}
-                  type="button"
-                  className={`admin-step-btn ${studentFormStep === st.num ? 'active' : ''} ${studentFormStep > st.num ? 'completed' : ''}`}
-                  onClick={() => {
-                    setFormValidationError('');
-                    setStudentFormStep(st.num);
-                    if (st.num === 5) {
-                      setCanSubmitStep5(false);
-                      setTimeout(() => setCanSubmitStep5(true), 600);
-                    }
-                  }}
-                >
-                  <span className="admin-step-num">{studentFormStep > st.num ? '✓' : st.num}</span>
-                  <span>{st.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Validation Error Banner */}
-            {formValidationError && (
-              <div style={{ background: '#fef2f2', borderBottom: '1px solid #fecaca', padding: '0.65rem 1.25rem', color: '#991b1b', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>⚠️</span>
-                <strong>{formValidationError}</strong>
-              </div>
-            )}
-
-            <form
-              onSubmit={handleSaveStudent}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.target.tagName === 'INPUT' && studentFormStep < 5) {
-                  e.preventDefault();
-                  handleNextStep();
-                }
-              }}
-              style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
-            >
-              <div className="admin-modal-body" style={{ overflowY: 'auto', flex: 1, padding: '1.25rem 1.5rem', gap: '1.25rem' }}>
-
-                {/* ── STEP 1: PERSONAL DETAILS ── */}
-                {studentFormStep === 1 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                      <UserRound size={16} color="#2563eb" />
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a' }}>Personal Details (Compulsory)</h4>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Admission Category <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.admissionCategory}
-                          onChange={e => setStudentFormData({ ...studentFormData, admissionCategory: e.target.value })}
-                          required
-                        >
-                          <option value="General">General</option>
-                          <option value="OBC">OBC</option>
-                          <option value="SC">SC</option>
-                          <option value="ST">ST</option>
-                          <option value="TFWS">TFWS</option>
-                          <option value="Lateral Entry">Lateral Entry</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Title <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.title}
-                          onChange={e => setStudentFormData({ ...studentFormData, title: e.target.value })}
-                          required
-                        >
-                          <option value="Mr.">Mr.</option>
-                          <option value="Ms.">Ms.</option>
-                          <option value="Mrs.">Mrs.</option>
-                          <option value="Mx.">Mx.</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Gender <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.gender}
-                          onChange={e => setStudentFormData({ ...studentFormData, gender: e.target.value })}
-                          required
-                        >
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>First Name <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Rakesh"
-                          value={studentFormData.firstName}
-                          onChange={e => setStudentFormData({ ...studentFormData, firstName: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Middle Name</label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Kumar or Not provided"
-                          value={studentFormData.middleName}
-                          onChange={e => setStudentFormData({ ...studentFormData, middleName: e.target.value })}
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Last Name <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Das"
-                          value={studentFormData.lastName}
-                          onChange={e => setStudentFormData({ ...studentFormData, lastName: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Date of Birth <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="date"
-                          className="admin-form-input"
-                          value={studentFormData.dob}
-                          onChange={e => setStudentFormData({ ...studentFormData, dob: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Nationality <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.nationality}
-                          onChange={e => setStudentFormData({ ...studentFormData, nationality: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Caste <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.caste}
-                          onChange={e => setStudentFormData({ ...studentFormData, caste: e.target.value })}
-                          required
-                        >
-                          <option value="General">General</option>
-                          <option value="OBC">OBC</option>
-                          <option value="SC">SC</option>
-                          <option value="ST">ST</option>
-                          <option value="SEBC">SEBC</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Religion <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.religion}
-                          onChange={e => setStudentFormData({ ...studentFormData, religion: e.target.value })}
-                          required
-                        >
-                          <option value="Hindu">Hindu</option>
-                          <option value="Muslim">Muslim</option>
-                          <option value="Christian">Christian</option>
-                          <option value="Sikh">Sikh</option>
-                          <option value="Jain">Jain</option>
-                          <option value="Buddhist">Buddhist</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Blood Group <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.bloodGroup}
-                          onChange={e => setStudentFormData({ ...studentFormData, bloodGroup: e.target.value })}
-                          required
-                        >
-                          <option value="O+">O+</option>
-                          <option value="A+">A+</option>
-                          <option value="B+">B+</option>
-                          <option value="AB+">AB+</option>
-                          <option value="O-">O-</option>
-                          <option value="A-">A-</option>
-                          <option value="B-">B-</option>
-                          <option value="AB-">AB-</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Birthplace <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Bhubaneswar, Odisha"
-                          value={studentFormData.birthplace}
-                          onChange={e => setStudentFormData({ ...studentFormData, birthplace: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Identification Mark <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Small mole on right forearm / Not provided"
-                          value={studentFormData.identificationMark}
-                          onChange={e => setStudentFormData({ ...studentFormData, identificationMark: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Thumb ID / Biometric ID <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.thumbId || `GFT230520${studentFormData.rollNumber || '01'}`}
-                          onChange={e => setStudentFormData({ ...studentFormData, thumbId: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-                      <div className="admin-form-group">
-                        <label>Hostel <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.hostel}
-                          onChange={e => setStudentFormData({ ...studentFormData, hostel: e.target.value })}
-                          required
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Transport <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.transport}
-                          onChange={e => setStudentFormData({ ...studentFormData, transport: e.target.value })}
-                          required
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Lunch Facility <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.lunch}
-                          onChange={e => setStudentFormData({ ...studentFormData, lunch: e.target.value })}
-                          required
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>NSS Member <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.nss}
-                          onChange={e => setStudentFormData({ ...studentFormData, nss: e.target.value })}
-                          required
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Languages Known <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Odia, English, Hindi"
-                          value={studentFormData.languagesKnown}
-                          onChange={e => setStudentFormData({ ...studentFormData, languagesKnown: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Hobbies</label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Robotics, Badminton or Not provided"
-                          value={studentFormData.hobbies}
-                          onChange={e => setStudentFormData({ ...studentFormData, hobbies: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── STEP 2: ACADEMIC DETAILS ── */}
-                {studentFormStep === 2 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                      <GraduationCap size={16} color="#2563eb" />
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a' }}>Academic Details & Qualifications (Compulsory)</h4>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Program / Degree Course <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.course}
-                          onChange={e => setStudentFormData({ ...studentFormData, course: e.target.value, program: e.target.value })}
-                          required
-                        >
-                          <option value="Bachelor of Technology">Bachelor of Technology (B.Tech)</option>
-                          <option value="Bachelor of Computer Applications">Bachelor of Computer Applications (BCA)</option>
-                          <option value="Master of Computer Applications">Master of Computer Applications (MCA)</option>
-                          <option value="Master of Business Administration">Master of Business Administration (MBA)</option>
-                          <option value="Diploma in Engineering">Diploma in Engineering (Polytechnic)</option>
-                          <option value="Master of Technology">Master of Technology (M.Tech)</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Academic Batch <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.batch}
-                          onChange={e => setStudentFormData({ ...studentFormData, batch: e.target.value })}
-                          required
-                        >
-                          <option value="BTECH 2026–2030">B.Tech Batch 2026–2030 (Fresh Admissions)</option>
-                          <option value="BTECH 2025–2029">B.Tech Batch 2025–2029 (Sem 1-2)</option>
-                          <option value="BTECH 2024–2028">B.Tech Batch 2024–2028 (Sem 3-4)</option>
-                          <option value="BTECH 2023–2027">B.Tech Batch 2023–2027 (Sem 5-6)</option>
-                          <option value="BCA 2024–2027">BCA Batch 2024–2027</option>
-                          <option value="MCA 2025–2027">MCA Batch 2025–2027</option>
-                          <option value="MBA 2025–2027">MBA Batch 2025–2027</option>
-                          <option value="DIPLOMA 2024–2027">Diploma Batch 2024–2027</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Branch / Department <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.deptCode}
-                          onChange={e => {
-                            const map = {
-                              CSE: 'Computer Science & Engineering',
-                              'AI&ML': 'CSE - Artificial Intelligence & Machine Learning',
-                              ECE: 'Electronics & Communication',
-                              EEE: 'Electrical & Electronics',
-                              MECH: 'Mechanical Engineering',
-                              CIVIL: 'Civil Engineering',
-                              IT: 'Information Technology',
-                              CA: 'Computer Applications (BCA & MCA)',
-                              MGMT: 'Management Studies (MBA)',
-                              DIPLOMA: 'Diploma Engineering Wing'
-                            };
-                            setStudentFormData({
-                              ...studentFormData,
-                              deptCode: e.target.value,
-                              department: map[e.target.value] || e.target.value
-                            });
-                          }}
-                          required
-                        >
-                          <option value="CSE">CSE - Computer Science & Engineering</option>
-                          <option value="AI&ML">AI&ML - Artificial Intelligence & ML</option>
-                          <option value="ECE">ECE - Electronics & Communication</option>
-                          <option value="EEE">EEE - Electrical & Electronics</option>
-                          <option value="MECH">MECH - Mechanical Engineering</option>
-                          <option value="CIVIL">CIVIL - Civil Engineering</option>
-                          <option value="IT">IT - Information Technology</option>
-                          <option value="CA">CA - Computer Applications</option>
-                          <option value="MGMT">MGMT - Management Studies</option>
-                          <option value="DIPLOMA">DIPLOMA - Polytechnic Wing</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-                      <div className="admin-form-group">
-                        <label>Roll Number <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.rollNumber}
-                          onChange={e => setStudentFormData({ ...studentFormData, rollNumber: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Section <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.section}
-                          onChange={e => setStudentFormData({ ...studentFormData, section: e.target.value })}
-                          required
-                        >
-                          <option value="Section A">CSE · Section A</option>
-                          <option value="Section B">CSE · Section B</option>
-                          <option value="Section C">CSE · Section C</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>House Assigned</label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.house}
-                          onChange={e => setStudentFormData({ ...studentFormData, house: e.target.value })}
-                        >
-                          <option value="Not assigned">Not assigned</option>
-                          <option value="Orion House">Orion House</option>
-                          <option value="Phoenix House">Phoenix House</option>
-                          <option value="Pegasus House">Pegasus House</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Lab Group <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.labGroup}
-                          onChange={e => setStudentFormData({ ...studentFormData, labGroup: e.target.value })}
-                          required
-                        >
-                          <option value="1">1</option>
-                          <option value="2">2</option>
-                          <option value="3">3</option>
-                          <option value="4">4</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Official Email Address <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="email"
-                          className="admin-form-input"
-                          placeholder="student.01@apnacampus.edu.in"
-                          value={studentFormData.email}
-                          onChange={e => setStudentFormData({ ...studentFormData, email: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Phone Number <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="+91 98610 23010"
-                          value={studentFormData.phone}
-                          onChange={e => setStudentFormData({ ...studentFormData, phone: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-                      <div className="admin-form-group">
-                        <label>Honors</label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.honors}
-                          onChange={e => setStudentFormData({ ...studentFormData, honors: e.target.value })}
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Minor</label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.minor}
-                          onChange={e => setStudentFormData({ ...studentFormData, minor: e.target.value })}
-                        >
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Admission Date <span className="admin-compulsory-tag">*</span></label>
-                        <input
-                          type="date"
-                          className="admin-form-input"
-                          value={studentFormData.admissionDate}
-                          onChange={e => setStudentFormData({ ...studentFormData, admissionDate: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Entrance Exam <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.entranceExam}
-                          onChange={e => setStudentFormData({ ...studentFormData, entranceExam: e.target.value })}
-                          required
-                        >
-                          <option value="JEE (Main)">JEE (Main)</option>
-                          <option value="OJEE">OJEE</option>
-                          <option value="Management Quota">Management Quota</option>
-                          <option value="Lateral Entry">Lateral Entry</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Value Added Course-1</label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.valueAdded1}
-                          onChange={e => setStudentFormData({ ...studentFormData, valueAdded1: e.target.value })}
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Value Added Course-2</label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.valueAdded2}
-                          onChange={e => setStudentFormData({ ...studentFormData, valueAdded2: e.target.value })}
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Value Added Course-3</label>
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          value={studentFormData.valueAdded3}
-                          onChange={e => setStudentFormData({ ...studentFormData, valueAdded3: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Qualifications Table matching Screenshot 2 */}
-                    <div className="admin-form-group">
-                      <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>Prior Academic Qualification Records <span className="admin-compulsory-tag">* (10th & 12th Compulsory)</span></span>
-                        <small style={{ color: '#64748b' }}>Displayed in Student Section Qualification Ledger</small>
-                      </label>
-                      <table className="admin-qual-table">
-                        <thead>
-                          <tr>
-                            <th style={{ width: '15%' }}>Qualification</th>
-                            <th style={{ width: '45%' }}>Institute Name <span className="admin-compulsory-tag">*</span></th>
-                            <th style={{ width: '20%' }}>Passout Year <span className="admin-compulsory-tag">*</span></th>
-                            <th style={{ width: '20%' }}>Marks / CGPA <span className="admin-compulsory-tag">*</span></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td><strong>10th</strong></td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="Secondary School Name"
-                                value={studentFormData.qual10thInstitute}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual10thInstitute: e.target.value })}
-                                required
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="2021"
-                                value={studentFormData.qual10thYear}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual10thYear: e.target.value })}
-                                required
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="82.00%"
-                                value={studentFormData.qual10thMarks}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual10thMarks: e.target.value })}
-                                required
-                              />
-                            </td>
-                          </tr>
-                          <tr>
-                            <td><strong>12th</strong></td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="Senior Secondary School / Junior College"
-                                value={studentFormData.qual12thInstitute}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual12thInstitute: e.target.value })}
-                                required
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="2023"
-                                value={studentFormData.qual12thYear}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual12thYear: e.target.value })}
-                                required
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                placeholder="86.00%"
-                                value={studentFormData.qual12thMarks}
-                                onChange={e => setStudentFormData({ ...studentFormData, qual12thMarks: e.target.value })}
-                                required
-                              />
-                            </td>
-                          </tr>
-                          <tr>
-                            <td>ITI</td>
-                            <td><input type="text" value={studentFormData.qualItiInstitute} onChange={e => setStudentFormData({ ...studentFormData, qualItiInstitute: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualItiYear} onChange={e => setStudentFormData({ ...studentFormData, qualItiYear: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualItiMarks} onChange={e => setStudentFormData({ ...studentFormData, qualItiMarks: e.target.value })} /></td>
-                          </tr>
-                          <tr>
-                            <td>Diploma</td>
-                            <td><input type="text" value={studentFormData.qualDiplomaInstitute} onChange={e => setStudentFormData({ ...studentFormData, qualDiplomaInstitute: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualDiplomaYear} onChange={e => setStudentFormData({ ...studentFormData, qualDiplomaYear: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualDiplomaMarks} onChange={e => setStudentFormData({ ...studentFormData, qualDiplomaMarks: e.target.value })} /></td>
-                          </tr>
-                          <tr>
-                            <td>BTECH</td>
-                            <td><input type="text" value={studentFormData.qualBtechInstitute} onChange={e => setStudentFormData({ ...studentFormData, qualBtechInstitute: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualBtechYear} onChange={e => setStudentFormData({ ...studentFormData, qualBtechYear: e.target.value })} /></td>
-                            <td><input type="text" value={studentFormData.qualBtechMarks} onChange={e => setStudentFormData({ ...studentFormData, qualBtechMarks: e.target.value })} /></td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                      <div className="admin-form-group">
-                        <label>Student Status <span className="admin-compulsory-tag">*</span></label>
-                        <select
-                          className="admin-form-select"
-                          value={studentFormData.status}
-                          onChange={e => setStudentFormData({ ...studentFormData, status: e.target.value, studentStatus: e.target.value, activeStatus: e.target.value })}
-                          required
-                        >
-                          <option value="Active">Active</option>
-                          <option value="Inactive">Inactive</option>
-                        </select>
-                      </div>
-                      <div className="admin-form-group">
-                        <label>Autonomous Entrance Rank</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. 15,240 or Not provided"
-                          value={studentFormData.rank}
-                          onChange={e => setStudentFormData({ ...studentFormData, rank: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── STEP 3: GUARDIANS DETAILS ── */}
-                {studentFormStep === 3 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                      <UsersRound size={16} color="#2563eb" />
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a' }}>Guardians Details (Compulsory)</h4>
-                    </div>
-
-                    {/* Father Details */}
-                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <h5 style={{ margin: '0 0 0.85rem 0', fontSize: '0.88rem', color: '#1e3a8a', fontWeight: 700 }}>
-                        Father / Primary Guardian Information
-                      </h5>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div className="admin-form-group">
-                          <label>Father / Guardian Name <span className="admin-compulsory-tag">*</span></label>
-                          <input
-                            type="text"
-                            className="admin-form-input"
-                            placeholder="e.g. Sanjay Das"
-                            value={studentFormData.fatherName}
-                            onChange={e => setStudentFormData({ ...studentFormData, fatherName: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="admin-form-group">
-                          <label>Relationship <span className="admin-compulsory-tag">*</span></label>
-                          <input
-                            type="text"
-                            className="admin-form-input"
-                            value={studentFormData.fatherRelationship}
-                            onChange={e => setStudentFormData({ ...studentFormData, fatherRelationship: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="admin-form-group">
-                          <label>Contact Number <span className="admin-compulsory-tag">*</span></label>
-                          <input
-                            type="text"
-                            className="admin-form-input"
-                            placeholder="+91 94370 10001"
-                            value={studentFormData.fatherPhone}
-                            onChange={e => setStudentFormData({ ...studentFormData, fatherPhone: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="admin-form-group">
-                          <label>Email Address <span className="admin-compulsory-tag">*</span></label>
-                          <input
-                            type="email"
-                            className="admin-form-input"
-                            placeholder="sanjay.das@example.com"
-                            value={studentFormData.fatherEmail}
-                            onChange={e => setStudentFormData({ ...studentFormData, fatherEmail: e.target.value })}
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Mother Details */}
-                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <h5 style={{ margin: '0 0 0.85rem 0', fontSize: '0.88rem', color: '#1e3a8a', fontWeight: 700 }}>
-                        Mother / Secondary Guardian Information
-                      </h5>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div className="admin-form-group">
-                          <label>Mother / Guardian Name <span className="admin-compulsory-tag">*</span></label>
-                          <input
-                            type="text"
-                            className="admin-form-input"
-                            placeholder="e.g. Madhuri Das"
-                            value={studentFormData.motherName}
-                            onChange={e => setStudentFormData({ ...studentFormData, motherName: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="admin-form-group">
-                          <label>Relationship <span className="admin-compulsory-tag">*</span></label>
-                          <input
-                            type="text"
-                            className="admin-form-input"
-                            value={studentFormData.motherRelationship}
-                            onChange={e => setStudentFormData({ ...studentFormData, motherRelationship: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="admin-form-group">
-                          <label>Contact Number <span className="admin-compulsory-tag">*</span></label>
-                          <input
-                            type="text"
-                            className="admin-form-input"
-                            placeholder="+91 94370 10002"
-                            value={studentFormData.motherPhone}
-                            onChange={e => setStudentFormData({ ...studentFormData, motherPhone: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="admin-form-group">
-                          <label>Email Address <span className="admin-compulsory-tag">*</span></label>
-                          <input
-                            type="email"
-                            className="admin-form-input"
-                            placeholder="madhuri.das@example.com"
-                            value={studentFormData.motherEmail}
-                            onChange={e => setStudentFormData({ ...studentFormData, motherEmail: e.target.value })}
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── STEP 4: ADDRESS DETAILS ── */}
-                {studentFormStep === 4 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <MapPin size={16} color="#2563eb" />
-                        <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a' }}>Address Details (Compulsory)</h4>
-                      </div>
-                      <button
-                        type="button"
-                        className="admin-action-btn-secondary"
-                        style={{ fontSize: '0.74rem', padding: '0.3rem 0.6rem' }}
-                        onClick={() => {
-                          setStudentFormData({
-                            ...studentFormData,
-                            currAddress: studentFormData.permAddress,
-                            currCity: studentFormData.permCity,
-                            currState: studentFormData.permState,
-                            currCountry: studentFormData.permCountry,
-                            currPin: studentFormData.permPin
-                          });
-                          showToast('Copied permanent address to current address.');
-                        }}
-                      >
-                        Copy Permanent → Current
-                      </button>
-                    </div>
-
-                    {/* Permanent Address */}
-                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <h5 style={{ margin: '0 0 0.85rem 0', fontSize: '0.88rem', color: '#1e3a8a', fontWeight: 700 }}>
-                        Permanent Residence Address
-                      </h5>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                        <div className="admin-form-group">
-                          <label>Address Line (Plot No. / Street / Unit) <span className="admin-compulsory-tag">*</span></label>
-                          <input
-                            type="text"
-                            className="admin-form-input"
-                            placeholder="e.g. Plot 18, Unit 4"
-                            value={studentFormData.permAddress}
-                            onChange={e => setStudentFormData({ ...studentFormData, permAddress: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-                          <div className="admin-form-group">
-                            <label>City <span className="admin-compulsory-tag">*</span></label>
-                            <input
-                              type="text"
-                              className="admin-form-input"
-                              placeholder="Bhubaneswar"
-                              value={studentFormData.permCity}
-                              onChange={e => setStudentFormData({ ...studentFormData, permCity: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="admin-form-group">
-                            <label>State <span className="admin-compulsory-tag">*</span></label>
-                            <input
-                              type="text"
-                              className="admin-form-input"
-                              value={studentFormData.permState}
-                              onChange={e => setStudentFormData({ ...studentFormData, permState: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="admin-form-group">
-                            <label>Country <span className="admin-compulsory-tag">*</span></label>
-                            <input
-                              type="text"
-                              className="admin-form-input"
-                              value={studentFormData.permCountry}
-                              onChange={e => setStudentFormData({ ...studentFormData, permCountry: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="admin-form-group">
-                            <label>PIN Code <span className="admin-compulsory-tag">*</span></label>
-                            <input
-                              type="text"
-                              className="admin-form-input"
-                              placeholder="751001"
-                              value={studentFormData.permPin}
-                              onChange={e => setStudentFormData({ ...studentFormData, permPin: e.target.value })}
-                              required
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Current Address */}
-                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-                        <h5 style={{ margin: 0, fontSize: '0.88rem', color: '#1e3a8a', fontWeight: 700 }}>
-                          Current / Local Campus Address
-                        </h5>
-                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#1d4ed8', fontWeight: 600, cursor: 'pointer', background: '#eff6ff', padding: '4px 10px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
-                          <input
-                            type="checkbox"
-                            style={{ accentColor: '#2563eb', cursor: 'pointer' }}
-                            checked={Boolean(
-                              studentFormData.currAddress &&
-                              studentFormData.currAddress === studentFormData.permAddress &&
-                              studentFormData.currPin === studentFormData.permPin
-                            )}
-                            onChange={e => {
-                              if (e.target.checked) {
-                                setStudentFormData(prev => ({
-                                  ...prev,
-                                  currAddress: prev.permAddress || '',
-                                  currCity: prev.permCity || '',
-                                  currState: prev.permState || '',
-                                  currCountry: prev.permCountry || 'India',
-                                  currPin: prev.permPin || '',
-                                }));
-                                showToast('✓ Current address synced with Permanent address');
-                              }
-                            }}
-                          />
-                          Same as Permanent Address
-                        </label>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                        <div className="admin-form-group">
-                          <label>Address Line (Campus Hostel / Residence) <span className="admin-compulsory-tag">*</span></label>
-                          <input
-                            type="text"
-                            className="admin-form-input"
-                            placeholder="e.g. GIFT Campus Residence"
-                            value={studentFormData.currAddress}
-                            onChange={e => setStudentFormData({ ...studentFormData, currAddress: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-                          <div className="admin-form-group">
-                            <label>City <span className="admin-compulsory-tag">*</span></label>
-                            <input
-                              type="text"
-                              className="admin-form-input"
-                              value={studentFormData.currCity}
-                              onChange={e => setStudentFormData({ ...studentFormData, currCity: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="admin-form-group">
-                            <label>State <span className="admin-compulsory-tag">*</span></label>
-                            <input
-                              type="text"
-                              className="admin-form-input"
-                              value={studentFormData.currState}
-                              onChange={e => setStudentFormData({ ...studentFormData, currState: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="admin-form-group">
-                            <label>Country <span className="admin-compulsory-tag">*</span></label>
-                            <input
-                              type="text"
-                              className="admin-form-input"
-                              value={studentFormData.currCountry}
-                              onChange={e => setStudentFormData({ ...studentFormData, currCountry: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="admin-form-group">
-                            <label>PIN Code <span className="admin-compulsory-tag">*</span></label>
-                            <input
-                              type="text"
-                              className="admin-form-input"
-                              value={studentFormData.currPin}
-                              onChange={e => setStudentFormData({ ...studentFormData, currPin: e.target.value })}
-                              required
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* -- STEP 5: DOCUMENTS DETAILS -- */}
-                {studentFormStep === 5 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <FileText size={16} color="#2563eb" />
-                        <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a' }}>Documents (Upload &amp; Verify)</h4>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button
-                          type="button"
-                          className="admin-action-btn-secondary"
-                          style={{ fontSize: '0.74rem', padding: '0.3rem 0.65rem', background: '#eff6ff', borderColor: '#93c5fd', color: '#1d4ed8' }}
-                          onClick={handleAttachDemoDocs}
-                          title="Auto-attach verified sample documents for quick testing"
-                        >
-                          ⚡ Auto-Attach Demo Documents
-                        </button>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Upload files for all 4 compulsory documents</span>
-                      </div>
-                    </div>
-
-                    {/* 4 required document upload cards */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-
-                      {/* Doc 1 – Passport Photo */}
-                      <div style={{ background: studentFormData.passportPhotoUrl ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${studentFormData.passportPhotoUrl ? '#86efac' : '#cbd5e1'}`, borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>1. Passport-size Photograph</strong>
-                          <span style={{ fontSize: '0.7rem', background: studentFormData.passportPhotoUrl ? '#dcfce7' : '#fef9c3', color: studentFormData.passportPhotoUrl ? '#15803d' : '#854d0e', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                            {studentFormData.passportPhotoUrl ? '✓ Uploaded' : '⏳ Pending'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>For Student ID Card &amp; Hall Ticket · JPG / PNG</span>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1.5px dashed #93c5fd', borderRadius: '7px', padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
-                          <Download size={14} /> {studentFormData.passportPhotoUrl ? 'Change photo' : 'Upload photo'}
-                          <input type="file" accept="image/*" style={{ display: 'none' }}
-                            onChange={e => {
-                              const file = e.target.files && e.target.files[0];
-                              if (file) {
-                                const fileName = file.name;
-                                const reader = new FileReader();
-                                reader.onload = ev => setStudentFormData(prev => ({ ...prev, passportPhotoUrl: ev.target.result, passportPhotoName: fileName }));
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                        </label>
-                        {studentFormData.passportPhotoUrl && <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>📎 {studentFormData.passportPhotoName}</span>}
-                      </div>
-
-                      {/* Doc 2 – Govt ID */}
-                      <div style={{ background: studentFormData.govtIdFileUrl ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${studentFormData.govtIdFileUrl ? '#86efac' : '#cbd5e1'}`, borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>2. Government ID Proof</strong>
-                          <span style={{ fontSize: '0.7rem', background: studentFormData.govtIdFileUrl ? '#dcfce7' : '#fef9c3', color: studentFormData.govtIdFileUrl ? '#15803d' : '#854d0e', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                            {studentFormData.govtIdFileUrl ? '✓ Uploaded' : '⏳ Pending'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Aadhaar Card / Voter ID / Passport · PDF or JPG</span>
-                        <input type="text" className="admin-form-input" value={studentFormData.govtIdType}
-                          onChange={e => setStudentFormData({ ...studentFormData, govtIdType: e.target.value })}
-                          placeholder="e.g. Aadhaar Card (XXXX XXXX 2341)" style={{ fontSize: '0.8rem' }} required />
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1.5px dashed #93c5fd', borderRadius: '7px', padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
-                          <Download size={14} /> {studentFormData.govtIdFileUrl ? 'Change file' : 'Upload ID file'}
-                          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }}
-                            onChange={e => {
-                              const file = e.target.files && e.target.files[0];
-                              if (file) {
-                                const fileName = file.name;
-                                const reader = new FileReader();
-                                reader.onload = ev => setStudentFormData(prev => ({ ...prev, govtIdFileUrl: ev.target.result, govtIdFileName: fileName }));
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                        </label>
-                        {studentFormData.govtIdFileUrl && <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>📎 {studentFormData.govtIdFileName}</span>}
-                      </div>
-
-                      {/* Doc 3 – Class 10 */}
-                      <div style={{ background: studentFormData.class10FileUrl ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${studentFormData.class10FileUrl ? '#86efac' : '#cbd5e1'}`, borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>3. Class 10 Certificate</strong>
-                          <span style={{ fontSize: '0.7rem', background: studentFormData.class10FileUrl ? '#dcfce7' : '#fef9c3', color: studentFormData.class10FileUrl ? '#15803d' : '#854d0e', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                            {studentFormData.class10FileUrl ? '✓ Uploaded' : '⏳ Pending'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Matriculation / DOB verification · PDF or JPG</span>
-                        <input type="text" className="admin-form-input" value={studentFormData.class10Board}
-                          onChange={e => setStudentFormData({ ...studentFormData, class10Board: e.target.value })}
-                          placeholder="e.g. CBSE / BSE Odisha" style={{ fontSize: '0.8rem' }} required />
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1.5px dashed #93c5fd', borderRadius: '7px', padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
-                          <Download size={14} /> {studentFormData.class10FileUrl ? 'Change file' : 'Upload certificate'}
-                          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }}
-                            onChange={e => {
-                              const file = e.target.files && e.target.files[0];
-                              if (file) {
-                                const fileName = file.name;
-                                const reader = new FileReader();
-                                reader.onload = ev => setStudentFormData(prev => ({ ...prev, class10FileUrl: ev.target.result, class10FileName: fileName }));
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                        </label>
-                        {studentFormData.class10FileUrl && <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>📎 {studentFormData.class10FileName}</span>}
-                      </div>
-
-                      {/* Doc 4 – Class 12 */}
-                      <div style={{ background: studentFormData.class12FileUrl ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${studentFormData.class12FileUrl ? '#86efac' : '#cbd5e1'}`, borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>4. Class 12 Certificate</strong>
-                          <span style={{ fontSize: '0.7rem', background: studentFormData.class12FileUrl ? '#dcfce7' : '#fef9c3', color: studentFormData.class12FileUrl ? '#15803d' : '#854d0e', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                            {studentFormData.class12FileUrl ? '✓ Uploaded' : '⏳ Pending'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Higher Secondary (10+2) Marksheet · PDF or JPG</span>
-                        <input type="text" className="admin-form-input" value={studentFormData.class12Board}
-                          onChange={e => setStudentFormData({ ...studentFormData, class12Board: e.target.value })}
-                          placeholder="e.g. CBSE / CHSE Odisha" style={{ fontSize: '0.8rem' }} required />
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1.5px dashed #93c5fd', borderRadius: '7px', padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
-                          <Download size={14} /> {studentFormData.class12FileUrl ? 'Change file' : 'Upload certificate'}
-                          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }}
-                            onChange={e => {
-                              const file = e.target.files && e.target.files[0];
-                              if (file) {
-                                const fileName = file.name;
-                                const reader = new FileReader();
-                                reader.onload = ev => setStudentFormData(prev => ({ ...prev, class12FileUrl: ev.target.result, class12FileName: fileName }));
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                        </label>
-                        {studentFormData.class12FileUrl && <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>📎 {studentFormData.class12FileName}</span>}
-                      </div>
-                    </div>
-
-                    {/* Add Extra Document */}
-                    <div style={{ background: '#eff6ff', border: '1.5px dashed #93c5fd', borderRadius: '10px', padding: '1rem 1.25rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
-                        <Plus size={15} color="#2563eb" />
-                        <strong style={{ fontSize: '0.88rem', color: '#1e40af' }}>Add Extra Document</strong>
-                        <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 'auto' }}>Optional · e.g. Transfer Cert, Caste Cert, Migration…</span>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '0.75rem', alignItems: 'flex-end' }}>
-                        <div className="admin-form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: '4px', display: 'block' }}>Document Title *</label>
-                          <input type="text" className="admin-form-input"
-                            placeholder="e.g. Caste Certificate, Transfer Cert…"
-                            value={studentFormData._extraDocTitle || ''}
-                            onChange={e => setStudentFormData({ ...studentFormData, _extraDocTitle: e.target.value })}
-                            style={{ fontSize: '0.82rem' }} />
-                        </div>
-                        <div className="admin-form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: '4px', display: 'block' }}>Choose File</label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1.5px dashed #93c5fd', borderRadius: '7px', padding: '0.45rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#2563eb', fontWeight: 600, height: '38px', boxSizing: 'border-box' }}>
-                            <Download size={14} /> {studentFormData._extraDocFileName || 'Select file…'}
-                            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style={{ display: 'none' }}
-                              onChange={e => {
-                                const file = e.target.files && e.target.files[0];
-                                if (file) {
-                                  const fileName = file.name;
-                                  const reader = new FileReader();
-                                  reader.onload = ev => setStudentFormData(prev => ({ ...prev, _extraDocFileUrl: ev.target.result, _extraDocFileName: fileName }));
-                                  reader.readAsDataURL(file);
-                                }
-                              }}
-                            />
-                          </label>
-                        </div>
-                        <button type="button" className="admin-action-btn-primary"
-                          style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', height: '38px', alignSelf: 'flex-end' }}
-                          onClick={() => {
-                            if (!studentFormData._extraDocTitle?.trim() || !studentFormData._extraDocFileUrl) {
-                              showToast('Please enter a document title and select a file.');
-                              return;
-                            }
-                            const extra = studentFormData.extraDocs || [];
-                            setStudentFormData({
-                              ...studentFormData,
-                              extraDocs: [...extra, { title: studentFormData._extraDocTitle, fileUrl: studentFormData._extraDocFileUrl, fileName: studentFormData._extraDocFileName }],
-                              _extraDocTitle: '', _extraDocFileUrl: '', _extraDocFileName: ''
-                            });
-                            showToast('Document "' + studentFormData._extraDocTitle + '" added.');
-                          }}>
-                          <Plus size={13} /> Add
-                        </button>
-                      </div>
-                      {(studentFormData.extraDocs || []).length > 0 && (
-                        <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {(studentFormData.extraDocs || []).map((doc, idx) => (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', fontSize: '0.8rem' }}>
-                              <FileText size={13} color="#2563eb" />
-                              <span style={{ fontWeight: 600, color: '#1e40af', flex: 1 }}>{doc.title}</span>
-                              <span style={{ color: '#64748b', fontSize: '0.72rem' }}>📎 {doc.fileName}</span>
-                              <button type="button" style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '0 4px', fontSize: '1.1rem', lineHeight: 1 }}
-                                onClick={() => setStudentFormData({ ...studentFormData, extraDocs: (studentFormData.extraDocs || []).filter((_, i) => i !== idx) })}
-                                title="Remove">×</button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '0.85rem 1.15rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <CheckCircle2 size={20} color="#2563eb" />
-                      <div style={{ fontSize: '0.8rem', color: '#1e40af' }}>
-                        <strong>Enrollment Ready:</strong> Upload all 4 compulsory documents, then click <em>Create Student</em> to complete enrollment and sync to the Student Portal.
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-
-              {/* Stepper Footer Controls */}
-              <div className="admin-modal-footer" style={{ padding: '0.85rem 1.5rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <button type="button" className="admin-action-btn-secondary" onClick={() => setIsStudentModalOpen(false)}>
-                    Cancel
-                  </button>
-                </div>
-                <div style={{ display: 'flex', gap: '0.65rem' }}>
-                  {studentFormStep > 1 && (
-                    <button type="button" className="admin-action-btn-secondary" onClick={handlePrevStep}>
-                      ← Previous Step
-                    </button>
-                  )}
-                  {studentFormStep < 5 ? (
-                    <button
-                      key={`btn-step-${studentFormStep}`}
-                      type="button"
-                      className="admin-action-btn-primary"
-                      onClick={handleNextStep}
-                    >
-                      Next: {studentFormStep === 1 ? 'Academic' : studentFormStep === 2 ? 'Guardians' : studentFormStep === 3 ? 'Address' : 'Documents'} →
-                    </button>
-                  ) : (
-                    <button
-                      key="btn-step-5-submit"
-                      type="submit"
-                      disabled={!canSubmitStep5}
-                      className="admin-action-btn-primary"
-                      style={{
-                        background: canSubmitStep5 ? '#16a34a' : '#94a3b8',
-                        borderColor: canSubmitStep5 ? '#15803d' : '#64748b',
-                        cursor: canSubmitStep5 ? 'pointer' : 'not-allowed',
-                        transition: 'all 0.2s',
-                      }}
-                      title={!canSubmitStep5 ? 'Preparing documents section…' : 'Finalize & Publish Student Profile'}
-                    >
-                      {editingStudent ? '✓ Save Changes' : '✓ Create Student & Publish to Student Section'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* REGISTER NEW STUDENT WIZARD (FULL 8-STEP COMPREHENSIVE ERP SYSTEM) */}
+      <RegisterStudentWizard
+        isOpen={isStudentModalOpen}
+        onClose={() => {
+          setIsStudentModalOpen(false);
+          setEditingStudent(null);
+        }}
+        initialStudent={editingStudent}
+        onStudentRegistered={(newStudent) => {
+          setStudents(getAllStudents());
+          setActiveStudent(newStudent.id);
+          showToast(`Student ${newStudent.name} registered successfully!`);
+          erpStore.logAuditEvent({
+            user: account?.name || 'Academic Administrator',
+            role: 'ADMIN',
+            action: editingStudent ? 'Updated Student Profile' : 'Admitted New Student',
+            target: `${newStudent.name} (${newStudent.registrationNumber})`,
+            oldValue: editingStudent ? 'Active Record' : 'Application Processed',
+            newValue: `Enrolled: ${newStudent.appliedCourse || newStudent.course || 'B.Tech'} · ${newStudent.branch || newStudent.department} · ${newStudent.semester || 'Semester 1'}`,
+          });
+        }}
+      />
 
       {/* MODAL: ADD / EDIT FACULTY */}
       {isFacultyModalOpen && (

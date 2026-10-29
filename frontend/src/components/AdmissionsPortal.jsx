@@ -29,6 +29,7 @@ import {
 import { api } from '../services/api.js';
 import AccountActivationModal from './AccountActivationModal.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import RegisterStudentWizard from './RegisterStudentWizard.jsx';
 import './AdmissionsModules/AdmissionsModules.css';
 
 // Admissions Directorate Modules
@@ -155,6 +156,9 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
   // Actions passed down to modules
   const handleVerify = (id, name) => {
     admissionsStore.changeApplicationStatus(id, 'Verified', 'Prerequisites & credentials verified', 'Ms. Sasmita Mohapatra');
+    try {
+      api.updateApplicantStatus(id, 'VERIFIED', 'Prerequisites & credentials verified').catch(() => {});
+    } catch {}
     showToast(`Applicant ${name} marked as VERIFIED.`);
   };
 
@@ -171,6 +175,9 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
     const reason = window.prompt(`Please provide an official rejection reason for ${name}:`, 'Prerequisites not met');
     if (reason === null) return;
     admissionsStore.changeApplicationStatus(id, 'Rejected', reason, 'Ms. Sasmita Mohapatra');
+    try {
+      api.rejectApplicant(id, reason).catch(() => {});
+    } catch {}
     showToast(`Applicant ${name} marked as REJECTED.`);
   };
 
@@ -558,211 +565,23 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         )}
       </div>
 
-      {/* REGISTER NEW INSTITUTIONAL APPLICANT MODAL (Preserved from existing portal) */}
-      {isRegisterModalOpen && (
-        <div className="adm-modal-backdrop" onClick={() => setIsRegisterModalOpen(false)}>
-          <div className="adm-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="adm-modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Plus size={20} color="#0284c7" />
-                <h3 style={{ margin: 0, fontSize: '1.12rem', fontWeight: 700 }}>
-                  Register New Institutional Applicant
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsRegisterModalOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleRegisterApplicant}>
-              <div className="adm-modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, marginBottom: '4px' }}>
-                      Full Legal Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Candidate Legal Name"
-                      required
-                      className="adm-search-input"
-                      style={{ paddingLeft: '12px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, marginBottom: '4px' }}>
-                      Email Address *
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="student@example.com"
-                      required
-                      className="adm-search-input"
-                      style={{ paddingLeft: '12px' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, marginBottom: '4px' }}>
-                      Phone Contact *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+91 94370 00000"
-                      required
-                      className="adm-search-input"
-                      style={{ paddingLeft: '12px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, marginBottom: '4px' }}>
-                      Gender
-                    </label>
-                    <select
-                      value={formData.gender}
-                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                      className="adm-select-control"
-                      style={{ width: '100%' }}
-                    >
-                      <option value="Female">Female</option>
-                      <option value="Male">Male</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, marginBottom: '4px' }}>
-                      Category
-                    </label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="adm-select-control"
-                      style={{ width: '100%' }}
-                    >
-                      <option value="General">General</option>
-                      <option value="OBC">OBC</option>
-                      <option value="SC">SC</option>
-                      <option value="ST">ST</option>
-                      <option value="EWS">EWS</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '14px' }}>
-                  <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, marginBottom: '4px' }}>
-                    Target Academic Program *
-                  </label>
-                  <select
-                    value={formData.appliedCourse}
-                    onChange={(e) => {
-                      const sel = courses.find((c) => c.name === e.target.value);
-                      setFormData({
-                        ...formData,
-                        appliedCourse: e.target.value,
-                        courseCode: sel ? sel.code : 'BTECH-CSE',
-                      });
-                    }}
-                    className="adm-select-control"
-                    style={{ width: '100%' }}
-                  >
-                    {courses.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name} ({c.code} · {c.durationYears} Years)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '14px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, marginBottom: '4px' }}>
-                      10th Marks (%)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={formData.tenthMarks}
-                      onChange={(e) => setFormData({ ...formData, tenthMarks: e.target.value })}
-                      className="adm-search-input"
-                      style={{ paddingLeft: '12px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, marginBottom: '4px' }}>
-                      12th Marks (%)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={formData.twelfthMarks}
-                      onChange={(e) => setFormData({ ...formData, twelfthMarks: e.target.value })}
-                      className="adm-search-input"
-                      style={{ paddingLeft: '12px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, marginBottom: '4px' }}>
-                      Entrance Exam
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.entranceExam}
-                      onChange={(e) => setFormData({ ...formData, entranceExam: e.target.value })}
-                      placeholder="JEE Main / OJEE"
-                      className="adm-search-input"
-                      style={{ paddingLeft: '12px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, marginBottom: '4px' }}>
-                      Entrance Rank
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.entranceRank}
-                      onChange={(e) => setFormData({ ...formData, entranceRank: e.target.value })}
-                      placeholder="Rank"
-                      className="adm-search-input"
-                      style={{ paddingLeft: '12px' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="adm-modal-footer">
-                <button
-                  type="button"
-                  onClick={() => setIsRegisterModalOpen(false)}
-                  className="adm-btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="adm-btn-primary"
-                >
-                  Submit Application
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* REGISTER NEW STUDENT WIZARD (FULL 8-STEP COMPREHENSIVE ERP SYSTEM) */}
+      <RegisterStudentWizard
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onStudentRegistered={(newStudent) => {
+          setIsRegisterModalOpen(false);
+          setEnrolledStudentInfo({
+            name: newStudent.name,
+            rollNumber: newStudent.rollNumber,
+            email: newStudent.email,
+            program: newStudent.appliedCourse || newStudent.course,
+            regNo: newStudent.registrationNumber,
+            password: newStudent.defaultPassword || 'Gift@2026',
+          });
+          showToast(`Candidate ${newStudent.name} registered and enrolled successfully!`);
+        }}
+      />
 
       {/* ONBOARDING CREDENTIAL MODAL (Preserved from existing portal) */}
       {enrolledStudentInfo && (

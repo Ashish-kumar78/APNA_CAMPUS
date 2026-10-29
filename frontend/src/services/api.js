@@ -399,11 +399,15 @@ export const api = {
       body: JSON.stringify({ confirmationCode }),
     }),
   getAdminApprovals: () => request('/admin/approvals'),
-  decideAdminApproval: (id, decision, reason) =>
-    request(`/admin/approvals/${id}/decide`, {
+  decideAdminApproval: (id, decision, reason) => {
+    const payload = typeof decision === 'object' && decision !== null
+      ? { decision: decision.decision, reason: decision.reason || decision.justification }
+      : { decision, reason };
+    return request(`/admin/approvals/${id}/decide`, {
       method: 'POST',
-      body: JSON.stringify({ decision, reason }),
-    }),
+      body: JSON.stringify(payload),
+    });
+  },
   saveAdminRbacPermissions: (roleKey, permissions) =>
     request('/admin/rbac/permissions', {
       method: 'POST',
@@ -1260,6 +1264,51 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  getAdminSettings: (category = '') =>
+    request(`/admin/settings${category ? `?category=${encodeURIComponent(category)}` : ''}`),
+  getAdminRbacPermissions: () => request('/admin/rbac/permissions'),
+  getAdminFaculty: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/faculty${q ? '?' + q : ''}`);
+  },
+  createAdminFaculty: (payload) =>
+    request('/admin/faculty', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateAdminFaculty: (id, payload) =>
+    request(`/admin/faculty/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteAdminFaculty: (id) =>
+    request(`/admin/faculty/${id}`, {
+      method: 'DELETE',
+    }),
+  getAdminHods: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/hods${q ? '?' + q : ''}`);
+  },
+  createAdminHod: (payload) =>
+    request('/admin/hods', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateAdminHod: (id, payload) =>
+    request(`/admin/hods/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteAdminHod: (id) =>
+    request(`/admin/hods/${id}`, {
+      method: 'DELETE',
+    }),
+  getAdminMarkingSchemes: () => request('/admin/marking-schemes'),
+  updateAdminMarkingScheme: (id, payload) =>
+    request(`/admin/marking-schemes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
   // 28. Enterprise Academic Reports
   getReportFilters: () => request('/reports/filters'),
   getAttendanceReport: (params = {}) => {
@@ -1538,6 +1587,49 @@ export const api = {
     request(`/principal/circulars/${id}/clearance`, {
       method: 'POST',
       body: JSON.stringify({ action, remarks }),
+    }),
+
+  // 33. Smart Admission & Student Lifecycle Management
+  getAdmissionStats: () => request('/admission/stats'),
+  getEligibilityRules: () => request('/admission/rules'),
+  getApplicants: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admission/applicants${q ? '?' + q : ''}`);
+  },
+  getApplicantById: (id) => request(`/admission/applicants/${encodeURIComponent(id)}`),
+  saveAdmissionDraft: (data) =>
+    request('/admission/applicants/draft', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  createApplicant: (data) =>
+    request('/admission/applicants', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  verifyApplicantDocument: (applicantId, docId, status, remarks = '') =>
+    request(`/admission/applicants/${encodeURIComponent(applicantId)}/documents/${encodeURIComponent(docId)}/verify`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, remarks }),
+    }),
+  updateApplicantStatus: (applicantId, status, reason = '') =>
+    request(`/admission/applicants/${encodeURIComponent(applicantId)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, reason }),
+    }),
+  verifyApplicantFee: (applicantId, feeData) =>
+    request(`/admission/applicants/${encodeURIComponent(applicantId)}/fees/verify`, {
+      method: 'POST',
+      body: JSON.stringify(feeData),
+    }),
+  rejectApplicant: (applicantId, reason = 'Criteria not met') =>
+    request(`/admission/applicants/${encodeURIComponent(applicantId)}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  approveAndEnrollApplicant: (applicantId) =>
+    request(`/admission/applicants/${encodeURIComponent(applicantId)}/approve`, {
+      method: 'POST',
     }),
 };
 

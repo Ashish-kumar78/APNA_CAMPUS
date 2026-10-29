@@ -1519,7 +1519,7 @@ export default function FacultyPortal({ account, onLogout }) {
               </div>
 
               {/* Renders the full fast inline matrix table with keyboard navigation, tabs, CSV upload and Save Draft/Finalize */}
-              <MarksManagementModule initialRole="teacher" />
+              <MarksManagementModule initialRole="teacher" allowStudentView={false} />
             </div>
           )}
 

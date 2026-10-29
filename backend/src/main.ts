@@ -32,7 +32,7 @@ async function bootstrap() {
     logger.error('   DATABASE_URL="postgresql://user:pass@host:5432/college_management?sslmode=require"\n');
   }
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
 
   // Increase payload limit for supportive documents (PDFs, images)
   app.use(json({ limit: '50mb' }));

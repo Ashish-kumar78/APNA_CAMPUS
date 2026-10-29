@@ -23,6 +23,7 @@ import {
   updateApplicantStatus,
   getAllHostels
 } from '../../services/hostelAttendanceStore.js';
+import StudentDossierDashboard from './StudentDossierDashboard.jsx';
 import './HostelModules.css';
 
 export default function HostelApplicantDetails({ account }) {
@@ -109,6 +110,19 @@ export default function HostelApplicantDetails({ account }) {
     document.body.removeChild(link);
     showToast('✓ Exported applicant records to CSV/Excel.');
   };
+
+  if (selectedApplicant) {
+    return (
+      <div className="hostel-unified-module">
+        <StudentDossierDashboard
+          applicant={selectedApplicant}
+          account={account}
+          onBack={() => setSelectedApplicant(null)}
+          onUpdateStatus={handleUpdateStatus}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="hostel-unified-module">
@@ -298,138 +312,6 @@ export default function HostelApplicantDetails({ account }) {
         </div>
       </div>
 
-      {/* Applicant Full Detail Modal */}
-      {selectedApplicant && (
-        <div className="hostel-modal-overlay" onClick={() => setSelectedApplicant(null)}>
-          <div className="hostel-modal-box" onClick={e => e.stopPropagation()}>
-            <div className="hostel-modal-header">
-              <div>
-                <h3>Hostel Boarding Application Dossier</h3>
-                <p>Application ID: {selectedApplicant.applicationNo}</p>
-              </div>
-              <button
-                type="button"
-                className="close-modal-btn"
-                onClick={() => setSelectedApplicant(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="hostel-modal-body">
-              <div className="modal-profile-strip">
-                <div className="avatar-circle">
-                  {selectedApplicant.studentName.charAt(0)}
-                </div>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{selectedApplicant.studentName}</h4>
-                  <p style={{ margin: '2px 0 0 0', color: '#64748b', fontSize: '0.82rem' }}>
-                    {selectedApplicant.regNo} · {selectedApplicant.branch} ({selectedApplicant.semester})
-                  </p>
-                </div>
-                <div style={{ marginLeft: 'auto' }}>
-                  <span className="cgpa-pill" style={{ fontSize: '0.92rem', padding: '4px 12px' }}>
-                    CGPA: {selectedApplicant.cgpa}
-                  </span>
-                </div>
-              </div>
-
-              <div className="modal-grid-2col">
-                <div className="modal-info-card">
-                  <h5>Accommodation Details</h5>
-                  <div className="info-row">
-                    <span className="info-lbl">Preferred Hostel:</span>
-                    <strong>{selectedApplicant.preferredHostel}</strong>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-lbl">Allotted Hostel:</span>
-                    <strong>{selectedApplicant.allottedHostel}</strong>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-lbl">Room &amp; Bed:</span>
-                    <strong>{selectedApplicant.roomNo} ({selectedApplicant.bedNo})</strong>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-lbl">Hostel Fee Status:</span>
-                    <strong style={{ color: '#15803d' }}>{selectedApplicant.feeStatus}</strong>
-                  </div>
-                </div>
-
-                <div className="modal-info-card">
-                  <h5>Guardian &amp; Permanent Residence</h5>
-                  <div className="info-row">
-                    <span className="info-lbl">Guardian Name:</span>
-                    <strong>{selectedApplicant.guardianName}</strong>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-lbl">Guardian Phone:</span>
-                    <strong>{selectedApplicant.guardianPhone}</strong>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-lbl">Student Phone:</span>
-                    <strong>{selectedApplicant.phone}</strong>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-lbl">Home City &amp; Distance:</span>
-                    <strong>{selectedApplicant.homeCity} ({selectedApplicant.distanceKm} km from campus)</strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Status Update for Hostel Admin */}
-              {isHostelAdmin && (
-                <div style={{ marginTop: '1.25rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <h5 style={{ margin: '0 0 0.5rem 0', color: '#0f172a' }}>Hostel Admin Status Sanction</h5>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      className="bulk-btn mark-present"
-                      onClick={() => handleUpdateStatus(selectedApplicant.id, 'Allotted')}
-                    >
-                      ✓ Sanction Allotment
-                    </button>
-                    <button
-                      type="button"
-                      className="bulk-btn"
-                      style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
-                      onClick={() => handleUpdateStatus(selectedApplicant.id, 'Approved')}
-                    >
-                      Approve Dossier
-                    </button>
-                    <button
-                      type="button"
-                      className="bulk-btn mark-absent"
-                      onClick={() => handleUpdateStatus(selectedApplicant.id, 'Waitlisted')}
-                    >
-                      Move to Waitlist
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="hostel-modal-footer">
-              <button
-                type="button"
-                className="h-btn-secondary"
-                onClick={() => setSelectedApplicant(null)}
-              >
-                Close Dossier
-              </button>
-              <button
-                type="button"
-                className="h-btn-action-primary"
-                onClick={() => {
-                  window.print();
-                  showToast('Preparing printable hostel allotment credentials.');
-                }}
-              >
-                <Printer size={15} /> Print Allotment Slip
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

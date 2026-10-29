@@ -263,25 +263,27 @@ export default function HostelApplyLeaveModule({
         </div>
 
         <div className="hal-hero-actions">
-          {/* Role Preview Switcher */}
-          <button
-            type="button"
-            className="hal-btn hal-btn-outline"
-            onClick={() => {
-              const newMode = isHostelAdmin ? 'warden' : 'hostel_admin';
-              setRoleMode(newMode);
-              if (newMode === 'warden' && activeTab === 'approvals') {
-                setActiveTab('apply');
-              } else if (newMode === 'hostel_admin') {
-                setActiveTab('approvals');
-              }
-              showToast(`Switched view to ${newMode === 'hostel_admin' ? 'Hostel Admin' : 'Warden'} role.`);
-            }}
-            title="Toggle between Warden (Applicant) and Hostel Admin (Sanctioner) view"
-          >
-            <ShieldCheck size={14} />
-            <span>Switch to {isHostelAdmin ? 'Warden View' : 'Hostel Admin View'}</span>
-          </button>
+          {/* Role Preview Switcher: only for Hostel Admin */}
+          {isHostelAdmin && (
+            <button
+              type="button"
+              className="hal-btn hal-btn-outline"
+              onClick={() => {
+                const newMode = isHostelAdmin ? 'warden' : 'hostel_admin';
+                setRoleMode(newMode);
+                if (newMode === 'warden' && activeTab === 'approvals') {
+                  setActiveTab('apply');
+                } else if (newMode === 'hostel_admin') {
+                  setActiveTab('approvals');
+                }
+                showToast(`Switched view to ${newMode === 'hostel_admin' ? 'Hostel Admin' : 'Warden'} role.`);
+              }}
+              title="Toggle between Warden (Applicant) and Hostel Admin (Sanctioner) view"
+            >
+              <ShieldCheck size={14} />
+              <span>Switch to {isHostelAdmin ? 'Warden View' : 'Hostel Admin View'}</span>
+            </button>
+          )}
 
           {onNavigateLeaves && (
             <button
@@ -295,20 +297,22 @@ export default function HostelApplyLeaveModule({
             </button>
           )}
 
-          <button
-            type="button"
-            className="hal-btn hal-btn-outline"
-            onClick={() => {
-              const res = resetStaffLeavesToDefaults();
-              setLeaves(res.leaves);
-              setSummary(res.summary);
-              showToast('Leave records & balances reset to official defaults.');
-            }}
-            title="Reset leave records"
-          >
-            <RotateCcw size={15} />
-            <span>Reset Demo</span>
-          </button>
+          {isHostelAdmin && (
+            <button
+              type="button"
+              className="hal-btn hal-btn-outline"
+              onClick={() => {
+                const res = resetStaffLeavesToDefaults();
+                setLeaves(res.leaves);
+                setSummary(res.summary);
+                showToast('Leave records & balances reset to official defaults.');
+              }}
+              title="Reset leave records"
+            >
+              <RotateCcw size={15} />
+              <span>Reset Demo</span>
+            </button>
+          )}
         </div>
       </div>
 

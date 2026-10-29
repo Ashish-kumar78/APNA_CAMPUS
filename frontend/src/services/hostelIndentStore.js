@@ -36,154 +36,290 @@ export const PRESET_MATERIALS = [
 export const INITIAL_INDENTS = [
   {
     id: 'ind-1',
+    referenceNo: 'REQ-7037/15350',
     indentNo: '7037/15350',
+    requestTitle: 'Session Student Documentation Cover & Files',
+    requestType: 'General Hostel Supplies',
+    productName: 'File with GIFT Logo (Folder File)',
     materialName: 'File with GIFT Logo (Folder File)',
     isCustom: false,
     code: 'S-201',
     quantity: '4.00 pcs',
+    unit: 'Pieces',
     approxCost: 'RS. 82.18',
     costNum: 82.18,
-    purpose: 'bh-1,bh-2',
+    estimatedCost: 82.18,
+    hostelName: "BPUT Boy's Hostel 1 (Kalam Block)",
+    roomLocation: 'Hostel Office & Record Room',
+    purpose: 'bh-1,bh-2 (Hostel Office)',
+    priority: 'Medium',
     expectedDate: '22-01-2024',
-    raisedBy: 'Tanmaya Kumar Routray',
-    currentLevel: 'Level-1',
+    raisedBy: 'Mr. Tanmaya Kumar Routray (Hostel Warden)',
+    currentLevel: 'Level-2 (Store Issued)',
     isApproved: true,
     issued: true,
-    status: 'Approved',
+    status: 'Approved & Issued',
     approvedBy: 'Mr. Rajesh Jena (Hostel Admin)',
     approvedAt: '24-01-2024',
+    submittedAt: '22 Jan 2024, 10:15 AM',
     remarks: 'Approved for session student files.'
   },
   {
     id: 'ind-2',
+    referenceNo: 'REQ-7037/15349',
     indentNo: '7037/15349',
+    requestTitle: 'Curfew & Night Roll-Call Student Attendance Registers',
+    requestType: 'General Hostel Supplies',
+    productName: 'Attendance Register Student',
     materialName: 'Attendance Register Student',
     isCustom: false,
     code: 'S-211',
     quantity: '2.00 pcs',
+    unit: 'Pieces',
     approxCost: 'RS. 217.11',
     costNum: 217.11,
-    purpose: 'bh-1,bh-2',
+    estimatedCost: 217.11,
+    hostelName: "BPUT Boy's Hostel 1 (Kalam Block)",
+    roomLocation: 'Warden Guard Booth & Entry Desk',
+    purpose: 'bh-1,bh-2 (Guard Station)',
+    priority: 'High',
     expectedDate: '22-01-2024',
-    raisedBy: 'Tanmaya Kumar Routray',
-    currentLevel: 'Level-1',
+    raisedBy: 'Mr. Tanmaya Kumar Routray (Hostel Warden)',
+    currentLevel: 'Level-2 (Store Issued)',
     isApproved: true,
     issued: true,
-    status: 'Approved',
+    status: 'Approved & Issued',
     approvedBy: 'Mr. Rajesh Jena (Hostel Admin)',
     approvedAt: '23-01-2024',
+    submittedAt: '22 Jan 2024, 09:30 AM',
     remarks: 'Approved for night roll-call record register.'
   },
   {
     id: 'ind-3',
+    referenceNo: 'REQ-6396/13875',
     indentNo: '6396/13875',
+    requestTitle: 'Administrative Filing System Covers',
+    requestType: 'General Hostel Supplies',
+    productName: 'Cover File',
     materialName: 'Cover File',
     isCustom: false,
     code: 'S-202',
     quantity: '4.00 pcs',
+    unit: 'Pieces',
     approxCost: 'RS. 109.33',
     costNum: 109.33,
+    estimatedCost: 109.33,
+    hostelName: "BPUT Boy's Hostel 2 (Raman Block)",
+    roomLocation: 'Warden Archive Desk',
     purpose: 'bh-1,bh-2',
+    priority: 'Low',
     expectedDate: '11-10-2023',
-    raisedBy: 'Tanmaya Kumar Routray',
-    currentLevel: 'Level-1',
+    raisedBy: 'Mr. Tanmaya Kumar Routray (Hostel Warden)',
+    currentLevel: 'Level-2 (Store Issued)',
     isApproved: true,
     issued: true,
-    status: 'Approved',
+    status: 'Approved & Issued',
     approvedBy: 'Mr. Rajesh Jena (Hostel Admin)',
     approvedAt: '12-10-2023',
+    submittedAt: '11 Oct 2023, 11:20 AM',
     remarks: 'Office filing requisitions approved.'
   },
   {
     id: 'ind-4',
+    referenceNo: 'REQ-6396/13874',
     indentNo: '6396/13874',
+    requestTitle: 'Block Resident Muster Rolls',
+    requestType: 'General Hostel Supplies',
+    productName: 'Attendance Register Student',
     materialName: 'Attendance Register Student',
     isCustom: false,
     code: 'S-211',
     quantity: '2.00 pcs',
+    unit: 'Pieces',
     approxCost: 'RS. 221.75',
     costNum: 221.75,
-    purpose: 'bh-1,bh-2',
+    estimatedCost: 221.75,
+    hostelName: 'Sarojini Girls Hostel (Block A)',
+    roomLocation: 'Girls Hostel Ground Desk',
+    purpose: 'gh-1 (Sarojini)',
+    priority: 'Medium',
     expectedDate: '11-10-2023',
-    raisedBy: 'Tanmaya Kumar Routray',
-    currentLevel: 'Level-1',
+    raisedBy: 'Mrs. Nibedita Das (Hostel Warden)',
+    currentLevel: 'Level-2 (Store Issued)',
     isApproved: true,
     issued: true,
-    status: 'Approved',
+    status: 'Approved & Issued',
     approvedBy: 'Mr. Rajesh Jena (Hostel Admin)',
     approvedAt: '12-10-2023',
+    submittedAt: '11 Oct 2023, 08:45 AM',
     remarks: 'Approved for Kalam & Sarojini residence blocks.'
   },
   {
     id: 'ind-5',
+    referenceNo: 'REQ-2051/4122',
     indentNo: '2051/4122',
+    requestTitle: 'Heavy Brass Scissors for Warden Station',
+    requestType: 'Room Equipment',
+    productName: 'Scissor Heavy Brass',
     materialName: 'Scissor',
     isCustom: false,
     code: 'S-104',
     quantity: '1.00 pcs',
+    unit: 'Pieces',
     approxCost: 'RS. 126.67',
     costNum: 126.67,
+    estimatedCost: 126.67,
+    hostelName: "BPUT Boy's Hostel 1 (Kalam Block)",
+    roomLocation: 'Warden Office',
     purpose: 'OFFICE',
+    priority: 'Low',
     expectedDate: '03-01-2023',
-    raisedBy: 'Tanmaya Kumar Routray',
-    currentLevel: 'Level-1',
+    raisedBy: 'Mr. Tanmaya Kumar Routray (Hostel Warden)',
+    currentLevel: 'Level-2 (Store Issued)',
     isApproved: true,
     issued: true,
-    status: 'Approved',
+    status: 'Approved & Issued',
     approvedBy: 'Mr. Rajesh Jena (Hostel Admin)',
     approvedAt: '04-01-2023',
+    submittedAt: '03 Jan 2023, 02:00 PM',
     remarks: 'Stationery procurement.'
   },
   {
     id: 'ind-6',
+    referenceNo: 'REQ-8492/18920',
     indentNo: '8492/18920',
+    requestTitle: 'Urgent Replacement of Damaged Door Handles and Locks',
+    requestType: 'Repair of Existing Item',
+    productName: 'Aluminium door Stay Handle & lock',
     materialName: 'Aluminium door Stay Handle & lock',
     isCustom: false,
     code: 'H-301',
     quantity: '12.00 pcs',
+    unit: 'Pieces',
     approxCost: 'RS. 1,446.00',
     costNum: 1446.00,
+    estimatedCost: 1446.00,
+    hostelName: "BPUT Boy's Hostel 1 (Kalam Block)",
+    roomLocation: 'Gandhi Block Rooms 101 to 106',
     purpose: 'bh-1 (Gandhi Block Rooms 101-106)',
+    priority: 'Urgent',
     expectedDate: '2026-11-02',
-    raisedBy: 'Tanmaya Kumar Routray',
-    currentLevel: 'Level-1',
+    raisedBy: 'Mr. Tanmaya Kumar Routray (Hostel Warden)',
+    currentLevel: 'Level-1 (Pending Review)',
     isApproved: false,
     issued: false,
-    status: 'Pending',
+    status: 'Pending Admin Approval',
     approvedBy: null,
     approvedAt: null,
-    remarks: 'Damaged locks require urgent replacement before winter term exams.'
+    submittedAt: '26 Oct 2026, 09:15 AM',
+    remarks: 'Damaged locks require urgent replacement before winter term exams.',
+    description: 'Multiple room door handles are broken and mortise latches are jamming, creating a safety and privacy concern for students in rooms 101 through 106.',
+    itemCondition: 'Damaged / Malfunctioning latches',
+    repairPossible: 'No - Needs full replacement',
+    replacementRequired: 'Yes - Complete set',
+    affectedRooms: 6,
+    safetyHazard: true
   },
   {
     id: 'ind-7',
+    referenceNo: 'REQ-8492/18921',
     indentNo: '8492/18921',
+    requestTitle: 'Washroom Shower Spindle and CPVC Fittings Repair',
+    requestType: 'Plumbing Problem',
+    productName: 'Shower Spindle 7mm & CPVC Sockets',
     materialName: 'Shower Spindle 7mm & CPVC Sockets',
     isCustom: true,
     code: 'P-707-CUST',
     quantity: '8.00 pcs',
+    unit: 'Pieces',
     approxCost: 'RS. 860.00',
     costNum: 860.00,
+    estimatedCost: 860.00,
+    hostelName: 'Sarojini Girls Hostel (Block A)',
+    roomLocation: '2nd & 3rd Floor Washroom Block',
     purpose: 'gh-1 (Sarojini Girls Residence)',
+    priority: 'High',
     expectedDate: '2026-11-05',
-    raisedBy: 'Mrs. Nibedita Das',
-    currentLevel: 'Level-1',
+    raisedBy: 'Mrs. Nibedita Das (Hostel Warden)',
+    currentLevel: 'Level-1 (Pending Review)',
     isApproved: false,
     issued: false,
-    status: 'Pending',
+    status: 'Pending Admin Approval',
     approvedBy: null,
     approvedAt: null,
-    remarks: 'Plumbing maintenance on 2nd and 3rd floor washrooms.'
+    submittedAt: '27 Oct 2026, 04:45 PM',
+    remarks: 'Plumbing maintenance on 2nd and 3rd floor washrooms.',
+    description: 'High pressure water leakage occurring on the shower junctions causing floor waterlogging. Requires 8 units of 7mm spindles and CPVC connector sockets.',
+    itemCondition: 'Leaking / Degraded fittings',
+    repairPossible: 'Yes - Can be repaired on campus by technician',
+    replacementRequired: 'Yes - Replacement spindles',
+    affectedRooms: 12,
+    safetyHazard: false
   }
 ];
+
+export function normalizeIndent(item) {
+  if (!item) return item;
+
+  const rawStatus = item.status || 'Pending';
+  let cleanStatus = rawStatus;
+  if (item.isDraft) {
+    cleanStatus = 'Draft';
+  } else if (rawStatus === 'Pending' || rawStatus === 'Pending Admin Approval') {
+    cleanStatus = 'Pending Admin Approval';
+  } else if (rawStatus === 'Approved') {
+    cleanStatus = item.issued ? 'Completed' : 'Approved';
+  } else if (rawStatus === 'Approved & Issued') {
+    cleanStatus = 'Completed';
+  }
+
+  const refPart = item.indentNo ? item.indentNo : `${item.id}`;
+  const requestRef = item.referenceNo || `REQ-${refPart}`;
+
+  return {
+    ...item,
+    id: item.id || `ind-${Date.now()}`,
+    referenceNo: requestRef,
+    indentNo: item.indentNo || refPart,
+    productName: item.productName || item.materialName || 'Hostel Maintenance Item',
+    materialName: item.materialName || item.productName || 'Hostel Maintenance Item',
+    requestTitle: item.requestTitle || item.title || `${item.productName || item.materialName || 'Maintenance'} Requisition`,
+    requestType: item.requestType || 'General Hostel Supplies',
+    quantity: item.quantity || '1 pcs',
+    unit: item.unit || 'Pieces',
+    approxCost: item.approxCost || (item.costNum ? `RS. ${Number(item.costNum).toFixed(2)}` : 'RS. 0.00'),
+    costNum: typeof item.costNum === 'number' ? item.costNum : 0,
+    estimatedCost: typeof item.estimatedCost === 'number' ? item.estimatedCost : (item.costNum || 0),
+    hostelName: item.hostelName || (item.purpose && item.purpose.includes('gh-') ? 'Sarojini Girls Hostel (Block A)' : "BPUT Boy's Hostel 1 (Kalam Block)"),
+    roomLocation: item.roomLocation || (item.purpose ? item.purpose : 'General Hostel Premises'),
+    priority: item.priority || 'Medium',
+    expectedDate: item.expectedDate || '2026-11-05',
+    raisedBy: item.raisedBy || 'Mr. Tanmaya Kumar Routray (Hostel Warden)',
+    status: cleanStatus,
+    currentLevel: item.currentLevel || (cleanStatus === 'Pending Admin Approval' ? 'Level-1 (Pending Review)' : cleanStatus),
+    isApproved: Boolean(item.isApproved),
+    issued: Boolean(item.issued),
+    isDraft: Boolean(item.isDraft),
+    attachments: Array.isArray(item.attachments) ? item.attachments : [],
+    submittedAt: item.submittedAt || (item.approvedAt ? item.approvedAt : 'Recently submitted'),
+    remarks: item.remarks || '',
+    description: item.description || item.remarks || 'Requisition submitted for hostel maintenance and facilities.'
+  };
+}
 
 export function getAllIndents() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(normalizeIndent);
+      }
+    }
   } catch (err) {
     console.error('Failed reading indents from storage', err);
   }
-  return [...INITIAL_INDENTS];
+  return INITIAL_INDENTS.map(normalizeIndent);
 }
 
 export function saveIndents(indents) {
@@ -199,31 +335,77 @@ export function raiseNewIndent(formData) {
   const nextReqPart1 = Math.floor(7000 + Math.random() * 1900);
   const nextReqPart2 = Math.floor(15000 + Math.random() * 4000);
   const newIndentNo = `${nextReqPart1}/${nextReqPart2}`;
+  const isDraft = Boolean(formData.isDraft);
+
+  const finalStatus = isDraft ? 'Draft' : 'Pending Admin Approval';
+  const finalLevel = isDraft ? 'Draft' : 'Level-1 (Pending Review)';
+
+  const costNum = Number(formData.estimatedCost || formData.approxCost || formData.costNum || 0);
+  const qtyNumber = Number(formData.quantity) || 1;
+  const unitStr = formData.unit || 'Pieces';
 
   const newIndent = {
-    id: `ind-${Date.now()}`,
+    id: formData.id || `ind-${Date.now()}`,
+    referenceNo: `REQ-${newIndentNo}`,
     indentNo: newIndentNo,
-    materialName: formData.materialName,
-    isCustom: Boolean(formData.isCustom),
-    code: formData.code || (formData.isCustom ? 'CUST-SPEC' : 'S-GEN'),
-    quantity: `${Number(formData.quantity).toFixed(2)} ${formData.unit || 'pcs'}`,
-    approxCost: `RS. ${Number(formData.approxCost || 0).toFixed(2)}`,
-    costNum: Number(formData.approxCost || 0),
-    purpose: formData.purpose || 'Hostel Campus Blocks',
+    requestTitle: formData.requestTitle || formData.title || `${formData.productName || formData.materialName || 'Maintenance'} Requisition`,
+    requestType: formData.requestType || 'General Hostel Supplies',
+    productName: formData.productName || formData.materialName || 'Maintenance Item',
+    materialName: formData.productName || formData.materialName || 'Maintenance Item',
+    description: formData.description || '',
+    quantity: `${qtyNumber} ${unitStr}`,
+    quantityNum: qtyNumber,
+    unit: unitStr,
+    approxCost: `RS. ${costNum.toFixed(2)}`,
+    costNum: costNum,
+    estimatedCost: costNum,
+    purpose: `${formData.hostelName || 'Hostel'} - ${formData.roomLocation || 'General'}`,
+    hostelName: formData.hostelName || "BPUT Boy's Hostel 1 (Kalam Block)",
+    roomLocation: formData.roomLocation || 'General Premises',
+    priority: formData.priority || 'Medium',
     expectedDate: formData.expectedDate || new Date().toISOString().split('T')[0],
-    raisedBy: formData.raisedBy || 'Hostel Warden',
-    currentLevel: 'Level-1',
+    raisedBy: formData.raisedBy || 'Mr. Tanmaya Kumar Routray (Hostel Warden)',
+    isCustom: Boolean(formData.isCustom),
+    code: formData.code || 'REQ-MAT',
+    currentLevel: finalLevel,
     isApproved: false,
     issued: false,
-    status: 'Pending',
+    isDraft: isDraft,
+    status: finalStatus,
     approvedBy: null,
     approvedAt: null,
-    remarks: formData.remarks || ''
+    remarks: formData.remarks || formData.additionalRemarks || '',
+    itemCondition: formData.itemCondition || '',
+    repairPossible: formData.repairPossible || '',
+    replacementRequired: formData.replacementRequired || '',
+    affectedRooms: Number(formData.affectedRooms) || 1,
+    safetyHazard: Boolean(formData.safetyHazard),
+    observations: formData.observations || '',
+    attachments: Array.isArray(formData.attachments) ? formData.attachments : [],
+    submittedAt: isDraft
+      ? 'Draft saved'
+      : new Intl.DateTimeFormat('en-IN', {
+          day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
+        }).format(new Date()),
+    createdAt: new Date().toISOString()
   };
 
-  const updated = [newIndent, ...currentIndents];
+  let updated;
+  if (formData.id && currentIndents.some(i => i.id === formData.id)) {
+    updated = currentIndents.map(i => i.id === formData.id ? newIndent : i);
+  } else {
+    updated = [newIndent, ...currentIndents];
+  }
+
   saveIndents(updated);
   return { newIndent, updated };
+}
+
+export function deleteIndent(indentId) {
+  const currentIndents = getAllIndents();
+  const updated = currentIndents.filter(item => item.id !== indentId && item.indentNo !== indentId);
+  saveIndents(updated);
+  return updated;
 }
 
 export function approveIndentByAdmin(indentId, approverName = 'Mr. Rajesh Jena (Hostel Admin)') {
@@ -258,7 +440,7 @@ export function rejectIndentByAdmin(indentId, reason = 'Budget / Stock not appro
         status: 'Rejected',
         currentLevel: 'Rejected',
         approvedBy: rejectorName,
-        remarks: reason ? `[Rejected]: ${reason}` : item.remarks
+        remarks: reason ? `[Rejected by Admin]: ${reason}` : item.remarks
       };
     }
     return item;
@@ -276,7 +458,7 @@ export function markIndentIssued(indentId) {
         ...item,
         issued: true,
         currentLevel: 'Store Dispatched',
-        status: 'Approved & Issued'
+        status: 'Completed'
       };
     }
     return item;
@@ -287,6 +469,6 @@ export function markIndentIssued(indentId) {
 }
 
 export function resetIndentsToDefault() {
-  saveIndents(INITIAL_INDENTS);
-  return INITIAL_INDENTS;
+  saveIndents(INITIAL_INDENTS.map(normalizeIndent));
+  return INITIAL_INDENTS.map(normalizeIndent);
 }

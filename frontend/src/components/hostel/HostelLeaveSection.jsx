@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Calendar,
   CalendarCheck,
@@ -16,30 +16,76 @@ import {
   Check,
   X,
   Eye,
-  ArrowRight
+  ArrowRight,
+  AlertTriangle,
+  Send,
+  MessageSquare,
+  ShieldAlert
 } from 'lucide-react';
-import { mockLeaveApplications } from './hostelData.js';
+import {
+  getAllResidentLeaves,
+  approveResidentLeave,
+  rejectResidentLeave,
+  markResidentReturned
+} from '../../services/hostelResidentLeaveStore.js';
 import './HostelExtraSections.css';
 
-export default function HostelLeaveSection({ onNavigateApplyLeave }) {
-  const [leaves, setLeaves] = useState(mockLeaveApplications);
+const PRESET_REJECTION_REASONS = [
+  'Parent / Guardian telephonic consent could not be verified by hostel office.',
+  'Upcoming internal mid-semester examinations and scheduled laboratory evaluations.',
+  'Disciplinary curfew violation / attendance shortage recorded in current term.',
+  'Incomplete outstation transit address and department mentor recommendation missing.',
+  'Outstation duration exceeds maximum permissible consecutive days per hostel rules.'
+];
+
+export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHostelAdmin: propIsHostelAdmin }) {
+  const [leaves, setLeaves] = useState(() => getAllResidentLeaves());
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'Pending' | 'Approved' | 'Rejected'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLeaveModal, setSelectedLeaveModal] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
 
+  // Rejection modal states
+  const [rejectModalTarget, setRejectModalTarget] = useState(null);
+  const [rejectionReasonText, setRejectionReasonText] = useState('');
+  const [rejectionError, setRejectionError] = useState('');
+
+  const isHostelAdmin = typeof propIsHostelAdmin === 'boolean'
+    ? propIsHostelAdmin
+    : Boolean(
+        account?.role === 'hostel_admin' ||
+        account?.role === 'admin' ||
+        account?.role === 'super_admin' ||
+        account?.identity === 'WRD-ADM-01' ||
+        account?.detail?.toLowerCase().includes('administrator')
+      );
+
+  // Listen to storage events for real-time synchronization with Student Portal
+  useEffect(() => {
+    const handleSync = () => {
+      setLeaves(getAllResidentLeaves());
+    };
+    window.addEventListener('bput_hostel_leaves_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('bput_hostel_leaves_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
+
   const showToast = (msg) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3000);
+    setTimeout(() => setToastMsg(null), 3500);
   };
 
   const filteredLeaves = useMemo(() => {
     return leaves.filter(l => {
       const matchStatus = statusFilter === 'ALL' || l.status === statusFilter;
-      const matchSearch = !searchQuery ||
-        l.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.hostelName.toLowerCase().includes(searchQuery.toLowerCase());
+      const query = searchQuery.trim().toLowerCase();
+      const matchSearch = !query ||
+        l.studentName.toLowerCase().includes(query) ||
+        l.rollNumber.toLowerCase().includes(query) ||
+        l.hostelName.toLowerCase().includes(query);
       return matchStatus && matchSearch;
     });
   }, [leaves, statusFilter, searchQuery]);
@@ -55,27 +101,58 @@ export default function HostelLeaveSection({ onNavigateApplyLeave }) {
   }, [leaves]);
 
   const handleApprove = (id) => {
-    setLeaves(prev => prev.map(l => l.id === id ? { ...l, status: 'Approved', returned: false } : l));
+    const submitterName = account?.name
+      ? `${account.name} (${isHostelAdmin ? 'Hostel Admin' : 'Resident Warden'})`
+      : 'Mr. Rajesh Jena (Resident Warden)';
+
+    const updated = approveResidentLeave(id, submitterName);
+    setLeaves(updated);
     if (selectedLeaveModal?.id === id) {
-      setSelectedLeaveModal(prev => ({ ...prev, status: 'Approved', returned: false }));
+      setSelectedLeaveModal(updated.find(l => l.id === id));
     }
-    showToast(`Leave application ${id} approved successfully`);
+    showToast(`✓ Leave application ${id} approved successfully`);
   };
 
-  const handleReject = (id) => {
-    setLeaves(prev => prev.map(l => l.id === id ? { ...l, status: 'Rejected' } : l));
-    if (selectedLeaveModal?.id === id) {
-      setSelectedLeaveModal(prev => ({ ...prev, status: 'Rejected' }));
+  const handleInitiateReject = (leave) => {
+    setRejectModalTarget(leave);
+    setRejectionReasonText('');
+    setRejectionError('');
+  };
+
+  const handleConfirmReject = () => {
+    if (!rejectionReasonText.trim()) {
+      setRejectionError('Please provide a specific reason for rejection to inform the student.');
+      return;
     }
-    showToast(`Leave application ${id} rejected`);
+
+    const submitterName = account?.name
+      ? `${account.name} (${isHostelAdmin ? 'Hostel Admin' : 'Resident Warden'})`
+      : 'Mr. Rajesh Jena (Resident Warden)';
+
+    const updated = rejectResidentLeave({
+      leaveId: rejectModalTarget.id,
+      reason: rejectionReasonText.trim(),
+      rejectedBy: submitterName
+    });
+
+    setLeaves(updated);
+    if (selectedLeaveModal?.id === rejectModalTarget.id) {
+      setSelectedLeaveModal(updated.find(l => l.id === rejectModalTarget.id));
+    }
+
+    const studentName = rejectModalTarget.studentName;
+    const leaveId = rejectModalTarget.id;
+    setRejectModalTarget(null);
+    showToast(`✓ Leave application ${leaveId} rejected. Reason recorded and notified to ${studentName}.`);
   };
 
   const handleMarkReturned = (id) => {
-    setLeaves(prev => prev.map(l => l.id === id ? { ...l, returned: true } : l));
+    const updated = markResidentReturned(id);
+    setLeaves(updated);
     if (selectedLeaveModal?.id === id) {
-      setSelectedLeaveModal(prev => ({ ...prev, returned: true }));
+      setSelectedLeaveModal(updated.find(l => l.id === id));
     }
-    showToast(`Student recorded as returned to hostel`);
+    showToast(`✓ Student recorded as returned to hostel`);
   };
 
   return (
@@ -121,7 +198,7 @@ export default function HostelLeaveSection({ onNavigateApplyLeave }) {
           <button
             className="h-btn h-btn-secondary"
             onClick={() => {
-              setLeaves(mockLeaveApplications);
+              setLeaves(getAllResidentLeaves());
               showToast('Leave queue synchronized');
             }}
           >
@@ -173,7 +250,7 @@ export default function HostelLeaveSection({ onNavigateApplyLeave }) {
           <div className="hostel-kpi-info">
             <span className="hostel-kpi-value" style={{ color: '#e11d48' }}>{stats.rejected}</span>
             <span className="hostel-kpi-title">Rejected</span>
-            <span className="hostel-kpi-subtitle">Consent Lacking</span>
+            <span className="hostel-kpi-subtitle">With Specified Reason</span>
           </div>
         </div>
       </div>
@@ -267,7 +344,7 @@ export default function HostelLeaveSection({ onNavigateApplyLeave }) {
                         display: 'inline-block',
                         fontSize: '0.7rem',
                         fontWeight: 700,
-                        color: leave.guardianStatus.includes('Verified') ? '#059669' : '#d97706',
+                        color: leave.guardianStatus?.includes('Verified') ? '#059669' : '#d97706',
                         marginTop: '2px'
                       }}>
                         ● {leave.guardianStatus}
@@ -287,7 +364,17 @@ export default function HostelLeaveSection({ onNavigateApplyLeave }) {
                           </div>
                         </div>
                       )}
-                      {leave.status === 'Rejected' && <span className="h-badge h-badge-rejected">Rejected</span>}
+                      {leave.status === 'Rejected' && (
+                        <div>
+                          <span className="h-badge h-badge-rejected">Rejected</span>
+                          {leave.rejectionReason && (
+                            <div className="leave-rejection-chip" title={leave.rejectionReason}>
+                              <AlertCircle size={11} color="#e11d48" style={{ flexShrink: 0 }} />
+                              <span><strong>Reason:</strong> {leave.rejectionReason}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -310,7 +397,8 @@ export default function HostelLeaveSection({ onNavigateApplyLeave }) {
                             <button
                               className="h-btn h-btn-danger"
                               style={{ padding: '4px 8px', fontSize: '0.74rem' }}
-                              onClick={() => handleReject(leave.id)}
+                              onClick={() => handleInitiateReject(leave)}
+                              title="Reject leave and mention reason"
                             >
                               <X size={13} /> Reject
                             </button>
@@ -335,10 +423,10 @@ export default function HostelLeaveSection({ onNavigateApplyLeave }) {
         </div>
       </div>
 
-      {/* MODAL: VIEW DETAILS */}
+      {/* MODAL 1: VIEW DETAILS */}
       {selectedLeaveModal && (
         <div className="admin-modal-backdrop" onClick={() => setSelectedLeaveModal(null)}>
-          <div className="admin-modal-card" style={{ maxWidth: '620px' }} onClick={e => e.stopPropagation()}>
+          <div className="admin-modal-card" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
             <div className="admin-modal-header">
               <div>
                 <h3 style={{ margin: 0 }}>Leave Dossier · {selectedLeaveModal.id}</h3>
@@ -360,6 +448,27 @@ export default function HostelLeaveSection({ onNavigateApplyLeave }) {
                 <div><strong>Total Duration:</strong> {selectedLeaveModal.days} Days ({selectedLeaveModal.startDate} to {selectedLeaveModal.endDate})</div>
               </div>
 
+              {/* If Rejected: Prominent Rejection Card showing Reason */}
+              {selectedLeaveModal.status === 'Rejected' && (
+                <div className="modal-rejection-card">
+                  <div className="rejection-card-head">
+                    <XCircle size={18} color="#e11d48" />
+                    <strong>Leave Application Rejected by Hostel Office</strong>
+                  </div>
+                  <div className="rejection-card-body">
+                    <span className="reason-label">Reason Stated by Warden / Admin:</span>
+                    <p className="reason-quote">
+                      "{selectedLeaveModal.rejectionReason || 'Parent/Guardian telephonic consent could not be verified by hostel office.'}"
+                    </p>
+                    <div className="rejection-meta">
+                      <span>Decided by: <strong>{selectedLeaveModal.rejectedBy || 'Resident Warden'}</strong></span>
+                      <span>•</span>
+                      <span>Date: <strong>{selectedLeaveModal.rejectedAt || selectedLeaveModal.appliedOn}</strong></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
                   Declared Purpose of Leave
@@ -380,7 +489,7 @@ export default function HostelLeaveSection({ onNavigateApplyLeave }) {
             <div className="admin-modal-footer">
               {selectedLeaveModal.status === 'Pending' && (
                 <>
-                  <button className="h-btn h-btn-danger" onClick={() => handleReject(selectedLeaveModal.id)}>
+                  <button className="h-btn h-btn-danger" onClick={() => handleInitiateReject(selectedLeaveModal)}>
                     <X size={14} /> Reject Application
                   </button>
                   <button className="h-btn h-btn-success" onClick={() => handleApprove(selectedLeaveModal.id)}>
@@ -395,6 +504,116 @@ export default function HostelLeaveSection({ onNavigateApplyLeave }) {
               )}
               <button className="h-btn h-btn-secondary" onClick={() => setSelectedLeaveModal(null)}>
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: MENTION REASON FOR REJECTION */}
+      {rejectModalTarget && (
+        <div className="reject-modal-backdrop" onClick={() => setRejectModalTarget(null)}>
+          <div className="reject-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="reject-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="reject-icon-badge">
+                  <ShieldAlert size={20} color="#e11d48" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>
+                    Reject Leave Application
+                  </h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                    Application ID: <strong>{rejectModalTarget.id}</strong> · Student: <strong>{rejectModalTarget.studentName}</strong>
+                  </p>
+                </div>
+              </div>
+              <button className="admin-table-action-btn" onClick={() => setRejectModalTarget(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="reject-modal-body">
+              {/* Application Details Summary */}
+              <div className="reject-summary-banner">
+                <div className="summary-col">
+                  <span className="lbl">Student:</span>
+                  <strong>{rejectModalTarget.studentName} ({rejectModalTarget.rollNumber})</strong>
+                </div>
+                <div className="summary-col">
+                  <span className="lbl">Residence:</span>
+                  <strong>{rejectModalTarget.hostelName} · Room {rejectModalTarget.roomNumber}</strong>
+                </div>
+                <div className="summary-col">
+                  <span className="lbl">Duration:</span>
+                  <strong>{rejectModalTarget.startDate} to {rejectModalTarget.endDate} ({rejectModalTarget.days} Days)</strong>
+                </div>
+                <div className="summary-col">
+                  <span className="lbl">Student's Stated Reason:</span>
+                  <span style={{ color: '#334155' }}>"{rejectModalTarget.reason}"</span>
+                </div>
+              </div>
+
+              {/* Mandatory Rejection Reason Input */}
+              <div className="reject-input-group">
+                <label className="reject-label">
+                  Mention Rejection Reason *
+                  <span className="reject-subtext">This specific reason will be displayed directly to the student on their portal</span>
+                </label>
+                <textarea
+                  className="reject-textarea"
+                  rows={4}
+                  placeholder="Specify the reason why this leave cannot be granted (e.g. Parent consent not verified over phone call, upcoming exams, attendance shortage, etc.)..."
+                  value={rejectionReasonText}
+                  onChange={e => {
+                    setRejectionReasonText(e.target.value);
+                    setRejectionError('');
+                  }}
+                />
+
+                {rejectionError && (
+                  <div className="reject-error-msg">
+                    <AlertCircle size={14} /> {rejectionError}
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Preset Reason Chips */}
+              <div className="reject-presets-wrap">
+                <span className="presets-label">Quick Suggestion Chips (Click to fill):</span>
+                <div className="presets-chips">
+                  {PRESET_REJECTION_REASONS.map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className="preset-chip-btn"
+                      onClick={() => {
+                        setRejectionReasonText(preset);
+                        setRejectionError('');
+                      }}
+                    >
+                      + {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="reject-modal-footer">
+              <button
+                type="button"
+                className="h-btn h-btn-secondary"
+                onClick={() => setRejectModalTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="h-btn h-btn-danger"
+                style={{ padding: '8px 18px', fontSize: '0.88rem' }}
+                onClick={handleConfirmReject}
+              >
+                <X size={15} /> Confirm &amp; Reject Leave
               </button>
             </div>
           </div>

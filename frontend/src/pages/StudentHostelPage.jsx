@@ -19,7 +19,13 @@ import {
   ShieldCheck,
   Star,
   UserCheck,
-  ArrowRight
+  ArrowRight,
+  Calendar,
+  XCircle,
+  Eye,
+  Info,
+  Building,
+  Printer
 } from 'lucide-react';
 import './StudentHostelPage.css';
 import { initialStudentHostelDetail, initialHostelComplaints } from '../data/collegeData.js';
@@ -28,12 +34,89 @@ import SmartComplaintModal from '../components/SmartComplaintModal.jsx';
 import StudentComplaintFeedbackModal from '../components/StudentComplaintFeedbackModal.jsx';
 import ReopenComplaintModal from '../components/ReopenComplaintModal.jsx';
 import { getStudentGatePasses } from '../services/gatePassStore.js';
+import {
+  getAllResidentLeaves,
+  getResidentLeavesByStudent,
+  createResidentLeave
+} from '../services/hostelResidentLeaveStore.js';
+import { getActiveStudent } from '../services/studentStore.js';
 
 import { api } from '../services/api.js';
+import { getStudentRulesList, subscribeHostelRules } from '../services/hostelRulesStore.js';
 
 export default function StudentHostelPage({ defaultTab = 'overview' }) {
   const [activeSubTab, setActiveSubTab] = useState(defaultTab);
   const [pendingGatePassCount, setPendingGatePassCount] = useState(0);
+
+  // Student Leaves state & synchronization
+  const activeStudent = getActiveStudent();
+  const [residentLeaves, setResidentLeaves] = useState(() => getAllResidentLeaves());
+  const [selectedStudentFilter, setSelectedStudentFilter] = useState('ALL');
+  const [selectedLeaveDetail, setSelectedLeaveDetail] = useState(null);
+  const [isApplyLeaveModalOpen, setIsApplyLeaveModalOpen] = useState(false);
+  const [leaveToast, setLeaveToast] = useState(null);
+
+  const [newLeaveForm, setNewLeaveForm] = useState({
+    studentName: activeStudent?.name || 'Rakesh Das',
+    rollNumber: activeStudent?.rollNumber || '2305200001',
+    regNo: activeStudent?.registrationNumber || '2305201001',
+    hostelName: 'Gandhi Boys Residence',
+    roomNumber: '101',
+    phone: activeStudent?.phone || '+91 94370 11999',
+    startDate: '2026-10-29',
+    endDate: '2026-10-31',
+    days: 2,
+    reason: '',
+    guardianName: activeStudent?.guardianName || activeStudent?.fatherName || 'D. Das',
+    guardianPhone: activeStudent?.guardianPhone || activeStudent?.fatherPhone || '+91 94370 11888'
+  });
+
+  useEffect(() => {
+    const handleLeavesSync = () => {
+      setResidentLeaves(getAllResidentLeaves());
+    };
+    window.addEventListener('bput_hostel_leaves_updated', handleLeavesSync);
+    window.addEventListener('storage', handleLeavesSync);
+    return () => {
+      window.removeEventListener('bput_hostel_leaves_updated', handleLeavesSync);
+      window.removeEventListener('storage', handleLeavesSync);
+    };
+  }, []);
+
+  const showLeaveToast = (msg) => {
+    setLeaveToast(msg);
+    setTimeout(() => setLeaveToast(null), 3500);
+  };
+
+  const studentFilteredLeaves = useMemo(() => {
+    if (selectedStudentFilter === 'ALL') {
+      return residentLeaves;
+    }
+    return residentLeaves.filter(l =>
+      l.rollNumber === selectedStudentFilter ||
+      l.regNo === selectedStudentFilter ||
+      (selectedStudentFilter === '2305200001' && l.studentName.toLowerCase().includes('rakesh'))
+    );
+  }, [residentLeaves, selectedStudentFilter]);
+
+  const rejectedLeavesCount = useMemo(() => {
+    return residentLeaves.filter(l => l.status === 'Rejected').length;
+  }, [residentLeaves]);
+
+  const highPriorityRejection = useMemo(() => {
+    return studentFilteredLeaves.find(l => l.status === 'Rejected') || null;
+  }, [studentFilteredLeaves]);
+
+  const handleApplyLeaveSubmit = (e) => {
+    e.preventDefault();
+    if (!newLeaveForm.reason.trim()) {
+      alert('Please specify the reason for your outstation leave.');
+      return;
+    }
+    const created = createResidentLeave(newLeaveForm);
+    setIsApplyLeaveModalOpen(false);
+    showLeaveToast(`✓ Leave Application ${created.id} submitted successfully to Resident Warden.`);
+  };
 
   useEffect(() => {
     setActiveSubTab(defaultTab);
@@ -51,6 +134,14 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
   }, []);
 
   const [hostelDetail] = useState(initialStudentHostelDetail);
+  const [liveRules, setLiveRules] = useState(() => getStudentRulesList());
+
+  useEffect(() => {
+    const unsub = subscribeHostelRules(() => {
+      setLiveRules(getStudentRulesList());
+    });
+    return unsub;
+  }, []);
   const [complaints, setComplaints] = useState(initialHostelComplaints);
 
   // Modals for Feedback and Reopening
@@ -436,10 +527,611 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
             </span>
           )}
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('leaves')}
+          style={{
+            padding: '0.6rem 1.2rem',
+            borderRadius: '10px',
+            border: 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: activeSubTab === 'leaves' ? '#dc2626' : '#f1f5f9',
+            color: activeSubTab === 'leaves' ? '#ffffff' : '#475569',
+            boxShadow: activeSubTab === 'leaves' ? '0 4px 12px rgba(220, 38, 38, 0.25)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Calendar size={17} /> Overnight Leave Applications
+          {rejectedLeavesCount > 0 && (
+            <span style={{
+              background: activeSubTab === 'leaves' ? '#fef2f2' : '#fee2e2',
+              color: '#991b1b',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              padding: '2px 7px',
+              borderRadius: '9999px',
+              marginLeft: '4px',
+              border: '1px solid #fca5a5'
+            }}>
+              {rejectedLeavesCount} Notice
+            </span>
+          )}
+        </button>
       </div>
 
       {activeSubTab === 'gate-pass' ? (
         <StudentGatePassSection />
+      ) : activeSubTab === 'leaves' ? (
+        <div className="student-leaves-container">
+          {/* Toast message */}
+          {leaveToast && (
+            <div style={{
+              background: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              color: '#166534',
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <CheckCircle2 size={16} /> {leaveToast}
+            </div>
+          )}
+
+          {/* HIGH-PRIORITY WARDEN REJECTION BANNER (User requirement: reason mentioned by warden shown to student) */}
+          {highPriorityRejection && (
+            <div className="student-leave-rejection-banner">
+              <div className="rejection-banner-header">
+                <div className="rejection-banner-title">
+                  <AlertTriangle size={20} color="#e11d48" />
+                  <span>Important Notice: Leave Application {highPriorityRejection.id} Rejected by Resident Warden</span>
+                </div>
+                <div className="rejection-banner-time">
+                  Decided: {highPriorityRejection.rejectedAt || 'Recent'}
+                </div>
+              </div>
+
+              <div className="rejection-quote-box">
+                <div className="rejection-quote-label">
+                  <AlertCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
+                  Reason Stated by Warden for Rejection:
+                </div>
+                <p className="rejection-quote-text">
+                  "{highPriorityRejection.rejectionReason || 'Parent/Guardian telephonic consent could not be verified by hostel warden office.'}"
+                </p>
+              </div>
+
+              <div className="rejection-banner-footer">
+                <div>
+                  Action taken by: <strong>{highPriorityRejection.rejectedBy || 'Mr. Rajesh Jena (Resident Warden)'}</strong>
+                  &nbsp;·&nbsp; Resident: <strong>{highPriorityRejection.studentName} ({highPriorityRejection.rollNumber})</strong>
+                </div>
+                <button
+                  type="button"
+                  className="admin-action-btn-secondary"
+                  style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', borderColor: '#fca5a5', color: '#991b1b', background: '#ffffff', fontWeight: 700 }}
+                  onClick={() => setSelectedLeaveDetail(highPriorityRejection)}
+                >
+                  <Eye size={13} /> View Official Rejection Notice
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Header */}
+          <div className="student-hostel-header">
+            <div>
+              <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={22} style={{ color: '#dc2626' }} /> My Overnight Leaves &amp; Outstation Requests
+              </h1>
+              <p>Official registry of overnight leave applications submitted to Resident Warden with real-time approvals and stated rejection reasons.</p>
+            </div>
+            <button
+              type="button"
+              className="admin-action-btn-primary"
+              style={{ background: '#dc2626' }}
+              onClick={() => setIsApplyLeaveModalOpen(true)}
+            >
+              <Plus size={15} /> Apply for Overnight Leave
+            </button>
+          </div>
+
+          {/* Demo Profile Switcher Bar */}
+          <div className="student-leave-card-wrapper">
+            <div className="student-leave-filter-bar">
+              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Select Student Profile (Demo Switcher):
+              </span>
+              <button
+                type="button"
+                className={`student-leave-filter-btn ${selectedStudentFilter === 'ALL' ? 'active' : ''}`}
+                onClick={() => setSelectedStudentFilter('ALL')}
+              >
+                All Applications ({residentLeaves.length})
+              </button>
+              <button
+                type="button"
+                className={`student-leave-filter-btn ${selectedStudentFilter === '2305200001' ? 'active' : ''}`}
+                onClick={() => setSelectedStudentFilter('2305200001')}
+              >
+                Rakesh Das (LV-2026-039)
+              </button>
+              <button
+                type="button"
+                className={`student-leave-filter-btn ${selectedStudentFilter === '2305200002' ? 'rejected-active' : ''}`}
+                onClick={() => setSelectedStudentFilter('2305200002')}
+              >
+                Amit Nayak (LV-2026-042 · Rejected with Reason)
+              </button>
+              <button
+                type="button"
+                className={`student-leave-filter-btn ${selectedStudentFilter === '2305200008' ? 'active' : ''}`}
+                onClick={() => setSelectedStudentFilter('2305200008')}
+              >
+                Ananya Mishra (LV-2026-043 · Pending)
+              </button>
+              <button
+                type="button"
+                className={`student-leave-filter-btn ${selectedStudentFilter === '2305200012' ? 'rejected-active' : ''}`}
+                onClick={() => setSelectedStudentFilter('2305200012')}
+              >
+                Subrat Jena (LV-2026-038 · Rejected with Reason)
+              </button>
+              <button
+                type="button"
+                className={`student-leave-filter-btn ${selectedStudentFilter === '2305200005' ? 'active' : ''}`}
+                onClick={() => setSelectedStudentFilter('2305200005')}
+              >
+                Sourav Mohanty (LV-2026-041 · Approved)
+              </button>
+            </div>
+
+            {/* Leaves Table */}
+            <div style={{ overflowX: 'auto' }}>
+              <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left', fontSize: '0.78rem', color: '#64748b', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '0.85rem 1rem' }}>App ID</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Student / Roll</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Hostel &amp; Room</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Leave Duration</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Reason</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Guardian Verification</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Status &amp; Stated Reason</th>
+                    <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studentFilteredLeaves.map(leave => {
+                    const isRejected = leave.status === 'Rejected';
+                    const isApproved = leave.status === 'Approved';
+                    const isPending = leave.status === 'Pending';
+
+                    return (
+                      <tr key={leave.id} style={{ borderBottom: '1px solid #f1f5f9', background: isRejected ? '#fffbfb' : '#ffffff' }}>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <strong style={{ color: '#2563eb', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                            {leave.id}
+                          </strong>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Applied: {leave.appliedOn}</div>
+                        </td>
+
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{leave.studentName}</div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Reg: {leave.rollNumber || leave.regNo}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{leave.phone}</div>
+                        </td>
+
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontWeight: 600, color: '#334155' }}>{leave.hostelName}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Room {leave.roomNumber}</div>
+                        </td>
+
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                            {leave.startDate} → {leave.endDate}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: '#2563eb', fontWeight: 600 }}>
+                            {leave.days} Days Total
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '0.85rem 1rem', maxWidth: '220px' }}>
+                          <div style={{ fontSize: '0.85rem', color: '#334155', fontWeight: 500 }}>
+                            {leave.reason}
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{leave.guardianName}</div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{leave.guardianPhone}</div>
+                          <div style={{ fontSize: '0.72rem', color: leave.guardianStatus?.includes('Disapproved') ? '#dc2626' : '#166534', fontWeight: 600, marginTop: '2px' }}>
+                            • {leave.guardianStatus}
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '0.85rem 1rem', minWidth: '240px' }}>
+                          {isRejected && (
+                            <div>
+                              <span className="badge-leave-rejected">
+                                <XCircle size={12} /> Rejected
+                              </span>
+                              {/* Prominently show reason to student */}
+                              <div className="student-leave-reason-chip">
+                                <div className="student-leave-reason-label">
+                                  <AlertCircle size={11} /> Reason Mentioned by Warden:
+                                </div>
+                                <div className="student-leave-reason-text">
+                                  "{leave.rejectionReason || 'Parent/Guardian telephonic consent could not be verified by hostel warden office.'}"
+                                </div>
+                                <div className="student-leave-reason-by">
+                                  By {leave.rejectedBy || 'Mr. Rajesh Jena (Resident Warden)'} · {leave.rejectedAt || 'Recent'}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {isApproved && (
+                            <div>
+                              <span className="badge-leave-approved">
+                                <CheckCircle2 size={12} /> Approved
+                              </span>
+                              <span className={leave.returned ? "badge-leave-returned" : "badge-leave-away"}>
+                                {leave.returned ? "✓ Returned" : "⏳ Away"}
+                              </span>
+                              <div style={{ fontSize: '0.72rem', color: '#15803d', marginTop: '4px' }}>
+                                Sanctioned by {leave.approvedBy || 'Resident Warden'}
+                              </div>
+                            </div>
+                          )}
+
+                          {isPending && (
+                            <div>
+                              <span className="badge-leave-pending">
+                                <Clock size={12} /> Pending Review
+                              </span>
+                              <div style={{ fontSize: '0.72rem', color: '#854d0e', marginTop: '3px' }}>
+                                Under warden verification with parent
+                              </div>
+                            </div>
+                          )}
+                        </td>
+
+                        <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            className="admin-action-btn-secondary"
+                            style={{
+                              fontSize: '0.78rem',
+                              padding: '0.4rem 0.75rem',
+                              color: isRejected ? '#991b1b' : '#334155',
+                              borderColor: isRejected ? '#fca5a5' : '#cbd5e1',
+                              background: isRejected ? '#fef2f2' : '#ffffff',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            onClick={() => setSelectedLeaveDetail(leave)}
+                          >
+                            <Eye size={13} /> {isRejected ? 'View Notice' : 'View'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {studentFilteredLeaves.length === 0 && (
+                    <tr>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+                        <Calendar size={36} style={{ color: '#cbd5e1', marginBottom: '0.5rem' }} />
+                        <p style={{ margin: 0, fontWeight: 600 }}>No leave applications found for this student.</p>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem' }}>Click "Apply for Overnight Leave" above to create an outstation leave request.</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ── MODAL: VIEW FORMAL LEAVE & REJECTION NOTICE ── */}
+          {selectedLeaveDetail && (
+            <div className="admin-modal-backdrop" onClick={() => setSelectedLeaveDetail(null)}>
+              <div
+                className="admin-modal-card"
+                style={{ maxWidth: '640px', width: '95vw' }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div
+                  className="admin-modal-header"
+                  style={{
+                    background: selectedLeaveDetail.status === 'Rejected' ? '#fef2f2' : '#f8fafc',
+                    borderBottom: '1px solid #e2e8f0',
+                    padding: '1.25rem 1.5rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    {selectedLeaveDetail.status === 'Rejected' ? (
+                      <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b91c1c' }}>
+                        <XCircle size={22} />
+                      </div>
+                    ) : (
+                      <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                        <Calendar size={22} />
+                      </div>
+                    )}
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', color: selectedLeaveDetail.status === 'Rejected' ? '#991b1b' : '#0f172a', fontWeight: 800 }}>
+                        {selectedLeaveDetail.status === 'Rejected' ? 'Hostel Leave Application — Rejection Notice' : 'Hostel Overnight Leave Application Record'}
+                      </h3>
+                      <small style={{ color: selectedLeaveDetail.status === 'Rejected' ? '#b91c1c' : '#64748b' }}>
+                        Application ID: <strong>{selectedLeaveDetail.id}</strong> · Submitted: {selectedLeaveDetail.appliedOn}
+                      </small>
+                    </div>
+                  </div>
+                  <button
+                    className="admin-table-action-btn"
+                    onClick={() => setSelectedLeaveDetail(null)}
+                    style={{ border: 'none', background: '#f1f5f9', borderRadius: '50%', width: '32px', height: '32px' }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="admin-modal-body" style={{ padding: '1.5rem' }}>
+                  {/* REJECTION REASON CARD IF REJECTED */}
+                  {selectedLeaveDetail.status === 'Rejected' && (
+                    <div style={{ background: '#fff1f2', border: '1.5px solid #fecdd3', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 800, color: '#9f1239', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                        <AlertCircle size={15} /> Official Reason Stated by Resident Warden
+                      </div>
+                      <div style={{ fontSize: '1.02rem', color: '#881337', fontWeight: 600, lineHeight: '1.5', background: '#ffffff', padding: '14px 16px', borderRadius: '8px', borderLeft: '4px solid #e11d48' }}>
+                        "{selectedLeaveDetail.rejectionReason || 'Parent / Guardian telephonic consent could not be verified by hostel warden office.'}"
+                      </div>
+                      <div style={{ marginTop: '10px', fontSize: '0.78rem', color: '#9f1239', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                        <span>Decided by: <strong>{selectedLeaveDetail.rejectedBy || 'Mr. Rajesh Jena (Resident Warden)'}</strong></span>
+                        <span>Date &amp; Time: <strong>{selectedLeaveDetail.rejectedAt || 'Recent'}</strong></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Application Data Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.85rem', background: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase' }}>Resident Student</span>
+                      <div style={{ fontWeight: 800, color: '#0f172a' }}>{selectedLeaveDetail.studentName}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#475569' }}>Reg No: {selectedLeaveDetail.rollNumber || selectedLeaveDetail.regNo}</div>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase' }}>Hostel &amp; Room</span>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{selectedLeaveDetail.hostelName}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#475569' }}>Room {selectedLeaveDetail.roomNumber}</div>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase' }}>Leave Period</span>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{selectedLeaveDetail.startDate} → {selectedLeaveDetail.endDate}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600 }}>{selectedLeaveDetail.days} Days Total</div>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase' }}>Parent / Guardian</span>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{selectedLeaveDetail.guardianName}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#475569' }}>{selectedLeaveDetail.guardianPhone} ({selectedLeaveDetail.guardianStatus})</div>
+                    </div>
+
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase' }}>Stated Student Reason</span>
+                      <div style={{ fontWeight: 600, color: '#1e293b', marginTop: '2px' }}>{selectedLeaveDetail.reason}</div>
+                    </div>
+                  </div>
+
+                  {/* Student Next Steps Notice */}
+                  {selectedLeaveDetail.status === 'Rejected' && (
+                    <div style={{ marginTop: '1.25rem', padding: '0.85rem 1rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', fontSize: '0.8rem', color: '#0369a1' }}>
+                      <strong>Resolution Guideline:</strong> If you believe the rejection was due to a telephonic miscommunication, have your parent/guardian call the Resident Warden directly at <strong>+91 94370 12345</strong>, or report in person to the Hostel Office between 05:00 PM and 07:00 PM.
+                    </div>
+                  )}
+                </div>
+
+                <div className="admin-modal-footer" style={{ padding: '1rem 1.5rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="admin-action-btn-secondary"
+                    onClick={() => window.print()}
+                  >
+                    <Printer size={14} /> Print Notice
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-action-btn-primary"
+                    style={{ background: '#0f172a' }}
+                    onClick={() => setSelectedLeaveDetail(null)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── MODAL: APPLY FOR NEW OVERNIGHT LEAVE ── */}
+          {isApplyLeaveModalOpen && (
+            <div className="admin-modal-backdrop" onClick={() => setIsApplyLeaveModalOpen(false)}>
+              <div
+                className="admin-modal-card"
+                style={{ maxWidth: '600px', width: '95vw' }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="admin-modal-header" style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <Calendar size={20} color="#dc2626" />
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', fontWeight: 800 }}>
+                        Apply for Overnight Outstation Leave
+                      </h3>
+                      <small style={{ color: '#64748b' }}>Application will be submitted directly to Resident Warden for verification.</small>
+                    </div>
+                  </div>
+                  <button
+                    className="admin-table-action-btn"
+                    onClick={() => setIsApplyLeaveModalOpen(false)}
+                    style={{ border: 'none', background: '#f1f5f9', borderRadius: '50%', width: '32px', height: '32px' }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleApplyLeaveSubmit}>
+                  <div className="admin-modal-body" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <div className="admin-form-group">
+                        <label>Student Name</label>
+                        <input
+                          type="text"
+                          className="admin-form-input"
+                          value={newLeaveForm.studentName}
+                          onChange={e => setNewLeaveForm({ ...newLeaveForm, studentName: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="admin-form-group">
+                        <label>Registration / Roll Number</label>
+                        <input
+                          type="text"
+                          className="admin-form-input"
+                          value={newLeaveForm.rollNumber}
+                          onChange={e => setNewLeaveForm({ ...newLeaveForm, rollNumber: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+                      <div className="admin-form-group">
+                        <label>Hostel Residence</label>
+                        <select
+                          className="admin-form-select"
+                          value={newLeaveForm.hostelName}
+                          onChange={e => setNewLeaveForm({ ...newLeaveForm, hostelName: e.target.value })}
+                        >
+                          <option value="Gandhi Boys Residence">Gandhi Boys Residence (Hostel 1)</option>
+                          <option value="Kalam Boys Residence">Kalam Boys Residence (Hostel 2)</option>
+                          <option value="Sarojini Girls Residence">Sarojini Girls Residence (Hostel 1)</option>
+                        </select>
+                      </div>
+                      <div className="admin-form-group">
+                        <label>Room Number</label>
+                        <input
+                          type="text"
+                          className="admin-form-input"
+                          value={newLeaveForm.roomNumber}
+                          onChange={e => setNewLeaveForm({ ...newLeaveForm, roomNumber: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                      <div className="admin-form-group">
+                        <label>Leave Start Date</label>
+                        <input
+                          type="date"
+                          className="admin-form-input"
+                          value={newLeaveForm.startDate}
+                          onChange={e => setNewLeaveForm({ ...newLeaveForm, startDate: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="admin-form-group">
+                        <label>Leave End Date</label>
+                        <input
+                          type="date"
+                          className="admin-form-input"
+                          value={newLeaveForm.endDate}
+                          onChange={e => setNewLeaveForm({ ...newLeaveForm, endDate: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="admin-form-group">
+                        <label>Total Days</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="30"
+                          className="admin-form-input"
+                          value={newLeaveForm.days}
+                          onChange={e => setNewLeaveForm({ ...newLeaveForm, days: Number(e.target.value) })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label>Reason for Outstation Leave *</label>
+                      <textarea
+                        className="admin-form-input"
+                        rows="3"
+                        placeholder="State clearly the reason for leaving campus (e.g. Sister's wedding in Berhampur, urgent dental procedure, hackathon)..."
+                        value={newLeaveForm.reason}
+                        onChange={e => setNewLeaveForm({ ...newLeaveForm, reason: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <div className="admin-form-group">
+                        <label>Parent / Guardian Name *</label>
+                        <input
+                          type="text"
+                          className="admin-form-input"
+                          value={newLeaveForm.guardianName}
+                          onChange={e => setNewLeaveForm({ ...newLeaveForm, guardianName: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="admin-form-group">
+                        <label>Parent / Guardian Contact *</label>
+                        <input
+                          type="tel"
+                          className="admin-form-input"
+                          value={newLeaveForm.guardianPhone}
+                          onChange={e => setNewLeaveForm({ ...newLeaveForm, guardianPhone: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="admin-modal-footer" style={{ padding: '1rem 1.5rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      className="admin-action-btn-secondary"
+                      onClick={() => setIsApplyLeaveModalOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="admin-action-btn-primary"
+                      style={{ background: '#dc2626' }}
+                    >
+                      Submit Leave Application
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
         <>
           {/* Header */}
@@ -527,11 +1219,49 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
 
         {/* Hostel Rules */}
         <div className="hostel-info-card" style={{ gap: '1rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>Hostel Regulations &amp; Code of Conduct</h3>
-          <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', color: '#475569' }}>
-            {hostelDetail.rules.map((rule, idx) => (
-              <li key={idx}>{rule}</li>
-            ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>Hostel Regulations &amp; Code of Conduct</h3>
+            <span style={{ fontSize: '0.76rem', color: '#2563eb', background: '#eff6ff', padding: '3px 10px', borderRadius: '12px', fontWeight: 600 }}>
+              Live Admin Policy
+            </span>
+          </div>
+          <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.85rem', color: '#475569' }}>
+            {liveRules && liveRules.length > 0 ? (
+              liveRules.map((rule, idx) => (
+                <li key={rule.id || idx} style={{ lineHeight: 1.5 }}>
+                  {typeof rule === 'string' ? (
+                    rule
+                  ) : (
+                    <>
+                      <strong style={{ color: '#0f172a' }}>{rule.title}</strong>
+                      {rule.value && (
+                        <span style={{
+                          marginLeft: '6px',
+                          background: '#eff6ff',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe',
+                          padding: '1px 7px',
+                          borderRadius: '4px',
+                          fontSize: '0.76rem',
+                          fontWeight: 700
+                        }}>
+                          {rule.value}
+                        </span>
+                      )}
+                      {rule.description && (
+                        <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '2px' }}>
+                          {rule.description}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </li>
+              ))
+            ) : (
+              hostelDetail.rules.map((rule, idx) => (
+                <li key={idx}>{rule}</li>
+              ))
+            )}
           </ul>
         </div>
       </div>
@@ -881,9 +1611,17 @@ export default function StudentHostelPage({ defaultTab = 'overview' }) {
         complaint={feedbackModalTarget}
         onClose={() => setIsFeedbackModalOpen(false)}
         onSubmitted={handleFeedbackSuccess}
-        onRouteToReopen={(comp) => {
+        onFeedbackSubmitted={handleFeedbackSuccess}
+        onRouteToReopen={(comp, initialReason) => {
           setIsFeedbackModalOpen(false);
-          setReopenModalTarget(comp);
+          const target = comp || feedbackModalTarget;
+          setReopenModalTarget(initialReason ? { ...target, initialReason } : target);
+          setIsReopenModalOpen(true);
+        }}
+        onSwitchToReopen={(comp, initialReason) => {
+          setIsFeedbackModalOpen(false);
+          const target = comp || feedbackModalTarget;
+          setReopenModalTarget(initialReason ? { ...target, initialReason } : target);
           setIsReopenModalOpen(true);
         }}
       />

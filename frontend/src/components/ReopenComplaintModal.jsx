@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   AlertTriangle,
@@ -18,24 +18,75 @@ export default function ReopenComplaintModal({
   onClose,
   onReopened,
 }) {
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState(complaint?.initialReason || complaint?.reopenReason || '');
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoName, setPhotoName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const fileInputRef = useRef(null);
 
+  useEffect(() => {
+    if (complaint?.initialReason) {
+      setReason(complaint.initialReason);
+    } else if (complaint?.reopenReason) {
+      setReason(complaint.reopenReason);
+    } else {
+      setReason('');
+    }
+    setPhotoPreview(null);
+    setPhotoName('');
+    setErrorMessage('');
+  }, [complaint, isOpen]);
+
   if (!isOpen || !complaint) return null;
 
-  const handlePhotoSelect = (e) => {
+  const compressImage = (file, maxWidth = 1280, maxHeight = 1280, quality = 0.8) => {
+    return new Promise((resolve) => {
+      if (!file || !file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(e.target.result);
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handlePhotoSelect = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setPhotoName(file.name);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPhotoPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file);
+      setPhotoPreview(compressed);
+    } catch {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleRemovePhoto = () => {

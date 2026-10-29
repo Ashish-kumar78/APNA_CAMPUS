@@ -1,0 +1,359 @@
+/* Apna Campus — Hostel Administrator Executive Console Styles */
+
+.had-container {
+  padding: 1.5rem;
+  background: #f8fafc;
+  min-height: calc(100vh - 80px);
+  color: #1e293b;
+  font-family: inherit;
+}
+
+.had-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.had-title-group h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.35rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.had-title-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  background: #ede9fe;
+  color: #7c3aed;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid #ddd6fe;
+}
+
+.had-subtitle {
+  color: #64748b;
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.had-quick-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.had-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease-in-out;
+}
+
+.had-btn-primary {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.had-btn-primary:hover {
+  background: #6d28d9;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+}
+
+.had-btn-secondary {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.had-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.had-btn-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.had-btn-danger:hover {
+  background: #fecaca;
+}
+
+/* Filter Bar */
+.had-filter-bar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.had-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.had-filter-select, .had-filter-input {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 0.825rem;
+  color: #0f172a;
+  outline: none;
+}
+
+.had-filter-select:focus, .had-filter-input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+}
+
+/* Overdue Critical Banner */
+.had-alert-banner {
+  background: #fff1f2;
+  border: 1px solid #ffe4e6;
+  border-left: 4px solid #e11d48;
+  border-radius: 10px;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.had-alert-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.had-alert-text strong {
+  color: #9f1239;
+  font-size: 0.88rem;
+  display: block;
+}
+
+.had-alert-text span {
+  color: #be123c;
+  font-size: 0.8rem;
+}
+
+/* Top KPI Grid */
+.had-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.had-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.had-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  border-color: #cbd5e1;
+}
+
+.had-kpi-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.had-kpi-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.had-kpi-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.had-kpi-icon.purple { background: #ede9fe; color: #7c3aed; }
+.had-kpi-icon.blue { background: #e0f2fe; color: #0284c7; }
+.had-kpi-icon.emerald { background: #d1fae5; color: #059669; }
+.had-kpi-icon.amber { background: #fef3c7; color: #d97706; }
+.had-kpi-icon.rose { background: #ffe4e6; color: #e11d48; }
+
+.had-kpi-val {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+
+.had-kpi-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Monitoring Sections Grid */
+.had-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.had-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.had-col-12 { grid-column: span 12; }
+.had-col-8 { grid-column: span 8; }
+.had-col-6 { grid-column: span 6; }
+.had-col-4 { grid-column: span 4; }
+
+@media (max-width: 1024px) {
+  .had-col-8, .had-col-6, .had-col-4 {
+    grid-column: span 12;
+  }
+}
+
+.had-card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+}
+
+.had-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.had-card-body {
+  padding: 1.25rem;
+  flex: 1;
+}
+
+/* Data Table Styles */
+.had-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+  text-align: left;
+}
+
+.had-table th {
+  padding: 0.65rem 0.85rem;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  text-transform: uppercase;
+  font-size: 0.725rem;
+  letter-spacing: 0.03em;
+}
+
+.had-table td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.had-table tr:hover {
+  background: #f8fafc;
+}
+
+/* Badges */
+.had-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.725rem;
+  font-weight: 600;
+}
+
+.had-badge.success { background: #dcfce7; color: #15803d; }
+.had-badge.warning { background: #fef3c7; color: #b45309; }
+.had-badge.danger { background: #fee2e2; color: #b91c1c; }
+.had-badge.info { background: #e0f2fe; color: #0369a1; }
+.had-badge.neutral { background: #f1f5f9; color: #475569; }
+
+/* Progress Bar */
+.had-progress-bar {
+  width: 100%;
+  height: 7px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 0.35rem;
+}
+
+.had-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.had-progress-fill.purple { background: #7c3aed; }
+.had-progress-fill.emerald { background: #10b981; }
+.had-progress-fill.amber { background: #f59e0b; }
+.had-progress-fill.rose { background: #f43f5e; }
+

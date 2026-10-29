@@ -77,7 +77,7 @@ export default function HostelMessSection() {
       <div className="hostel-section-header">
         <div>
           <h2><Utensils size={24} color="#2563eb" /> Mess &amp; Central Dining Management</h2>
-          <p>Nutritional Diet Scheduling · Weekly Menu Roster · Special Patient Diet Coordination · Student Feedback</p>
+          <p>Nutritional Diet Scheduling · Weekly Menu Roster · Student Feedback</p>
         </div>
         <div style={{ display: 'flex', gap: '0.65rem' }}>
           <button className="h-btn h-btn-secondary" onClick={() => window.print()}>
@@ -145,12 +145,6 @@ export default function HostelMessSection() {
           onClick={() => setActiveTab('menu')}
         >
           <Calendar size={14} /> Weekly Menu Schedule
-        </button>
-        <button
-          className={`hostel-tab-pill ${activeTab === 'special-meals' ? 'active' : ''}`}
-          onClick={() => setActiveTab('special-meals')}
-        >
-          <Heart size={14} /> Special Patient Diet ({specialMeals.length})
         </button>
         <button
           className={`hostel-tab-pill ${activeTab === 'feedback' ? 'active' : ''}`}
@@ -272,54 +266,6 @@ export default function HostelMessSection() {
         </div>
       )}
 
-      {/* TAB 2: SPECIAL PATIENT DIET */}
-      {activeTab === 'special-meals' && (
-        <div className="hostel-table-container">
-          <div className="hostel-table-scroll">
-            <table className="hostel-data-table">
-              <thead>
-                <tr>
-                  <th>Request ID</th>
-                  <th>Student / Roll</th>
-                  <th>Hostel &amp; Room</th>
-                  <th>Diet Prescription / Purpose</th>
-                  <th>Schedule Duration</th>
-                  <th>Kitchen Service Status</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {specialMeals.map(sm => (
-                  <tr key={sm.id}>
-                    <td style={{ fontWeight: 700, color: '#2563eb' }}>{sm.id}</td>
-                    <td>
-                      <div style={{ fontWeight: 700 }}>{sm.studentName}</div>
-                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Reg: {sm.rollNumber}</div>
-                    </td>
-                    <td>{sm.hostel} · Room {sm.room}</td>
-                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{sm.dietType}</td>
-                    <td>{sm.startDate} to {sm.endDate}</td>
-                    <td>
-                      <span className={`h-badge ${sm.status.includes('Serving') ? 'h-badge-approved' : 'h-badge-low'}`}>
-                        {sm.status}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button
-                        className="h-btn h-btn-secondary"
-                        style={{ padding: '4px 8px', fontSize: '0.74rem' }}
-                        onClick={() => handleToggleSpecialMeal(sm.id)}
-                      >
-                        {sm.status.includes('Serving') ? 'Mark Completed' : 'Activate Serving'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* TAB 3: FEEDBACK */}
       {activeTab === 'feedback' && (

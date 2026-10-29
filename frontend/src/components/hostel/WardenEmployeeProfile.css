@@ -349,6 +349,84 @@
   border-color: #0284c7;
 }
 
+/* Other Info Table (Exact Match to Image 2 & 3) */
+.emp-otherinfo-table {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.emp-otherinfo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.72rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.86rem;
+  transition: background 0.15s ease;
+}
+
+.emp-otherinfo-row:last-child {
+  border-bottom: none;
+}
+
+.emp-otherinfo-row:nth-child(even) {
+  background: #fafafa;
+}
+
+.emp-otherinfo-row:hover {
+  background: #f8fafc;
+}
+
+.emp-otherinfo-label {
+  color: #334155;
+  font-weight: 600;
+  width: 42%;
+  font-size: 0.85rem;
+}
+
+.emp-otherinfo-val {
+  color: #0f172a;
+  font-weight: 600;
+  width: 58%;
+  word-break: break-word;
+}
+
+/* Modal Form Controls */
+.emp-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.emp-form-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.emp-form-input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.emp-form-input:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .emp-profile-grid {
@@ -360,4 +438,11 @@
   .emp-detail-row.full-width {
     grid-column: span 1;
   }
+  .emp-otherinfo-label {
+    width: 50%;
+  }
+  .emp-otherinfo-val {
+    width: 50%;
+  }
 }
+

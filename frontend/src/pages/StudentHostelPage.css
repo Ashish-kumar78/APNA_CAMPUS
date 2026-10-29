@@ -438,4 +438,240 @@
   width: fit-content;
 }
 
+/* ══════════════════════════════════════════════════════
+   STUDENT OVERNIGHT LEAVE SECTION & REJECTION DISPLAY
+   ══════════════════════════════════════════════════════ */
+
+.student-leaves-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* High-priority warden rejection banner for student */
+.student-leave-rejection-banner {
+  background: #fff1f2;
+  border: 1.5px solid #fecdd3;
+  border-left: 5px solid #e11d48;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  animation: pulseSubtle 3s infinite ease-in-out;
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { border-color: #fecdd3; }
+  50% { border-color: #fda4af; }
+}
+
+.rejection-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rejection-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #9f1239;
+}
+
+.rejection-banner-time {
+  font-size: 0.78rem;
+  color: #be123c;
+  font-weight: 600;
+}
+
+.rejection-quote-box {
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #fee2e2;
+  border-left: 4px solid #be123c;
+  padding: 0.9rem 1.1rem;
+}
+
+.rejection-quote-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #9f1239;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.rejection-quote-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #881337;
+  font-weight: 600;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.rejection-banner-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #9f1239;
+}
+
+/* Student Leave Table & Filter */
+.student-leave-card-wrapper {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.student-leave-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.student-leave-filter-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.student-leave-filter-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.student-leave-filter-btn.active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.student-leave-filter-btn.rejected-active {
+  background: #e11d48;
+  color: #ffffff;
+  border-color: #e11d48;
+}
+
+/* Leave Status Badges */
+.badge-leave-approved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.badge-leave-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fefce8;
+  color: #854d0e;
+  border: 1px solid #fef08a;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.badge-leave-rejected {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecdd3;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.badge-leave-away {
+  display: inline-block;
+  margin-left: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.badge-leave-returned {
+  display: inline-block;
+  margin-left: 6px;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* In-table Rejection Reason Callout */
+.student-leave-reason-chip {
+  margin-top: 6px;
+  background: #fef2f2;
+  border: 1px solid #fecdd3;
+  border-left: 3px solid #e11d48;
+  border-radius: 6px;
+  padding: 6px 9px;
+  text-align: left;
+  max-width: 320px;
+}
+
+.student-leave-reason-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #991b1b;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.student-leave-reason-text {
+  font-size: 0.78rem;
+  color: #7f1d1d;
+  font-style: italic;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.student-leave-reason-by {
+  font-size: 0.68rem;
+  color: #be123c;
+  margin-top: 4px;
+}
+
+
 

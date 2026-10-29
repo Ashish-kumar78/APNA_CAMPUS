@@ -1218,12 +1218,16 @@ export default function RoleDashboardLanding({
   const C3Icon = c3.icon;
   const C4Icon = c4.icon;
 
-  // When warden requests Employee Profile (2nd Image format)
-  if (resolvedKey === 'warden' && showWardenProfile) {
+  // When warden or hostel admin requests Employee Profile (2nd Image format)
+  if ((resolvedKey === 'warden' || rawKey === 'hostel_admin' || account?.role === 'hostel_admin') && showWardenProfile) {
     return (
       <WardenEmployeeProfile
         account={account}
-        onBack={() => setShowWardenProfile(false)}
+        onBack={() => {
+          setShowWardenProfile(false);
+          if (onNavigateTab) onNavigateTab('dashboard');
+          else if (onNavigate) onNavigate('dashboard');
+        }}
       />
     );
   }
@@ -1278,25 +1282,33 @@ export default function RoleDashboardLanding({
                 className="dash-passport-photo-frame"
                 title={`${officerDisplayName} Official Passport Photo (35mm x 45mm)`}
               >
-                {!photoError && officer.photo ? (
-                  <img
-                    src={officer.photo}
-                    alt={officerDisplayName}
-                    className="dash-passport-img"
-                    onError={() => setPhotoError(true)}
-                  />
-                ) : (
-                  <div className="dash-passport-fallback" aria-label="Official photo fallback">
-                    <UserRound size={34} color="#4338ca" />
-                    <span className="dash-fallback-badge">{officer.id?.split('-')[0] || 'ERP'}</span>
-                  </div>
-                )}
+                {(() => {
+                  const isHostelRole = resolvedKey === 'warden' || rawKey === 'hostel_admin' || account?.role === 'warden' || account?.role === 'hostel_admin' || account?.role === 'hostel';
+                  const activePhoto = isHostelRole
+                    ? (localStorage.getItem('hostel_officer_avatar') || '/candidate_photo_apna.png')
+                    : (officer.photo || account?.photo);
+                  return !photoError && activePhoto ? (
+                    <img
+                      src={activePhoto}
+                      alt={officerDisplayName}
+                      className="dash-passport-img"
+                      onError={() => setPhotoError(true)}
+                    />
+                  ) : (
+                    <div className="dash-passport-fallback" aria-label="Official photo fallback">
+                      <UserRound size={34} color="#4338ca" />
+                      <span className="dash-fallback-badge">{officer.id?.split('-')[0] || 'ERP'}</span>
+                    </div>
+                  );
+                })()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <strong>{officerDisplayName}</strong>
-                <small title={officer.designation}>{officer.designation}</small>
+                <small title={account?.role === 'hostel_admin' ? (account?.detail || 'Hostel Chief Administrator & Housing Ops') : officer.designation}>
+                  {account?.role === 'hostel_admin' ? (account?.detail || 'Hostel Chief Administrator & Housing Ops') : officer.designation}
+                </small>
                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', fontWeight: 600 }}>
-                  {officer.department}
+                  {account?.role === 'hostel_admin' ? (account?.department || 'Hostel Administration Office') : officer.department}
                 </div>
               </div>
               <span className="dash-status">
@@ -1304,29 +1316,33 @@ export default function RoleDashboardLanding({
               </span>
             </div>
 
-            {/* When role is Warden: Format strictly like 3rd Image (clean flat rows, no tab pills, and 'More info' button) */}
-            {resolvedKey === 'warden' ? (
+            {/* When role is Warden or Hostel Admin */}
+            {(resolvedKey === 'warden' || rawKey === 'hostel_admin' || account?.role === 'hostel_admin') ? (
               <>
                 <dl className="dash-info-list">
-                  <DetailRow label="Registration No." value={officer.id || 'WRD-CHIEF-01'} />
+                  <DetailRow label="Registration No." value={account?.role === 'hostel_admin' ? (account?.identity || 'WRD-ADM-01') : (officer.id || 'WRD-CHIEF-01')} />
                   <DetailRow label="Name" value={officerDisplayName} />
-                  <DetailRow label="Program" value={officer.designation || 'Chief Resident Warden'} />
+                  <DetailRow label="Program" value={account?.role === 'hostel_admin' ? (account?.detail || 'Hostel Chief Administrator & Housing Ops') : (officer.designation || 'Hostel Supervisor')} />
                   <DetailRow label="Batch" value={officer.academicYear || '2023–2027'} />
-                  <DetailRow label="Department" value={officer.department || 'Hostel Administration & Student Housing'} />
-                  <DetailRow label="Section" value={officer.office || 'Sarojini & Gandhi Blocks'} />
-                  <DetailRow label="Email ID" value={officer.email || 'warden@apnacampus.edu.in'} />
-                  <DetailRow label="Mobile No." value={officer.phone || '+91 94370 00120'} />
+                  <DetailRow label="Department" value={account?.role === 'hostel_admin' ? (account?.department || 'Hostel Administration Office') : (officer.department || 'Hostel Administration & Student Housing')} />
+                  <DetailRow label="Section" value={account?.role === 'hostel_admin' ? 'All Residential Complexes (Supervisory)' : (officer.office || 'Sarojini & Gandhi Blocks')} />
+                  <DetailRow label="Email ID" value={account?.role === 'hostel_admin' ? (account?.email || 'rajesh.jena@apnacampus.edu.in') : (officer.email || 'tanmaya.routray@gift.edu.in')} />
+                  <DetailRow label="Mobile No." value={account?.role === 'hostel_admin' ? (account?.phone || '+91 94370 12345') : (officer.phone || '7873008197')} />
                 </dl>
 
                 <button
                   className="dash-btn dash-btn-primary dash-info-btn"
                   type="button"
                   onClick={() => {
-                    if (onNavigateTab) onNavigateTab('profile');
-                    else if (onNavigate) onNavigate('profile');
-                    setShowWardenProfile(true);
+                    if (onNavigateTab) {
+                      onNavigateTab('profile');
+                    } else if (onNavigate) {
+                      onNavigate('profile');
+                    } else {
+                      setShowWardenProfile(true);
+                    }
                   }}
-                  title="View complete Warden Employee Profile"
+                  title="View complete Employee Profile"
                 >
                   <span>More info</span>
                   <ChevronRight size={15} />

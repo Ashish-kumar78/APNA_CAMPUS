@@ -50,7 +50,9 @@ import {
   Settings,
   Bell,
   Shield,
-  Star
+  Star,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import './HostelPortal.css';
@@ -100,6 +102,12 @@ import ViewHostelAttendance from './hostel/ViewHostelAttendance.jsx';
 import HostelApplicantDetails from './hostel/HostelApplicantDetails.jsx';
 import RoomAllotmentSection from './hostel/RoomAllotmentSection.jsx';
 import ManageHostelsSection from './hostel/ManageHostelsSection.jsx';
+import HostelAdminDashboard from './hostel/admin/HostelAdminDashboard.jsx';
+import WardenManagementSection from './hostel/admin/WardenManagementSection.jsx';
+import HostelAdminApprovalCenter from './hostel/admin/HostelAdminApprovalCenter.jsx';
+import HostelAdminAttendanceVerification from './hostel/admin/HostelAdminAttendanceVerification.jsx';
+import HostelAdminAuditLogs from './hostel/admin/HostelAdminAuditLogs.jsx';
+
 
 export default function HostelPortal({ account, onLogout }) {
   const detectedIsAdmin = Boolean(
@@ -115,6 +123,43 @@ export default function HostelPortal({ account, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Guard: Redirect restricted tabs back to dashboard for Warden role
+  useEffect(() => {
+    if (!isHostelAdmin) {
+      const restrictedWardenTabs = [
+        'manage-hostels',
+        'institution-overview',
+        'checkin-checkout',
+        'attendance',
+        'hostel-admin-approvals',
+        'applicant-details',
+        'notices-announcements',
+        'fees-dues',
+        'reports',
+        'emergency-incidents',
+        'documents',
+        'report-generation',
+        'warden-directory',
+        'warden-assignments',
+        'warden-permissions',
+        'warden-duty-leaves',
+        'warden-performance',
+        'approval-center',
+        'attendance-verification',
+        'resident-leaves-admin',
+        'audit-logs'
+      ];
+      if (restrictedWardenTabs.includes(activeTab)) {
+        setActiveTab('dashboard');
+      }
+    } else {
+      const removedAdminTabs = ['applicant-details', 'checkin-checkout', 'emergency-incidents'];
+      if (removedAdminTabs.includes(activeTab)) {
+        setActiveTab('rooms');
+      }
+    }
+  }, [isHostelAdmin, activeTab]);
   const [hostels, setHostels] = useState(initialHostels);
   const [rooms, setRooms] = useState(initialHostelRooms);
   const [complaints, setComplaints] = useState(initialHostelComplaints);
@@ -150,6 +195,11 @@ export default function HostelPortal({ account, onLogout }) {
     targetBedNumber: 'Bed 02 (Study Side)',
     reason: 'Medical accommodation / Room realignment',
   });
+
+    const [residentOverrides, setResidentOverrides] = useState({});
+  const [vacatedResidentBeds, setVacatedResidentBeds] = useState(new Set());
+  const [editingResidentModal, setEditingResidentModal] = useState(null);
+  const [deletingResidentModal, setDeletingResidentModal] = useState(null);
 
   const [isVacateConfirmOpen, setIsVacateConfirmOpen] = useState(false);
   const [vacateTarget, setVacateTarget] = useState(null);
@@ -355,7 +405,7 @@ export default function HostelPortal({ account, onLogout }) {
 
   useEffect(() => {
     refreshComplaints();
-    api.checkComplaintEscalations().catch(() => {});
+    api.checkComplaintEscalations().catch(() => { });
   }, []);
 
   const getComplaintDeadlineInfo = (c) => {
@@ -660,6 +710,34 @@ export default function HostelPortal({ account, onLogout }) {
       return h;
     }));
 
+    const bedIdx = allocateForm.bedNumber?.includes('01') ? 1 :
+                   allocateForm.bedNumber?.includes('02') ? 2 :
+                   allocateForm.bedNumber?.includes('03') ? 3 : 4;
+    const targetKey = `${allocateForm.hostelId || selectedHostelId}-rm-${allocateForm.roomNumber}-bed-${bedIdx}`;
+
+    setVacatedResidentBeds(prev => {
+      const next = new Set(prev);
+      next.delete(targetKey);
+      return next;
+    });
+
+    setResidentOverrides(prev => ({
+      ...prev,
+      [targetKey]: {
+        name: targetStudent.name,
+        rollNumber: targetStudent.rollNumber,
+        registrationNumber: targetStudent.registrationNumber || `230520${targetStudent.rollNumber}`,
+        studentId: targetStudent.studentId || `GIFT-2023-${targetStudent.rollNumber}`,
+        department: targetStudent.department || 'Computer Science & Engineering',
+        semester: targetStudent.semester || 'Semester 5',
+        section: targetStudent.section || 'Section A',
+        phone: targetStudent.phone || '+91 98610 99999',
+        fatherPhone: targetStudent.fatherPhone || '+91 94370 88888',
+        biometricStatus: 'In Hostel (Biometric Verified · Active)',
+        bedNo: allocateForm.bedNumber
+      }
+    }));
+
     setIsAllocateModalOpen(false);
     showToast(`✓ Bed ${allocateForm.bedNumber} in Room ${allocateForm.roomNumber} allocated to ${targetStudent.name} (${targetStudent.rollNumber})!`);
     try {
@@ -704,6 +782,68 @@ export default function HostelPortal({ account, onLogout }) {
     } catch (err) {
       console.warn('Backend transfer sync failed:', err);
     }
+  };
+
+  // Hostel Admin: Save Edited Resident
+  const handleSaveEditedResident = (e) => {
+    e.preventDefault();
+    if (!editingResidentModal) return;
+
+    setResidentOverrides(prev => ({
+      ...prev,
+      [editingResidentModal.residentKey]: {
+        name: editingResidentModal.name,
+        studentId: editingResidentModal.studentId,
+        rollNumber: editingResidentModal.rollNumber,
+        registrationNumber: editingResidentModal.registrationNumber,
+        department: editingResidentModal.department,
+        semester: editingResidentModal.semester,
+        section: editingResidentModal.section,
+        bedNo: editingResidentModal.bedNo,
+        phone: editingResidentModal.phone,
+        fatherPhone: editingResidentModal.fatherPhone,
+        biometricStatus: editingResidentModal.biometricStatus
+      }
+    }));
+
+    showToast(`Resident ${editingResidentModal.name} (Roll ${editingResidentModal.rollNumber}) updated successfully.`);
+    setEditingResidentModal(null);
+  };
+
+  // Hostel Admin: Confirm Delete / Vacate Resident Bed
+  const handleConfirmDeleteResident = () => {
+    if (!deletingResidentModal) return;
+
+    setVacatedResidentBeds(prev => {
+      const next = new Set(prev);
+      next.add(deletingResidentModal.residentKey);
+      return next;
+    });
+
+    setHostels(prev => prev.map(h => {
+      if (h.id === deletingResidentModal.hostelId || h.name.includes(deletingResidentModal.hostelName)) {
+        return {
+          ...h,
+          occupiedBeds: Math.max(0, h.occupiedBeds - 1),
+          availableBeds: h.availableBeds + 1
+        };
+      }
+      return h;
+    }));
+
+    showToast(`Bed ${deletingResidentModal.bedNo} vacated. Student ${deletingResidentModal.name} removed from room roster.`);
+    setDeletingResidentModal(null);
+  };
+
+  const openAllocateForBed = (rm, bedNo) => {
+    setAllocateForm({
+      studentRoll: '',
+      hostelId: selectedHostelId,
+      roomNumber: rm.roomNumber,
+      bedNumber: bedNo,
+      floor: rm.floor
+    });
+    setIsAllocateModalOpen(true);
   };
 
   // Vacate Bed Handler
@@ -880,7 +1020,7 @@ export default function HostelPortal({ account, onLogout }) {
       ? students.filter(s => s.gender === 'Female')
       : students.filter(s => s.gender !== 'Female');
 
-    const offset = selectedHostelId === 'hostel-b2' ? 20 : 0;
+    const offset = selectedHostelId === 'hostel-b2' ? 20 : (selectedHostelId === 'hostel-b3' ? 40 : 0);
     const studentsToUse = pool.slice(offset).concat(pool.slice(0, offset));
 
     const roomDefs = [
@@ -911,33 +1051,71 @@ export default function HostelPortal({ account, onLogout }) {
     return roomDefs.map((def, rIdx) => {
       const roomResidents = [];
       for (let b = 0; b < def.capacity; b++) {
-        const studentIndex = (rIdx * def.capacity + b) % (studentsToUse.length || 1);
-        const std = studentsToUse[studentIndex] || {};
-        const rollNum = parseInt(std.rollNumber) || (studentIndex + 1);
-        roomResidents.push({
-          bedNo: bedLocations[b] || `Bed 0${b + 1}`,
-          bedIndex: b + 1,
-          studentId: std.studentId || `GIFT-2023-${1000 + rollNum}`,
-          registrationNumber: std.registrationNumber || `230520${String(rollNum).padStart(4, '0')}`,
-          name: std.name || `Resident Student ${b + 1}`,
-          rollNumber: std.rollNumber || String(rollNum).padStart(2, '0'),
-          gender: std.gender || (isGirlsHostel ? 'Female' : 'Male'),
-          section: std.section || 'Section A',
-          semester: std.semester || 'Semester 5',
-          department: std.department || 'Computer Science & Engineering',
-          deptCode: std.deptCode || 'CSE',
-          phone: std.phone || `+91 98610 ${String((rollNum * 1111) % 90000 + 10000)}`,
-          fatherName: std.fatherName || 'Guardian Senior',
-          fatherPhone: std.fatherPhone || `+91 94370 ${String((rollNum * 2222) % 90000 + 10000)}`,
-          motherName: std.motherName || 'Mother Guardian',
-          permAddress: std.permAddress ? `${std.permAddress}, ${std.permCity || 'Bhubaneswar'}` : 'Plot 18, Unit 4, Bhubaneswar, Odisha',
-          bloodGroup: std.bloodGroup || 'B+',
-          cgpa: std.cgpa || '8.25',
-          attendance: std.attendance || 92,
-          biometricStatus: attendanceStatuses[b % attendanceStatuses.length],
-          rawStudent: std
-        });
+        const residentKey = `${selectedHostelId || 'hostel'}-rm-${def.num}-bed-${b + 1}`;
+        const isVacated = vacatedResidentBeds.has(residentKey);
+        const override = residentOverrides[residentKey] || {};
+
+        if (isVacated) {
+          roomResidents.push({
+            residentKey,
+            bedNo: override.bedNo || bedLocations[b] || `Bed 0${b + 1}`,
+            bedIndex: b + 1,
+            roomNumber: def.num,
+            isVacant: true,
+            name: 'Vacant Bed (Unassigned)',
+            studentId: '—',
+            rollNumber: '—',
+            registrationNumber: '—',
+            gender: isGirlsHostel ? 'Female' : 'Male',
+            section: '—',
+            semester: '—',
+            department: 'Available for Allocation',
+            deptCode: '—',
+            phone: '—',
+            fatherName: '—',
+            fatherPhone: '—',
+            motherName: '—',
+            permAddress: '—',
+            bloodGroup: '—',
+            cgpa: '—',
+            attendance: 0,
+            biometricStatus: 'Ready for Allocation',
+            rawStudent: null
+          });
+        } else {
+          const studentIndex = (rIdx * def.capacity + b) % (studentsToUse.length || 1);
+          const std = studentsToUse[studentIndex] || {};
+          const rollNum = parseInt(std.rollNumber) || (studentIndex + 1);
+          roomResidents.push({
+            residentKey,
+            bedNo: override.bedNo || bedLocations[b] || `Bed 0${b + 1}`,
+            bedIndex: b + 1,
+            roomNumber: def.num,
+            isVacant: false,
+            studentId: override.studentId || std.studentId || `GIFT-2023-${1000 + rollNum}`,
+            registrationNumber: override.registrationNumber || std.registrationNumber || `230520${String(rollNum).padStart(4, '0')}`,
+            name: override.name || std.name || `Resident Student ${b + 1}`,
+            rollNumber: override.rollNumber || std.rollNumber || String(rollNum).padStart(2, '0'),
+            gender: override.gender || std.gender || (isGirlsHostel ? 'Female' : 'Male'),
+            section: override.section || std.section || 'Section A',
+            semester: override.semester || std.semester || 'Semester 5',
+            department: override.department || std.department || 'Computer Science & Engineering',
+            deptCode: override.deptCode || std.deptCode || 'CSE',
+            phone: override.phone || std.phone || `+91 98610 ${String((rollNum * 1111) % 90000 + 10000)}`,
+            fatherName: override.fatherName || std.fatherName || 'Guardian Senior',
+            fatherPhone: override.fatherPhone || std.fatherPhone || `+91 94370 ${String((rollNum * 2222) % 90000 + 10000)}`,
+            motherName: override.motherName || std.motherName || 'Mother Guardian',
+            permAddress: override.permAddress || (std.permAddress ? `${std.permAddress}, ${std.permCity || 'Bhubaneswar'}` : 'Plot 18, Unit 4, Bhubaneswar, Odisha'),
+            bloodGroup: override.bloodGroup || std.bloodGroup || 'B+',
+            cgpa: override.cgpa || std.cgpa || '8.25',
+            attendance: override.attendance !== undefined ? override.attendance : (std.attendance || 92),
+            biometricStatus: override.biometricStatus || attendanceStatuses[b % attendanceStatuses.length],
+            rawStudent: std
+          });
+        }
       }
+
+      const occupiedCount = roomResidents.filter(r => !r.isVacant).length;
 
       return {
         id: `rm-${def.num}`,
@@ -946,12 +1124,12 @@ export default function HostelPortal({ account, onLogout }) {
         floor: def.floor,
         type: def.type,
         capacity: def.capacity,
-        occupiedCount: def.capacity,
+        occupiedCount,
         residents: roomResidents,
         amenities: ['4x Study Desk', '4x Steel Wardrobe', 'High-Speed Wi-Fi AP', 'Ceiling Fan & LED']
       };
     });
-  }, [selectedHostelId, currentHostel, students]);
+  }, [selectedHostelId, currentHostel, students, residentOverrides, vacatedResidentBeds]);
 
   const filteredHostelRooms = useMemo(() => {
     return hostelRoomsWithResidents.filter(rm => {
@@ -962,23 +1140,23 @@ export default function HostelPortal({ account, onLogout }) {
         rm.roomNumber.toLowerCase().includes(query) ||
         rm.type.toLowerCase().includes(query) ||
         rm.residents.some(res =>
-          res.name.toLowerCase().includes(query) ||
-          res.rollNumber.toLowerCase().includes(query)
+          !res.isVacant && (
+            res.name.toLowerCase().includes(query) ||
+            res.rollNumber.toLowerCase().includes(query) ||
+            res.studentId.toLowerCase().includes(query) ||
+            res.department.toLowerCase().includes(query)
+          )
         );
       return matchFloor && matchQuery;
     });
   }, [hostelRoomsWithResidents, roomFloorFilter, roomSearchQuery]);
 
 
-  const hostelNavSections = [
+  const wardenNavSections = [
     {
       title: 'OVERVIEW',
       items: [
-        {
-          id: 'dashboard',
-          label: isHostelAdmin ? 'Hostel Admin Dashboard' : 'Warden Dashboard',
-          icon: Home
-        },
+        { id: 'dashboard', label: 'Warden Dashboard', icon: Home }
       ]
     },
     {
@@ -986,32 +1164,24 @@ export default function HostelPortal({ account, onLogout }) {
       items: [
         { id: 'take-attendance', label: 'Take Hostel Attendance', icon: Clock },
         { id: 'view-attendance', label: 'View Hostel Attendance', icon: UserCheck },
-        { id: 'applicant-details', label: 'View Applicant Details', icon: Users },
         { id: 'room-allotment', label: 'Room Allotment', icon: Bed },
-        { id: 'manage-hostels', label: 'Manage Hostel(s)', icon: Building2 },
       ]
     },
     {
       title: 'RESIDENTIAL OPERATIONS',
       items: [
         { id: 'hostels', label: 'Hostel Blocks & Wings', icon: Building2 },
-        ...(isHostelAdmin ? [{ id: 'rooms', label: 'Rooms & Bed Allotment', icon: Bed }] : []),
-        { id: 'checkin-checkout', label: 'Check-In & Check-Out', icon: UserCheck },
-        { id: 'attendance', label: 'Night Roll Call (Biometric)', icon: Clock },
+        { id: 'rooms', label: 'Rooms & Bed Allotment', icon: Bed },
       ]
     },
     {
       title: 'LEAVES & DIGITAL PASSES',
       items: [
-        ...(isHostelAdmin ? [
-          { id: 'hostel-admin-approvals', label: 'Hostel Admin Approvals', icon: ShieldCheck, badge: 2 }
-        ] : []),
         { id: 'leave-mgmt', label: 'Hostel Leaves', icon: CalendarDays },
         { id: 'apply-leave', label: 'Apply Leave', icon: CalendarCheck },
         { id: 'gatepasses', label: 'Digital Gate Passes', icon: ShieldCheck },
         { id: 'visitors', label: 'Visitor Logs', icon: Users },
         { id: 'disciplinary', label: 'Disciplinary Records', icon: AlertTriangle },
-        { id: 'emergency-incidents', label: 'Incident Hotline', icon: ShieldAlert },
       ]
     },
     {
@@ -1020,30 +1190,138 @@ export default function HostelPortal({ account, onLogout }) {
         { id: 'mess-dining', label: 'Mess & Dining Menu', icon: Utensils },
         { id: 'complaints', label: 'Room Complaints', icon: Wrench },
         { id: 'inventory-assets', label: 'Furniture & Inventory', icon: Layers },
-        { id: 'fees-dues', label: 'Hostel Fee Ledger', icon: CreditCard },
         { id: 'staff-mgmt', label: 'Warden & Caretaker Roster', icon: UsersRound },
-        { id: 'notices-announcements', label: 'Hostel Notices', icon: Megaphone },
       ]
     },
     {
       title: 'REPORTS & POLICIES',
       items: [
-        { id: 'reports', label: 'Occupancy & Meal Reports', icon: FileText },
-        { id: 'documents', label: 'Student Resident Docs', icon: Download },
-        { id: 'report-generation', label: 'Report Generation', icon: FileSpreadsheet },
         { id: 'settings-rules', label: 'Hostel Rules & Curfew', icon: Settings },
       ]
     }
   ];
 
+  const hostelAdminNavSections = [
+    {
+      title: 'OVERVIEW',
+      items: [
+        { id: 'dashboard', label: 'Hostel Admin Dashboard', icon: Home },
+      ]
+    },
+    {
+      title: 'WARDEN MANAGEMENT',
+      items: [
+        { id: 'warden-directory', label: 'Warden Directory', icon: Users },
+        { id: 'warden-assignments', label: 'Warden Assignments', icon: Building2 },
+        { id: 'warden-permissions', label: 'Warden Permissions', icon: ShieldCheck },
+        { id: 'warden-duty-leaves', label: 'Duty & Leave Management', icon: CalendarCheck },
+        { id: 'warden-performance', label: 'Warden Performance', icon: Award },
+      ]
+    },
+    {
+      title: 'RESIDENTIAL OPERATIONS',
+      items: [
+        { id: 'manage-hostels', label: 'Hostel Buildings & Blocks', icon: Building2 },
+        { id: 'rooms', label: 'Rooms & Bed Capacity', icon: Bed },
+        { id: 'room-allotment', label: 'Room Allotment', icon: Bed },
+      ]
+    },
+    {
+      title: 'ATTENDANCE & MOVEMENT',
+      items: [
+        { id: 'attendance', label: 'Attendance Monitoring', icon: Clock },
+        { id: 'attendance-verification', label: 'Attendance Verification & Override', icon: CheckCircle2 },
+        { id: 'resident-leaves-admin', label: 'Student Leave Approvals', icon: CalendarDays },
+        { id: 'gatepasses', label: 'Digital Gate Passes', icon: ShieldCheck },
+        { id: 'visitors', label: 'Visitor Register', icon: Users },
+      ]
+    },
+    {
+      title: 'SAFETY & DISCIPLINE',
+      items: [
+        { id: 'disciplinary', label: 'Disciplinary Reviews', icon: AlertTriangle },
+        { id: 'emergency-contacts', label: 'Emergency Contacts', icon: ShieldCheck },
+      ]
+    },
+    {
+      title: 'SERVICES & ASSETS',
+      items: [
+        { id: 'complaints', label: 'Maintenance Complaints & SLA', icon: Wrench },
+        { id: 'inventory-assets', label: 'Furniture & Inventory Requisitions', icon: Layers },
+        { id: 'staff-mgmt', label: 'Staff & Caretaker Roster', icon: UsersRound },
+        { id: 'mess-dining', label: 'Mess & Dining Management', icon: Utensils },
+        { id: 'fees-dues', label: 'Hostel Fee Ledger', icon: CreditCard },
+      ]
+    },
+    {
+      title: 'POLICIES & REPORTS',
+      items: [
+        { id: 'settings-rules', label: 'Hostel Rules & Curfew', icon: Settings },
+        { id: 'approval-center', label: 'Central Approval Center', icon: CheckCircle2, badge: 'Unified' },
+        { id: 'report-generation', label: 'Reports & Compliance Analytics', icon: FileSpreadsheet },
+        { id: 'audit-logs', label: 'Administrative Audit Logs', icon: FileText },
+      ]
+    }
+  ];
+
+  const hostelNavSections = isHostelAdmin ? hostelAdminNavSections : wardenNavSections;
+
   const getHostelHeading = () => {
     switch (activeTab) {
+      case 'warden-directory':
+        return {
+          title: 'Warden Directory & Operational Staffing',
+          subtitle: 'Active resident wardens, assigned hostels, contact records, and employment status.'
+        };
+      case 'warden-assignments':
+        return {
+          title: 'Warden Assignments & Reliever Console',
+          subtitle: 'Reassign wardens to hostel complexes, rebalance residential blocks, and review handover audit history.'
+        };
+      case 'warden-permissions':
+        return {
+          title: 'Granular Scoped Permissions Matrix for Wardens',
+          subtitle: 'Configure operational permissions across attendance, room transfers, and material indents.'
+        };
+      case 'warden-duty-leaves':
+        return {
+          title: 'Warden Duty Rosters & Leave Management',
+          subtitle: 'Active shifts, rotational roll-call relief rosters, and official staff leave sanctions.'
+        };
+      case 'warden-performance':
+        return {
+          title: 'Warden Performance & Compliance Indicators',
+          subtitle: 'Objective metrics: on-time roll call rate, 72h complaint resolution speed, and supervisory notes.'
+        };
+      case 'approval-center':
+        return {
+          title: 'Centralized Administrative Approval Center',
+          subtitle: 'Consolidated pending queue for leaves, digital gate passes, material indents, and attendance certifications.'
+        };
+      case 'attendance-verification':
+        return {
+          title: 'Attendance Verification & Override Desk',
+          subtitle: 'Inspect night roll calls across all hostels, officially certify submissions, and execute authorized corrections.'
+        };
+      case 'resident-leaves-admin':
+        return {
+          title: 'Student Outstation Leave Authorizations',
+          subtitle: 'Review resident overnight leaves, guardian verification slips, and return confirmations.'
+        };
+      case 'audit-logs':
+        return {
+          title: 'Administrative Official Audit Logs',
+          subtitle: 'Immutable chronological register of all administrative overrides, policy revisions, and sanctions.'
+        };
+      case 'institution-overview':
+        return {
+          title: 'Hostel Administrator Executive Console',
+          subtitle: 'Centralized institutional oversight for all hostels, warden duty rosters, night roll calls, capacity, and SLA compliance.'
+        };
       case 'dashboard':
         return {
-          title: isHostelAdmin ? 'Hostel Administrator Executive Console' : 'Hostel & Residential Services Management',
-          subtitle: isHostelAdmin
-            ? 'Centralized administrative oversight for hostel blocks, warden management, attendance sync, and maintenance SLA.'
-            : 'Real-time room occupancy, night roll calls, gate passes, and resident welfare.'
+          title: isHostelAdmin ? 'Hostel Admin Dashboard' : 'Hostel & Residential Services Management',
+          subtitle: isHostelAdmin ? 'Student Residence & Housing · Hostel Administration & Resident Welfare' : 'Hostel & Residential Services Management · Real-time room occupancy, night roll calls, and gate passes.'
         };
       case 'profile':
         return {
@@ -1057,8 +1335,8 @@ export default function HostelPortal({ account, onLogout }) {
         };
       case 'view-attendance':
         return {
-          title: 'View Hostel Attendance Console',
-          subtitle: 'Real-time attendance ledger automatically fetched from Warden roll call submissions.'
+          title: '',
+          subtitle: ''
         };
       case 'applicant-details':
         return {
@@ -1104,8 +1382,10 @@ export default function HostelPortal({ account, onLogout }) {
         };
       case 'inventory-assets':
         return {
-          title: 'Hostel Inventory & Requisition Management',
-          subtitle: 'Raise Indent / View Status, Custom Materials Requisition, and Recommendation Log.'
+          title: isHostelAdmin ? 'Hostel Inventory & Requisition Management' : 'Furniture & Inventory',
+          subtitle: isHostelAdmin
+            ? 'Raise Indent / View Status, Custom Materials Requisition, and Recommendation Log.'
+            : 'Report hostel maintenance issues, request materials, and track requisition status.'
         };
       default:
         return {
@@ -1194,10 +1474,10 @@ export default function HostelPortal({ account, onLogout }) {
             />
           )}
 
-          {/* TAB 1: DASHBOARD */}
+          {/* TAB 1: DASHBOARD (SAME AS HOSTEL WARDEN DASHBOARD) */}
           {activeTab === 'dashboard' && (
             <RoleDashboardLanding
-              roleKey="warden"
+              roleKey={isHostelAdmin ? 'hostel_admin' : 'warden'}
               account={account}
               onLogout={onLogout}
               onNavigateTab={(target) => {
@@ -1205,9 +1485,10 @@ export default function HostelPortal({ account, onLogout }) {
                 else if (target === 'rooms') setActiveTab('rooms');
                 else if (target === 'complaints') setActiveTab('complaints');
                 else if (target === 'maintenance') setActiveTab('complaints');
-                else if (target === 'attendance') setActiveTab('attendance');
-                else if (target === 'leave') setActiveTab('leave-mgmt');
+                else if (target === 'attendance') setActiveTab(isHostelAdmin ? 'attendance' : 'take-attendance');
+                else if (target === 'leave') setActiveTab(isHostelAdmin ? 'resident-leaves-admin' : 'leave-mgmt');
                 else if (target === 'mess') setActiveTab('mess-dining');
+                else if (target === 'institution-overview') setActiveTab('institution-overview');
                 else if (target) setActiveTab(target);
                 else setActiveTab('rooms');
               }}
@@ -1216,12 +1497,22 @@ export default function HostelPortal({ account, onLogout }) {
                 else if (target === 'rooms') setActiveTab('rooms');
                 else if (target === 'complaints') setActiveTab('complaints');
                 else if (target === 'maintenance') setActiveTab('complaints');
-                else if (target === 'attendance') setActiveTab('attendance');
-                else if (target === 'leave') setActiveTab('leave-mgmt');
+                else if (target === 'attendance') setActiveTab(isHostelAdmin ? 'attendance' : 'take-attendance');
+                else if (target === 'leave') setActiveTab(isHostelAdmin ? 'resident-leaves-admin' : 'leave-mgmt');
                 else if (target === 'mess') setActiveTab('mess-dining');
+                else if (target === 'institution-overview') setActiveTab('institution-overview');
                 else if (target) setActiveTab(target);
                 else setActiveTab('rooms');
               }}
+            />
+          )}
+
+          {/* TAB: INSTITUTION-WIDE OVERVIEW (SUPERVISORY CONTROL EXECUTIVE CONSOLE) */}
+          {activeTab === 'institution-overview' && (
+            <HostelAdminDashboard
+              account={account}
+              onNavigateTab={setActiveTab}
+              showToast={showToast}
             />
           )}
 
@@ -1676,19 +1967,72 @@ export default function HostelPortal({ account, onLogout }) {
                                       </span>
                                     </td>
                                     <td style={{ textAlign: 'right' }}>
-                                      <button
-                                        type="button"
-                                        className="hostel-view-student-btn"
-                                        onClick={() => setSelectedStudentModal({
-                                          ...res,
-                                          hostelName: currentHostel.name,
-                                          roomNumber: rm.displayTitle,
-                                          wardenName: currentHostel.warden,
-                                          wardenContact: currentHostel.contact
-                                        })}
-                                      >
-                                        <Eye size={12} /> Inspect
-                                      </button>
+                                      <div style={{ display: 'inline-flex', gap: '0.35rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                        <button
+                                          type="button"
+                                          className="hostel-view-student-btn"
+                                          onClick={() => setSelectedStudentModal({
+                                            ...res,
+                                            hostelName: currentHostel.name,
+                                            roomNumber: rm.displayTitle,
+                                            wardenName: currentHostel.warden,
+                                            wardenContact: currentHostel.contact
+                                          })}
+                                        >
+                                          <Eye size={12} /> Inspect
+                                        </button>
+                                        {isHostelAdmin && !res.isVacant && (
+                                          <>
+                                            <button
+                                              type="button"
+                                              className="hostel-edit-student-btn"
+                                              onClick={() => setEditingResidentModal({
+                                                residentKey: res.residentKey,
+                                                hostelId: selectedHostelId,
+                                                hostelName: currentHostel.name,
+                                                roomNumber: rm.displayTitle,
+                                                roomId: rm.id,
+                                                bedIndex: res.bedIndex,
+                                                bedNo: res.bedNo,
+                                                studentId: res.studentId,
+                                                name: res.name,
+                                                rollNumber: res.rollNumber,
+                                                registrationNumber: res.registrationNumber,
+                                                department: res.department,
+                                                semester: res.semester,
+                                                section: res.section,
+                                                phone: res.phone,
+                                                fatherPhone: res.fatherPhone,
+                                                biometricStatus: res.biometricStatus,
+                                                adminReason: 'Administrative update to resident record'
+                                              })}
+                                              title="Edit / Modify Resident Data"
+                                            >
+                                              <Edit2 size={12} /> Edit
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className="hostel-delete-student-btn"
+                                              onClick={() => setDeletingResidentModal({
+                                                residentKey: res.residentKey,
+                                                hostelId: selectedHostelId,
+                                                hostelName: currentHostel.name,
+                                                roomNumber: rm.displayTitle,
+                                                roomId: rm.id,
+                                                bedIndex: res.bedIndex,
+                                                bedNo: res.bedNo,
+                                                name: res.name,
+                                                rollNumber: res.rollNumber,
+                                                studentId: res.studentId,
+                                                reason: 'Administrative de-allocation & bed release'
+                                              })}
+                                              title="Delete / Vacate Resident Allocation"
+                                            >
+                                              <Trash2 size={12} /> Vacate
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
                                     </td>
                                   </tr>
                                 ))}
@@ -1707,91 +2051,450 @@ export default function HostelPortal({ account, onLogout }) {
           {/* TAB 3: ROOMS & BED ALLOCATIONS */}
           {activeTab === 'rooms' && (
             <div>
-              <div className="admin-view-header">
+              {/* Header with Title and Actions */}
+              <div className="admin-view-header" style={{ marginBottom: '1.25rem' }}>
                 <div>
-                  <h2>Room &amp; Bed Inventory Matrix</h2>
-                  <p>Bed level allocation tracking across triple deluxe, double, and quad standard resident rooms.</p>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Residential Operations &bull; Bed-Level Capacity &amp; Allotment
+                  </span>
+                  <h2 style={{ margin: '4px 0 2px 0', fontSize: '1.45rem', fontWeight: 800, color: '#0f172a' }}>
+                    Room Allotment &amp; Bed Capacity Manager
+                  </h2>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>
+                    Supervisory bed allocation matrix, room occupancy monitoring, and real-time student residency records.
+                  </p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <button className="admin-action-btn-primary" onClick={() => setIsAllocateModalOpen(true)}>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className="admin-action-btn-primary"
+                    onClick={() => {
+                      setAllocateForm({
+                        studentRoll: '',
+                        hostelId: selectedHostelId,
+                        roomNumber: '1',
+                        bedNumber: 'Bed 01 (Window Side)',
+                        floor: 'Floor 1',
+                      });
+                      setIsAllocateModalOpen(true);
+                    }}
+                  >
                     <UserPlus size={15} /> Allocate Available Bed
                   </button>
-                  <button className="admin-action-btn-secondary" onClick={() => setIsTransferModalOpen(true)}>
+                  <button
+                    type="button"
+                    className="admin-action-btn-secondary"
+                    onClick={() => setIsTransferModalOpen(true)}
+                  >
                     <RotateCcw size={15} /> Transfer Resident
                   </button>
                 </div>
               </div>
 
-              {/* Room Inventory Table */}
-              <div className="admin-table-container">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Room #</th>
-                      <th>Hostel Residence</th>
-                      <th>Floor</th>
-                      <th>Room Type</th>
-                      <th>Capacity</th>
-                      <th>Occupancy Status</th>
-                      <th>Allocated Residents</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rooms.map(rm => (
-                      <tr key={rm.id}>
-                        <td><strong style={{ fontSize: '1rem', color: '#7c3aed' }}>Room {rm.roomNumber}</strong></td>
-                        <td>{rm.hostelName}</td>
-                        <td>{rm.floor}</td>
-                        <td><span className="admin-badge active">{rm.type}</span></td>
-                        <td>{rm.capacity} Beds</td>
-                        <td>
-                          <span className={`admin-badge ${rm.occupied >= rm.capacity ? 'approved' : 'pending'}`}>
-                            {rm.occupied} / {rm.capacity} Beds Occupied
+              {/* HOSTEL ADMIN STRUCTURED VIEW (Exact Image 2 format with Hostel Selection & Admin Edit/Delete) */}
+              {isHostelAdmin ? (
+                <div>
+                  {/* Choose Hostel Bar */}
+                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#1e293b', fontSize: '0.88rem' }}>
+                          <Building2 size={16} style={{ color: '#7c3aed' }} />
+                          <span>Choose Hostel Residence:</span>
+                        </div>
+                        <select
+                          value={selectedHostelId}
+                          onChange={e => setSelectedHostelId(e.target.value)}
+                          className="admin-search-input"
+                          style={{ width: 'auto', minWidth: '240px', fontWeight: 600, height: '36px', fontSize: '0.85rem' }}
+                        >
+                          {hostels.map(h => (
+                            <option key={h.id} value={h.id}>
+                              {h.name} ({h.type}) &mdash; {h.totalBeds} Beds
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Switcher Tab Pills */}
+                      <div className="hostel-switcher-bar" style={{ margin: 0 }}>
+                        {hostels.map(h => (
+                          <button
+                            key={h.id}
+                            type="button"
+                            className={`hostel-switcher-tab ${selectedHostelId === h.id ? 'active' : ''}`}
+                            onClick={() => setSelectedHostelId(h.id)}
+                          >
+                            <Building size={14} /> {h.name.split(' (')[0]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Selected Hostel Details Overview Banner */}
+                  <div className="hostel-details-header-card" style={{ marginBottom: '1.25rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 700 }}>
+                            {currentHostel.type} Residential Complex
                           </span>
-                        </td>
-                        <td style={{ fontSize: '0.8rem' }}>
-                          {rm.roomNumber === '204' ? 'Rakesh Das (Bed 01), Priya Patra (Bed 02), Sneha Mohanty (Bed 03)' : `${rm.occupied} Resident students enrolled`}
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
-                            <button
-                              className="admin-action-btn-secondary"
-                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                              onClick={() => {
-                                setTransferForm(prev => ({
-                                  ...prev,
-                                  currentRoomNumber: rm.roomNumber,
-                                  studentName: 'Resident Student'
-                                }));
-                                setIsTransferModalOpen(true);
-                              }}
-                            >
-                              Transfer
-                            </button>
-                            {rm.occupied > 0 && (
+                          <span style={{ background: '#10b981', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 700 }}>
+                            Biometric Active
+                          </span>
+                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 700 }}>
+                            Hostel Admin Supervised
+                          </span>
+                        </div>
+                        <h4 style={{ margin: '0 0 0.35rem 0', fontSize: '1.25rem', fontWeight: 800 }}>{currentHostel.name}</h4>
+                        <p style={{ margin: 0, fontSize: '0.84rem', opacity: 0.85, lineHeight: 1.4 }}>
+                          {currentHostel.totalFloors} Floors &bull; {currentHostel.totalRooms} Rooms &bull; Central Dining Mess Hall &amp; 500 Mbps Wi-Fi
+                        </p>
+                      </div>
+
+                      <div style={{ background: 'rgba(255,255,255,0.08)', padding: '0.85rem 1.15rem', borderRadius: '10px' }}>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.75, fontWeight: 600 }}>CHIEF RESIDENT WARDEN</div>
+                        <div style={{ fontSize: '0.98rem', fontWeight: 700, margin: '2px 0' }}>{currentHostel.warden}</div>
+                        <div style={{ fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.9 }}>
+                          <Phone size={13} /> {currentHostel.contact}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ background: 'rgba(255,255,255,0.12)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.76rem' }}>
+                          📶 500 Mbps Wi-Fi
+                        </span>
+                        <span style={{ background: 'rgba(255,255,255,0.12)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.76rem' }}>
+                          ⚡ 24x7 Power Backup
+                        </span>
+                        <span style={{ background: 'rgba(255,255,255,0.12)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.76rem' }}>
+                          🛡️ Biometric Turnstiles
+                        </span>
+                        <span style={{ background: 'rgba(255,255,255,0.12)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.76rem' }}>
+                          🥗 Pure RO Water &amp; Mess
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Floor Filters, Search, and Expand/Collapse (Exact Image 2 Format) */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', margin: '1rem 0' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {['ALL', 'Floor 1', 'Floor 2', 'Floor 3'].map(fl => (
+                        <button
+                          key={fl}
+                          type="button"
+                          className={`hostel-floor-pill ${roomFloorFilter === fl ? 'active' : ''}`}
+                          onClick={() => setRoomFloorFilter(fl)}
+                        >
+                          {fl === 'ALL' ? 'All Floors' : fl}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                      <div style={{ position: 'relative' }}>
+                        <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                        <input
+                          type="text"
+                          placeholder="Search Room / Student..."
+                          value={roomSearchQuery}
+                          onChange={e => setRoomSearchQuery(e.target.value)}
+                          className="admin-search-input"
+                          style={{ paddingLeft: '32px', fontSize: '0.82rem', height: '34px' }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="admin-action-btn-secondary"
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
+                        onClick={() => expandAllRooms(hostelRoomsWithResidents.map(r => r.id))}
+                      >
+                        Expand All
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-action-btn-secondary"
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
+                        onClick={collapseAllRooms}
+                      >
+                        Collapse All
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Room Accordions with Students Table (Image 2 format) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    {filteredHostelRooms.map(rm => {
+                      const isExpanded = expandedRooms.has(rm.id);
+                      return (
+                        <div key={rm.id} className="hostel-room-item-card">
+                          <div className="hostel-room-header-row" onClick={() => toggleRoomExpand(rm.id)}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                              <div className="hostel-room-num-badge">
+                                <Bed size={16} /> {rm.displayTitle}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.95rem' }}>{rm.type}</div>
+                                <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                                  {rm.floor} &bull; {rm.amenities.join(' &bull; ')}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                              <span className={`admin-badge ${rm.occupiedCount >= rm.capacity ? 'approved' : 'pending'}`} style={{ fontSize: '0.76rem' }}>
+                                {rm.occupiedCount} / {rm.capacity} Beds Occupied
+                              </span>
                               <button
-                                className="hostel-quick-reject-btn"
+                                type="button"
+                                className="hostel-room-dropdown-btn"
+                                aria-label={`Toggle Room ${rm.roomNumber}`}
+                              >
+                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                              </button>
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="hostel-residents-pane">
+                              <table className="hostel-residents-table">
+                                <thead>
+                                  <tr>
+                                    <th>Bed Position</th>
+                                    <th>Resident Student</th>
+                                    <th>Roll / Reg Number</th>
+                                    <th>Department &amp; Sem</th>
+                                    <th>Emergency Contact</th>
+                                    <th>Biometric Status</th>
+                                    <th style={{ textAlign: 'right' }}>Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {rm.residents.map(res => {
+                                    if (res.isVacant) {
+                                      return (
+                                        <tr key={res.bedIndex} style={{ background: '#fafaf9' }}>
+                                          <td>
+                                            <span className="hostel-bed-pill" style={{ opacity: 0.7 }}>
+                                              <Bed size={12} /> {res.bedNo}
+                                            </span>
+                                          </td>
+                                          <td>
+                                            <div style={{ fontWeight: 600, color: '#94a3b8', fontStyle: 'italic' }}>
+                                              Vacant Bed (Unassigned)
+                                            </div>
+                                            <small style={{ color: '#cbd5e1' }}>Ready for assignment</small>
+                                          </td>
+                                          <td>
+                                            <span style={{ color: '#94a3b8' }}>&mdash;</span>
+                                          </td>
+                                          <td>
+                                            <span style={{ color: '#16a34a', fontSize: '0.8rem', fontWeight: 600 }}>Available for Allocation</span>
+                                          </td>
+                                          <td>
+                                            <span style={{ color: '#94a3b8' }}>&mdash;</span>
+                                          </td>
+                                          <td>
+                                            <span style={{ color: '#64748b', fontSize: '0.78rem' }}>Unassigned Bed</span>
+                                          </td>
+                                          <td style={{ textAlign: 'right' }}>
+                                            <button
+                                              type="button"
+                                              className="hostel-allocate-bed-btn"
+                                              onClick={() => openAllocateForBed(rm, res.bedNo)}
+                                            >
+                                              <Plus size={12} /> Allocate Bed
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    }
+
+                                    return (
+                                      <tr key={res.bedIndex}>
+                                        <td>
+                                          <span className="hostel-bed-pill">
+                                            <Bed size={12} /> {res.bedNo}
+                                          </span>
+                                        </td>
+                                        <td>
+                                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{res.name}</div>
+                                          <small style={{ color: '#64748b' }}>ID: {res.studentId}</small>
+                                        </td>
+                                        <td>
+                                          <div style={{ fontWeight: 600 }}>Roll {res.rollNumber}</div>
+                                          <small style={{ color: '#64748b' }}>Reg: {res.registrationNumber}</small>
+                                        </td>
+                                        <td>
+                                          <div>{res.department}</div>
+                                          <small style={{ color: '#7c3aed', fontWeight: 600 }}>{res.semester} &bull; {res.section}</small>
+                                        </td>
+                                        <td>
+                                          <div>📞 {res.phone}</div>
+                                          <small style={{ color: '#64748b' }}>Father: {res.fatherPhone}</small>
+                                        </td>
+                                        <td>
+                                          <span style={{ color: '#16a34a', fontWeight: 600, fontSize: '0.78rem' }}>
+                                            ✓ {res.biometricStatus}
+                                          </span>
+                                        </td>
+                                        <td style={{ textAlign: 'right' }}>
+                                          <div style={{ display: 'inline-flex', gap: '0.35rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                            <button
+                                              type="button"
+                                              className="hostel-view-student-btn"
+                                              onClick={() => setSelectedStudentModal({
+                                                ...res,
+                                                hostelName: currentHostel.name,
+                                                roomNumber: rm.displayTitle,
+                                                wardenName: currentHostel.warden,
+                                                wardenContact: currentHostel.contact
+                                              })}
+                                              title="Inspect Student Dossier"
+                                            >
+                                              <Eye size={12} /> Inspect
+                                            </button>
+
+                                            {/* EDIT AND VACATE/DELETE BUTTONS FOR HOSTEL ADMIN */}
+                                            {isHostelAdmin && (
+                                              <>
+                                                <button
+                                                  type="button"
+                                                  className="hostel-edit-student-btn"
+                                                  onClick={() => setEditingResidentModal({
+                                                    residentKey: res.residentKey,
+                                                    hostelId: selectedHostelId,
+                                                    hostelName: currentHostel.name,
+                                                    roomNumber: rm.displayTitle,
+                                                    roomId: rm.id,
+                                                    bedIndex: res.bedIndex,
+                                                    bedNo: res.bedNo,
+                                                    studentId: res.studentId,
+                                                    name: res.name,
+                                                    rollNumber: res.rollNumber,
+                                                    registrationNumber: res.registrationNumber,
+                                                    department: res.department,
+                                                    semester: res.semester,
+                                                    section: res.section,
+                                                    phone: res.phone,
+                                                    fatherPhone: res.fatherPhone,
+                                                    biometricStatus: res.biometricStatus,
+                                                    adminReason: 'Administrative update to resident record'
+                                                  })}
+                                                  title="Edit / Modify Resident Data"
+                                                >
+                                                  <Edit2 size={12} /> Edit
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  className="hostel-delete-student-btn"
+                                                  onClick={() => setDeletingResidentModal({
+                                                    residentKey: res.residentKey,
+                                                    hostelId: selectedHostelId,
+                                                    hostelName: currentHostel.name,
+                                                    roomNumber: rm.displayTitle,
+                                                    roomId: rm.id,
+                                                    bedIndex: res.bedIndex,
+                                                    bedNo: res.bedNo,
+                                                    name: res.name,
+                                                    rollNumber: res.rollNumber,
+                                                    studentId: res.studentId,
+                                                    reason: 'Administrative de-allocation & bed release'
+                                                  })}
+                                                  title="Delete / Vacate Resident Allocation"
+                                                >
+                                                  <Trash2 size={12} /> Vacate
+                                                </button>
+                                              </>
+                                            )}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                /* WARDEN STANDARD VIEW (Preserved exactly as is for Warden Role) */
+                <div className="admin-table-container">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Room #</th>
+                        <th>Hostel Residence</th>
+                        <th>Floor</th>
+                        <th>Room Type</th>
+                        <th>Capacity</th>
+                        <th>Occupancy Status</th>
+                        <th>Allocated Residents</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rooms.map(rm => (
+                        <tr key={rm.id}>
+                          <td><strong style={{ fontSize: '1rem', color: '#7c3aed' }}>Room {rm.roomNumber}</strong></td>
+                          <td>{rm.hostelName}</td>
+                          <td>{rm.floor}</td>
+                          <td><span className="admin-badge active">{rm.type}</span></td>
+                          <td>{rm.capacity} Beds</td>
+                          <td>
+                            <span className={`admin-badge ${rm.occupied >= rm.capacity ? 'approved' : 'pending'}`}>
+                              {rm.occupied} / {rm.capacity} Beds Occupied
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '0.8rem' }}>
+                            {rm.roomNumber === '204' ? 'Rakesh Das (Bed 01), Priya Patra (Bed 02), Sneha Mohanty (Bed 03)' : `${rm.occupied} Resident students enrolled`}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                              <button
+                                className="admin-action-btn-secondary"
                                 style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
                                 onClick={() => {
-                                  setVacateTarget({
-                                    roomNumber: rm.roomNumber,
-                                    studentRoll: '01',
+                                  setTransferForm(prev => ({
+                                    ...prev,
+                                    currentRoomNumber: rm.roomNumber,
                                     studentName: 'Resident Student'
-                                  });
-                                  setIsVacateConfirmOpen(true);
+                                  }));
+                                  setIsTransferModalOpen(true);
                                 }}
                               >
-                                Vacate
+                                Transfer
                               </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                              {rm.occupied > 0 && (
+                                <button
+                                  className="hostel-quick-reject-btn"
+                                  style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                                  onClick={() => {
+                                    setVacateTarget({
+                                      roomNumber: rm.roomNumber,
+                                      studentRoll: '01',
+                                      studentName: 'Resident Student'
+                                    });
+                                    setIsVacateConfirmOpen(true);
+                                  }}
+                                >
+                                  Vacate
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -2695,7 +3398,7 @@ export default function HostelPortal({ account, onLogout }) {
           )}
 
           {/* TAB 7: OCCUPANCY REPORTS */}
-          {activeTab === 'reports' && (
+          {activeTab === 'reports' && isHostelAdmin && (
             <div>
               <div className="admin-view-header">
                 <div>
@@ -2782,12 +3485,12 @@ export default function HostelPortal({ account, onLogout }) {
           )}
 
           {/* TAB 8: STUDENT DOCUMENTS */}
-          {activeTab === 'documents' && (
+          {activeTab === 'documents' && isHostelAdmin && (
             <StudentDocumentsTable portalRole="warden" />
           )}
 
           {/* TAB 9: REPORT GENERATION */}
-          {activeTab === 'report-generation' && (
+          {activeTab === 'report-generation' && isHostelAdmin && (
             <ReportGenerationModule account={account} role="hostel" />
           )}
 
@@ -2799,7 +3502,11 @@ export default function HostelPortal({ account, onLogout }) {
 
           {/* TAB 11: LEAVE MANAGEMENT */}
           {activeTab === 'leave-mgmt' && (
-            <HostelLeaveSection onNavigateApplyLeave={() => setActiveTab('apply-leave')} />
+            <HostelLeaveSection
+              account={account}
+              isHostelAdmin={isHostelAdmin}
+              onNavigateApplyLeave={() => setActiveTab('apply-leave')}
+            />
           )}
 
           {/* TAB: HOSTEL ADMIN APPROVALS (Only for Hostel Admin) */}
@@ -2843,7 +3550,7 @@ export default function HostelPortal({ account, onLogout }) {
           )}
 
           {/* TAB 16: EMERGENCY & INCIDENT REPORTS */}
-          {activeTab === 'emergency-incidents' && (
+          {activeTab === 'emergency-incidents' && isHostelAdmin && (
             <HostelEmergencyIncidentsSection />
           )}
 
@@ -2853,7 +3560,7 @@ export default function HostelPortal({ account, onLogout }) {
           )}
 
           {/* TAB 18: HOSTEL NOTICES & ANNOUNCEMENTS */}
-          {activeTab === 'notices-announcements' && (
+          {activeTab === 'notices-announcements' && isHostelAdmin && (
             <HostelNoticesSection />
           )}
 
@@ -2863,7 +3570,7 @@ export default function HostelPortal({ account, onLogout }) {
           )}
 
           {/* TAB 20: HOSTEL FEES & DUES */}
-          {activeTab === 'fees-dues' && (
+          {activeTab === 'fees-dues' && isHostelAdmin && (
             <HostelFeesSection />
           )}
 
@@ -2882,9 +3589,55 @@ export default function HostelPortal({ account, onLogout }) {
             <HostelEmergencyContactsSection />
           )}
 
+          
+          {/* TAB: WARDEN MANAGEMENT (HOSTEL ADMIN) */}
+          {(activeTab === 'warden-directory' || activeTab === 'warden-assignments' || activeTab === 'warden-permissions' || activeTab === 'warden-duty-leaves' || activeTab === 'warden-performance') && isHostelAdmin && (
+            <WardenManagementSection
+              account={account}
+              initialTab={
+                activeTab === 'warden-assignments' ? 'assignments' :
+                activeTab === 'warden-permissions' ? 'permissions' :
+                activeTab === 'warden-duty-leaves' ? 'duty-leaves' :
+                activeTab === 'warden-performance' ? 'performance' : 'directory'
+              }
+              showToast={showToast}
+            />
+          )}
+
+          {/* TAB: CENTRAL APPROVAL CENTER (HOSTEL ADMIN) */}
+          {activeTab === 'approval-center' && isHostelAdmin && (
+            <HostelAdminApprovalCenter
+              account={account}
+              showToast={showToast}
+            />
+          )}
+
+          {/* TAB: ATTENDANCE VERIFICATION & OVERRIDE (HOSTEL ADMIN) */}
+          {activeTab === 'attendance-verification' && isHostelAdmin && (
+            <HostelAdminAttendanceVerification
+              account={account}
+              showToast={showToast}
+            />
+          )}
+
+          {/* TAB: ADMINISTRATIVE AUDIT LOGS (HOSTEL ADMIN) */}
+          {activeTab === 'audit-logs' && isHostelAdmin && (
+            <HostelAdminAuditLogs
+              showToast={showToast}
+            />
+          )}
+
+          {/* TAB: STUDENT RESIDENT LEAVES ADMIN (HOSTEL ADMIN) */}
+          {activeTab === 'resident-leaves-admin' && isHostelAdmin && (
+            <HostelLeaveSection
+              account={account}
+              isHostelAdmin={true}
+              onNavigateApplyLeave={() => setActiveTab('apply-leave')}
+            />
+          )}
           {/* TAB 24: SETTINGS & HOSTEL RULES */}
           {activeTab === 'settings-rules' && (
-            <HostelSettingsRulesSection />
+            <HostelSettingsRulesSection isHostelAdmin={isHostelAdmin} />
           )}
         </div>
       </AppLayout>
@@ -3064,6 +3817,267 @@ export default function HostelPortal({ account, onLogout }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: EDIT RESIDENT ALLOCATION (HOSTEL ADMIN) ── */}
+      {editingResidentModal && (
+        <div className="admin-modal-backdrop" onClick={() => setEditingResidentModal(null)}>
+          <div className="admin-modal-card" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2px' }}>
+                  <span className="admin-badge approved" style={{ fontSize: '0.72rem' }}>
+                    Hostel Admin Authority
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                    {editingResidentModal.hostelName} &bull; {editingResidentModal.roomNumber}
+                  </span>
+                </div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
+                  Edit Resident Allocation &amp; Student Data
+                </h3>
+              </div>
+              <button className="admin-table-action-btn" onClick={() => setEditingResidentModal(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditedResident}>
+              <div className="admin-modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                  <div className="admin-form-group">
+                    <label>Resident Student Name *</label>
+                    <input
+                      type="text"
+                      className="admin-form-input"
+                      value={editingResidentModal.name}
+                      onChange={e => setEditingResidentModal({ ...editingResidentModal, name: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label>College Student ID *</label>
+                    <input
+                      type="text"
+                      className="admin-form-input"
+                      value={editingResidentModal.studentId}
+                      onChange={e => setEditingResidentModal({ ...editingResidentModal, studentId: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label>Roll Number *</label>
+                    <input
+                      type="text"
+                      className="admin-form-input"
+                      value={editingResidentModal.rollNumber}
+                      onChange={e => setEditingResidentModal({ ...editingResidentModal, rollNumber: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label>Registration Number *</label>
+                    <input
+                      type="text"
+                      className="admin-form-input"
+                      value={editingResidentModal.registrationNumber}
+                      onChange={e => setEditingResidentModal({ ...editingResidentModal, registrationNumber: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: '0.85rem', marginTop: '0.5rem' }}>
+                  <div className="admin-form-group">
+                    <label>Department *</label>
+                    <select
+                      className="admin-form-select"
+                      value={editingResidentModal.department}
+                      onChange={e => setEditingResidentModal({ ...editingResidentModal, department: e.target.value })}
+                      required
+                    >
+                      <option value="Computer Science & Engineering">Computer Science & Engineering</option>
+                      <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
+                      <option value="Electrical Engineering">Electrical Engineering</option>
+                      <option value="Mechanical Engineering">Mechanical Engineering</option>
+                      <option value="Civil Engineering">Civil Engineering</option>
+                      <option value="Information Technology">Information Technology</option>
+                      <option value="Artificial Intelligence & Data Science">Artificial Intelligence & Data Science</option>
+                    </select>
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label>Semester *</label>
+                    <select
+                      className="admin-form-select"
+                      value={editingResidentModal.semester}
+                      onChange={e => setEditingResidentModal({ ...editingResidentModal, semester: e.target.value })}
+                      required
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
+                        <option key={s} value={`Semester ${s}`}>Semester {s}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label>Section *</label>
+                    <select
+                      className="admin-form-select"
+                      value={editingResidentModal.section}
+                      onChange={e => setEditingResidentModal({ ...editingResidentModal, section: e.target.value })}
+                      required
+                    >
+                      <option value="Section A">Section A</option>
+                      <option value="Section B">Section B</option>
+                      <option value="Section C">Section C</option>
+                      <option value="Section D">Section D</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginTop: '0.5rem' }}>
+                  <div className="admin-form-group">
+                    <label>Bed Position *</label>
+                    <select
+                      className="admin-form-select"
+                      value={editingResidentModal.bedNo}
+                      onChange={e => setEditingResidentModal({ ...editingResidentModal, bedNo: e.target.value })}
+                      required
+                    >
+                      <option value="Bed 01 (Window Side)">Bed 01 (Window Side)</option>
+                      <option value="Bed 02 (Study Side)">Bed 02 (Study Side)</option>
+                      <option value="Bed 03 (Inner Side)">Bed 03 (Inner Side)</option>
+                      <option value="Bed 04 (Door Side)">Bed 04 (Door Side)</option>
+                    </select>
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label>Biometric &amp; Presence Status</label>
+                    <select
+                      className="admin-form-select"
+                      value={editingResidentModal.biometricStatus}
+                      onChange={e => setEditingResidentModal({ ...editingResidentModal, biometricStatus: e.target.value })}
+                    >
+                      <option value="In Hostel (Biometric Verified · 08:15 PM)">In Hostel (Biometric Verified · 08:15 PM)</option>
+                      <option value="In Hostel (Biometric Verified · 07:50 PM)">In Hostel (Biometric Verified · 07:50 PM)</option>
+                      <option value="In Hostel (Biometric Verified · 08:35 PM)">In Hostel (Biometric Verified · 08:35 PM)</option>
+                      <option value="Campus Central Library (Study Pass)">Campus Central Library (Study Pass)</option>
+                      <option value="Outstation (Approved Digital Gate Pass)">Outstation (Approved Digital Gate Pass)</option>
+                      <option value="Night Curfew Breach (Alert Sent)">Night Curfew Breach (Alert Sent)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginTop: '0.5rem' }}>
+                  <div className="admin-form-group">
+                    <label>Resident Student Contact *</label>
+                    <input
+                      type="text"
+                      className="admin-form-input"
+                      value={editingResidentModal.phone}
+                      onChange={e => setEditingResidentModal({ ...editingResidentModal, phone: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label>Parent / Guardian Contact *</label>
+                    <input
+                      type="text"
+                      className="admin-form-input"
+                      value={editingResidentModal.fatherPhone}
+                      onChange={e => setEditingResidentModal({ ...editingResidentModal, fatherPhone: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="admin-form-group" style={{ marginTop: '0.5rem' }}>
+                  <label>Administrative Reason for Record Modification *</label>
+                  <textarea
+                    className="admin-form-textarea"
+                    rows={2}
+                    value={editingResidentModal.adminReason}
+                    onChange={e => setEditingResidentModal({ ...editingResidentModal, adminReason: e.target.value })}
+                    placeholder="Provide reason for updating student resident records (logged to audit trail)..."
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="admin-modal-footer">
+                <button type="button" className="admin-action-btn-secondary" onClick={() => setEditingResidentModal(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="admin-action-btn-primary">
+                  Save &amp; Update Resident Allocation
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: VACATE / DELETE RESIDENT ALLOCATION (HOSTEL ADMIN) ── */}
+      {deletingResidentModal && (
+        <div className="admin-modal-backdrop" onClick={() => setDeletingResidentModal(null)}>
+          <div className="admin-modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <div>
+                <span className="admin-badge rejected" style={{ fontSize: '0.72rem', marginBottom: '3px' }}>
+                  Administrative Bed Deletion
+                </span>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#b91c1c' }}>
+                  Vacate &amp; Delete Resident Bed Allocation
+                </h3>
+              </div>
+              <button className="admin-table-action-btn" onClick={() => setDeletingResidentModal(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="admin-modal-body">
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.85rem 1rem', marginBottom: '1rem', color: '#991b1b', fontSize: '0.86rem', lineHeight: 1.5 }}>
+                <strong>Warning:</strong> You are about to remove <strong>{deletingResidentModal.name}</strong> (Roll: {deletingResidentModal.rollNumber}) from <strong>{deletingResidentModal.roomNumber} - {deletingResidentModal.bedNo}</strong> in <strong>{deletingResidentModal.hostelName}</strong>.
+                <br /><br />
+                This will release the bed allocation and mark the bed as <em>Vacant &amp; Available for Allocation</em> in the live hostel inventory matrix.
+              </div>
+
+              <div className="admin-form-group">
+                <label>Administrative De-allocation Reason *</label>
+                <select
+                  className="admin-form-select"
+                  value={deletingResidentModal.reason}
+                  onChange={e => setDeletingResidentModal({ ...deletingResidentModal, reason: e.target.value })}
+                >
+                  <option value="Administrative de-allocation & bed release">Administrative de-allocation &amp; bed release</option>
+                  <option value="Graduation / Course Completion">Graduation / Course Completion</option>
+                  <option value="Hostel Relinquishment / Day Scholar Conversion">Hostel Relinquishment / Day Scholar Conversion</option>
+                  <option value="Disciplinary Suspension / Eviction">Disciplinary Suspension / Eviction</option>
+                  <option value="Medical Transfer / Rebalance">Medical Transfer / Rebalance</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="admin-modal-footer">
+              <button type="button" className="admin-action-btn-secondary" onClick={() => setDeletingResidentModal(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="admin-action-btn-primary"
+                style={{ background: '#dc2626', borderColor: '#b91c1c' }}
+                onClick={handleConfirmDeleteResident}
+              >
+                Confirm Delete &amp; Vacate Bed
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -3438,8 +4452,8 @@ export default function HostelPortal({ account, onLogout }) {
                         adminActionTab === 'NOTE'
                           ? 'Enter internal notes, supervisor directives, or contractor instructions...'
                           : adminActionTab === 'REASSIGN'
-                          ? 'Enter instructions for newly assigned technician...'
-                          : 'Confirm reason for administrative closure and satisfaction verification...'
+                            ? 'Enter instructions for newly assigned technician...'
+                            : 'Confirm reason for administrative closure and satisfaction verification...'
                       }
                       required={adminActionTab === 'CLOSE'}
                     />

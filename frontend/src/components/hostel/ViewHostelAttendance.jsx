@@ -15,7 +15,10 @@ import {
   FileText,
   RotateCcw,
   Sparkles,
+  Phone,
   PhoneCall,
+  Copy,
+  ArrowLeft,
   ShieldCheck,
   Eye,
   Filter,
@@ -24,8 +27,16 @@ import {
 } from 'lucide-react';
 import {
   getAllHostels,
-  getSubmittedAttendances
+  getSubmittedAttendances,
+  getStudentsRoster,
+  getStudentDeptAndBranch
 } from '../../services/hostelAttendanceStore.js';
+import { findStudentByQuery } from '../../services/studentStore.js';
+import StudentPortal from '../../StudentPortal.jsx';
+import {
+  exportHostelAttendanceToExcel,
+  downloadHostelAttendancePdf
+} from '../../utils/hostelAttendanceExportUtils.js';
 import './HostelModules.css';
 
 export default function ViewHostelAttendance({ account, onNavigateTab }) {
@@ -40,10 +51,57 @@ export default function ViewHostelAttendance({ account, onNavigateTab }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMsg, setToastMsg] = useState(null);
   const [newSubmissionAlert, setNewSubmissionAlert] = useState(null);
+  const [viewingStudentDashboard, setViewingStudentDashboard] = useState(null);
+  const [copiedKey, setCopiedKey] = useState(null);
 
   const showToast = (msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3500);
+  };
+
+  const handleCopyNumber = (phoneStr, key) => {
+    if (!phoneStr) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(phoneStr);
+      } else {
+        const input = document.createElement('input');
+        input.value = phoneStr;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+      setCopiedKey(key);
+      showToast(`Copied ${phoneStr} to clipboard.`);
+      setTimeout(() => setCopiedKey(null), 2500);
+    } catch {
+      showToast(`Contact number: ${phoneStr}`);
+    }
+  };
+
+  const handleViewStudentDashboard = (r) => {
+    const matched = findStudentByQuery(r.regNo || r.rollNumber || r.studentName) || {};
+    const studentAccount = {
+      id: matched.id || `std-${r.rollNumber}`,
+      studentId: matched.id || `std-${r.rollNumber}`,
+      role: 'student',
+      name: matched.name || r.studentName,
+      registrationNumber: matched.registrationNumber || r.regNo,
+      rollNumber: matched.rollNumber || r.rollNumber,
+      branch: matched.branch || r.department,
+      department: matched.department || r.department,
+      semester: matched.semester || r.semester || '5th Sem',
+      phone: r.phone || matched.phone || '+91 98610 11223',
+      parentPhone: r.parentPhone || matched.parentPhone || matched.guardianPhone || '+91 94370 99887',
+      guardianName: matched.guardianName || 'Guardian',
+      email: matched.email || 'student@apnacampus.edu',
+      roomNumber: r.roomNumber,
+      bedNumber: r.bedNumber,
+      allottedHostel: activeSubmission?.hostelName || selectedHostelFilter,
+      hostelCode: activeSubmission?.hostelCode || 'BN1'
+    };
+    setViewingStudentDashboard(studentAccount);
   };
 
   // Real-time automatic fetch listener:
@@ -81,11 +139,64 @@ export default function ViewHostelAttendance({ account, onNavigateTab }) {
     });
   }, [submissions, selectedHostelFilter]);
 
+  // Handle Hostel Filter selection
+  const handleHostelFilterChange = (val) => {
+    setSelectedHostelFilter(val);
+    const matches = submissions.filter(sub => {
+      if (val === 'ALL') return true;
+      return (
+        sub.hostelName?.toLowerCase() === val.toLowerCase() ||
+        sub.hostelName?.toLowerCase().includes(val.toLowerCase()) ||
+        sub.hostelCode?.toLowerCase() === val.toLowerCase()
+      );
+    });
+    if (matches.length > 0) {
+      setSelectedSubmissionId(matches[0].id);
+    } else {
+      setSelectedSubmissionId(null);
+    }
+  };
+
   // Active submission currently selected for detailed inspection
   const activeSubmission = useMemo(() => {
-    if (!selectedSubmissionId) return filteredSubmissions[0] || null;
-    return submissions.find(s => s.id === selectedSubmissionId) || filteredSubmissions[0] || null;
-  }, [submissions, selectedSubmissionId, filteredSubmissions]);
+    if (!filteredSubmissions || filteredSubmissions.length === 0) {
+      if (selectedHostelFilter !== 'ALL') {
+        const roster = getStudentsRoster(selectedHostelFilter);
+        if (roster && roster.length > 0) {
+          const hostelObj = hostels.find(h =>
+            h.name.toLowerCase().includes(selectedHostelFilter.toLowerCase()) ||
+            h.code?.toLowerCase() === selectedHostelFilter.toLowerCase()
+          );
+          const presentCnt = roster.filter(r => r.status === 'Present').length;
+          const absentCnt = roster.filter(r => r.status === 'Absent').length;
+          const leaveCnt = roster.filter(r => r.status === 'On Leave').length;
+          return {
+            id: `AUTO-${hostelObj?.code || 'HST'}`,
+            hostelName: hostelObj?.name || selectedHostelFilter,
+            hostelCode: hostelObj?.code || 'HST',
+            date: new Date().toISOString().split('T')[0],
+            session: 'Night Roll Call (08:30 PM)',
+            submittedBy: hostelObj?.warden || 'Resident Warden',
+            submittedAt: `${new Date().toLocaleDateString('en-GB')}, 08:30 PM (Verified)`,
+            verifiedByAdmin: true,
+            status: 'Submitted to Hostel Admin',
+            stats: {
+              total: roster.length,
+              present: presentCnt,
+              absent: absentCnt,
+              onLeave: leaveCnt,
+              percentage: `${((presentCnt / roster.length) * 100).toFixed(1)}%`
+            },
+            remarks: `Hostel roll-call attendance register for ${hostelObj?.name || selectedHostelFilter}`,
+            records: roster
+          };
+        }
+      }
+      return null;
+    }
+    const match = filteredSubmissions.find(s => s.id === selectedSubmissionId);
+    return match || filteredSubmissions[0];
+  }, [filteredSubmissions, selectedSubmissionId, selectedHostelFilter, hostels]);
 
   // Filtered resident records inside the active submission
   const filteredRecords = useMemo(() => {
@@ -96,7 +207,9 @@ export default function ViewHostelAttendance({ account, onNavigateTab }) {
       const matchSearch = !query ||
         r.studentName?.toLowerCase().includes(query) ||
         r.rollNumber?.toLowerCase().includes(query) ||
-        r.roomNumber?.toLowerCase().includes(query);
+        r.roomNumber?.toLowerCase().includes(query) ||
+        r.regNo?.toLowerCase().includes(query) ||
+        r.department?.toLowerCase().includes(query);
       return matchStatus && matchSearch;
     });
   }, [activeSubmission, statusFilter, searchQuery]);
@@ -115,33 +228,89 @@ export default function ViewHostelAttendance({ account, onNavigateTab }) {
   }, [activeSubmission]);
 
   // Export functions
-  const handleExportCsv = () => {
-    if (!activeSubmission) return;
-    const headers = ['#', 'Student Name', 'Roll Number', 'Room', 'Bed', 'Status', 'Warden Remarks'];
-    const rows = (activeSubmission.records || []).map((r, i) => [
-      i + 1,
-      r.studentName,
-      r.rollNumber,
-      r.roomNumber,
-      r.bedNumber,
-      r.status,
-      r.remarks || ''
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' +
-      [headers, ...rows].map(e => e.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Hostel_Attendance_${activeSubmission.hostelCode}_${activeSubmission.date}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('✓ Attendance report exported to CSV / Excel.');
+  const handleExportExcel = () => {
+    if (!activeSubmission) {
+      showToast('No active attendance submission found to export.');
+      return;
+    }
+    try {
+      const fileName = exportHostelAttendanceToExcel({
+        submission: activeSubmission,
+        records: filteredRecords
+      });
+      showToast(`✓ Excel downloaded for ${activeSubmission.hostelName}: ${fileName}`);
+    } catch (err) {
+      console.error('Excel Export Error:', err);
+      showToast('Failed to export Excel file. Please try again.');
+    }
+  };
+
+  const handleExportPdf = () => {
+    if (!activeSubmission) {
+      showToast('No active attendance submission found to generate PDF.');
+      return;
+    }
+    try {
+      const fileName = downloadHostelAttendancePdf({
+        submission: activeSubmission,
+        records: filteredRecords
+      });
+      showToast(`✓ PDF generated for ${activeSubmission.hostelName}: ${fileName}`);
+    } catch (err) {
+      console.error('PDF Export Error:', err);
+      showToast('Failed to generate PDF document. Please try again.');
+    }
   };
 
   const handlePrint = () => {
     window.print();
   };
+
+  if (viewingStudentDashboard) {
+    return (
+      <div className="hostel-unified-module">
+        <div className="warden-student-dashboard-wrapper">
+          <div className="warden-student-nav-bar">
+            <div className="warden-student-nav-left">
+              <button
+                type="button"
+                className="warden-back-attendance-btn"
+                onClick={() => setViewingStudentDashboard(null)}
+                title="Return to View Attendance"
+              >
+                <ArrowLeft size={16} />
+                <span>Back to View Attendance</span>
+              </button>
+              <div className="warden-viewing-student-info">
+                <span className="warden-badge-inspect">
+                  <ShieldCheck size={14} /> Hostel Admin Inspection View: CMS Student Workspace
+                </span>
+                <strong className="warden-student-name">{viewingStudentDashboard.name}</strong>
+                <span className="warden-student-meta">
+                  Roll No: <strong>{viewingStudentDashboard.rollNumber}</strong> &nbsp;|&nbsp;
+                  Reg No: <strong>{viewingStudentDashboard.registrationNumber}</strong> &nbsp;|&nbsp;
+                  {viewingStudentDashboard.branch} &nbsp;|&nbsp;
+                  Room {viewingStudentDashboard.roomNumber} ({viewingStudentDashboard.allottedHostel})
+                </span>
+              </div>
+            </div>
+            <div className="warden-student-nav-right">
+              <span className="warden-sync-chip">
+                <span className="live-dot-green"></span> Live CMS Profile Connected
+              </span>
+            </div>
+          </div>
+
+          <div className="warden-student-portal-embed">
+            <StudentPortal
+              account={viewingStudentDashboard}
+              onLogout={() => setViewingStudentDashboard(null)}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="hostel-unified-module">
@@ -152,22 +321,6 @@ export default function ViewHostelAttendance({ account, onNavigateTab }) {
           <span>{toastMsg}</span>
         </div>
       )}
-
-      {/* Header & Breadcrumb */}
-      <div className="hostel-page-header">
-        <div className="hostel-breadcrumb">
-          <span>Home</span> / <span>Hostel</span> / <span className="current">View Hostel Attendance</span>
-        </div>
-        <div className="hostel-header-title-row">
-          <div>
-            <h2>View Hostel Attendance Console</h2>
-            <p>Real-time hostel night roll-call audit log. Submissions by resident wardens automatically appear here immediately upon submission.</p>
-          </div>
-          <div className="realtime-live-tag">
-            <span className="live-dot" /> Live Auto-Sync Active
-          </div>
-        </div>
-      </div>
 
       {/* Real-time sync notification banner when Warden submits */}
       {newSubmissionAlert && (
@@ -199,7 +352,7 @@ export default function ViewHostelAttendance({ account, onNavigateTab }) {
               <label>Filter Hostel:</label>
               <select
                 value={selectedHostelFilter}
-                onChange={e => setSelectedHostelFilter(e.target.value)}
+                onChange={e => handleHostelFilterChange(e.target.value)}
               >
                 <option value="ALL">All Residential Hostels</option>
                 {hostels.map(h => (
@@ -211,7 +364,7 @@ export default function ViewHostelAttendance({ account, onNavigateTab }) {
             <div className="filter-item">
               <label>Select Submitted Session:</label>
               <select
-                value={selectedSubmissionId || ''}
+                value={activeSubmission?.id || selectedSubmissionId || ''}
                 onChange={e => setSelectedSubmissionId(e.target.value)}
               >
                 {filteredSubmissions.length === 0 ? (
@@ -244,10 +397,18 @@ export default function ViewHostelAttendance({ account, onNavigateTab }) {
             <button
               type="button"
               className="export-btn excel"
-              onClick={handleExportCsv}
-              title="Download CSV for Excel"
+              onClick={handleExportExcel}
+              title="Download Full Excel Workbook (.xlsx) with Present, Absent, and Leave boarder details"
             >
               <FileSpreadsheet size={15} /> EXCEL
+            </button>
+            <button
+              type="button"
+              className="export-btn pdf"
+              onClick={handleExportPdf}
+              title="Download Official PDF Attendance Report with Table, Stats & Signatures"
+            >
+              <FileText size={15} /> PDF
             </button>
             <button
               type="button"
@@ -255,7 +416,7 @@ export default function ViewHostelAttendance({ account, onNavigateTab }) {
               onClick={handlePrint}
               title="Print Official Attendance Sheet"
             >
-              <Printer size={15} /> Print
+              <Printer size={15} /> PRINT
             </button>
             {onNavigateTab && (
               <button
@@ -364,56 +525,154 @@ export default function ViewHostelAttendance({ account, onNavigateTab }) {
           <table className="hostel-custom-table">
             <thead>
               <tr>
-                <th style={{ width: '45px' }}>#</th>
-                <th>Resident Student</th>
-                <th>Roll / Reg No</th>
-                <th>Room &amp; Bed</th>
-                <th>Status</th>
-                <th>Contact</th>
-                <th>Remarks / Warden Note</th>
+                <th style={{ width: '45px' }}>Sl No</th>
+                <th>Name of Student</th>
+                <th>Registration No</th>
+                <th>Department</th>
+                <th>Branch</th>
+                <th style={{ textAlign: 'center' }}>Roll No</th>
+                <th>Room No</th>
+                <th>Student Contact</th>
+                <th>Parent Contact</th>
+                <th style={{ minWidth: '130px', textAlign: 'center' }}>Attendance Status</th>
+                <th style={{ minWidth: '125px', textAlign: 'center' }}>View Student</th>
               </tr>
             </thead>
             <tbody>
               {filteredRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="no-records-cell">
+                  <td colSpan={11} className="no-records-cell">
                     No resident records found for this view criteria.
                   </td>
                 </tr>
               ) : (
-                filteredRecords.map((r, idx) => (
-                  <tr key={idx} className={r.status === 'Absent' ? 'row-absent-highlight' : ''}>
-                    <td>{idx + 1}</td>
-                    <td>
-                      <div className="student-name-bold">{r.studentName}</div>
-                      <div className="student-subtext">{r.department || 'B.Tech Boarder'}</div>
-                    </td>
-                    <td>
-                      <div>Roll: <strong>{r.rollNumber}</strong></div>
-                      {r.regNo && <div className="student-subtext">Reg: {r.regNo}</div>}
-                    </td>
-                    <td>
-                      <span className="room-badge">Room {r.roomNumber}</span>
-                      <span className="bed-badge">{r.bedNumber}</span>
-                    </td>
-                    <td>
-                      {r.status === 'Present' && <span className="h-status-badge present">✓ Present</span>}
-                      {r.status === 'Absent' && <span className="h-status-badge absent">✕ Absent</span>}
-                      {r.status === 'On Leave' && <span className="h-status-badge leave">On Leave</span>}
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '0.82rem' }}>{r.phone || 'Resident Student'}</div>
-                      {r.parentPhone && (
-                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Parent: {r.parentPhone}</div>
-                      )}
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.82rem', color: '#475569' }}>
-                        {r.remarks || 'Regular presence verified.'}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                filteredRecords.map((r, idx) => {
+                  const deptAndBranch = getStudentDeptAndBranch(r);
+                  return (
+                    <tr key={idx} className={r.status === 'Absent' ? 'row-absent-highlight' : ''}>
+                      {/* 1. Sl No */}
+                      <td>{idx + 1}</td>
+
+                      {/* 2. Name of Student */}
+                      <td>
+                        <div
+                          className="student-name-bold"
+                          style={{ cursor: 'pointer', color: '#1d4ed8' }}
+                          onClick={() => handleViewStudentDashboard(r)}
+                          title="Click to view student details"
+                        >
+                          {r.studentName}
+                        </div>
+                      </td>
+
+                      {/* 3. Registration No */}
+                      <td>
+                        <span className="reg-no-code">{r.regNo || `23052010${String(r.rollNumber || '01').padStart(2, '0')}`}</span>
+                      </td>
+
+                      {/* 4. Department */}
+                      <td>
+                        <div style={{ fontSize: '0.84rem', color: '#1e293b' }}>
+                          {deptAndBranch.department}
+                        </div>
+                      </td>
+
+                      {/* 5. Branch */}
+                      <td>
+                        <span className="branch-pill-badge">
+                          {deptAndBranch.branch}
+                        </span>
+                      </td>
+
+                      {/* 6. Roll No */}
+                      <td style={{ textAlign: 'center' }}>
+                        <strong style={{ color: '#0f172a' }}>{r.rollNumber}</strong>
+                      </td>
+
+                      {/* 7. Room No */}
+                      <td>
+                        <span className="room-badge">
+                          Room {r.roomNumber}
+                          {r.bedNumber ? ` · ${r.bedNumber}` : ''}
+                        </span>
+                      </td>
+
+                      {/* 8. Student Contact */}
+                      <td>
+                        {r.phone ? (
+                          <div className="contact-cell-box">
+                            <a
+                              href={`tel:${r.phone}`}
+                              className="contact-phone-link"
+                              title={`Call Student: ${r.phone}`}
+                            >
+                              <Phone size={13} className="contact-icon student" />
+                              <span className="contact-number">{r.phone}</span>
+                            </a>
+                            <button
+                              type="button"
+                              className="contact-copy-btn"
+                              onClick={() => handleCopyNumber(r.phone, `view-std-${idx}`)}
+                              title="Copy Student Mobile Number"
+                            >
+                              {copiedKey === `view-std-${idx}` ? <Check size={12} color="#16a34a" /> : <Copy size={12} />}
+                              {copiedKey === `view-std-${idx}` && <span className="copied-tag">Copied!</span>}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="contact-unavailable">— Not Provided</span>
+                        )}
+                      </td>
+
+                      {/* 9. Parent Contact */}
+                      <td>
+                        {r.parentPhone ? (
+                          <div className="contact-cell-box">
+                            <a
+                              href={`tel:${r.parentPhone}`}
+                              className="contact-phone-link parent"
+                              title={`Call Parent: ${r.parentPhone}`}
+                            >
+                              <PhoneCall size={13} className="contact-icon parent" />
+                              <span className="contact-number">{r.parentPhone}</span>
+                            </a>
+                            <button
+                              type="button"
+                              className="contact-copy-btn"
+                              onClick={() => handleCopyNumber(r.parentPhone, `view-par-${idx}`)}
+                              title="Copy Parent Mobile Number"
+                            >
+                              {copiedKey === `view-par-${idx}` ? <Check size={12} color="#16a34a" /> : <Copy size={12} />}
+                              {copiedKey === `view-par-${idx}` && <span className="copied-tag">Copied!</span>}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="contact-unavailable">— Not Provided</span>
+                        )}
+                      </td>
+
+                      {/* 10. Attendance Status */}
+                      <td style={{ textAlign: 'center' }}>
+                        {r.status === 'Present' && <span className="h-status-badge present">✓ Present</span>}
+                        {r.status === 'Absent' && <span className="h-status-badge absent">✕ Absent</span>}
+                        {r.status === 'On Leave' && <span className="h-status-badge leave">On Leave</span>}
+                      </td>
+
+                      {/* 11. View Student */}
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          className="view-student-btn"
+                          onClick={() => handleViewStudentDashboard(r)}
+                          title={`Open ${r.studentName}'s complete CMS Student Dashboard`}
+                        >
+                          <Eye size={14} />
+                          <span>View Student</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -477,6 +736,7 @@ export default function ViewHostelAttendance({ account, onNavigateTab }) {
                         type="button"
                         className="h-btn-inspect"
                         onClick={() => {
+                          setSelectedHostelFilter('ALL');
                           setSelectedSubmissionId(sub.id);
                           showToast(`Loaded attendance details for ${sub.hostelName} (${sub.date}).`);
                         }}

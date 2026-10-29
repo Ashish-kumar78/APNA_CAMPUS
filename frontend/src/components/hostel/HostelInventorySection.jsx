@@ -35,6 +35,7 @@ import {
 } from '../../services/hostelIndentStore.js';
 import { mockInventoryAssets } from './hostelData.js';
 import './HostelIndentSection.css';
+import WardenInventoryRequisition from './WardenInventoryRequisition.jsx';
 
 export default function HostelInventorySection({ account, isHostelAdmin: propIsHostelAdmin }) {
   // Check role: Hostel Admin vs Warden
@@ -46,6 +47,13 @@ export default function HostelInventorySection({ account, isHostelAdmin: propIsH
     account?.identity === 'WRD-ADM-01' ||
     account?.detail?.toLowerCase().includes('administrator')
   );
+
+  // STRICT ROLE RESTRICTION:
+  // If role is Hostel Warden (not Hostel Admin), render the modern Warden Requisition portal.
+  // The Hostel Admin approval console remains 100% untouched below.
+  if (!isHostelAdmin) {
+    return <WardenInventoryRequisition account={account} />;
+  }
 
   // 2 SECTIONS matching Image 1:
   // Section 1: 'raise_indent' (Raise Indent / View Status)

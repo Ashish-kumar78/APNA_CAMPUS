@@ -37,6 +37,7 @@ export default function StudentGatePassSection({ student: propStudent }) {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedDigitalPass, setSelectedDigitalPass] = useState(null);
   const [viewDocModal, setViewDocModal] = useState(null);
+  const [selectedRejectionNotice, setSelectedRejectionNotice] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
   const fileInputRef = useRef(null);
 
@@ -395,9 +396,22 @@ export default function StudentGatePassSection({ student: propStudent }) {
                         </div>
                       )}
                       {isRejected && (
-                        <span className="gp-badge gp-badge-rejected">
-                          <XCircle size={12} /> Rejected by Warden
-                        </span>
+                        <div style={{ maxWidth: '240px' }}>
+                          <span className="gp-badge gp-badge-rejected">
+                            <XCircle size={12} /> Rejected by Warden
+                          </span>
+                          <div className="gp-rejection-reason-chip">
+                            <div className="gp-rejection-chip-header">
+                              <AlertCircle size={11} /> <strong>Reason Stated by Warden:</strong>
+                            </div>
+                            <div className="gp-rejection-chip-body">
+                              "{pass.wardenRemarks || pass.rejectionReason || 'Application rejected by hostel warden office.'}"
+                            </div>
+                            <div className="gp-rejection-chip-footer">
+                              By {pass.approvedBy || pass.rejectedBy || 'Resident Warden'} · {pass.approvedAt || pass.rejectedAt || 'Recent'}
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </td>
 
@@ -417,6 +431,25 @@ export default function StudentGatePassSection({ student: propStudent }) {
                           onClick={() => setSelectedDigitalPass(pass)}
                         >
                           <QrCode size={14} /> View Official Pass
+                        </button>
+                      ) : isRejected ? (
+                        <button
+                          type="button"
+                          className="admin-action-btn-secondary"
+                          style={{
+                            fontSize: '0.78rem',
+                            padding: '0.4rem 0.75rem',
+                            color: '#b91c1c',
+                            borderColor: '#fca5a5',
+                            background: '#fef2f2',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            fontWeight: 700
+                          }}
+                          onClick={() => setSelectedRejectionNotice(pass)}
+                        >
+                          <AlertCircle size={13} /> View Reason
                         </button>
                       ) : (
                         <button
@@ -1074,6 +1107,92 @@ export default function StudentGatePassSection({ student: propStudent }) {
                 onClick={() => setViewDocModal(null)}
               >
                 Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 4: FORMAL REJECTION NOTICE WITH REASON ── */}
+      {selectedRejectionNotice && (
+        <div className="admin-modal-backdrop" onClick={() => setSelectedRejectionNotice(null)}>
+          <div
+            className="admin-modal-card"
+            style={{ maxWidth: '580px', width: '95vw' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="admin-modal-header" style={{ background: '#fef2f2', borderBottom: '1px solid #fee2e2', padding: '1.25rem 1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b91c1c' }}>
+                  <XCircle size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#991b1b', fontWeight: 800 }}>
+                    Gate Pass Application Rejected
+                  </h3>
+                  <small style={{ color: '#b91c1c' }}>
+                    Application ID: <strong>{selectedRejectionNotice.id}</strong> · {selectedRejectionNotice.appliedAt}
+                  </small>
+                </div>
+              </div>
+              <button
+                className="admin-table-action-btn"
+                onClick={() => setSelectedRejectionNotice(null)}
+                style={{ border: 'none', background: '#fee2e2', color: '#991b1b', borderRadius: '50%', width: '32px', height: '32px' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="admin-modal-body" style={{ padding: '1.5rem' }}>
+              {/* Highlighted Reason Banner */}
+              <div style={{ background: '#fff1f2', border: '1.5px solid #fecdd3', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 800, color: '#9f1239', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                  <AlertCircle size={15} /> Official Reason Stated by Resident Warden
+                </div>
+                <div style={{ fontSize: '1rem', color: '#881337', fontWeight: 600, lineHeight: '1.5', background: '#ffffff', padding: '12px 14px', borderRadius: '8px', borderLeft: '4px solid #e11d48' }}>
+                  "{selectedRejectionNotice.wardenRemarks || selectedRejectionNotice.rejectionReason || 'Parent / Guardian telephonic consent could not be verified by hostel warden office.'}"
+                </div>
+                <div style={{ marginTop: '10px', fontSize: '0.78rem', color: '#9f1239', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Decided by: <strong>{selectedRejectionNotice.approvedBy || selectedRejectionNotice.rejectedBy || 'Mr. Rajesh Jena (Resident Warden)'}</strong></span>
+                  <span>Date: <strong>{selectedRejectionNotice.approvedAt || selectedRejectionNotice.rejectedAt || 'Recent'}</strong></span>
+                </div>
+              </div>
+
+              {/* Pass Context Details */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.82rem' }}>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.72rem' }}>Student Name</span>
+                  <div style={{ fontWeight: 700, color: '#1e293b' }}>{selectedRejectionNotice.studentName}</div>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.72rem' }}>Hostel &amp; Room</span>
+                  <div style={{ fontWeight: 700, color: '#1e293b' }}>{selectedRejectionNotice.hostelName} ({selectedRejectionNotice.roomNumber})</div>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.72rem' }}>Requested Destination</span>
+                  <div style={{ fontWeight: 600, color: '#334155' }}>{selectedRejectionNotice.destination}</div>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.72rem' }}>Purpose</span>
+                  <div style={{ fontWeight: 600, color: '#334155' }}>{selectedRejectionNotice.purposeType}</div>
+                </div>
+              </div>
+
+              {/* Action advice */}
+              <div style={{ marginTop: '1.25rem', padding: '0.85rem 1rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', fontSize: '0.8rem', color: '#0369a1' }}>
+                <strong>What should you do next?</strong> If you believe this was an error or you now have updated parental consent or faculty recommendation, please report in person to the <strong>Resident Warden Office (Hostel 1, Ground Floor)</strong> during counseling hours (05:00 PM – 07:00 PM) or re-apply with valid verification documents attached.
+              </div>
+            </div>
+
+            <div className="admin-modal-footer" style={{ padding: '1rem 1.5rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="admin-action-btn-primary"
+                style={{ background: '#0f172a' }}
+                onClick={() => setSelectedRejectionNotice(null)}
+              >
+                Understood &amp; Close
               </button>
             </div>
           </div>

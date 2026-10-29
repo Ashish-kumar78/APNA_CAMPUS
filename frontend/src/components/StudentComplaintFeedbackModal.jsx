@@ -21,6 +21,8 @@ export default function StudentComplaintFeedbackModal({
   onClose,
   onFeedbackSubmitted,
   onSwitchToReopen,
+  onSubmitted,
+  onRouteToReopen,
 }) {
   const [isResolved, setIsResolved] = useState('yes');
   const [rating, setRating] = useState(5);
@@ -41,20 +43,24 @@ export default function StudentComplaintFeedbackModal({
     5: '5 Stars — Excellent',
   };
 
+  const triggerReopenRoute = () => {
+    const routeFn = onRouteToReopen || onSwitchToReopen;
+    if (routeFn) {
+      const reasonCombined = feedbackText.trim()
+        ? feedbackText.trim() + (adminComments.trim() ? ` (Admin Note: ${adminComments.trim()})` : '')
+        : adminComments.trim();
+      routeFn(complaint, reasonCombined);
+    }
+  };
+
   const handleWorkCompletionChange = (val) => {
     setIsResolved(val);
-    if (val === 'no') {
-      // Prompt requires: "If the student indicates that the problem is not resolved, route them through the Problem Not Resolved workflow instead of falsely recording the complaint as successfully completed."
-      if (onSwitchToReopen) {
-        onSwitchToReopen();
-      }
-    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isResolved === 'no') {
-      if (onSwitchToReopen) onSwitchToReopen();
+      triggerReopenRoute();
       return;
     }
 
@@ -99,8 +105,9 @@ export default function StudentComplaintFeedbackModal({
         console.warn('Local notification dispatch warning:', e);
       }
 
-      if (onFeedbackSubmitted) {
-        onFeedbackSubmitted(updatedTicket);
+      const submitCallback = onFeedbackSubmitted || onSubmitted;
+      if (submitCallback) {
+        submitCallback(updatedTicket);
       }
       onClose();
     } catch (err) {
@@ -264,9 +271,44 @@ export default function StudentComplaintFeedbackModal({
               </label>
             </div>
             {isResolved === 'no' && (
-              <small style={{ color: '#b91c1c', fontWeight: 600 }}>
-                Selecting "No" will route you to the Problem Not Resolved form so the warden can immediately schedule follow-up repair.
-              </small>
+              <div
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  marginTop: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px'
+                }}
+              >
+                <div style={{ color: '#991b1b', fontSize: '0.82rem', lineHeight: '1.4' }}>
+                  <strong>Problem remains:</strong> Reopening this complaint will alert the Resident Warden &amp; Administration for immediate priority follow-up repair.
+                </div>
+                <button
+                  type="button"
+                  onClick={triggerReopenRoute}
+                  style={{
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    flexShrink: 0,
+                  }}
+                >
+                  Open Report <ArrowRight size={13} />
+                </button>
+              </div>
             )}
           </div>
 
@@ -426,17 +468,26 @@ export default function StudentComplaintFeedbackModal({
                 padding: '8px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                background: '#16a34a',
+                background: isResolved === 'no' ? '#dc2626' : '#16a34a',
                 color: '#ffffff',
                 fontSize: '0.85rem',
                 fontWeight: 700,
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 opacity: isSubmitting ? 0.75 : 1,
-                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)',
+                boxShadow: isResolved === 'no' ? '0 2px 8px rgba(220, 38, 38, 0.35)' : '0 2px 6px rgba(22, 163, 74, 0.3)',
               }}
             >
-              <Send size={15} />
-              {isSubmitting ? 'Submitting Feedback...' : 'Confirm Resolution & Submit Feedback'}
+              {isResolved === 'no' ? (
+                <>
+                  <AlertCircle size={16} />
+                  Report Problem Not Resolved →
+                </>
+              ) : (
+                <>
+                  <Send size={15} />
+                  {isSubmitting ? 'Submitting Feedback...' : 'Confirm Resolution & Submit Feedback'}
+                </>
+              )}
             </button>
           </div>
         </form>

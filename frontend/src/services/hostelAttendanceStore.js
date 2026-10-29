@@ -332,10 +332,271 @@ export const INITIAL_STUDENTS_ROSTER = [
     gender: 'Male',
     status: 'Absent',
     remarks: 'Library pass overdue'
+  },
+  {
+    id: 'std-13',
+    studentName: 'Tanmaya Kumar Das',
+    rollNumber: '13',
+    regNo: '2305201013',
+    hostelName: 'Gandhi Boys Residence',
+    hostelCode: 'GB1',
+    roomNumber: '101',
+    bedNumber: 'Bed 01',
+    department: 'Computer Science & Engineering',
+    semester: '5th Sem',
+    phone: '+91 98612 11223',
+    parentPhone: '+91 94372 99887',
+    gender: 'Male',
+    status: 'Present',
+    remarks: 'Regular attendance'
+  },
+  {
+    id: 'std-14',
+    studentName: 'Smruti Ranjan Pradhan',
+    rollNumber: '14',
+    regNo: '2305201014',
+    hostelName: 'Gandhi Boys Residence',
+    hostelCode: 'GB1',
+    roomNumber: '101',
+    bedNumber: 'Bed 02',
+    department: 'Mechanical Engineering',
+    semester: '5th Sem',
+    phone: '+91 98612 22334',
+    parentPhone: '+91 94372 88776',
+    gender: 'Male',
+    status: 'Present',
+    remarks: 'Verified'
+  },
+  {
+    id: 'std-15',
+    studentName: 'Ashutosh Sahu',
+    rollNumber: '15',
+    regNo: '2305201015',
+    hostelName: 'Gandhi Boys Residence',
+    hostelCode: 'GB1',
+    roomNumber: '102',
+    bedNumber: 'Bed 01',
+    department: 'Electrical Engineering',
+    semester: '5th Sem',
+    phone: '+91 98612 33445',
+    parentPhone: '+91 94372 77665',
+    gender: 'Male',
+    status: 'Absent',
+    remarks: 'Absent without gate pass'
+  },
+  {
+    id: 'std-16',
+    studentName: 'Jyoti Prakash Swain',
+    rollNumber: '16',
+    regNo: '2305201016',
+    hostelName: 'Gandhi Boys Residence',
+    hostelCode: 'GB1',
+    roomNumber: '102',
+    bedNumber: 'Bed 02',
+    department: 'Civil Engineering',
+    semester: '5th Sem',
+    phone: '+91 98612 44556',
+    parentPhone: '+91 94372 66554',
+    gender: 'Male',
+    status: 'Present',
+    remarks: 'Verified'
+  },
+  {
+    id: 'std-17',
+    studentName: 'Chandan Kumar Mallick',
+    rollNumber: '17',
+    regNo: '2305201017',
+    hostelName: 'Kalam Boys Residence',
+    hostelCode: 'KB1',
+    roomNumber: '101',
+    bedNumber: 'Bed 01',
+    department: 'Electrical Engineering',
+    semester: '3rd Sem',
+    phone: '+91 98613 55667',
+    parentPhone: '+91 94373 55443',
+    gender: 'Male',
+    status: 'Present',
+    remarks: 'Regular attendance'
+  },
+  {
+    id: 'std-18',
+    studentName: 'Sambit Mohapatra',
+    rollNumber: '18',
+    regNo: '2305201018',
+    hostelName: 'Kalam Boys Residence',
+    hostelCode: 'KB1',
+    roomNumber: '101',
+    bedNumber: 'Bed 02',
+    department: 'Computer Science & Engineering',
+    semester: '3rd Sem',
+    phone: '+91 98613 66778',
+    parentPhone: '+91 94373 44332',
+    gender: 'Male',
+    status: 'Present',
+    remarks: 'Verified'
+  },
+  {
+    id: 'std-19',
+    studentName: 'Rajesh Kumar Baral',
+    rollNumber: '19',
+    regNo: '2305201019',
+    hostelName: 'Kalam Boys Residence',
+    hostelCode: 'KB1',
+    roomNumber: '102',
+    bedNumber: 'Bed 01',
+    department: 'Information Technology',
+    semester: '3rd Sem',
+    phone: '+91 98613 77889',
+    parentPhone: '+91 94373 33221',
+    gender: 'Male',
+    status: 'Absent',
+    remarks: 'Unreported night curfew absence'
+  },
+  {
+    id: 'std-20',
+    studentName: 'Pragyan Priyadarshi',
+    rollNumber: '20',
+    regNo: '2305201020',
+    hostelName: 'Kalam Boys Residence',
+    hostelCode: 'KB1',
+    roomNumber: '102',
+    bedNumber: 'Bed 02',
+    department: 'Electronics & Comm. Engg',
+    semester: '3rd Sem',
+    phone: '+91 98613 88990',
+    parentPhone: '+91 94373 22110',
+    gender: 'Male',
+    status: 'On Leave',
+    remarks: 'Approved weekend home pass #HP-2026-45'
   }
 ];
 
 export const INITIAL_ATTENDANCE_SUBMISSIONS = [
+  {
+    id: 'ATT-20261028-BN1',
+    hostelName: 'Bhabani Hostel-1',
+    hostelCode: 'BN1',
+    date: '2026-10-28',
+    session: 'Night Roll Call (08:30 PM)',
+    submittedBy: 'Mrs. Nibedita Das (Resident Warden)',
+    submittedAt: '28 Oct 2026, 05:17 PM (Updated)',
+    verifiedByAdmin: true,
+    status: 'Submitted to Hostel Admin',
+    stats: {
+      total: 4,
+      present: 2,
+      absent: 2,
+      onLeave: 0,
+      percentage: '50.0%'
+    },
+    remarks: 'Night roll call verified. 2 students absent (Amit Pattnaik & Sourav Mohanty).',
+    records: [
+      { studentName: 'Rakesh Das', rollNumber: '01', regNo: '2305201001', department: 'Computer Science & Engineering', roomNumber: '101', bedNumber: 'Bed 01', status: 'Present', phone: '+91 98610 11223', parentPhone: '+91 94370 99887', remarks: 'Verified by Warden' },
+      { studentName: 'Amit Pattnaik', rollNumber: '03', regNo: '2305201003', department: 'Electronics & Comm. Engg', roomNumber: '101', bedNumber: 'Bed 02', status: 'Absent', phone: '+91 98610 33445', parentPhone: '+91 94370 77665', remarks: 'Verified by Warden' },
+      { studentName: 'Sourav Mohanty', rollNumber: '05', regNo: '2305201005', department: 'Electrical Engineering', roomNumber: '102', bedNumber: 'Bed 01', status: 'Absent', phone: '+91 98610 55667', parentPhone: '+91 94370 55443', remarks: 'Unreported absence' },
+      { studentName: 'Debabrata Jena', rollNumber: '06', regNo: '2305201006', department: 'Mechanical Engineering', roomNumber: '102', bedNumber: 'Bed 02', status: 'Present', phone: '+91 98610 66778', parentPhone: '+91 94370 44332', remarks: 'Verified by Warden' }
+    ]
+  },
+  {
+    id: 'ATT-20261028-BN2',
+    hostelName: 'Bhabani Hostel-2',
+    hostelCode: 'BN2',
+    date: '2026-10-28',
+    session: 'Night Roll Call (08:30 PM)',
+    submittedBy: 'Mr. Tanmaya Kumar Routray (Resident Warden)',
+    submittedAt: '28 Oct 2026, 08:30 PM (Updated)',
+    verifiedByAdmin: true,
+    status: 'Submitted to Hostel Admin',
+    stats: {
+      total: 4,
+      present: 3,
+      absent: 1,
+      onLeave: 0,
+      percentage: '75.0%'
+    },
+    remarks: 'Night roll call verified. Deepak Kumar Barik absent.',
+    records: [
+      { studentName: 'Bikash Rout', rollNumber: '08', regNo: '2305201008', department: 'Civil Engineering', roomNumber: '101', bedNumber: 'Bed 01', status: 'Present', phone: '+91 98610 88990', parentPhone: '+91 94370 22110', remarks: 'Verified by Warden' },
+      { studentName: 'Manoj Tripathy', rollNumber: '09', regNo: '2305201009', department: 'Computer Science & Engineering', roomNumber: '101', bedNumber: 'Bed 02', status: 'Present', phone: '+91 98610 99001', parentPhone: '+91 94370 11009', remarks: 'Verified by Warden' },
+      { studentName: 'Kishore Sethi', rollNumber: '11', regNo: '2305201011', department: 'Mechanical Engineering', roomNumber: '102', bedNumber: 'Bed 01', status: 'Present', phone: '+91 98611 11223', parentPhone: '+91 94371 99887', remarks: 'Verified by Warden' },
+      { studentName: 'Deepak Kumar Barik', rollNumber: '12', regNo: '2305201012', department: 'Information Technology', roomNumber: '102', bedNumber: 'Bed 02', status: 'Absent', phone: '+91 98611 22334', parentPhone: '+91 94371 88776', remarks: 'Overdue library pass' }
+    ]
+  },
+  {
+    id: 'ATT-20261028-SG1',
+    hostelName: 'Sarojini Girls Residence',
+    hostelCode: 'SG1',
+    date: '2026-10-28',
+    session: 'Night Roll Call (08:30 PM)',
+    submittedBy: 'Dr. Smita Mishra (Resident Warden)',
+    submittedAt: '28 Oct 2026, 08:35 PM (Verified)',
+    verifiedByAdmin: true,
+    status: 'Submitted to Hostel Admin',
+    stats: {
+      total: 4,
+      present: 3,
+      absent: 0,
+      onLeave: 1,
+      percentage: '75.0%'
+    },
+    remarks: 'Girls residence night inspection completed. 1 boarder on approved medical leave.',
+    records: [
+      { studentName: 'Priya Nayak', rollNumber: '02', regNo: '2305201002', department: 'Computer Science & Engineering', roomNumber: '201', bedNumber: 'Bed 01', status: 'Present', phone: '+91 98610 22334', parentPhone: '+91 94370 88776', remarks: 'Verified by Warden' },
+      { studentName: 'Subhashree Sahoo', rollNumber: '04', regNo: '2305201004', department: 'Information Technology', roomNumber: '201', bedNumber: 'Bed 02', status: 'Present', phone: '+91 98610 44556', parentPhone: '+91 94370 66554', remarks: 'Verified by Warden' },
+      { studentName: 'Ananya Panda', rollNumber: '07', regNo: '2305201007', department: 'Computer Science & Engineering', roomNumber: '202', bedNumber: 'Bed 01', status: 'On Leave', phone: '+91 98610 77889', parentPhone: '+91 94370 33221', remarks: 'Approved medical gate pass #GP-2026-88' },
+      { studentName: 'Sasmita Behera', rollNumber: '10', regNo: '2305201010', department: 'Electrical & Electronics Engg', roomNumber: '202', bedNumber: 'Bed 02', status: 'Present', phone: '+91 98610 00112', parentPhone: '+91 94370 00998', remarks: 'Verified by Warden' }
+    ]
+  },
+  {
+    id: 'ATT-20261028-GB1',
+    hostelName: 'Gandhi Boys Residence',
+    hostelCode: 'GB1',
+    date: '2026-10-28',
+    session: 'Night Roll Call (08:30 PM)',
+    submittedBy: 'Mr. Rajesh Jena (Resident Warden)',
+    submittedAt: '28 Oct 2026, 08:25 PM (Verified)',
+    verifiedByAdmin: true,
+    status: 'Submitted to Hostel Admin',
+    stats: {
+      total: 4,
+      present: 3,
+      absent: 1,
+      onLeave: 0,
+      percentage: '75.0%'
+    },
+    remarks: 'Gandhi residence roll call completed. Ashutosh Sahu absent.',
+    records: [
+      { studentName: 'Tanmaya Kumar Das', rollNumber: '13', regNo: '2305201013', department: 'Computer Science & Engineering', roomNumber: '101', bedNumber: 'Bed 01', status: 'Present', phone: '+91 98612 11223', parentPhone: '+91 94372 99887', remarks: 'Regular attendance' },
+      { studentName: 'Smruti Ranjan Pradhan', rollNumber: '14', regNo: '2305201014', department: 'Mechanical Engineering', roomNumber: '101', bedNumber: 'Bed 02', status: 'Present', phone: '+91 98612 22334', parentPhone: '+91 94372 88776', remarks: 'Verified by Warden' },
+      { studentName: 'Ashutosh Sahu', rollNumber: '15', regNo: '2305201015', department: 'Electrical Engineering', roomNumber: '102', bedNumber: 'Bed 01', status: 'Absent', phone: '+91 98612 33445', parentPhone: '+91 94372 77665', remarks: 'Parent notification sent' },
+      { studentName: 'Jyoti Prakash Swain', rollNumber: '16', regNo: '2305201016', department: 'Civil Engineering', roomNumber: '102', bedNumber: 'Bed 02', status: 'Present', phone: '+91 98612 44556', parentPhone: '+91 94372 66554', remarks: 'Verified by Warden' }
+    ]
+  },
+  {
+    id: 'ATT-20261028-KB1',
+    hostelName: 'Kalam Boys Residence',
+    hostelCode: 'KB1',
+    date: '2026-10-28',
+    session: 'Night Roll Call (08:30 PM)',
+    submittedBy: 'Mr. Sunil Pradhan (Resident Warden)',
+    submittedAt: '28 Oct 2026, 08:30 PM (Verified)',
+    verifiedByAdmin: true,
+    status: 'Submitted to Hostel Admin',
+    stats: {
+      total: 4,
+      present: 2,
+      absent: 1,
+      onLeave: 1,
+      percentage: '50.0%'
+    },
+    remarks: 'Kalam block roll-call audit log. 1 boarder on leave, 1 absent.',
+    records: [
+      { studentName: 'Chandan Kumar Mallick', rollNumber: '17', regNo: '2305201017', department: 'Electrical Engineering', roomNumber: '101', bedNumber: 'Bed 01', status: 'Present', phone: '+91 98613 55667', parentPhone: '+91 94373 55443', remarks: 'Regular attendance' },
+      { studentName: 'Sambit Mohapatra', rollNumber: '18', regNo: '2305201018', department: 'Computer Science & Engineering', roomNumber: '101', bedNumber: 'Bed 02', status: 'Present', phone: '+91 98613 66778', parentPhone: '+91 94373 44332', remarks: 'Verified by Warden' },
+      { studentName: 'Rajesh Kumar Baral', rollNumber: '19', regNo: '2305201019', department: 'Information Technology', roomNumber: '102', bedNumber: 'Bed 01', status: 'Absent', phone: '+91 98613 77889', parentPhone: '+91 94373 33221', remarks: 'Parent alert dispatched' },
+      { studentName: 'Pragyan Priyadarshi', rollNumber: '20', regNo: '2305201020', department: 'Electronics & Comm. Engg', roomNumber: '102', bedNumber: 'Bed 02', status: 'On Leave', phone: '+91 98613 88990', parentPhone: '+91 94373 22110', remarks: 'Approved weekend home pass #HP-2026-45' }
+    ]
+  },
   {
     id: 'ATT-20261026-BN1',
     hostelName: 'Bhabani Hostel-1',
@@ -347,18 +608,18 @@ export const INITIAL_ATTENDANCE_SUBMISSIONS = [
     verifiedByAdmin: true,
     status: 'Submitted to Hostel Admin',
     stats: {
-      total: 5,
-      present: 4,
+      total: 4,
+      present: 3,
       absent: 1,
       onLeave: 0,
-      percentage: '80.0%'
+      percentage: '75.0%'
     },
     remarks: 'All 1st floor rooms inspected. Sourav Mohanty absent without gatepass.',
     records: [
-      { studentName: 'Rakesh Das', rollNumber: '01', roomNumber: '101', bedNumber: 'Bed 01', status: 'Present', remarks: 'Verified by Warden' },
-      { studentName: 'Amit Pattnaik', rollNumber: '03', roomNumber: '101', bedNumber: 'Bed 02', status: 'Present', remarks: 'Verified by Warden' },
-      { studentName: 'Sourav Mohanty', rollNumber: '05', roomNumber: '102', bedNumber: 'Bed 01', status: 'Absent', remarks: 'Parent SMS queued' },
-      { studentName: 'Debabrata Jena', rollNumber: '06', roomNumber: '102', bedNumber: 'Bed 02', status: 'Present', remarks: 'Verified by Warden' }
+      { studentName: 'Rakesh Das', rollNumber: '01', regNo: '2305201001', department: 'Computer Science & Engineering', roomNumber: '101', bedNumber: 'Bed 01', status: 'Present', phone: '+91 98610 11223', parentPhone: '+91 94370 99887', remarks: 'Verified by Warden' },
+      { studentName: 'Amit Pattnaik', rollNumber: '03', regNo: '2305201003', department: 'Electronics & Comm. Engg', roomNumber: '101', bedNumber: 'Bed 02', status: 'Present', phone: '+91 98610 33445', parentPhone: '+91 94370 77665', remarks: 'Verified by Warden' },
+      { studentName: 'Sourav Mohanty', rollNumber: '05', regNo: '2305201005', department: 'Electrical Engineering', roomNumber: '102', bedNumber: 'Bed 01', status: 'Absent', phone: '+91 98610 55667', parentPhone: '+91 94370 55443', remarks: 'Parent SMS queued' },
+      { studentName: 'Debabrata Jena', rollNumber: '06', regNo: '2305201006', department: 'Mechanical Engineering', roomNumber: '102', bedNumber: 'Bed 02', status: 'Present', phone: '+91 98610 66778', parentPhone: '+91 94370 44332', remarks: 'Verified by Warden' }
     ]
   },
   {
@@ -380,10 +641,10 @@ export const INITIAL_ATTENDANCE_SUBMISSIONS = [
     },
     remarks: 'Night roll call completed in wing A and B.',
     records: [
-      { studentName: 'Bikash Rout', rollNumber: '08', roomNumber: '101', bedNumber: 'Bed 01', status: 'Present', remarks: 'Verified' },
-      { studentName: 'Manoj Tripathy', rollNumber: '09', roomNumber: '101', bedNumber: 'Bed 02', status: 'Present', remarks: 'Verified' },
-      { studentName: 'Kishore Sethi', rollNumber: '11', roomNumber: '102', bedNumber: 'Bed 01', status: 'Present', remarks: 'Verified' },
-      { studentName: 'Deepak Kumar Barik', rollNumber: '12', roomNumber: '102', bedNumber: 'Bed 02', status: 'Absent', remarks: 'Library pass overdue' }
+      { studentName: 'Bikash Rout', rollNumber: '08', regNo: '2305201008', department: 'Civil Engineering', roomNumber: '101', bedNumber: 'Bed 01', status: 'Present', phone: '+91 98610 88990', parentPhone: '+91 94370 22110', remarks: 'Verified' },
+      { studentName: 'Manoj Tripathy', rollNumber: '09', regNo: '2305201009', department: 'Computer Science & Engineering', roomNumber: '101', bedNumber: 'Bed 02', status: 'Present', phone: '+91 98610 99001', parentPhone: '+91 94370 11009', remarks: 'Verified' },
+      { studentName: 'Kishore Sethi', rollNumber: '11', regNo: '2305201011', department: 'Mechanical Engineering', roomNumber: '102', bedNumber: 'Bed 01', status: 'Present', phone: '+91 98611 11223', parentPhone: '+91 94371 99887', remarks: 'Verified' },
+      { studentName: 'Deepak Kumar Barik', rollNumber: '12', regNo: '2305201012', department: 'Information Technology', roomNumber: '102', bedNumber: 'Bed 02', status: 'Absent', phone: '+91 98611 22334', parentPhone: '+91 94371 88776', remarks: 'Library pass overdue' }
     ]
   }
 ];
@@ -645,8 +906,33 @@ export function getStudentsRoster(hostelName = 'ALL') {
   );
 }
 
+export function getStudentDeptAndBranch(std) {
+  const deptRaw = std?.department || '';
+  let branch = std?.branch || '';
+  let department = std?.department || 'Computer Science & Engineering';
+
+  if (!branch) {
+    if (deptRaw.includes('Computer Science') || deptRaw.includes('CSE')) branch = 'CSE';
+    else if (deptRaw.includes('Electronics') || deptRaw.includes('ECE')) branch = 'ECE';
+    else if (deptRaw.includes('Electrical') || deptRaw.includes('EE')) branch = 'EE';
+    else if (deptRaw.includes('Mechanical') || deptRaw.includes('ME')) branch = 'ME';
+    else if (deptRaw.includes('Civil')) branch = 'Civil';
+    else if (deptRaw.includes('Information Technology') || deptRaw.includes('IT')) branch = 'IT';
+    else branch = deptRaw || 'B.Tech';
+  }
+
+  return { department, branch };
+}
+
 export function getSubmittedAttendances() {
-  return getStoredJson(ATTENDANCE_STORAGE_KEY, INITIAL_ATTENDANCE_SUBMISSIONS);
+  const current = getStoredJson(ATTENDANCE_STORAGE_KEY, INITIAL_ATTENDANCE_SUBMISSIONS);
+  const missing = INITIAL_ATTENDANCE_SUBMISSIONS.filter(init => !current.some(c => c.id === init.id));
+  if (missing.length > 0) {
+    const merged = [...missing, ...current];
+    setStoredJson(ATTENDANCE_STORAGE_KEY, merged);
+    return merged;
+  }
+  return current;
 }
 
 export function getLatestSubmittedAttendance(hostelName = null) {
@@ -661,9 +947,10 @@ export function getLatestSubmittedAttendance(hostelName = null) {
 }
 
 /**
- * Submit attendance from Warden - immediately synchronizes and dispatches to Hostel Admin
+ * Submit or Update attendance from Warden - immediately synchronizes and dispatches to Hostel Admin
  */
 export function submitHostelAttendance({
+  id,
   hostelName,
   hostelCode,
   date,
@@ -684,39 +971,84 @@ export function submitHostelAttendance({
   const timeFormatted = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   const dateFormatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
-  const newSubmission = {
-    id: `ATT-${Date.now()}`,
-    hostelName: hostelName || 'Bhabani Hostel-1',
-    hostelCode: hostelCode || 'BN1',
-    date: date || new Date().toISOString().split('T')[0],
-    session: session || 'Night Roll Call (08:30 PM)',
-    submittedBy: submittedBy || 'Mr. Rajesh Jena (Resident Warden)',
-    submittedAt: `${dateFormatted}, ${timeFormatted}`,
-    verifiedByAdmin: true,
-    status: 'Submitted to Hostel Admin',
-    stats: {
-      total,
-      present,
-      absent,
-      onLeave,
-      percentage
-    },
-    remarks: remarks || 'Roll call taken and verified by Warden.',
-    records
-  };
+  // Check if an existing record exists with the same ID or same hostel + date + session
+  const targetHostel = hostelName || 'Bhabani Hostel-1';
+  const targetDate = date || new Date().toISOString().split('T')[0];
+  const targetSession = session || 'Night Roll Call (08:30 PM)';
 
-  const updated = [newSubmission, ...current];
+  const existingIndex = current.findIndex(s => {
+    if (id && s.id === id) return true;
+    return s.hostelName?.toLowerCase() === targetHostel.toLowerCase() &&
+           s.date === targetDate &&
+           s.session === targetSession;
+  });
+
+  let targetSubmission;
+  let updated;
+
+  if (existingIndex >= 0) {
+    const existing = current[existingIndex];
+    targetSubmission = {
+      ...existing,
+      hostelName: targetHostel,
+      hostelCode: hostelCode || existing.hostelCode || 'BN1',
+      date: targetDate,
+      session: targetSession,
+      submittedBy: submittedBy || existing.submittedBy,
+      submittedAt: `${dateFormatted}, ${timeFormatted} (Updated)`,
+      verifiedByAdmin: true,
+      status: 'Submitted to Hostel Admin',
+      stats: {
+        total,
+        present,
+        absent,
+        onLeave,
+        percentage
+      },
+      remarks: remarks || existing.remarks || 'Roll call taken and updated by Warden.',
+      records
+    };
+    updated = [...current];
+    updated[existingIndex] = targetSubmission;
+  } else {
+    targetSubmission = {
+      id: id || `ATT-${Date.now()}`,
+      hostelName: targetHostel,
+      hostelCode: hostelCode || 'BN1',
+      date: targetDate,
+      session: targetSession,
+      submittedBy: submittedBy || 'Mr. Rajesh Jena (Resident Warden)',
+      submittedAt: `${dateFormatted}, ${timeFormatted}`,
+      verifiedByAdmin: true,
+      status: 'Submitted to Hostel Admin',
+      stats: {
+        total,
+        present,
+        absent,
+        onLeave,
+        percentage
+      },
+      remarks: remarks || 'Roll call taken and verified by Warden.',
+      records
+    };
+    updated = [targetSubmission, ...current];
+  }
+
   setStoredJson(ATTENDANCE_STORAGE_KEY, updated);
 
   // Broadcast in real-time to Hostel Admin view
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
-      new CustomEvent('bput_hostel_attendance_submitted', { detail: newSubmission })
+      new CustomEvent('bput_hostel_attendance_submitted', { detail: targetSubmission })
     );
     window.dispatchEvent(new Event('storage'));
   }
 
-  return newSubmission;
+  return targetSubmission;
+}
+
+export function updateHostelAttendance(id, updateData) {
+  return submitHostelAttendance({ id, ...updateData });
 }
 
 // ── 3. APPLICANT DETAILS ──

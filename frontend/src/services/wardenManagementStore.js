@@ -1,6 +1,8 @@
 // Apna Campus — Warden Management & Hostel Admin Supervisory Store
 // Manages Warden Directory, Assignments, Granular Permissions, Performance, Audit Logs & Multi-module Approvals
 
+import { api } from './api.js';
+
 const WARDENS_STORAGE_KEY = 'apna_hostel_wardens_directory_v1';
 const ASSIGNMENTS_HISTORY_KEY = 'apna_hostel_warden_assignments_history_v1';
 const PERMISSIONS_STORAGE_KEY = 'apna_hostel_warden_permissions_v1';
@@ -236,6 +238,15 @@ export const DEFAULT_WARDEN_PERMISSIONS = {
   editHostelConfiguration: false // Admin only
 };
 
+export const INITIAL_WARDEN_PERMISSIONS = {
+  'WRD-101': { ...DEFAULT_WARDEN_PERMISSIONS, manageStaffDutyRosters: true, approveOperationalRequests: true, editHostelConfiguration: true },
+  'WRD-102': { ...DEFAULT_WARDEN_PERMISSIONS, editHostelConfiguration: true },
+  'WRD-103': { ...DEFAULT_WARDEN_PERMISSIONS, editHostelConfiguration: false },
+  'WRD-104': { ...DEFAULT_WARDEN_PERMISSIONS, editHostelConfiguration: false },
+  'WRD-105': { ...DEFAULT_WARDEN_PERMISSIONS, editHostelConfiguration: true },
+  'WRD-106': { ...DEFAULT_WARDEN_PERMISSIONS, editHostelConfiguration: false },
+};
+
 export const INITIAL_AUDIT_LOGS = [
   {
     id: 'AUD-HST-2026-101',
@@ -330,10 +341,109 @@ function setToStorage(key, value) {
 }
 
 // ----------------------------------------------------
-// 1. WARDEN DIRECTORY APIS
+// 1. WARDEN DIRECTORY APIS & SUSPENSION STATUS CHECK
 // ----------------------------------------------------
+export function isWardenSuspended(target) {
+  if (!target) return false;
+
+  // If passed an account / user object
+  if (typeof target === 'object') {
+    if (target.accountStatus === 'Suspended' || target.status === 'Suspended') return true;
+    if (target.identity && isWardenSuspended(target.identity)) return true;
+    if (target.id && isWardenSuspended(target.id)) return true;
+    if (target.name && isWardenSuspended(target.name)) return true;
+    if (target.email && isWardenSuspended(target.email)) return true;
+    return false;
+  }
+
+  // If passed an ID or Name or Email string
+  if (typeof target === 'string') {
+    const trimmed = target.trim().toLowerCase();
+    const wardens = getAllWardens();
+    const match = wardens.find(w =>
+      (w.id && w.id.toLowerCase() === trimmed) ||
+      (w.name && w.name.toLowerCase() === trimmed) ||
+      (w.name && (w.name.toLowerCase().includes(trimmed) || trimmed.includes(w.name.toLowerCase()))) ||
+      (w.email && w.email.toLowerCase() === trimmed)
+    );
+    if (match) {
+      return match.accountStatus === 'Suspended';
+    }
+  }
+
+  return false;
+}
+
 export function getAllWardens() {
   return getFromStorage(WARDENS_STORAGE_KEY, INITIAL_WARDENS);
+}
+
+export async function syncWardensFromBackend() {
+  if (typeof api !== 'undefined' && api.getWardens) {
+    try {
+      const res = await api.getWardens();
+      const backendList = res?.data || (Array.isArray(res) ? res : []);
+      if (Array.isArray(backendList) && backendList.length > 0) {
+        const localWardens = getAllWardens();
+        const mergedMap = new Map();
+
+        localWardens.forEach(w => {
+          if (w && (w.id || w.employeeId)) mergedMap.set(w.id || w.employeeId, w);
+        });
+
+        backendList.forEach(bw => {
+          const id = bw.id || bw.employeeId || bw.badgeNumber;
+          if (!id) return;
+          const existing = mergedMap.get(id) || {};
+          mergedMap.set(id, {
+            ...existing,
+            ...bw,
+            id: id,
+            name: bw.name || existing.name,
+            hostelName: bw.hostelName || bw.assignedHostelOrPost || existing.hostelName,
+            designation: bw.designation || bw.roleOrCategory || existing.designation,
+            phone: bw.phone || bw.mobileNo || existing.phone,
+            mobileNo: bw.phone || bw.mobileNo || existing.mobileNo,
+            accountStatus: bw.status === 'ACTIVE' || bw.accountStatus === 'Active' || bw.status === 'Active' ? 'Active' : (bw.accountStatus || 'Active'),
+            dutyStatus: bw.dutyStatus || existing.dutyStatus || 'On Duty'
+          });
+        });
+
+        const merged = Array.from(mergedMap.values());
+        setToStorage(WARDENS_STORAGE_KEY, merged);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('bput_wardens_updated', { detail: { wardens: merged } }));
+          window.dispatchEvent(new Event('storage'));
+        }
+        return merged;
+      }
+    } catch (err) {
+      console.warn('Backend getWardens sync fallback to local storage:', err?.message || err);
+    }
+  }
+  return getAllWardens();
+}
+
+export function getRelatedWardensForHostel(hostelNameOrId) {
+  if (!hostelNameOrId) return [];
+  const query = String(hostelNameOrId).toLowerCase().trim();
+  const wardens = getAllWardens();
+  return wardens.filter(w => {
+    const hName = (w.hostelName || '').toLowerCase();
+    const hId = (w.hostelId || '').toLowerCase();
+    return hName === query || hId === query || (query.length > 2 && (hName.includes(query) || query.includes(hName)));
+  });
+}
+
+export function getWardenAssignedHostel(wardenNameOrId) {
+  if (!wardenNameOrId) return null;
+  const query = String(wardenNameOrId).toLowerCase().trim();
+  const wardens = getAllWardens();
+  return wardens.find(w => {
+    const id = (w.id || '').toLowerCase();
+    const name = (w.name || '').toLowerCase();
+    return id === query || name === query || name.includes(query) || query.includes(name);
+  }) || null;
 }
 
 export function getWardenById(id) {
@@ -365,7 +475,126 @@ export function saveWarden(wardenData) {
     reason: 'Administrative profile maintenance.'
   });
 
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('bput_wardens_updated', { detail: { warden: wardenData, wardens: updated } }));
+    window.dispatchEvent(new Event('storage'));
+  }
+
   return updated;
+}
+
+export function addNewWarden(wardenData) {
+  const wardens = getAllWardens();
+
+  // 1. Calculate next numerical ID e.g. WRD-107
+  let nextId = wardenData.id || wardenData.employeeId;
+  if (!nextId) {
+    const ids = wardens
+      .map(w => parseInt(String(w.id || '').replace('WRD-', ''), 10))
+      .filter(n => !isNaN(n));
+    const maxId = ids.length > 0 ? Math.max(...ids) : 106;
+    nextId = `WRD-${maxId + 1}`;
+  }
+
+  const fullName = wardenData.name || `${wardenData.title || 'Mr.'} ${wardenData.firstName || ''} ${wardenData.lastName || ''}`.trim();
+  const avatarUrl = wardenData.avatar || wardenData.photoUrl || '/candidate_photo_apna.png';
+  const joiningDateFormatted = wardenData.joiningDate || new Date().toISOString().split('T')[0];
+
+  const newWarden = {
+    id: nextId,
+    employeeId: nextId,
+    name: fullName,
+    designation: wardenData.designation || 'Resident Warden',
+    department: wardenData.department || 'Hostel Administration & Student Housing',
+    email: wardenData.email || wardenData.emailId || `${nextId.toLowerCase()}@gift.edu.in`,
+    phone: wardenData.phone || wardenData.mobileNo || '+91 94370 00000',
+    mobileNo: wardenData.phone || wardenData.mobileNo || '+91 94370 00000',
+    emailId: wardenData.email || wardenData.emailId || `${nextId.toLowerCase()}@gift.edu.in`,
+    hostelId: wardenData.hostelId || 'hst-1',
+    hostelName: wardenData.hostelName || 'Gandhi Boys Residence',
+    assignedBlocks: Array.isArray(wardenData.assignedBlocks)
+      ? wardenData.assignedBlocks
+      : [wardenData.assignedBlocks || 'Block A (Rooms 101-220)'],
+    dutyShift: wardenData.dutyShift || 'General / 24x7 Resident',
+    shiftTimings: wardenData.shiftTimings || '06:00 AM - 10:00 PM (Rotational Curfew)',
+    accountStatus: 'Active',
+    dutyStatus: 'On Duty',
+    joiningDate: joiningDateFormatted,
+    lastLogin: 'Never logged in (New Account)',
+    qualification: wardenData.qualification || 'M.Tech / B.Tech',
+    roomOffice: wardenData.roomOffice || wardenData.presentAddress1 || 'Staff Quarters, Campus',
+    emergencyContact: wardenData.emergencyContact || '',
+    guardianMobile: wardenData.guardianMobile || wardenData.emergencyContactPhone || '',
+    bloodGroup: wardenData.bloodGroup || 'B+',
+    gender: wardenData.gender || 'MALE',
+    empDob: wardenData.empDob || '01-01-1985',
+    totalExperience: wardenData.totalExperience || '5 Year(s)',
+    attendanceCompliance: 100.0,
+    pendingTasks: 0,
+    activeResidentsCount: Number(wardenData.activeResidentsCount) || 160,
+    totalBedsSupervised: Number(wardenData.totalBedsSupervised) || 180,
+    role: 'warden',
+    notes: wardenData.notes || 'Newly onboarded resident warden registered by Hostel Administrator.',
+    avatar: avatarUrl,
+    photoUrl: avatarUrl,
+    createdAt: new Date().toISOString(),
+    ...wardenData,
+    id: nextId,
+    employeeId: nextId,
+    name: fullName,
+    avatar: avatarUrl,
+  };
+
+  // 2. Add to active wardens directory in localStorage
+  const updated = [newWarden, ...wardens.filter(w => w.id !== nextId)];
+  setToStorage(WARDENS_STORAGE_KEY, updated);
+
+  // 3. Register default or scoped granular permissions
+  const customPerms = wardenData.permissions || {};
+  const perms = { ...DEFAULT_WARDEN_PERMISSIONS, ...customPerms };
+  const allPerms = getFromStorage(PERMISSIONS_STORAGE_KEY, {});
+  allPerms[nextId] = perms;
+  setToStorage(PERMISSIONS_STORAGE_KEY, allPerms);
+
+  // 4. Save to custom profiles repository for instant 10-tab CMS dossier access
+  const customProfiles = getFromStorage('apna_custom_warden_profiles_v1', {});
+  customProfiles[nextId] = {
+    ...newWarden,
+    bputRegdNo: wardenData.bputRegdNo || `BPUT-EMP-2026-${Math.floor(100 + Math.random() * 900)}`,
+    status: 'Active',
+    documents: [
+      { id: `doc-${Date.now()}-1`, name: 'Official Appointment Order (Warden)', meta: `Issued ${joiningDateFormatted} · Autonomous Administration` },
+      { id: `doc-${Date.now()}-2`, name: 'Educational & Technical Degree Certificates', meta: 'Autonomous Verified' },
+      { id: `doc-${Date.now()}-3`, name: 'Identity Proof (Aadhaar & PAN)', meta: 'UIDAI Verified' }
+    ]
+  };
+  setToStorage('apna_custom_warden_profiles_v1', customProfiles);
+
+  // 5. Audit Logging
+  logAdminAction({
+    action: 'WARDEN_CREATED',
+    targetEntity: 'WardenDirectory',
+    recordId: nextId,
+    hostelScope: newWarden.hostelName,
+    previousValue: 'None (New Employee)',
+    newValue: `Registered new warden ${fullName} (${nextId}) assigned to ${newWarden.hostelName}`,
+    reason: wardenData.reason || 'Institutional employee onboarding.'
+  });
+
+  // 6. Sync with backend API
+  api.createWarden(newWarden).catch(err => {
+    console.warn('Backend createWarden sync fallback:', err?.message || err);
+  });
+
+  // 7. Fire custom events for instantaneous universal synchronization across all UI components
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('bput_wardens_updated', { detail: { warden: newWarden, wardens: updated } }));
+    window.dispatchEvent(new CustomEvent('bput_warden_created', { detail: { warden: newWarden, wardens: updated } }));
+    window.dispatchEvent(new CustomEvent('bput_warden_status_changed', { detail: { wardenId: nextId, status: 'Active' } }));
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  return newWarden;
 }
 
 export function setWardenAccountStatus(wardenId, status, reason = 'Administrative decision') {
@@ -382,6 +611,20 @@ export function setWardenAccountStatus(wardenId, status, reason = 'Administrativ
   });
   setToStorage(WARDENS_STORAGE_KEY, updated);
 
+  // Notify all active portal tabs and modules immediately
+  try {
+    window.dispatchEvent(new CustomEvent('bput_warden_status_changed', {
+      detail: { wardenId, status, wardenName: target.name, hostelName: target.hostelName }
+    }));
+  } catch {}
+
+  // Sync to backend if endpoint available
+  if (typeof api !== 'undefined' && api.updateWardenStatus) {
+    api.updateWardenStatus(wardenId, status, reason).catch(err => {
+      console.warn('Backend updateWardenStatus sync:', err?.message || err);
+    });
+  }
+
   logAdminAction({
     action: status === 'Suspended' ? 'WARDEN_SUSPEND' : 'WARDEN_REACTIVATE',
     targetEntity: 'WardenAccountStatus',
@@ -390,6 +633,51 @@ export function setWardenAccountStatus(wardenId, status, reason = 'Administrativ
     previousValue: `Status: ${prevStatus}`,
     newValue: `Status: ${status}`,
     reason: reason
+  });
+
+  return true;
+}
+
+export function setWardenDutyStatus(wardenId, dutyStatus, remarks = '') {
+  const wardens = getAllWardens();
+  const target = wardens.find(w => w.id === wardenId || w.employeeId === wardenId);
+  if (!target) return false;
+
+  const prevDutyStatus = target.dutyStatus || 'On Duty';
+  const updated = wardens.map(w => {
+    if (w.id === wardenId || w.employeeId === wardenId) {
+      return { ...w, dutyStatus, updatedAt: new Date().toISOString() };
+    }
+    return w;
+  });
+  setToStorage(WARDENS_STORAGE_KEY, updated);
+
+  // Notify all components immediately
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('bput_warden_duty_changed', {
+      detail: { wardenId, dutyStatus, prevDutyStatus, wardenName: target.name }
+    }));
+    window.dispatchEvent(new CustomEvent('bput_wardens_updated', {
+      detail: { wardens: updated }
+    }));
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  // Sync with backend API
+  if (typeof api !== 'undefined' && api.updateWardenDutyStatus) {
+    api.updateWardenDutyStatus(wardenId, dutyStatus, remarks).catch(err => {
+      console.warn('Backend updateWardenDutyStatus sync fallback:', err?.message || err);
+    });
+  }
+
+  logAdminAction({
+    action: dutyStatus === 'On Leave' ? 'WARDEN_LEAVE_MARKED' : 'WARDEN_DUTY_RESUMED',
+    targetEntity: 'WardenDutyStatus',
+    recordId: wardenId,
+    hostelScope: target.hostelName,
+    previousValue: `Duty Status: ${prevDutyStatus}`,
+    newValue: `Duty Status: ${dutyStatus}`,
+    reason: remarks || (dutyStatus === 'On Leave' ? 'Warden placed on official leave' : 'Warden resumed active hostel duty')
   });
 
   return true;
@@ -468,6 +756,22 @@ export function reassignWarden({
     actingUser: adminUser
   });
 
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('bput_wardens_updated', { detail: { wardenId, newHostelName } }));
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  // Also sync reassignment to backend API asynchronously
+  api.updateWardenProfile(wardenId, {
+    hostelName: newHostelName,
+    assignedHostelOrPost: newHostelName,
+    assignedBlocks: Array.isArray(assignedBlocks) ? assignedBlocks : [assignedBlocks],
+    dutyShift,
+    shiftTimings
+  }).catch(err => {
+    console.warn('Backend updateWardenProfile sync warning:', err?.message || err);
+  });
+
   return newHistRecord;
 }
 
@@ -475,17 +779,149 @@ export function reassignWarden({
 // 3. WARDEN PERMISSIONS APIS
 // ----------------------------------------------------
 export function getWardenPermissions(wardenId) {
-  const allPerms = getFromStorage(PERMISSIONS_STORAGE_KEY, {});
-  return allPerms[wardenId] || { ...DEFAULT_WARDEN_PERMISSIONS };
+  const allPerms = getFromStorage(PERMISSIONS_STORAGE_KEY, INITIAL_WARDEN_PERMISSIONS);
+  const perms = allPerms[wardenId] || INITIAL_WARDEN_PERMISSIONS[wardenId] || { ...DEFAULT_WARDEN_PERMISSIONS };
+  const suspended = isWardenSuspended(wardenId);
+
+  if (suspended) {
+    // When suspended by admin, warden is UNABLE to perform any mutating work in CMS
+    // (take attendance, gate approval, leave approval, room transfers, indents, etc.)
+    // Only view / show is permitted ("only show all the things")
+    return {
+      ...perms,
+      isSuspended: true,
+      viewHostelRecords: true,
+      viewRoomAllocations: true,
+      viewReports: true,
+      manageAttendance: false,
+      submitAttendance: false,
+      manageRoomAllocations: false,
+      reviewStudentLeaves: false,
+      approveOperationalRequests: false,
+      manageGatePasses: false,
+      registerVisitors: false,
+      recordDisciplinaryIncidents: false,
+      manageComplaints: false,
+      createInventoryRequisitions: false,
+      manageStaffDutyRosters: false,
+      exportReports: false,
+      editHostelConfiguration: false
+    };
+  }
+
+  return {
+    ...perms,
+    isSuspended: false
+  };
 }
 
-export function updateWardenPermissions(wardenId, newPermissions, reason = 'Administrative permission adjustment') {
-  const allPerms = getFromStorage(PERMISSIONS_STORAGE_KEY, {});
-  const prevPerms = allPerms[wardenId] || { ...DEFAULT_WARDEN_PERMISSIONS };
+export function syncPermissionsFromBackend() {
+  if (typeof api !== 'undefined' && api.getAllWardenPermissions) {
+    api.getAllWardenPermissions()
+      .then((res) => {
+        if (res && res.data && res.data.wardenPermissions) {
+          const current = getFromStorage(PERMISSIONS_STORAGE_KEY, {});
+          const merged = { ...current, ...res.data.wardenPermissions };
+          setToStorage(PERMISSIONS_STORAGE_KEY, merged);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('bput_warden_permissions_changed', { detail: { wardenId: 'SYNC', permissions: merged } }));
+            window.dispatchEvent(new Event('storage'));
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('Backend permissions sync fallback:', err?.message || err);
+      });
+  }
+}
+
+export function getWardenIdFromAccount(account) {
+  if (!account) return 'WRD-101';
+  const role = (account.role || '').toLowerCase();
+  if (role === 'student' || role === 'faculty' || role === 'admin') {
+    return null;
+  }
+  // Check by official warden name first
+  const name = (account.name || '').toLowerCase();
+  if (name.includes('rajesh') || name.includes('jena')) return 'WRD-101';
+  if (name.includes('nibedita') || name.includes('das')) return 'WRD-102';
+  if (name.includes('tanmaya') || name.includes('routray')) return 'WRD-103';
+  if (name.includes('swapna') || name.includes('patra')) return 'WRD-104';
+  if (name.includes('debendra') || name.includes('sahoo')) return 'WRD-105';
+  if (name.includes('bipin') || name.includes('sethi')) return 'WRD-106';
+
+  // Normalize legacy demo identities
+  const rawId = String(account.identity || account.id || account.employeeId || '');
+  if (rawId === 'WRD-001' || rawId === 'WRD-ADM-01') return 'WRD-101';
+  if (rawId === 'WRD-004' || rawId === 'WRD-002') return 'WRD-102';
+  if (rawId === 'WRD-003') return 'WRD-103';
+  if (rawId.startsWith('WRD-10')) return rawId;
+  if (account.identity && account.identity.startsWith('WRD-')) return account.identity;
+  if (role === 'warden') return 'WRD-101';
+  return null;
+}
+
+export const getActiveWardenId = getWardenIdFromAccount;
+
+export function applyPermissionsToAllWardens(newPermissions, reason = 'Global permissions applied to all hostel wardens', syncBackend = true) {
+  const allPerms = getFromStorage(PERMISSIONS_STORAGE_KEY, INITIAL_WARDEN_PERMISSIONS);
+  const wardens = getAllWardens();
+
+  wardens.forEach((w) => {
+    const prev = allPerms[w.id] || INITIAL_WARDEN_PERMISSIONS[w.id] || { ...DEFAULT_WARDEN_PERMISSIONS };
+    allPerms[w.id] = { ...prev, ...newPermissions };
+  });
+
+  setToStorage(PERMISSIONS_STORAGE_KEY, allPerms);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('bput_warden_permissions_changed', { detail: { wardenId: 'ALL', permissions: allPerms } }));
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  // Sync to Backend
+  if (syncBackend && typeof api !== 'undefined' && api.applyWardenPermissionsToAll) {
+    api.applyWardenPermissionsToAll(newPermissions).catch((err) => {
+      console.warn('Backend applyWardenPermissionsToAll fallback:', err?.message || err);
+    });
+  }
+
+  logAdminAction({
+    action: 'WARDEN_PERMISSIONS_UPDATE',
+    targetEntity: 'WardenPermissions',
+    recordId: 'ALL_WARDENS',
+    hostelScope: 'All Campus Hostels',
+    previousValue: 'Mixed / Per-warden configuration',
+    newValue: JSON.stringify(newPermissions),
+    reason: reason,
+  });
+
+  return allPerms;
+}
+
+export function updateWardenPermissions(wardenId, newPermissions, reason = 'Administrative permission adjustment', applyToAll = false, syncBackend = true) {
+  if (applyToAll) {
+    return applyPermissionsToAllWardens(newPermissions, reason, syncBackend);
+  }
+
+  const allPerms = getFromStorage(PERMISSIONS_STORAGE_KEY, INITIAL_WARDEN_PERMISSIONS);
+  const prevPerms = allPerms[wardenId] || INITIAL_WARDEN_PERMISSIONS[wardenId] || { ...DEFAULT_WARDEN_PERMISSIONS };
   const updatedPerms = { ...prevPerms, ...newPermissions };
 
   allPerms[wardenId] = updatedPerms;
   setToStorage(PERMISSIONS_STORAGE_KEY, allPerms);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('bput_warden_permissions_changed', { detail: { wardenId, permissions: updatedPerms } }));
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  // Sync to Backend
+  if (syncBackend && typeof api !== 'undefined' && api.updateWardenPermissions) {
+    api.updateWardenPermissions(wardenId, updatedPerms, false).catch((err) => {
+      console.warn('Backend updateWardenPermissions fallback:', err?.message || err);
+    });
+  }
 
   const warden = getWardenById(wardenId);
 

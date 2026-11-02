@@ -13,23 +13,65 @@ import {
   X,
   Check,
   Building,
-  DollarSign
+  DollarSign,
+  FileText
 } from 'lucide-react';
 import { mockMaintenanceRequests, mockHostelStaffList } from './hostelData.js';
+import { isWardenSuspended, getWardenPermissions, getWardenIdFromAccount } from '../../services/wardenManagementStore.js';
+import { getRoomsForHostelAndFloor } from '../../services/hostelRoomStore.js';
+import { getAllHostels } from '../../services/hostelAttendanceStore.js';
 import './HostelExtraSections.css';
 
-export default function HostelMaintenanceSection() {
+export default function HostelMaintenanceSection({ account, isHostelAdmin = false, isSuspended: propIsSuspended }) {
+  const [isSuspended, setIsSuspended] = useState(() => Boolean(propIsSuspended || (!isHostelAdmin && isWardenSuspended(account))));
+  const [permsTick, setPermsTick] = useState(0);
+  const [hostelList, setHostelList] = useState(() => getAllHostels());
+
+  const wardenId = useMemo(() => getWardenIdFromAccount(account), [account]);
+
+  React.useEffect(() => {
+    const handleStatusSync = () => {
+      setIsSuspended(Boolean(propIsSuspended || (!isHostelAdmin && isWardenSuspended(account))));
+    };
+    const handlePermSync = () => setPermsTick(t => t + 1);
+    const handleHostelsSync = () => setHostelList(getAllHostels());
+
+    window.addEventListener('bput_warden_status_changed', handleStatusSync);
+    window.addEventListener('bput_warden_permissions_changed', handlePermSync);
+    window.addEventListener('bput_hostels_updated', handleHostelsSync);
+    window.addEventListener('storage', handleStatusSync);
+    window.addEventListener('storage', handlePermSync);
+    window.addEventListener('storage', handleHostelsSync);
+
+    return () => {
+      window.removeEventListener('bput_warden_status_changed', handleStatusSync);
+      window.removeEventListener('bput_warden_permissions_changed', handlePermSync);
+      window.removeEventListener('bput_hostels_updated', handleHostelsSync);
+      window.removeEventListener('storage', handleStatusSync);
+      window.removeEventListener('storage', handlePermSync);
+      window.removeEventListener('storage', handleHostelsSync);
+    };
+  }, [propIsSuspended, isHostelAdmin, account]);
+
+  const canManageComplaints = useMemo(() => {
+    if (isHostelAdmin) return true;
+    if (isSuspended) return false;
+    const perms = getWardenPermissions(wardenId);
+    return perms.manageComplaints !== false;
+  }, [isHostelAdmin, isSuspended, wardenId, permsTick]);
   const [requests, setRequests] = useState(mockMaintenanceRequests);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRequestModal, setSelectedRequestModal] = useState(null);
+  const [viewingDocModal, setViewingDocModal] = useState(null);
   const [isNewRequestModalOpen, setIsNewRequestModalOpen] = useState(false);
+  const [maintenanceFloor, setMaintenanceFloor] = useState('1st Floor');
   const [newForm, setNewForm] = useState({
     category: 'Electrical',
     title: '',
     hostelName: 'Gandhi Boys Residence',
-    roomOrArea: '',
+    roomOrArea: 'Room 101',
     priority: 'Medium',
     assignedStaff: 'Mr. Bipin Sethi (Electrician)',
     notes: ''
@@ -64,6 +106,14 @@ export default function HostelMaintenanceSection() {
   }, [requests]);
 
   const handleUpdateStatus = (id, newStatus) => {
+    if (isSuspended) {
+      showToast('⚠️ Action blocked: Warden account is suspended. Maintenance actions are locked to Read-Only.');
+      return;
+    }
+    if (!canManageComplaints) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     setRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
     if (selectedRequestModal?.id === id) {
       setSelectedRequestModal(prev => ({ ...prev, status: newStatus }));
@@ -73,6 +123,10 @@ export default function HostelMaintenanceSection() {
 
   const handleCreateRequest = (e) => {
     e.preventDefault();
+    if (!canManageComplaints) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     if (!newForm.title || !newForm.roomOrArea) {
       alert('Please fill all required fields');
       return;
@@ -131,9 +185,30 @@ export default function HostelMaintenanceSection() {
           <p>Work Order Dispatch · Electrical, Plumbing, Carpentry &amp; Civil Sanitation Tracking</p>
         </div>
         <div style={{ display: 'flex', gap: '0.65rem' }}>
-          <button className="h-btn h-btn-primary" onClick={() => setIsNewRequestModalOpen(true)}>
-            <Plus size={15} /> Log Maintenance Request
-          </button>
+          <div
+            style={{ display: 'inline-block' }}
+            onClick={() => {
+              if (!canManageComplaints) {
+                showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+              }
+            }}
+          >
+            <button
+              className="h-btn h-btn-primary"
+              disabled={!canManageComplaints}
+              style={!canManageComplaints ? { pointerEvents: 'none', opacity: 0.6 } : undefined}
+              onClick={() => {
+                if (!canManageComplaints) {
+                  showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+                  return;
+                }
+                setIsNewRequestModalOpen(true);
+              }}
+              title={!canManageComplaints ? 'Permission restricted by Hostel Administration' : 'Log Maintenance Request'}
+            >
+              <Plus size={15} /> Log Maintenance Request
+            </button>
+          </div>
         </div>
       </div>
 
@@ -238,6 +313,7 @@ export default function HostelMaintenanceSection() {
                 <th>Category</th>
                 <th>Issue Description</th>
                 <th>Hostel &amp; Location</th>
+                <th>Supporting Document</th>
                 <th>Priority</th>
                 <th>Assigned Technician</th>
                 <th>Status</th>
@@ -247,7 +323,7 @@ export default function HostelMaintenanceSection() {
             <tbody>
               {filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
                     No maintenance orders match current filters.
                   </td>
                 </tr>
@@ -265,6 +341,45 @@ export default function HostelMaintenanceSection() {
                     <td>
                       <div style={{ fontWeight: 600 }}>{item.hostelName}</div>
                       <div style={{ fontSize: '0.74rem', color: '#475569' }}>{item.roomOrArea}</div>
+                    </td>
+                    <td>
+                      {item.attachmentUrl || item.supportingDocument ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setViewingDocModal({
+                              url: item.attachmentUrl || item.supportingDocument,
+                              code: item.id,
+                              title: item.title,
+                              studentName: item.reportedBy || 'Resident',
+                              rollNumber: item.rollNumber || 'N/A',
+                              hostel: item.hostelName,
+                              room: item.roomOrArea,
+                              date: item.filedDate
+                            })}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '4px 9px',
+                              background: '#eff6ff',
+                              color: '#1d4ed8',
+                              border: '1px solid #bfdbfe',
+                              borderRadius: '6px',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                            title="View supporting document/photograph"
+                          >
+                            <Eye size={12} />
+                            <span>View</span>
+                          </button>
+                          <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>Attached</span>
+                        </div>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontStyle: 'italic' }}>None</span>
+                      )}
                     </td>
                     <td>
                       {item.priority === 'Urgent' && <span className="h-badge h-badge-urgent">Urgent</span>}
@@ -449,7 +564,7 @@ export default function HostelMaintenanceSection() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.75rem' }}>
                   <div>
                     <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
                       Hostel Residence *
@@ -458,26 +573,61 @@ export default function HostelMaintenanceSection() {
                       className="hostel-select"
                       style={{ width: '100%' }}
                       value={newForm.hostelName}
-                      onChange={e => setNewForm({ ...newForm, hostelName: e.target.value })}
+                      onChange={e => {
+                        const newHostel = e.target.value;
+                        const available = getRoomsForHostelAndFloor(newHostel, maintenanceFloor);
+                        setNewForm({
+                          ...newForm,
+                          hostelName: newHostel,
+                          roomOrArea: available[0]?.label || 'Room 101'
+                        });
+                      }}
                     >
-                      <option value="Gandhi Boys Residence">Gandhi Boys Residence</option>
-                      <option value="Kalam Boys Residence">Kalam Boys Residence</option>
-                      <option value="Sarojini Girls Residence">Sarojini Girls Residence</option>
+                      {hostelList.map(h => (
+                        <option key={h.id || h.code} value={h.name}>{h.name}</option>
+                      ))}
                     </select>
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                      Room or Specific Area *
+                      Floor *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Room 204 or 1st Floor East Washroom"
+                    <select
+                      className="hostel-select"
+                      style={{ width: '100%' }}
+                      value={maintenanceFloor}
+                      onChange={e => {
+                        const newFloor = e.target.value;
+                        setMaintenanceFloor(newFloor);
+                        const available = getRoomsForHostelAndFloor(newForm.hostelName, newFloor);
+                        setNewForm({
+                          ...newForm,
+                          roomOrArea: available[0]?.label || 'Room 101'
+                        });
+                      }}
+                    >
+                      <option value="1st Floor">1st Floor</option>
+                      <option value="2nd Floor">2nd Floor</option>
+                      <option value="3rd Floor">3rd Floor</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                      Room Number *
+                    </label>
+                    <select
+                      className="hostel-select"
+                      style={{ width: '100%' }}
                       value={newForm.roomOrArea}
                       onChange={e => setNewForm({ ...newForm, roomOrArea: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                    />
+                      required
+                    >
+                      {getRoomsForHostelAndFloor(newForm.hostelName, maintenanceFloor).map(r => (
+                        <option key={r.roomNo} value={r.label}>{r.label}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -507,6 +657,155 @@ export default function HostelMaintenanceSection() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Supporting Document Viewer Modal */}
+      {viewingDocModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '1rem'
+          }}
+          onClick={() => setViewingDocModal(null)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '14px',
+              maxWidth: '720px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{
+              padding: '1rem 1.25rem',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: '#dbeafe',
+                  color: '#1d4ed8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                    Supporting Document / Photograph
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                    Order ID: <strong style={{ color: '#7c3aed' }}>{viewingDocModal.code}</strong>
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingDocModal(null)}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '6px',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#475569'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1, textAlign: 'center', background: '#0b1120' }}>
+              <img
+                src={viewingDocModal.url}
+                alt={'Supporting evidence for ' + viewingDocModal.code}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '440px',
+                  objectFit: 'contain',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)'
+                }}
+              />
+            </div>
+
+            <div style={{ padding: '1rem 1.25rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', fontSize: '0.78rem', color: '#475569', marginBottom: '12px' }}>
+                <div>👤 <strong>Reported By:</strong> {viewingDocModal.studentName} ({viewingDocModal.rollNumber})</div>
+                <div>🏠 <strong>Hostel &amp; Area:</strong> {viewingDocModal.hostel} · {viewingDocModal.room}</div>
+                <div>📋 <strong>Issue:</strong> {viewingDocModal.title}</div>
+                <div>📅 <strong>Date:</strong> {viewingDocModal.date}</div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckCircle2 size={14} /> Verified Supporting Evidence Document
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <a
+                    href={viewingDocModal.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '6px 12px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      color: '#334155',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    Open Full Size
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setViewingDocModal(null)}
+                    style={{
+                      padding: '6px 16px',
+                      background: '#2563eb',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      color: '#ffffff',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Done Viewing
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -316,52 +316,6 @@ export default function HostelApplyLeaveModule({
         </div>
       </div>
 
-      {/* 2nd Image: LEAVE SUMMARY OF 2025 - 2026 SESSION (Top Table) */}
-      <section className="hal-summary-section" aria-label="Leave Balances Summary">
-        <div className="hal-summary-header">
-          <div className="hal-summary-header-left">
-            <Calendar size={18} color="#0284c7" />
-            <h3>Leave Summary of 2025 - 2026 Session</h3>
-          </div>
-          <span className="hal-session-pill">Session 2025–2026 · Active</span>
-        </div>
-
-        <div className="hal-summary-table-wrap">
-          <table className="hal-summary-table">
-            <thead>
-              <tr>
-                <th>Casual Leave</th>
-                <th>Earned Leave</th>
-                <th>Extra Ordinary Leave</th>
-                <th>Sick Leave</th>
-                <th>1/2 Day Leave</th>
-                <th>Special Leave</th>
-                <th>Duty Outside the Campus</th>
-                <th>LWP</th>
-                <th>1/2 OD</th>
-                <th>Comp Leave</th>
-                <th>Work Home</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong className="hal-bal-highlight">{summary.casualLeave}</strong></td>
-                <td><strong>{summary.earnedLeave}</strong></td>
-                <td><strong>{summary.extraOrdinaryLeave}</strong></td>
-                <td><strong>{summary.sickLeave}</strong></td>
-                <td><strong>{summary.halfDayLeave}</strong></td>
-                <td><strong>{summary.specialLeave}</strong></td>
-                <td><strong>{summary.dutyOutsideCampus}</strong></td>
-                <td><span className="hal-zero-val">{summary.lwp}</span></td>
-                <td><span className="hal-zero-val">{summary.halfOd}</span></td>
-                <td><strong>{summary.compLeave}</strong></td>
-                <td><strong>{summary.workHome}</strong></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
       {/* ==============================================================
           MAIN TAB SWITCHER
           Notice: "Hostel Admin Approvals" is ONLY rendered for Hostel Admin.

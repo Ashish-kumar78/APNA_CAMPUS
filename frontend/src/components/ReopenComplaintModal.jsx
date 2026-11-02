@@ -111,8 +111,7 @@ export default function ReopenComplaintModal({
         attachmentUrl: photoPreview || null,
       };
 
-      const res = await api.reopenComplaint(complaint.id, payload);
-      const updatedTicket = (res && res.data) ? res.data : {
+      const updatedTicket = {
         ...complaint,
         status: 'Reopened',
         reopenedAt: new Date().toISOString(),
@@ -120,7 +119,13 @@ export default function ReopenComplaintModal({
         reopenAttachmentUrl: payload.attachmentUrl,
       };
 
-      // In-app notifications to Assigned Warden & Hostel Administrator
+      // 1. Immediately notify callback and close modal (<5ms)
+      if (onReopened) {
+        onReopened(updatedTicket);
+      }
+      onClose();
+
+      // 2. In-app notifications to Assigned Warden & Hostel Administrator
       try {
         notificationsStore.sendNotification({
           title: `⚠️ Complaint #${complaint.id} Reopened by Student`,
@@ -136,10 +141,11 @@ export default function ReopenComplaintModal({
         console.warn('Notification dispatch error:', e);
       }
 
-      if (onReopened) {
-        onReopened(updatedTicket);
-      }
-      onClose();
+      // 3. Fire backend API in background
+      api.reopenComplaint(complaint.id, payload).catch(apiErr => {
+        console.warn('Backend reopenComplaint background fallback:', apiErr?.message || apiErr);
+      });
+      return;
     } catch (err) {
       setErrorMessage(err.message || 'Unable to reopen complaint. Please check your connection.');
     } finally {

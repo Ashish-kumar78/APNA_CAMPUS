@@ -16,27 +16,60 @@ import {
   Layers,
   ArrowRightLeft,
   LogOut,
-  Plus
+  Plus,
+  Trash2,
+  ShieldAlert
 } from 'lucide-react';
 import {
   getAllHostels,
   getAllApplicants
 } from '../../services/hostelAttendanceStore.js';
+import { getAllHostelComplexes } from '../../services/hostelComplexStore.js';
 import {
   getRoomsForHostel,
   addRoomToHostel,
+  deleteRoomFromHostel,
   addBedToRoom,
   addFloorToHostel,
+  deleteFloorFromHostel,
   updateRoomsForHostel,
   subscribeHostelRooms
 } from '../../services/hostelRoomStore.js';
+import { getWardenPermissions, getWardenIdFromAccount } from '../../services/wardenManagementStore.js';
 import './HostelModules.css';
 
 export default function RoomAllotmentSection({ account }) {
   const isWarden = account?.role === 'warden';
   const isHostelAdmin = !isWarden;
 
-  const [hostels] = useState(() => getAllHostels());
+  // Granular Operational Permissions
+  const [wardenPermsTick, setWardenPermsTick] = useState(0);
+  useEffect(() => {
+    const handlePerms = () => setWardenPermsTick(t => t + 1);
+    window.addEventListener('bput_warden_permissions_changed', handlePerms);
+    window.addEventListener('storage', handlePerms);
+    return () => {
+      window.removeEventListener('bput_warden_permissions_changed', handlePerms);
+      window.removeEventListener('storage', handlePerms);
+    };
+  }, []);
+
+  const wardenId = useMemo(() => getWardenIdFromAccount(account), [account]);
+  const permissions = useMemo(() => {
+    if (isHostelAdmin) {
+      return {
+        viewRoomAllocations: true,
+        manageRoomAllocations: true,
+        exportReports: true
+      };
+    }
+    return getWardenPermissions(wardenId);
+  }, [isHostelAdmin, wardenId, wardenPermsTick]);
+
+  const canViewRooms = isHostelAdmin || permissions.viewRoomAllocations !== false;
+  const canManageRooms = isHostelAdmin || permissions.manageRoomAllocations !== false;
+
+  const [hostels, setHostels] = useState(() => getAllHostelComplexes());
   const [selectedHostel, setSelectedHostel] = useState('Bhabani Hostel-1');
   const [selectedFloor, setSelectedFloor] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,10 +86,22 @@ export default function RoomAllotmentSection({ account }) {
 
   // Subscribe to real-time updates (cross-tab and admin-to-warden sync)
   useEffect(() => {
+    const handleSync = () => {
+      setHostels(getAllHostelComplexes());
+      setRooms(getRoomsForHostel(selectedHostel));
+    };
     const unsubscribe = subscribeHostelRooms(() => {
       setRooms(getRoomsForHostel(selectedHostel));
     });
-    return unsubscribe;
+    window.addEventListener('bput_hostel_complexes_updated', handleSync);
+    window.addEventListener('bput_hostels_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('bput_hostel_complexes_updated', handleSync);
+      window.removeEventListener('bput_hostels_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
   }, [selectedHostel]);
 
   // Modal States
@@ -134,6 +179,10 @@ export default function RoomAllotmentSection({ account }) {
   // Handle Add Room
   const handleAddRoomSubmit = (e) => {
     e.preventDefault();
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     try {
       const targetFloor = addRoomForm.floor === 'CUSTOM' ? addRoomForm.customFloor.trim() : addRoomForm.floor;
       if (!targetFloor) {
@@ -170,6 +219,10 @@ export default function RoomAllotmentSection({ account }) {
   // Handle Add Bed
   const handleAddBedSubmit = (e) => {
     e.preventDefault();
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     try {
       if (!addBedRoomNo) {
         showToast('Please select a target room.');
@@ -188,6 +241,10 @@ export default function RoomAllotmentSection({ account }) {
   // Handle Add Floor
   const handleAddFloorSubmit = (e) => {
     e.preventDefault();
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     try {
       if (!addFloorForm.floorName.trim()) {
         showToast('Please enter a floor name.');
@@ -202,9 +259,50 @@ export default function RoomAllotmentSection({ account }) {
     }
   };
 
+  // Handle Delete Room
+  const handleDeleteRoom = (roomNo, floor) => {
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete Room ${roomNo} from ${selectedHostel}? This will permanently remove it from all dropdowns and sync to backend.`)) {
+      return;
+    }
+    try {
+      const updated = deleteRoomFromHostel(selectedHostel, roomNo, floor);
+      setRooms(updated);
+      showToast(`✓ Room ${roomNo} deleted successfully from ${selectedHostel} and synced to backend!`);
+    } catch (err) {
+      showToast(`⚠️ ${err.message || 'Failed to delete room.'}`);
+    }
+  };
+
+  // Handle Delete Floor
+  const handleDeleteFloor = (floorName) => {
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete ${floorName} and all its rooms from ${selectedHostel}? This will permanently remove it from all dropdowns and sync to backend.`)) {
+      return;
+    }
+    try {
+      const updated = deleteFloorFromHostel(selectedHostel, floorName);
+      setRooms(updated);
+      setSelectedFloor('ALL');
+      showToast(`✓ ${floorName} deleted successfully from ${selectedHostel} and synced to backend!`);
+    } catch (err) {
+      showToast(`⚠️ ${err.message || 'Failed to delete floor.'}`);
+    }
+  };
+
   // Handle Quick Bed Allotment
   const handleAllocateSubmit = (e) => {
     e.preventDefault();
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     const updatedRooms = rooms.map(rm => {
       if (rm.roomNo === allocateForm.roomNo) {
         const updatedBeds = rm.beds.map(b => {
@@ -234,6 +332,10 @@ export default function RoomAllotmentSection({ account }) {
 
   // Handle Vacate Bed
   const handleVacateBed = (roomNo, bedNo, residentName) => {
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     if (!window.confirm(`Are you sure you want to vacate ${bedNo} occupied by ${residentName}?`)) {
       return;
     }
@@ -259,6 +361,10 @@ export default function RoomAllotmentSection({ account }) {
   // Handle Room Transfer
   const handleTransferSubmit = (e) => {
     e.preventDefault();
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     if (!transferModalData) return;
 
     const updatedRooms = rooms.map(rm => {
@@ -300,6 +406,36 @@ export default function RoomAllotmentSection({ account }) {
       `✓ Transferred ${transferModalData.resident} to Room ${transferTargetRoom} (${transferTargetBed}). Synced in real-time.`
     );
   };
+
+  if (!canViewRooms) {
+    return (
+      <div className="hostel-unified-module">
+        <div className="hostel-page-header">
+          <div className="hostel-breadcrumb">
+            <span>Home</span> / <span>Hostel</span> / <span className="current">Room Allotment</span>
+          </div>
+          <div className="hostel-header-title-row">
+            <div>
+              <h2>Room Allotment &amp; Bed Capacity Management</h2>
+              <p>Resident bed allotments and occupancy records.</p>
+            </div>
+            <div className="hostel-role-tag" style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
+              <ShieldAlert size={16} /> Restricted Access
+            </div>
+          </div>
+        </div>
+        <div className="hostel-card-container" style={{ padding: '3.5rem 1.5rem', textAlign: 'center' }}>
+          <div style={{ maxWidth: '520px', margin: '0 auto', background: '#fff1f2', border: '1.5px solid #fecdd3', borderRadius: '12px', padding: '2rem' }}>
+            <ShieldAlert size={48} color="#e11d48" style={{ margin: '0 auto 1rem' }} />
+            <h3 style={{ color: '#9f1239', margin: '0 0 0.5rem', fontSize: '1.2rem' }}>Permission Restricted: View Bed Allotments</h3>
+            <p style={{ color: '#475569', fontSize: '0.9rem', lineHeight: 1.5 }}>
+              Your warden profile does not have permission to view bed allotments or room assignments. Please contact the Hostel Administrator to update your Operational Permissions matrix.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="hostel-unified-module">
@@ -395,69 +531,97 @@ export default function RoomAllotmentSection({ account }) {
           </div>
 
           <div className="toolbar-right" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* NEW ACTIONS: ADD FLOOR, ADD ROOM, ADD BED */}
-            <button
-              type="button"
-              className="h-btn-action-secondary"
-              onClick={() => {
-                const nextFloorNum = availableFloors.length + 1;
-                setAddFloorForm({
-                  floorName: `Floor ${nextFloorNum}`,
-                  roomCount: 2,
-                  startRoomNumber: `${nextFloorNum}01`,
-                  roomType: '4-Bed Standard AC',
-                  bedsPerRoom: 4
-                });
-                setIsAddFloorModalOpen(true);
-              }}
-              title="Add a new floor to this hostel"
-            >
-              <Layers size={14} /> + Add Floor
-            </button>
+            {/* NEW ACTIONS: ADD FLOOR, DELETE FLOOR, ADD ROOM, ADD BED */}
+            {canManageRooms && (
+              <>
+                {selectedFloor !== 'ALL' && (
+                  <button
+                    type="button"
+                    className="h-btn-action-secondary"
+                    style={{ background: '#fef2f2', borderColor: '#fca5a5', color: '#b91c1c' }}
+                    onClick={() => handleDeleteFloor(selectedFloor)}
+                    title={`Delete ${selectedFloor} and all its rooms from ${selectedHostel}`}
+                  >
+                    <Trash2 size={14} /> Delete {selectedFloor}
+                  </button>
+                )}
 
-            <button
-              type="button"
-              className="h-btn-action-secondary"
-              onClick={() => {
-                setAddRoomForm({
-                  floor: availableFloors[0] || 'Floor 1',
-                  customFloor: '',
-                  roomNo: '',
-                  type: '4-Bed Standard AC',
-                  capacity: 4
-                });
-                setIsAddRoomModalOpen(true);
-              }}
-              title="Add a new room to a floor"
-            >
-              <Home size={14} /> + Add Room
-            </button>
+                <button
+                  type="button"
+                  className="h-btn-action-secondary"
+                  onClick={() => {
+                    const nextFloorNum = availableFloors.length + 1;
+                    setAddFloorForm({
+                      floorName: `Floor ${nextFloorNum}`,
+                      roomCount: 2,
+                      startRoomNumber: `${nextFloorNum}01`,
+                      roomType: '4-Bed Standard AC',
+                      bedsPerRoom: 4
+                    });
+                    setIsAddFloorModalOpen(true);
+                  }}
+                  title="Add a new floor to this hostel"
+                >
+                  <Layers size={14} /> + Add Floor
+                </button>
 
-            <button
-              type="button"
-              className="h-btn-action-secondary"
-              onClick={() => {
-                if (rooms.length > 0) {
-                  setAddBedRoomNo(rooms[0].roomNo);
-                  setAddBedCustomLabel(`Bed 0${rooms[0].capacity + 1}`);
-                }
-                setIsAddBedModalOpen(true);
-              }}
-              title="Add an extra bed to a room"
-            >
-              <Bed size={14} /> + Add Bed
-            </button>
+                <button
+                  type="button"
+                  className="h-btn-action-secondary"
+                  onClick={() => {
+                    setAddRoomForm({
+                      floor: availableFloors[0] || 'Floor 1',
+                      customFloor: '',
+                      roomNo: '',
+                      type: '4-Bed Standard AC',
+                      capacity: 4
+                    });
+                    setIsAddRoomModalOpen(true);
+                  }}
+                  title="Add a new room to a floor"
+                >
+                  <Home size={14} /> + Add Room
+                </button>
 
-            <button
-              type="button"
-              className="h-btn-action-primary"
-              onClick={() => setIsAllocateModalOpen(true)}
-              title="Allocate student to a vacant bed"
-            >
-              <UserPlus size={15} /> + Allocate New Bed
-            </button>
+                <button
+                  type="button"
+                  className="h-btn-action-secondary"
+                  onClick={() => {
+                    if (rooms.length > 0) {
+                      setAddBedRoomNo(rooms[0].roomNo);
+                      setAddBedCustomLabel(`Bed 0${rooms[0].capacity + 1}`);
+                    }
+                    setIsAddBedModalOpen(true);
+                  }}
+                  title="Add an extra bed to a room"
+                >
+                  <Bed size={14} /> + Add Bed
+                </button>
+
+                <button
+                  type="button"
+                  className="h-btn-action-primary"
+                  onClick={() => setIsAllocateModalOpen(true)}
+                  title="Allocate student to a vacant bed"
+                >
+                  <UserPlus size={15} /> + Allocate New Bed
+                </button>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Read-Only Notice for Wardens without manageRoomAllocations permission */}
+        {!canManageRooms && (
+          <div 
+            onClick={() => showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.')}
+            style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.85rem 1.25rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px', color: '#991b1b', fontSize: '0.88rem', cursor: 'pointer' }}
+            title="Click for permission status"
+          >
+            <AlertCircle size={18} color="#dc2626" />
+            <span><strong>Read-Only Allocation Mode:</strong> Bed transfer and room reconfiguration permissions (Execute Bed Transfers) are disabled by Hostel Administration. You can view bed allotments but cannot add rooms, delete rooms, or transfer residents.</span>
+          </div>
+        )}
 
         {/* Room & Bed Allocation Grid */}
         <div className="room-matrix-grid">
@@ -475,18 +639,43 @@ export default function RoomAllotmentSection({ account }) {
                     <span className={`room-occ-badge ${isFull ? 'full' : 'vacant'}`}>
                       {occCount} / {rm.capacity} Beds
                     </span>
-                    <button
-                      type="button"
-                      className="quick-add-bed-btn"
-                      title={`Add a bed to Room ${rm.roomNo}`}
-                      onClick={() => {
-                        setAddBedRoomNo(rm.roomNo);
-                        setAddBedCustomLabel(`Bed 0${rm.capacity + 1}`);
-                        setIsAddBedModalOpen(true);
-                      }}
-                    >
-                      + Bed
-                    </button>
+                    {canManageRooms && (
+                      <>
+                        <button
+                          type="button"
+                          className="quick-add-bed-btn"
+                          title={`Add a bed to Room ${rm.roomNo}`}
+                          onClick={() => {
+                            setAddBedRoomNo(rm.roomNo);
+                            setAddBedCustomLabel(`Bed 0${rm.capacity + 1}`);
+                            setIsAddBedModalOpen(true);
+                          }}
+                        >
+                          + Bed
+                        </button>
+                        <button
+                          type="button"
+                          className="quick-del-room-btn"
+                          style={{
+                            padding: '4px 8px',
+                            background: '#fee2e2',
+                            color: '#b91c1c',
+                            border: '1px solid #fca5a5',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                          title={`Delete Room ${rm.roomNo}`}
+                          onClick={() => handleDeleteRoom(rm.roomNo, rm.floor)}
+                        >
+                          <Trash2 size={12} /> Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -508,37 +697,44 @@ export default function RoomAllotmentSection({ account }) {
                           <div className="resident-details-box">
                             <strong className="resident-name">{bed.resident}</strong>
                             <div className="resident-meta">Roll: {bed.roll} · {bed.branch}</div>
-                            <div className="bed-quick-actions">
-                              <button
-                                type="button"
-                                className="bed-action-btn transfer"
-                                title="Transfer to another room"
-                                onClick={() =>
-                                  setTransferModalData({
-                                    sourceRoom: rm.roomNo,
-                                    sourceBed: bed.bedNo,
-                                    resident: bed.resident,
-                                    roll: bed.roll,
-                                    branch: bed.branch
-                                  })
-                                }
-                              >
-                                ⇄ Transfer
-                              </button>
-                              <button
-                                type="button"
-                                className="bed-action-btn vacate"
-                                title="Vacate bed"
-                                onClick={() => handleVacateBed(rm.roomNo, bed.bedNo, bed.resident)}
-                              >
-                                ↳ Vacate
-                              </button>
-                            </div>
+                            {canManageRooms && (
+                              <div className="bed-quick-actions">
+                                <button
+                                  type="button"
+                                  className="bed-action-btn transfer"
+                                  title="Transfer to another room"
+                                  onClick={() =>
+                                    setTransferModalData({
+                                      sourceRoom: rm.roomNo,
+                                      sourceBed: bed.bedNo,
+                                      resident: bed.resident,
+                                      roll: bed.roll,
+                                      branch: bed.branch
+                                    })
+                                  }
+                                >
+                                  ⇄ Transfer
+                                </button>
+                                <button
+                                  type="button"
+                                  className="bed-action-btn vacate"
+                                  title="Vacate bed"
+                                  onClick={() => handleVacateBed(rm.roomNo, bed.bedNo, bed.resident)}
+                                >
+                                  ↳ Vacate
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div
-                            className="vacant-slot-cta"
+                            className={`vacant-slot-cta ${!canManageRooms ? 'disabled' : ''}`}
+                            style={!canManageRooms ? { cursor: 'not-allowed', opacity: 0.65 } : undefined}
                             onClick={() => {
+                              if (!canManageRooms) {
+                                showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+                                return;
+                              }
                               setAllocateForm(prev => ({
                                 ...prev,
                                 roomNo: rm.roomNo,

@@ -1,8 +1,8 @@
 // Faculty Portal Enterprise Service Layer
 // Connects to NestJS Backend (/api/faculty/*) with erpStore fallback
 
-import { api } from './api';
-import { erpStore } from './erpStore';
+import { api } from './api.js';
+import { erpStore } from './erpStore.js';
 
 export const facultyApi = {
   // 1. Dashboard & Work Queue

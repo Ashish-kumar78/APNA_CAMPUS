@@ -14,19 +14,59 @@ import {
   Check
 } from 'lucide-react';
 import { mockDisciplinaryRecords } from './hostelData.js';
+import { isWardenSuspended, getWardenPermissions, getWardenIdFromAccount } from '../../services/wardenManagementStore.js';
+import { getRoomsForHostelAndFloor } from '../../services/hostelRoomStore.js';
+import { getAllHostels } from '../../services/hostelAttendanceStore.js';
 import './HostelExtraSections.css';
 
-export default function HostelDisciplinarySection() {
+export default function HostelDisciplinarySection({ account, isHostelAdmin = false, isSuspended: propIsSuspended }) {
+  const [isSuspended, setIsSuspended] = useState(() => Boolean(propIsSuspended || (!isHostelAdmin && isWardenSuspended(account))));
+  const [permsTick, setPermsTick] = useState(0);
+  const [hostelList, setHostelList] = useState(() => getAllHostels());
+
+  const wardenId = useMemo(() => getWardenIdFromAccount(account), [account]);
+
+  React.useEffect(() => {
+    const handleStatusSync = () => {
+      setIsSuspended(Boolean(propIsSuspended || (!isHostelAdmin && isWardenSuspended(account))));
+    };
+    const handlePermSync = () => setPermsTick(t => t + 1);
+    const handleHostelsSync = () => setHostelList(getAllHostels());
+
+    window.addEventListener('bput_warden_status_changed', handleStatusSync);
+    window.addEventListener('bput_warden_permissions_changed', handlePermSync);
+    window.addEventListener('bput_hostels_updated', handleHostelsSync);
+    window.addEventListener('storage', handleStatusSync);
+    window.addEventListener('storage', handlePermSync);
+    window.addEventListener('storage', handleHostelsSync);
+
+    return () => {
+      window.removeEventListener('bput_warden_status_changed', handleStatusSync);
+      window.removeEventListener('bput_warden_permissions_changed', handlePermSync);
+      window.removeEventListener('bput_hostels_updated', handleHostelsSync);
+      window.removeEventListener('storage', handleStatusSync);
+      window.removeEventListener('storage', handlePermSync);
+      window.removeEventListener('storage', handleHostelsSync);
+    };
+  }, [propIsSuspended, isHostelAdmin, account]);
+
+  const canRecordDisciplinary = useMemo(() => {
+    if (isHostelAdmin) return true;
+    if (isSuspended) return false;
+    const perms = getWardenPermissions(wardenId);
+    return perms.recordDisciplinaryIncidents !== false;
+  }, [isHostelAdmin, isSuspended, wardenId, permsTick]);
   const [records, setRecords] = useState(mockDisciplinaryRecords);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [selectedRecordModal, setSelectedRecordModal] = useState(null);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [disciplinaryFloor, setDisciplinaryFloor] = useState('1st Floor');
   const [newIncident, setNewIncident] = useState({
     studentName: '',
     rollNumber: '',
     hostelName: 'Gandhi Boys Residence',
-    roomNumber: '',
+    roomNumber: '101',
     category: 'Curfew & Gate Violation',
     description: '',
     actionTaken: 'First Written Warning Issued',
@@ -53,6 +93,10 @@ export default function HostelDisciplinarySection() {
 
   const handleCreateIncident = (e) => {
     e.preventDefault();
+    if (!canRecordDisciplinary) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     if (!newIncident.studentName || !newIncident.rollNumber || !newIncident.description) {
       alert('Please fill all mandatory fields');
       return;
@@ -100,9 +144,30 @@ export default function HostelDisciplinarySection() {
           <p>Curfew Infractions · Anti-Ragging Regulatory Compliance · Show-Cause Proceedings</p>
         </div>
         <div style={{ display: 'flex', gap: '0.65rem' }}>
-          <button className="h-btn h-btn-primary" onClick={() => setIsLogModalOpen(true)}>
-            <Plus size={15} /> Log Disciplinary Incident
-          </button>
+          <div
+            style={{ display: 'inline-block' }}
+            onClick={() => {
+              if (!canRecordDisciplinary) {
+                showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+              }
+            }}
+          >
+            <button
+              className="h-btn h-btn-primary"
+              disabled={!canRecordDisciplinary}
+              style={!canRecordDisciplinary ? { pointerEvents: 'none', opacity: 0.6 } : undefined}
+              onClick={() => {
+                if (!canRecordDisciplinary) {
+                  showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+                  return;
+                }
+                setIsLogModalOpen(true);
+              }}
+              title={!canRecordDisciplinary ? 'Permission restricted by Hostel Administration' : 'Log Disciplinary Incident'}
+            >
+              <Plus size={15} /> Log Disciplinary Incident
+            </button>
+          </div>
         </div>
       </div>
 
@@ -324,7 +389,7 @@ export default function HostelDisciplinarySection() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.75rem' }}>
                   <div>
                     <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
                       Hostel *
@@ -333,11 +398,43 @@ export default function HostelDisciplinarySection() {
                       className="hostel-select"
                       style={{ width: '100%' }}
                       value={newIncident.hostelName}
-                      onChange={e => setNewIncident({ ...newIncident, hostelName: e.target.value })}
+                      onChange={e => {
+                        const newHostel = e.target.value;
+                        const available = getRoomsForHostelAndFloor(newHostel, disciplinaryFloor);
+                        setNewIncident({
+                          ...newIncident,
+                          hostelName: newHostel,
+                          roomNumber: available[0]?.roomNo || '101'
+                        });
+                      }}
                     >
-                      <option value="Gandhi Boys Residence">Gandhi Boys Residence</option>
-                      <option value="Kalam Boys Residence">Kalam Boys Residence</option>
-                      <option value="Sarojini Girls Residence">Sarojini Girls Residence</option>
+                      {hostelList.map(h => (
+                        <option key={h.id || h.code} value={h.name}>{h.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                      Floor *
+                    </label>
+                    <select
+                      className="hostel-select"
+                      style={{ width: '100%' }}
+                      value={disciplinaryFloor}
+                      onChange={e => {
+                        const newFloor = e.target.value;
+                        setDisciplinaryFloor(newFloor);
+                        const available = getRoomsForHostelAndFloor(newIncident.hostelName, newFloor);
+                        setNewIncident({
+                          ...newIncident,
+                          roomNumber: available[0]?.roomNo || '101'
+                        });
+                      }}
+                    >
+                      <option value="1st Floor">1st Floor</option>
+                      <option value="2nd Floor">2nd Floor</option>
+                      <option value="3rd Floor">3rd Floor</option>
                     </select>
                   </div>
 
@@ -345,14 +442,17 @@ export default function HostelDisciplinarySection() {
                     <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
                       Room Number *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g., Room 104"
+                    <select
+                      className="hostel-select"
+                      style={{ width: '100%' }}
                       value={newIncident.roomNumber}
                       onChange={e => setNewIncident({ ...newIncident, roomNumber: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                    />
+                      required
+                    >
+                      {getRoomsForHostelAndFloor(newIncident.hostelName, disciplinaryFloor).map(r => (
+                        <option key={r.roomNo} value={r.roomNo}>{r.label}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

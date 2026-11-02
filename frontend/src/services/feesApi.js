@@ -1,6 +1,6 @@
 // Fee Payment Proof & Verification API Handler with Live Endpoint Calling and Initial Mock Fallback
 
-import { api } from './api';
+import { api } from './api.js';
 
 // Mock In-Memory Storage for dynamic testing when backend is offline
 let mockPaymentProofs = [

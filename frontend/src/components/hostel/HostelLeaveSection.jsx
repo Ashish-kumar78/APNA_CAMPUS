@@ -20,14 +20,18 @@ import {
   AlertTriangle,
   Send,
   MessageSquare,
-  ShieldAlert
+  ShieldAlert,
+  Building
 } from 'lucide-react';
 import {
   getAllResidentLeaves,
   approveResidentLeave,
   rejectResidentLeave,
-  markResidentReturned
+  markResidentReturned,
+  fetchResidentLeavesFromBackend,
+  normalizeLeaveStatus
 } from '../../services/hostelResidentLeaveStore.js';
+import { isWardenSuspended, getWardenPermissions, getWardenIdFromAccount, getWardenAssignedHostel } from '../../services/wardenManagementStore.js';
 import './HostelExtraSections.css';
 
 const PRESET_REJECTION_REASONS = [
@@ -41,6 +45,7 @@ const PRESET_REJECTION_REASONS = [
 export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHostelAdmin: propIsHostelAdmin }) {
   const [leaves, setLeaves] = useState(() => getAllResidentLeaves());
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'Pending' | 'Approved' | 'Rejected'
+  const [hostelFilter, setHostelFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLeaveModal, setSelectedLeaveModal] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
@@ -61,49 +66,106 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
       );
 
   // Listen to storage events for real-time synchronization with Student Portal
+  const [wardenStatusTick, setWardenStatusTick] = useState(0);
+
   useEffect(() => {
+    fetchResidentLeavesFromBackend();
     const handleSync = () => {
       setLeaves(getAllResidentLeaves());
     };
+    const handleStatusSync = () => setWardenStatusTick(t => t + 1);
+
     window.addEventListener('bput_hostel_leaves_updated', handleSync);
+    window.addEventListener('bput_warden_status_changed', handleStatusSync);
     window.addEventListener('storage', handleSync);
     return () => {
       window.removeEventListener('bput_hostel_leaves_updated', handleSync);
+      window.removeEventListener('bput_warden_status_changed', handleStatusSync);
       window.removeEventListener('storage', handleSync);
     };
   }, []);
+
+  const isSuspended = useMemo(() => {
+    if (isHostelAdmin) return false;
+    return isWardenSuspended(account);
+  }, [isHostelAdmin, account, wardenStatusTick]);
+
+  const wardenId = useMemo(() => getWardenIdFromAccount(account), [account]);
+  const [wardenPermsTick, setWardenPermsTick] = useState(0);
+
+  useEffect(() => {
+    const handlePermsSync = () => setWardenPermsTick(t => t + 1);
+    window.addEventListener('bput_warden_permissions_changed', handlePermsSync);
+    window.addEventListener('storage', handlePermsSync);
+    return () => {
+      window.removeEventListener('bput_warden_permissions_changed', handlePermsSync);
+      window.removeEventListener('storage', handlePermsSync);
+    };
+  }, []);
+
+  const permissions = useMemo(() => {
+    if (isHostelAdmin) {
+      return { reviewStudentLeaves: true };
+    }
+    return getWardenPermissions(wardenId);
+  }, [isHostelAdmin, wardenId, wardenStatusTick, wardenPermsTick]);
+
+  const canReviewLeaves = isHostelAdmin || (!isSuspended && permissions.reviewStudentLeaves !== false);
 
   const showToast = (msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3500);
   };
 
+  const normStatus = (s) => normalizeLeaveStatus(s);
+
+  // List of distinct hostels for filtering
+  const distinctHostels = useMemo(() => {
+    const set = new Set();
+    leaves.forEach(l => {
+      if (l.hostelName) set.add(l.hostelName);
+    });
+    return Array.from(set);
+  }, [leaves]);
+
   const filteredLeaves = useMemo(() => {
     return leaves.filter(l => {
-      const matchStatus = statusFilter === 'ALL' || l.status === statusFilter;
+      const currentNorm = normStatus(l.status);
+      const matchStatus = statusFilter === 'ALL' || currentNorm === statusFilter;
+      const matchHostel = hostelFilter === 'ALL' || (l.hostelName && l.hostelName.toLowerCase().includes(hostelFilter.toLowerCase()));
       const query = searchQuery.trim().toLowerCase();
       const matchSearch = !query ||
-        l.studentName.toLowerCase().includes(query) ||
-        l.rollNumber.toLowerCase().includes(query) ||
-        l.hostelName.toLowerCase().includes(query);
-      return matchStatus && matchSearch;
+        (l.studentName && l.studentName.toLowerCase().includes(query)) ||
+        (l.rollNumber && l.rollNumber.toLowerCase().includes(query)) ||
+        (l.regNo && l.regNo.toLowerCase().includes(query)) ||
+        (l.hostelName && l.hostelName.toLowerCase().includes(query)) ||
+        (l.id && l.id.toLowerCase().includes(query));
+      return matchStatus && matchHostel && matchSearch;
     });
-  }, [leaves, statusFilter, searchQuery]);
+  }, [leaves, statusFilter, hostelFilter, searchQuery]);
 
   const stats = useMemo(() => {
     return {
       total: leaves.length,
-      pending: leaves.filter(l => l.status === 'Pending').length,
-      approved: leaves.filter(l => l.status === 'Approved').length,
-      rejected: leaves.filter(l => l.status === 'Rejected').length,
-      currentlyAway: leaves.filter(l => l.status === 'Approved' && !l.returned).length
+      pending: leaves.filter(l => normStatus(l.status) === 'Pending').length,
+      approved: leaves.filter(l => normStatus(l.status) === 'Approved').length,
+      rejected: leaves.filter(l => normStatus(l.status) === 'Rejected').length,
+      currentlyAway: leaves.filter(l => normStatus(l.status) === 'Approved' && !l.returned).length
     };
   }, [leaves]);
 
   const handleApprove = (id) => {
+    if (isSuspended) {
+      showToast('⚠️ Warden Account Suspended: Leave approvals are disabled. Read-only mode.');
+      return;
+    }
+    if (!canReviewLeaves) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     const submitterName = account?.name
       ? `${account.name} (${isHostelAdmin ? 'Hostel Admin' : 'Resident Warden'})`
-      : 'Mr. Rajesh Jena (Resident Warden)';
+      : isHostelAdmin ? 'Mr. Rajesh Jena (Hostel Admin)' : 'Mr. Rajesh Jena (Resident Warden)';
 
     const updated = approveResidentLeave(id, submitterName);
     setLeaves(updated);
@@ -114,12 +176,28 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
   };
 
   const handleInitiateReject = (leave) => {
+    if (isSuspended) {
+      showToast('⚠️ Warden Account Suspended: Leave rejections are disabled. Read-only mode.');
+      return;
+    }
+    if (!canReviewLeaves) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     setRejectModalTarget(leave);
     setRejectionReasonText('');
     setRejectionError('');
   };
 
   const handleConfirmReject = () => {
+    if (isSuspended) {
+      showToast('⚠️ Warden Account Suspended: Leave rejections are disabled. Read-only mode.');
+      return;
+    }
+    if (!canReviewLeaves) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     if (!rejectionReasonText.trim()) {
       setRejectionError('Please provide a specific reason for rejection to inform the student.');
       return;
@@ -127,7 +205,7 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
 
     const submitterName = account?.name
       ? `${account.name} (${isHostelAdmin ? 'Hostel Admin' : 'Resident Warden'})`
-      : 'Mr. Rajesh Jena (Resident Warden)';
+      : isHostelAdmin ? 'Mr. Rajesh Jena (Hostel Admin)' : 'Mr. Rajesh Jena (Resident Warden)';
 
     const updated = rejectResidentLeave({
       leaveId: rejectModalTarget.id,
@@ -147,6 +225,14 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
   };
 
   const handleMarkReturned = (id) => {
+    if (isSuspended) {
+      showToast('⚠️ Warden Account Suspended: Status modifications are disabled in read-only mode.');
+      return;
+    }
+    if (!canReviewLeaves) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     const updated = markResidentReturned(id);
     setLeaves(updated);
     if (selectedLeaveModal?.id === id) {
@@ -179,27 +265,60 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
         </div>
       )}
 
+      {/* Account Suspended Warning Banner */}
+      {isSuspended && (
+        <div className="hostel-suspended-banner" style={{
+          background: '#fef2f2',
+          border: '1.5px solid #fecaca',
+          borderRadius: '10px',
+          padding: '0.85rem 1.25rem',
+          marginBottom: '1rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          color: '#991b1b',
+          boxShadow: '0 2px 4px rgba(220, 38, 38, 0.06)'
+        }}>
+          <AlertTriangle size={22} color="#dc2626" style={{ flexShrink: 0 }} />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#b91c1c' }}>
+              ⚠️ Warden Account Suspended by Hostel Administration
+            </div>
+            <div style={{ fontSize: '0.82rem', color: '#7f1d1d', marginTop: '2px' }}>
+              Your account is currently in <strong>Suspended</strong> status. You have <strong>Read-Only view access</strong> to inspect student leave records. Approving or rejecting leave applications is disabled.
+            </div>
+          </div>
+          <span style={{
+            marginLeft: 'auto',
+            background: '#fee2e2',
+            color: '#dc2626',
+            fontWeight: 800,
+            fontSize: '0.72rem',
+            padding: '4px 10px',
+            borderRadius: '6px',
+            border: '1px solid #fca5a5',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            flexShrink: 0
+          }}>
+            READ-ONLY MODE
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="hostel-section-header">
         <div>
-          <h2><Calendar size={24} color="#2563eb" /> Hostel Resident Leave Management</h2>
-          <p>Overnight Outstation Leaves · Parent/Guardian Consent Verification · Return Confirmation</p>
+          <h2><Calendar size={24} color="#2563eb" /> Overnight Leave Applications</h2>
+          <p>Resident Overnight Outstation Leaves · Parent/Guardian Consent Verification · Real-Time Warden &amp; Admin Sync</p>
         </div>
         <div style={{ display: 'flex', gap: '0.65rem' }}>
-          {onNavigateApplyLeave && (
-            <button
-              className="h-btn h-btn-primary"
-              onClick={onNavigateApplyLeave}
-              title="Apply Staff / Warden Leave & View Institutional Guidelines"
-            >
-              <CalendarCheck size={14} /> Apply Staff Leave &amp; Rules
-            </button>
-          )}
           <button
             className="h-btn h-btn-secondary"
-            onClick={() => {
+            onClick={async () => {
+              await fetchResidentLeavesFromBackend();
               setLeaves(getAllResidentLeaves());
-              showToast('Leave queue synchronized');
+              showToast('Leave queue synchronized from backend');
             }}
           >
             <RotateCcw size={14} /> Refresh Requests
@@ -257,7 +376,7 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
 
       {/* Filter Strip */}
       <div className="hostel-filter-strip">
-        <div className="hostel-filter-group">
+        <div className="hostel-filter-group" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>
           <div className="hostel-search-input">
             <Search size={16} color="#64748b" />
             <input
@@ -267,6 +386,23 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
               onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
+
+          {distinctHostels.length > 0 && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <Building size={15} color="#64748b" />
+              <select
+                className="admin-form-select"
+                style={{ padding: '6px 10px', fontSize: '0.82rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', minWidth: '170px' }}
+                value={hostelFilter}
+                onChange={e => setHostelFilter(e.target.value)}
+              >
+                <option value="ALL">All Hostels ({leaves.length})</option>
+                {distinctHostels.map(h => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="hostel-tab-pills">
             {['ALL', 'Pending', 'Approved', 'Rejected'].map(s => (
@@ -310,113 +446,152 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
                   </td>
                 </tr>
               ) : (
-                filteredLeaves.map(leave => (
-                  <tr key={leave.id}>
-                    <td style={{ fontWeight: 700, color: '#2563eb' }}>{leave.id}</td>
-                    <td>
-                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{leave.studentName}</div>
-                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Reg: {leave.rollNumber}</div>
-                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>📞 {leave.phone}</div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{leave.hostelName}</div>
-                      <div style={{ fontSize: '0.74rem', color: '#475569' }}>Room {leave.roomNumber}</div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 700, color: '#0f172a' }}>
-                        {leave.startDate} → {leave.endDate}
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: '#2563eb', fontWeight: 600 }}>
-                        {leave.days} Days Total
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '0.84rem', maxWidth: '240px', color: '#334155' }}>
-                        {leave.reason}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0f172a' }}>
-                        {leave.guardianName}
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{leave.guardianPhone}</div>
-                      <span style={{
-                        display: 'inline-block',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        color: leave.guardianStatus?.includes('Verified') ? '#059669' : '#d97706',
-                        marginTop: '2px'
-                      }}>
-                        ● {leave.guardianStatus}
-                      </span>
-                    </td>
-                    <td>
-                      {leave.status === 'Pending' && <span className="h-badge h-badge-pending">Pending Review</span>}
-                      {leave.status === 'Approved' && (
-                        <div>
-                          <span className="h-badge h-badge-approved">Approved</span>
-                          <div style={{ marginTop: '4px' }}>
-                            {leave.returned ? (
-                              <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 700 }}>✓ Returned</span>
-                            ) : (
-                              <span style={{ fontSize: '0.7rem', color: '#d97706', fontWeight: 700 }}>⏳ Away</span>
+                filteredLeaves.map(leave => {
+                  const st = normStatus(leave.status);
+                  return (
+                    <tr key={leave.id}>
+                      <td style={{ fontWeight: 700, color: '#2563eb' }}>{leave.id}</td>
+                      <td>
+                        <div style={{ fontWeight: 700, color: '#0f172a' }}>{leave.studentName}</div>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Reg: {leave.rollNumber || leave.regNo}</div>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>📞 {leave.phone}</div>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{leave.hostelName}</div>
+                        <div style={{ fontSize: '0.74rem', color: '#475569' }}>Room {leave.roomNumber}</div>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                          {leave.startDate} → {leave.endDate}
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: '#2563eb', fontWeight: 600 }}>
+                          {leave.days} Days Total
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: '0.84rem', maxWidth: '240px', color: '#334155' }}>
+                          {leave.reason}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0f172a' }}>
+                          {leave.guardianName}
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{leave.guardianPhone}</div>
+                        <span style={{
+                          display: 'inline-block',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          color: leave.guardianStatus?.includes('Verified') ? '#059669' : '#d97706',
+                          marginTop: '2px'
+                        }}>
+                          ● {leave.guardianStatus}
+                        </span>
+                      </td>
+                      <td>
+                        {st === 'Pending' && <span className="h-badge h-badge-pending">Pending Review</span>}
+                        {st === 'Approved' && (
+                          <div>
+                            <span className="h-badge h-badge-approved">Approved</span>
+                            <div style={{ marginTop: '4px' }}>
+                              {leave.returned ? (
+                                <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 700 }}>✓ Returned</span>
+                              ) : (
+                                <span style={{ fontSize: '0.7rem', color: '#d97706', fontWeight: 700 }}>⏳ Away</span>
+                              )}
+                            </div>
+                            {leave.approvedBy && (
+                              <div style={{ fontSize: '0.69rem', color: '#166534', marginTop: '2px', fontWeight: 500 }}>
+                                Sanctioned: {leave.approvedBy}
+                              </div>
                             )}
                           </div>
-                        </div>
-                      )}
-                      {leave.status === 'Rejected' && (
-                        <div>
-                          <span className="h-badge h-badge-rejected">Rejected</span>
-                          {leave.rejectionReason && (
-                            <div className="leave-rejection-chip" title={leave.rejectionReason}>
-                              <AlertCircle size={11} color="#e11d48" style={{ flexShrink: 0 }} />
-                              <span><strong>Reason:</strong> {leave.rejectionReason}</span>
-                            </div>
+                        )}
+                        {st === 'Rejected' && (
+                          <div>
+                            <span className="h-badge h-badge-rejected">Rejected</span>
+                            {leave.rejectionReason && (
+                              <div
+                                className="leave-rejection-chip"
+                                title={leave.rejectionReason}
+                                style={{
+                                  background: '#fff1f2',
+                                  border: '1px solid #fecdd3',
+                                  borderRadius: '6px',
+                                  padding: '4px 8px',
+                                  marginTop: '4px',
+                                  fontSize: '0.74rem',
+                                  color: '#9f1239',
+                                  display: 'flex',
+                                  alignItems: 'flex-start',
+                                  gap: '5px',
+                                  lineHeight: '1.3'
+                                }}
+                              >
+                                <AlertCircle size={12} color="#e11d48" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                <span><strong>Reason:</strong> {leave.rejectionReason}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                          <button
+                            className="h-btn h-btn-secondary"
+                            style={{ padding: '4px 8px', fontSize: '0.74rem' }}
+                            onClick={() => setSelectedLeaveModal(leave)}
+                          >
+                            <Eye size={13} /> View
+                          </button>
+                          {st === 'Pending' && (
+                            isSuspended ? (
+                              <span className="had-badge neutral" style={{ fontSize: '0.72rem', padding: '3px 7px' }} title="Approvals locked while warden account is suspended">
+                                Read Only (Suspended)
+                              </span>
+                            ) : !canReviewLeaves ? (
+                              <span
+                                className="had-badge neutral"
+                                style={{ fontSize: '0.72rem', padding: '3px 7px', cursor: 'pointer' }}
+                                title="Leave review permission restricted by Hostel Administrator"
+                                onClick={() => showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.')}
+                              >
+                                Read Only (Restricted)
+                              </span>
+                            ) : (
+                              <>
+                                <button
+                                  className="h-btn h-btn-success"
+                                  style={{ padding: '4px 8px', fontSize: '0.74rem' }}
+                                  onClick={() => handleApprove(leave.id)}
+                                >
+                                  <Check size={13} /> Approve
+                                </button>
+                                <button
+                                  className="h-btn h-btn-danger"
+                                  style={{ padding: '4px 8px', fontSize: '0.74rem' }}
+                                  onClick={() => handleInitiateReject(leave)}
+                                  title="Reject leave and mention reason"
+                                >
+                                  <X size={13} /> Reject
+                                </button>
+                              </>
+                            )
+                          )}
+                          {st === 'Approved' && !leave.returned && !isSuspended && canReviewLeaves && (
+                            <button
+                              className="h-btn h-btn-primary"
+                              style={{ padding: '4px 8px', fontSize: '0.74rem' }}
+                              onClick={() => handleMarkReturned(leave.id)}
+                            >
+                              Mark Returned
+                            </button>
                           )}
                         </div>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button
-                          className="h-btn h-btn-secondary"
-                          style={{ padding: '4px 8px', fontSize: '0.74rem' }}
-                          onClick={() => setSelectedLeaveModal(leave)}
-                        >
-                          <Eye size={13} /> View
-                        </button>
-                        {leave.status === 'Pending' && (
-                          <>
-                            <button
-                              className="h-btn h-btn-success"
-                              style={{ padding: '4px 8px', fontSize: '0.74rem' }}
-                              onClick={() => handleApprove(leave.id)}
-                            >
-                              <Check size={13} /> Approve
-                            </button>
-                            <button
-                              className="h-btn h-btn-danger"
-                              style={{ padding: '4px 8px', fontSize: '0.74rem' }}
-                              onClick={() => handleInitiateReject(leave)}
-                              title="Reject leave and mention reason"
-                            >
-                              <X size={13} /> Reject
-                            </button>
-                          </>
-                        )}
-                        {leave.status === 'Approved' && !leave.returned && (
-                          <button
-                            className="h-btn h-btn-primary"
-                            style={{ padding: '4px 8px', fontSize: '0.74rem' }}
-                            onClick={() => handleMarkReturned(leave.id)}
-                          >
-                            Mark Returned
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -431,25 +606,37 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
               <div>
                 <h3 style={{ margin: 0 }}>Leave Dossier · {selectedLeaveModal.id}</h3>
                 <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-                  Applied On {selectedLeaveModal.appliedOn} · BPUT Student Resident Welfare
+                  Submitted on {selectedLeaveModal.appliedOn} · Status: <strong>{normStatus(selectedLeaveModal.status)}</strong>
                 </p>
               </div>
               <button className="admin-table-action-btn" onClick={() => setSelectedLeaveModal(null)}>
                 <X size={16} />
               </button>
             </div>
-            <div className="admin-modal-body">
-              <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', fontSize: '0.84rem' }}>
+            <div className="admin-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', background: '#f8fafc', padding: '1rem', borderRadius: '10px' }}>
                 <div><strong>Student Name:</strong> {selectedLeaveModal.studentName}</div>
-                <div><strong>Registration:</strong> {selectedLeaveModal.rollNumber}</div>
+                <div><strong>Registration:</strong> {selectedLeaveModal.rollNumber || selectedLeaveModal.regNo}</div>
                 <div><strong>Hostel:</strong> {selectedLeaveModal.hostelName}</div>
                 <div><strong>Room No:</strong> {selectedLeaveModal.roomNumber}</div>
                 <div><strong>Contact:</strong> {selectedLeaveModal.phone}</div>
                 <div><strong>Total Duration:</strong> {selectedLeaveModal.days} Days ({selectedLeaveModal.startDate} to {selectedLeaveModal.endDate})</div>
               </div>
 
+              {/* If Approved: Sanction Details */}
+              {normStatus(selectedLeaveModal.status) === 'Approved' && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '0.9rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#15803d', fontWeight: 700, fontSize: '0.88rem', marginBottom: '4px' }}>
+                    <CheckCircle2 size={16} color="#16a34a" /> Official Approval Recorded
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: '#166534' }}>
+                    Sanctioned by: <strong>{selectedLeaveModal.approvedBy || 'Hostel Administration'}</strong> · {selectedLeaveModal.approvedAt || 'Active Term'}
+                  </div>
+                </div>
+              )}
+
               {/* If Rejected: Prominent Rejection Card showing Reason */}
-              {selectedLeaveModal.status === 'Rejected' && (
+              {normStatus(selectedLeaveModal.status) === 'Rejected' && (
                 <div className="modal-rejection-card">
                   <div className="rejection-card-head">
                     <XCircle size={18} color="#e11d48" />
@@ -487,17 +674,27 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
               </div>
             </div>
             <div className="admin-modal-footer">
-              {selectedLeaveModal.status === 'Pending' && (
-                <>
-                  <button className="h-btn h-btn-danger" onClick={() => handleInitiateReject(selectedLeaveModal)}>
-                    <X size={14} /> Reject Application
-                  </button>
-                  <button className="h-btn h-btn-success" onClick={() => handleApprove(selectedLeaveModal.id)}>
-                    <Check size={14} /> Sanction Leave
-                  </button>
-                </>
+              {normStatus(selectedLeaveModal.status) === 'Pending' && (
+                isSuspended ? (
+                  <span style={{ color: '#b91c1c', fontSize: '0.82rem', fontWeight: 600, marginRight: 'auto' }}>
+                    🔒 Decisions Locked (Warden Account Suspended)
+                  </span>
+                ) : !canReviewLeaves ? (
+                  <span style={{ color: '#b45309', fontSize: '0.82rem', fontWeight: 600, marginRight: 'auto' }}>
+                    🔒 Review Decisions Restricted by Hostel Administration
+                  </span>
+                ) : (
+                  <>
+                    <button className="h-btn h-btn-danger" onClick={() => handleInitiateReject(selectedLeaveModal)}>
+                      <X size={14} /> Reject Application
+                    </button>
+                    <button className="h-btn h-btn-success" onClick={() => handleApprove(selectedLeaveModal.id)}>
+                      <Check size={14} /> Sanction Leave
+                    </button>
+                  </>
+                )
               )}
-              {selectedLeaveModal.status === 'Approved' && !selectedLeaveModal.returned && (
+              {normStatus(selectedLeaveModal.status) === 'Approved' && !selectedLeaveModal.returned && !isSuspended && canReviewLeaves && (
                 <button className="h-btn h-btn-primary" onClick={() => handleMarkReturned(selectedLeaveModal.id)}>
                   Mark Student Returned
                 </button>
@@ -538,7 +735,7 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
               <div className="reject-summary-banner">
                 <div className="summary-col">
                   <span className="lbl">Student:</span>
-                  <strong>{rejectModalTarget.studentName} ({rejectModalTarget.rollNumber})</strong>
+                  <strong>{rejectModalTarget.studentName} ({rejectModalTarget.rollNumber || rejectModalTarget.regNo})</strong>
                 </div>
                 <div className="summary-col">
                   <span className="lbl">Residence:</span>

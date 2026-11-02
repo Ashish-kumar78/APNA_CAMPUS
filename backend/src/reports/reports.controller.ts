@@ -43,6 +43,12 @@ export class ReportsController {
     return this.reportsService.generateReport({ ...query, reportType: 'document' }, user);
   }
 
+  @Get('fees')
+  @ApiOperation({ summary: 'Generate student fees collection and outstanding dues report with paid and unpaid breakdown' })
+  async getFeesReport(@Query() query: ReportQueryDto, @CurrentUser() user: any) {
+    return this.reportsService.generateReport({ ...query, reportType: 'fees' }, user);
+  }
+
   @Get('export')
   @ApiOperation({ summary: 'Download filtered report as Microsoft Excel (.xlsx) spreadsheet' })
   async exportExcel(

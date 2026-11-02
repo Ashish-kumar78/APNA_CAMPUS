@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   CheckCircle2, XCircle, AlertTriangle, Filter, Search,
   Clock, FileText, Layers, ShieldCheck, UserCheck, ShieldAlert,
@@ -23,6 +23,20 @@ export default function HostelAdminApprovalCenter({ account, showToast }) {
   const [decisionType, setDecisionType] = useState('APPROVE'); // 'APPROVE' | 'REJECT' | 'RETURN'
   const [decisionRemarks, setDecisionRemarks] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const handleSync = () => setApprovals(getUnifiedPendingApprovals());
+    window.addEventListener('bput_hostel_leaves_updated', handleSync);
+    window.addEventListener('bput_gate_passes_changed', handleSync);
+    window.addEventListener('bput_hostel_indents_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('bput_hostel_leaves_updated', handleSync);
+      window.removeEventListener('bput_gate_passes_changed', handleSync);
+      window.removeEventListener('bput_hostel_indents_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
 
   const reloadQueue = () => {
     setApprovals(getUnifiedPendingApprovals());

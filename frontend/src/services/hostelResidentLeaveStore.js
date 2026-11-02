@@ -1,11 +1,74 @@
 // Service for Managing Hostel Student Resident Leaves (Overnight Outstation Leaves)
-// Synchronizes leave status and rejection reasons between Warden Portal and Student Portal
+// Synchronizes leave status and rejection reasons between Warden Portal, Hostel Admin, and Student Portal
 
-import { mockLeaveApplications } from '../components/hostel/hostelData.js';
+import { api } from './api.js';
 
 const STORAGE_KEY = 'bput_hostel_resident_leaves_v2';
 
+let isSyncingLeaves = false;
+
+/**
+ * Normalizes any variant of status to 'Pending', 'Approved', 'Rejected', or 'Returned'
+ */
+export function normalizeLeaveStatus(s) {
+  if (!s) return 'Pending';
+  const str = String(s).toLowerCase().trim();
+  if (str.includes('reject')) return 'Rejected';
+  if (str.includes('pending') || str.includes('awaiting')) return 'Pending';
+  if (str.includes('return')) return 'Returned';
+  if (str.includes('approv') || str.includes('sanction')) return 'Approved';
+  return 'Pending';
+}
+
 export const INITIAL_RESIDENT_LEAVES = [
+  {
+    id: 'LV-2026-072',
+    studentName: 'Rakesh Das',
+    rollNumber: '2305200001',
+    regNo: '2305201001',
+    hostelName: 'Sarojini Girls Residence (Block A)',
+    roomNumber: '201',
+    phone: '+91 94370 11999',
+    startDate: '2026-11-01',
+    endDate: '2026-11-03',
+    days: 4,
+    reason: 'hackathon',
+    guardianName: 'D. Das',
+    guardianPhone: '+91 94370 11888',
+    guardianStatus: 'Consent Form Submitted Online',
+    status: 'Pending',
+    appliedOn: '2026-11-01',
+    returned: false,
+    rejectionReason: '',
+    rejectedBy: null,
+    rejectedAt: null,
+    approvedBy: null,
+    approvedAt: null
+  },
+  {
+    id: 'LV-2026-046',
+    studentName: 'Raj Sahoo',
+    rollNumber: '03',
+    regNo: '03',
+    hostelName: 'Sarojini Girls Residence',
+    roomNumber: '101',
+    phone: '+91 98610 00333',
+    startDate: '2026-10-29',
+    endDate: '2026-10-31',
+    days: 2,
+    reason: 'hgc',
+    guardianName: 'Maheswar Sahoo',
+    guardianPhone: '+91 94370 00333',
+    guardianStatus: 'Consent Form Submitted Online',
+    status: 'Rejected',
+    appliedOn: '2026-10-29',
+    returned: false,
+    rejectionReason: 'Parent / Guardian telephonic consent could not be verified by hostel office.',
+    rejectedBy: 'Mrs. Nibedita Das (Resident Warden)',
+    rejectedAt: '30 Oct 2026, 10:15 AM',
+    approvedBy: null,
+    approvedAt: null
+  },
   {
     id: 'LV-2026-041',
     studentName: 'Sourav Mohanty',
@@ -26,7 +89,9 @@ export const INITIAL_RESIDENT_LEAVES = [
     returned: false,
     rejectionReason: '',
     rejectedBy: null,
-    rejectedAt: null
+    rejectedAt: null,
+    approvedBy: 'Mr. Rajesh Jena (Hostel Admin)',
+    approvedAt: '16 Oct 2026, 04:20 PM'
   },
   {
     id: 'LV-2026-042',
@@ -48,7 +113,9 @@ export const INITIAL_RESIDENT_LEAVES = [
     returned: false,
     rejectionReason: 'Parent/Guardian telephonic consent could not be verified after 3 attempts by warden office.',
     rejectedBy: 'Mr. Rajesh Jena (Resident Warden)',
-    rejectedAt: '19 Oct 2026, 11:30 AM'
+    rejectedAt: '19 Oct 2026, 11:30 AM',
+    approvedBy: null,
+    approvedAt: null
   },
   {
     id: 'LV-2026-043',
@@ -65,12 +132,14 @@ export const INITIAL_RESIDENT_LEAVES = [
     guardianName: 'S. K. Mishra',
     guardianPhone: '+91 94371 99001',
     guardianStatus: 'Faculty & Guardian Consent Letter Attached',
-    status: 'Pending',
+    status: 'Rejected',
     appliedOn: '2026-10-17',
     returned: false,
-    rejectionReason: '',
-    rejectedBy: null,
-    rejectedAt: null
+    rejectionReason: 'Returned to resident warden for clarification and correction.',
+    rejectedBy: 'Mrs. Nibedita Das (Resident Warden)',
+    rejectedAt: '18 Oct 2026, 02:45 PM',
+    approvedBy: null,
+    approvedAt: null
   },
   {
     id: 'LV-2026-039',
@@ -92,7 +161,9 @@ export const INITIAL_RESIDENT_LEAVES = [
     returned: true,
     rejectionReason: '',
     rejectedBy: null,
-    rejectedAt: null
+    rejectedAt: null,
+    approvedBy: 'Mr. Rajesh Jena (Hostel Admin)',
+    approvedAt: '09 Oct 2026, 11:00 AM'
   },
   {
     id: 'LV-2026-038',
@@ -114,7 +185,9 @@ export const INITIAL_RESIDENT_LEAVES = [
     returned: false,
     rejectionReason: 'Guardian explicitly disapproved overnight outstation travel during mid-semester review.',
     rejectedBy: 'Mr. Rajesh Jena (Resident Warden)',
-    rejectedAt: '04 Oct 2026, 06:15 PM'
+    rejectedAt: '04 Oct 2026, 06:15 PM',
+    approvedBy: null,
+    approvedAt: null
   }
 ];
 
@@ -126,7 +199,14 @@ function getStoredLeaves() {
     return INITIAL_RESIDENT_LEAVES;
   }
   try {
-    return JSON.parse(stored);
+    const parsed = JSON.parse(stored);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.map(l => ({
+        ...l,
+        status: normalizeLeaveStatus(l.status)
+      }));
+    }
+    return INITIAL_RESIDENT_LEAVES;
   } catch (e) {
     return INITIAL_RESIDENT_LEAVES;
   }
@@ -134,10 +214,66 @@ function getStoredLeaves() {
 
 function saveStoredLeaves(leaves) {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(leaves));
-    window.dispatchEvent(new CustomEvent('bput_hostel_leaves_updated', { detail: leaves }));
+    const normalized = leaves.map(l => ({
+      ...l,
+      status: normalizeLeaveStatus(l.status)
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    window.dispatchEvent(new CustomEvent('bput_hostel_leaves_updated', { detail: normalized }));
     window.dispatchEvent(new Event('storage'));
   }
+}
+
+export async function fetchResidentLeavesFromBackend() {
+  if (typeof window === 'undefined' || isSyncingLeaves) return;
+  isSyncingLeaves = true;
+  try {
+    const res = await api.getHostelLeaves();
+    if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+      const localLeaves = getStoredLeaves();
+      const leaveMap = new Map();
+      // Add local leaves first so newly submitted leaves are preserved
+      localLeaves.forEach(l => {
+        if (l && l.id) {
+          leaveMap.set(l.id, {
+            ...l,
+            status: normalizeLeaveStatus(l.status)
+          });
+        }
+      });
+      // Merge with backend authoritative records
+      res.data.forEach(l => {
+        if (l && l.id) {
+          const normSt = normalizeLeaveStatus(l.status);
+          const existing = leaveMap.get(l.id);
+          leaveMap.set(l.id, {
+            ...existing,
+            ...l,
+            status: normSt,
+            rejectionReason: l.rejectionReason || existing?.rejectionReason || '',
+            rejectedBy: l.rejectedBy || l.approvedBy || existing?.rejectedBy || null,
+            rejectedAt: l.rejectedAt || existing?.rejectedAt || null,
+            approvedBy: l.approvedBy || existing?.approvedBy || null,
+            approvedAt: l.approvedAt || existing?.approvedAt || null
+          });
+        }
+      });
+      const merged = Array.from(leaveMap.values());
+      saveStoredLeaves(merged);
+      return merged;
+    }
+  } catch (err) {
+    console.warn('hostelResidentLeaveStore: Failed to fetch leaves from backend, using local:', err.message);
+  } finally {
+    isSyncingLeaves = false;
+  }
+}
+
+// Initial auto sync
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    fetchResidentLeavesFromBackend();
+  }, 100);
 }
 
 export function getAllResidentLeaves() {
@@ -158,7 +294,7 @@ export function getResidentLeavesByStudent(studentIdentifier) {
   );
 }
 
-export function approveResidentLeave(leaveId, wardenName = 'Mr. Rajesh Jena (Resident Warden)') {
+export function approveResidentLeave(leaveId, wardenName = 'Mr. Rajesh Jena (Hostel Admin)') {
   const current = getStoredLeaves();
   const now = new Date();
   const timeFormatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' +
@@ -179,6 +315,7 @@ export function approveResidentLeave(leaveId, wardenName = 'Mr. Rajesh Jena (Res
   });
 
   saveStoredLeaves(updated);
+  api.actionHostelLeave(leaveId, 'APPROVE', 'Parent telephone verification confirmed').catch(() => {});
   return updated;
 }
 
@@ -188,7 +325,7 @@ export function approveResidentLeave(leaveId, wardenName = 'Mr. Rajesh Jena (Res
 export function rejectResidentLeave({
   leaveId,
   reason,
-  rejectedBy = 'Mr. Rajesh Jena (Resident Warden)'
+  rejectedBy = 'Mr. Rajesh Jena (Hostel Admin)'
 }) {
   const current = getStoredLeaves();
   const now = new Date();
@@ -211,6 +348,7 @@ export function rejectResidentLeave({
   });
 
   saveStoredLeaves(updated);
+  api.actionHostelLeave(leaveId, 'REJECT', finalReason).catch(() => {});
   return updated;
 }
 
@@ -218,12 +356,29 @@ export function markResidentReturned(leaveId) {
   const current = getStoredLeaves();
   const updated = current.map(l => {
     if (l.id === leaveId) {
-      return { ...l, returned: true };
+      return { ...l, returned: true, status: 'Returned' };
     }
     return l;
   });
 
   saveStoredLeaves(updated);
+  api.actionHostelLeave(leaveId, 'MARK_RETURNED').catch(() => {});
+  return updated;
+}
+
+export function deleteResidentLeave(leaveId) {
+  const current = getStoredLeaves();
+  const updated = current.filter(l => l.id !== leaveId);
+  saveStoredLeaves(updated);
+  api.deleteHostelLeave(leaveId).catch(() => {});
+  return updated;
+}
+
+export function updateResidentLeave(leaveId, updates) {
+  const current = getStoredLeaves();
+  const updated = current.map(l => l.id === leaveId ? { ...l, ...updates, status: updates.status ? normalizeLeaveStatus(updates.status) : l.status } : l);
+  saveStoredLeaves(updated);
+  api.updateHostelLeave(leaveId, updates).catch(() => {});
   return updated;
 }
 
@@ -231,8 +386,8 @@ export function createResidentLeave({
   studentName = 'Rakesh Das',
   rollNumber = '2305200001',
   regNo = '2305201001',
-  hostelName = 'Gandhi Boys Residence',
-  roomNumber = '101',
+  hostelName = 'Sarojini Girls Residence (Block A)',
+  roomNumber = '201',
   phone = '+91 94370 11999',
   startDate,
   endDate,
@@ -243,7 +398,7 @@ export function createResidentLeave({
   guardianStatus = 'Consent Form Submitted Online'
 }) {
   const current = getStoredLeaves();
-  const seq = 44 + Math.floor(Math.random() * 50);
+  const seq = 70 + Math.floor(Math.random() * 30);
   const newId = `LV-2026-0${seq}`;
   const now = new Date();
   const appliedOn = now.toISOString().split('T')[0];
@@ -268,11 +423,14 @@ export function createResidentLeave({
     returned: false,
     rejectionReason: '',
     rejectedBy: null,
-    rejectedAt: null
+    rejectedAt: null,
+    approvedBy: null,
+    approvedAt: null
   };
 
   const updated = [newLeave, ...current];
   saveStoredLeaves(updated);
+  api.createHostelLeave(newLeave).catch(() => {});
   return newLeave;
 }
 
@@ -280,4 +438,3 @@ export function resetResidentLeavesToInitial() {
   saveStoredLeaves(INITIAL_RESIDENT_LEAVES);
   return INITIAL_RESIDENT_LEAVES;
 }
-

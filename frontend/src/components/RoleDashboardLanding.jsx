@@ -1,3 +1,4 @@
+import CalendarWidget from './CalendarWidget.jsx';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users,
@@ -59,6 +60,7 @@ import '../DashboardHome.css';
 import './RoleDashboardLanding.css';
 import { getGreetingDisplayName } from '../utils/timeGreeting.js';
 import WardenEmployeeProfile from './hostel/WardenEmployeeProfile.jsx';
+import { api } from '../services/api.js';
 
 // DetailRow matching StudentPortal
 function DetailRow({ label, value }) {
@@ -1212,11 +1214,62 @@ export default function RoleDashboardLanding({
   const officerDisplayName = account?.name || officer.name;
   const greetingName = getGreetingDisplayName(officerDisplayName);
 
-  const { c1, c2, c3, c4 } = config.stats;
-  const C1Icon = c1.icon;
-  const C2Icon = c2.icon;
-  const C3Icon = c3.icon;
-  const C4Icon = c4.icon;
+  const isHostelRole = resolvedKey === 'warden' || rawKey === 'hostel_admin' || account?.role === 'hostel_admin';
+  const isHostelAdminRole = rawKey === 'hostel_admin' || account?.role === 'hostel_admin' || account?.identity === 'WRD-ADM-01';
+
+  // Live dynamic hostel stats backed by backend (All hostels for admin, own hostel for warden)
+  const [liveStats, setLiveStats] = useState(config.stats);
+
+  useEffect(() => {
+    if (!isHostelRole) {
+      setLiveStats(config.stats);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchStats = async () => {
+      try {
+        const hostelParam = isHostelAdminRole
+          ? 'ALL'
+          : (account?.hostelName || account?.assignedHostel || (account?.name?.includes('Nibedita') ? 'Sarojini Girls Residence (Hostel 1)' : 'Gandhi Boys Residence (Hostel 1)'));
+
+        const res = await api.getHostelDashboardStats(hostelParam);
+        if (isMounted && res && res.data && res.data.cards) {
+          const cards = res.data.cards;
+          setLiveStats({
+            c1: { ...config.stats.c1, ...cards.c1, icon: Building },
+            c2: { ...config.stats.c2, ...cards.c2, icon: CheckCircle2 },
+            c3: { ...config.stats.c3, ...cards.c3, icon: Bed },
+            c4: { ...config.stats.c4, ...cards.c4, icon: Clock }
+          });
+        }
+      } catch (err) {
+        // Fallback gracefully to default configured stats
+      }
+    };
+
+    fetchStats();
+
+    const handleDataEvent = () => fetchStats();
+    window.addEventListener('bput_hostel_leaves_updated', handleDataEvent);
+    window.addEventListener('bput_gate_passes_changed', handleDataEvent);
+    window.addEventListener('bput_hostel_rooms_updated', handleDataEvent);
+    window.addEventListener('storage', handleDataEvent);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('bput_hostel_leaves_updated', handleDataEvent);
+      window.removeEventListener('bput_gate_passes_changed', handleDataEvent);
+      window.removeEventListener('bput_hostel_rooms_updated', handleDataEvent);
+      window.removeEventListener('storage', handleDataEvent);
+    };
+  }, [isHostelRole, isHostelAdminRole, account]);
+
+  const { c1, c2, c3, c4 } = isHostelRole ? liveStats : config.stats;
+  const C1Icon = c1.icon || Building;
+  const C2Icon = c2.icon || CheckCircle2;
+  const C3Icon = c3.icon || Bed;
+  const C4Icon = c4.icon || Clock;
 
   // When warden or hostel admin requests Employee Profile (2nd Image format)
   if ((resolvedKey === 'warden' || rawKey === 'hostel_admin' || account?.role === 'hostel_admin') && showWardenProfile) {
@@ -1566,143 +1619,87 @@ export default function RoleDashboardLanding({
         {/* ==========================================================
             D. DASHBOARD OVERVIEW: Dual Cards Grid (Overview + Notices)
             ========================================================== */}
-        <div className="dash-grid-duo">
-          {/* Left Card: Operational Summary Table */}
-          <section className="dash-card" aria-label="Operational Summary">
-            <header className="dash-card-head">
-              <h3>
-                <span className="dash-head-icon tone-blue">
-                  <Layers size={15} />
+        {config.roleKey !== 'warden' && config.roleKey !== 'hostel_admin' && (
+          <div className="dash-grid-duo">
+            {/* Left Card: Operational Summary Table */}
+            <section className="dash-card" aria-label="Operational Summary">
+              <header className="dash-card-head">
+                <h3>
+                  <span className="dash-head-icon tone-blue">
+                    <Layers size={15} />
+                  </span>
+                  {config.overviewTitle}
+                </h3>
+                <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
+                  Live Institutional Data
                 </span>
-                {config.overviewTitle}
-              </h3>
-              <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
-                Live Institutional Data
-              </span>
-            </header>
+              </header>
 
-            <div className="role-overview-table-wrap">
-              <table className="role-overview-table">
-                <thead>
-                  <tr>
-                    {config.overviewColumns.map((col, idx) => (
-                      <th key={idx}>{col}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {config.overviewItems.map((item, idx) => (
-                    <tr key={idx}>
-                      <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.col1}</td>
-                      <td>{item.col2}</td>
-                      <td style={{ color: '#475569' }}>{item.col3}</td>
-                      <td>
-                        <span className={`role-status-badge ${item.badge}`}>{item.col4}</span>
-                      </td>
+              <div className="role-overview-table-wrap">
+                <table className="role-overview-table">
+                  <thead>
+                    <tr>
+                      {config.overviewColumns.map((col, idx) => (
+                        <th key={idx}>{col}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                  </thead>
+                  <tbody>
+                    {config.overviewItems.map((item, idx) => (
+                      <tr key={idx}>
+                        <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.col1}</td>
+                        <td>{item.col2}</td>
+                        <td style={{ color: '#475569' }}>{item.col3}</td>
+                        <td>
+                          <span className={`role-status-badge ${item.badge}`}>{item.col4}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
 
-          {/* Right Card: Institutional & Role Announcements */}
-          <section className="dash-card" aria-label="Announcements & Notices">
-            <header className="dash-card-head">
-              <h3>
-                <span className="dash-head-icon tone-amber">
-                  <Megaphone size={15} />
-                </span>
-                {config.roleTitle} Circulars &amp; Notices
-              </h3>
-              <span className="dash-stat-badge tone-amber-badge">Academic 2026</span>
-            </header>
+            {/* Right Card: Institutional & Role Announcements */}
+            <section className="dash-card" aria-label="Announcements & Notices">
+              <header className="dash-card-head">
+                <h3>
+                  <span className="dash-head-icon tone-amber">
+                    <Megaphone size={15} />
+                  </span>
+                  {config.roleTitle} Circulars &amp; Notices
+                </h3>
+                <span className="dash-stat-badge tone-amber-badge">Academic 2026</span>
+              </header>
 
-            <ul className="role-announcement-list">
-              {config.announcements.map((item, idx) => (
-                <li key={idx} className="role-announcement-item">
-                  <div className="role-announcement-date">
-                    <strong>{item.day}</strong>
-                    <small>{item.month}</small>
-                  </div>
-                  <div className="role-announcement-content">
-                    <div className="role-announcement-content-top">
-                      <span className={`role-notif-tag ${item.tagTone}`}>{item.tag}</span>
+              <ul className="role-announcement-list">
+                {config.announcements.map((item, idx) => (
+                  <li key={idx} className="role-announcement-item">
+                    <div className="role-announcement-date">
+                      <strong>{item.day}</strong>
+                      <small>{item.month}</small>
                     </div>
-                    <h4 className="role-announcement-title">{item.title}</h4>
-                    <p className="role-announcement-desc">{item.desc}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
+                    <div className="role-announcement-content">
+                      <div className="role-announcement-content-top">
+                        <span className={`role-notif-tag ${item.tagTone}`}>{item.tag}</span>
+                      </div>
+                      <h4 className="role-announcement-title">{item.title}</h4>
+                      <p className="role-announcement-desc">{item.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+        )}
 
         {/* ==========================================================
             E. CALENDAR & HOLIDAY LIST: Side-by-Side Lower Grid
             Requires scroll to view, identical to Student Dashboard
             ========================================================== */}
         <div className="dash-grid-duo" style={{ marginTop: '20px' }}>
-          {/* Calendar Card */}
-          <section className="dash-card dash-calendar" id="calendar">
-            <header className="dash-card-head">
-              <h3>
-                <span className="dash-head-icon tone-blue">
-                  <CalendarDays size={15} />
-                </span>
-                Calendar
-              </h3>
-              <div className="dash-cal-controls">
-                <button type="button" onClick={() => updateMonth(-1)} aria-label="Previous month">
-                  <ChevronLeft size={15} />
-                </button>
-                <strong>{monthLabel}</strong>
-                <button type="button" onClick={() => updateMonth(1)} aria-label="Next month">
-                  <ChevronRight size={15} />
-                </button>
-              </div>
-            </header>
-            <div className="dash-cal-weekdays">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <span key={day}>{day}</span>
-              ))}
-            </div>
-            <div className="dash-cal-days">
-              {calendarDays.map(({ key, day, inMonth, isToday, isSunday }) => {
-                const holidayName = holidayMap[key];
-                return (
-                  <span
-                    className={[
-                      'dash-day',
-                      inMonth ? '' : 'is-outside',
-                      isToday ? 'is-today' : '',
-                      holidayName ? 'is-holiday' : '',
-                      isSunday ? 'is-sunday' : '',
-                    ].filter(Boolean).join(' ')}
-                    style={
-                      isToday
-                        ? {
-                          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                          color: '#ffffff',
-                          fontWeight: 800,
-                          boxShadow: '0 6px 14px -4px rgba(37, 99, 235, 0.75)',
-                        }
-                        : undefined
-                    }
-                    title={holidayName || undefined}
-                    key={key}
-                  >
-                    {day}
-                  </span>
-                );
-              })}
-            </div>
-            <div className="dash-legend">
-              <span><i className="lg-holiday" style={{ backgroundColor: '#fdba74' }} />Holiday</span>
-              <span><i className="lg-sunday" style={{ backgroundColor: '#fda4af' }} />Sunday</span>
-              <span><i className="lg-today" style={{ backgroundColor: '#2563eb' }} />Today</span>
-            </div>
-          </section>
+          {/* Calendar Card with Personal Notes & Reminders */}
+          <CalendarWidget account={account} />
 
           {/* Holiday List Card */}
           <section className="dash-card dash-holidays" id="holidays">

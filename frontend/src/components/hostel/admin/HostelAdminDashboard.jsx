@@ -10,7 +10,7 @@ import './HostelAdminDashboard.css';
 import { getAllWardens, getAllAuditLogs, getUnifiedPendingApprovals } from '../../../services/wardenManagementStore.js';
 import { getAllHostels, getSubmittedAttendances } from '../../../services/hostelAttendanceStore.js';
 import { getAllIndents } from '../../../services/hostelIndentStore.js';
-import { INITIAL_RESIDENT_LEAVES } from '../../../services/hostelResidentLeaveStore.js';
+import { getAllResidentLeaves, normalizeLeaveStatus } from '../../../services/hostelResidentLeaveStore.js';
 import { INITIAL_LEAVE_APPLICATIONS } from '../../../services/hostelStaffLeaveStore.js';
 import {
   mockDisciplinaryRecords,
@@ -33,6 +33,7 @@ export default function HostelAdminDashboard({ account, onNavigateTab, showToast
   const [indents, setIndents] = useState(() => getAllIndents());
   const [auditLogs, setAuditLogs] = useState(() => getAllAuditLogs());
   const [pendingApprovals, setPendingApprovals] = useState(() => getUnifiedPendingApprovals());
+  const [residentLeaves, setResidentLeaves] = useState(() => getAllResidentLeaves());
 
   const refreshAllData = () => {
     setIsRefreshing(true);
@@ -42,11 +43,33 @@ export default function HostelAdminDashboard({ account, onNavigateTab, showToast
     setIndents(getAllIndents());
     setAuditLogs(getAllAuditLogs());
     setPendingApprovals(getUnifiedPendingApprovals());
+    setResidentLeaves(getAllResidentLeaves());
     setTimeout(() => {
       setIsRefreshing(false);
       if (showToast) showToast('Hostel Admin dashboard metrics reconciled with live database.');
     }, 400);
   };
+
+  useEffect(() => {
+    const handleHostelsUpdate = () => {
+      setHostels(getAllHostels());
+    };
+    const handleLeavesUpdate = () => {
+      setResidentLeaves(getAllResidentLeaves());
+    };
+    window.addEventListener('bput_hostels_updated', handleHostelsUpdate);
+    window.addEventListener('bput_hostel_complexes_updated', handleHostelsUpdate);
+    window.addEventListener('bput_hostel_leaves_updated', handleLeavesUpdate);
+    window.addEventListener('storage', handleHostelsUpdate);
+    window.addEventListener('storage', handleLeavesUpdate);
+    return () => {
+      window.removeEventListener('bput_hostels_updated', handleHostelsUpdate);
+      window.removeEventListener('bput_hostel_complexes_updated', handleHostelsUpdate);
+      window.removeEventListener('bput_hostel_leaves_updated', handleLeavesUpdate);
+      window.removeEventListener('storage', handleHostelsUpdate);
+      window.removeEventListener('storage', handleLeavesUpdate);
+    };
+  }, []);
 
   // Derived Calculations
   const totalHostelsCount = hostels.length;
@@ -64,7 +87,7 @@ export default function HostelAdminDashboard({ account, onNavigateTab, showToast
   const unassignedHostelsCount = hostels.filter(h => !h.warden || h.warden === 'Unassigned').length;
 
   const pendingAttendanceVerificationCount = attendances.filter(a => a.verificationStatus === 'Pending Verification' || a.status === 'Submitted').length;
-  const pendingResidentLeavesCount = INITIAL_RESIDENT_LEAVES.filter(l => l.status === 'Pending').length;
+  const pendingResidentLeavesCount = residentLeaves.filter(l => normalizeLeaveStatus(l.status) === 'Pending').length;
   const pendingStaffLeavesCount = INITIAL_LEAVE_APPLICATIONS.filter(sl => sl.status === 'Pending Approval').length;
   const pendingIndentsCount = indents.filter(i => i.status === 'Pending Approval' || i.status === 'Submitted to Admin').length;
 
@@ -462,27 +485,30 @@ export default function HostelAdminDashboard({ account, onNavigateTab, showToast
                 </tr>
               </thead>
               <tbody>
-                {INITIAL_RESIDENT_LEAVES.slice(0, 4).map(l => (
-                  <tr key={l.id}>
-                    <td>
-                      <strong>{l.studentName}</strong>
-                      <div style={{ fontSize: '0.725rem', color: '#64748b' }}>Roll: {l.rollNumber}</div>
-                    </td>
-                    <td>{l.hostelName}</td>
-                    <td>
-                      <span>{l.days} Days</span>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{l.startDate} to {l.endDate}</div>
-                    </td>
-                    <td>
-                      <span className="had-badge info" style={{ fontSize: '0.7rem' }}>{l.guardianStatus}</span>
-                    </td>
-                    <td>
-                      <span className={`had-badge ${l.status === 'Approved' ? 'success' : l.status === 'Rejected' ? 'danger' : 'warning'}`}>
-                        {l.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {residentLeaves.slice(0, 5).map(l => {
+                  const st = normalizeLeaveStatus(l.status);
+                  return (
+                    <tr key={l.id}>
+                      <td>
+                        <strong>{l.studentName}</strong>
+                        <div style={{ fontSize: '0.725rem', color: '#64748b' }}>Roll: {l.rollNumber || l.regNo}</div>
+                      </td>
+                      <td>{l.hostelName}</td>
+                      <td>
+                        <span>{l.days} Days</span>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{l.startDate} to {l.endDate}</div>
+                      </td>
+                      <td>
+                        <span className="had-badge info" style={{ fontSize: '0.7rem' }}>{l.guardianStatus || 'Verified'}</span>
+                      </td>
+                      <td>
+                        <span className={`had-badge ${st === 'Approved' ? 'success' : st === 'Rejected' ? 'danger' : 'warning'}`}>
+                          {st === 'Pending' ? 'Pending Review' : st}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

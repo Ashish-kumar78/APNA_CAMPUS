@@ -146,6 +146,7 @@ export default function AppSidebar({
                         if (mobileOpen && onCloseMobile) onCloseMobile();
                       }}
                       aria-current={isActive ? 'page' : undefined}
+                      title={item.label}
                     >
                       <div className="apna-sidebar-item-icon">
                         <Icon size={18} />
@@ -166,6 +167,15 @@ export default function AppSidebar({
 
         {/* Sidebar Footer Role Card */}
         <div className="apna-sidebar-footer">
+          <div className="apna-sidebar-online-status">
+            <div className="apna-status-indicator">
+              <span className="apna-status-dot" />
+              <span className="apna-status-label">System Online</span>
+            </div>
+            <span className="apna-version-tag">v2.5.0</span>
+          </div>
+          <div className="apna-sidebar-sync-time">Last sync: 06:42 PM</div>
+
           <div className="apna-sidebar-role-card">
             <div className="apna-sidebar-role-kicker">AUTHORIZED SCOPE</div>
             <div className="apna-sidebar-role-name">{displayRole.toUpperCase()} · {displayName}</div>

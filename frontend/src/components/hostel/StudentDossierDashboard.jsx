@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { findStudentByQuery } from '../../services/studentStore.js';
 import { getResidentLeavesByStudent } from '../../services/hostelResidentLeaveStore.js';
+import { getLatestHostelAttendanceDate } from '../../services/studentStore.js';
 import './StudentDossierDashboard.css';
 
 export default function StudentDossierDashboard({
@@ -109,7 +110,7 @@ export default function StudentDossierDashboard({
       academicAttendance: 94.2,
       hostelAttendance: 96.8,
       lastClassAttendance: '26/10/2026',
-      lastHostelAttendance: '27/10/2026 (Night Roll Call - Present)',
+      lastHostelAttendance: `${getLatestHostelAttendanceDate(applicant)} (Night Roll Call - Present)`,
       roomType: '2-Bedded Air-Cooled Room (Floor 1)',
       roommateName: 'Sourav Mohanty (Roll 05, Reg: 2305201005)',
       wardenName: 'Mr. Rajesh Jena',

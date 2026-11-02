@@ -1,8 +1,8 @@
 // Central API Client connecting Frontend to NestJS Backend
 
 const rawBase =
-  import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_API_BASE_URL ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
     ? 'https://apna-campus-12lt.onrender.com/api'
     : 'http://localhost:4000/api');
@@ -29,8 +29,13 @@ async function request(endpoint, options = {}) {
     ...options.headers,
   };
 
+  const controller = new AbortController();
+  const timeoutMs = options.timeout || (isFormData ? 8000 : 2500);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, { ...options, headers, signal: options.signal || controller.signal });
+    clearTimeout(timeoutId);
 
     // Parse response
     let data;
@@ -56,7 +61,12 @@ async function request(endpoint, options = {}) {
 
     return data;
   } catch (error) {
-    console.warn(`API call to ${cleanEndpoint} failed:`, error.message);
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      console.warn(`API call to ${cleanEndpoint} timed out after ${timeoutMs}ms (offline resilience active).`);
+    } else {
+      console.warn(`API call to ${cleanEndpoint} failed:`, error.message);
+    }
     throw error;
   }
 }
@@ -82,6 +92,13 @@ export const api = {
     localStorage.removeItem('collegeflow_user');
     return request('/auth/logout', { method: 'POST' }).catch(() => ({}));
   },
+
+  getUserPreferences: () => request('/auth/preferences'),
+  updateUserPreferences: (prefs) =>
+    request('/auth/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(prefs),
+    }),
 
   // 2. Students & Profile
   getStudents: (params = {}) => {
@@ -175,13 +192,56 @@ export const api = {
 
   // 6. Hostel
   getHostels: () => request('/hostel/list'),
-  getHostelDashboardStats: () => request('/hostel/dashboard-stats'),
-  getHostelRooms: (hostelId, floor) => {
+  getHostelComplexes: () => request('/hostel/complexes'),
+  createHostelComplex: (payload) =>
+    request('/hostel/complexes', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  createHostel: (payload) =>
+    request('/hostel/create', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getHostelDashboardStats: (hostel) =>
+    request('/hostel/dashboard-stats' + (hostel && hostel !== 'ALL' ? `?hostel=${encodeURIComponent(hostel)}` : '')),
+  getHostelRooms: (hostelId, floor, hostelName) => {
     const q = new URLSearchParams();
     if (hostelId) q.append('hostelId', hostelId);
     if (floor) q.append('floor', floor);
+    if (hostelName) q.append('hostelName', hostelName);
     const qs = q.toString();
     return request(`/hostel/rooms${qs ? '?' + qs : ''}`);
+  },
+  createHostelRoom: (payload) =>
+    request('/hostel/rooms', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  deleteHostelRoom: (params) => {
+    const q = new URLSearchParams();
+    if (params.hostelName) q.append('hostelName', params.hostelName);
+    if (params.roomNumber) q.append('roomNumber', params.roomNumber);
+    if (params.floor) q.append('floor', params.floor);
+    if (params.id) q.append('id', params.id);
+    const qs = q.toString();
+    return request(`/hostel/rooms${qs ? '?' + qs : ''}`, {
+      method: 'DELETE',
+    });
+  },
+  createHostelFloor: (payload) =>
+    request('/hostel/floors', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  deleteHostelFloor: (params) => {
+    const q = new URLSearchParams();
+    if (params.hostelName) q.append('hostelName', params.hostelName);
+    if (params.floor) q.append('floor', params.floor);
+    const qs = q.toString();
+    return request(`/hostel/floors${qs ? '?' + qs : ''}`, {
+      method: 'DELETE',
+    });
   },
   allocateBed: (payload) =>
     request('/hostel/allocate', {
@@ -260,6 +320,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  uploadComplaintDocument: (id, payload) =>
+    request(`/hostel/complaints/${id}/document`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
   adminComplaintAction: (id, payload) =>
     request(`/hostel/complaints/${id}/admin-action`, {
       method: 'POST',
@@ -317,7 +382,18 @@ export const api = {
     }),
   // 6b. Food Feedback & Mess Review
   getMessMenu: (date) => request(`/hostel/mess-menu${date ? '?date=' + date : ''}`),
+  getWeeklyMessMenu: () => request('/hostel/mess-menu/weekly'),
+  updateDailyMessMenu: (payload) =>
+    request('/hostel/mess-menu', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
   createFoodFeedback: (payload) =>
+    request('/hostel/food-feedback', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  submitFoodFeedback: (payload) =>
     request('/hostel/food-feedback', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -351,6 +427,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
+  approveFoodFeedback: (id, payload = {}) =>
+    request(`/hostel/food-feedback/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   respondToFoodFeedback: (id, payload) =>
     request(`/hostel/food-feedback/${id}/response`, {
       method: 'POST',
@@ -369,6 +450,11 @@ export const api = {
 
   // 6c. Room Cleanliness Complaints
   lodgeCleanlinessComplaint: (payload) =>
+    request('/hostel/cleanliness-complaints', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  submitCleanlinessComplaint: (payload) =>
     request('/hostel/cleanliness-complaints', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -423,6 +509,237 @@ export const api = {
     request(`/hostel/cleanliness-complaints/${id}/escalate`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
+    }),
+  uploadCleanlinessComplaintDocument: (id, payload) =>
+    request(`/hostel/cleanliness-complaints/${id}/document`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  // 6d. Hostel Requisitions & Indents
+  getHostelIndents: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.hostel && params.hostel !== 'ALL') q.append('hostel', params.hostel);
+    if (params.status && params.status !== 'ALL') q.append('status', params.status);
+    if (params.raisedBy && params.raisedBy !== 'ALL') q.append('raisedBy', params.raisedBy);
+    if (params.search) q.append('search', params.search);
+    const qs = q.toString();
+    return request(`/hostel/indents${qs ? '?' + qs : ''}`);
+  },
+  createHostelIndent: (payload) =>
+    request('/hostel/indents', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateHostelIndent: (id, payload) =>
+    request(`/hostel/indents/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  actionHostelIndent: (id, action, remarks) =>
+    request(`/hostel/indents/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action, remarks }),
+    }),
+  deleteHostelIndent: (id) =>
+    request(`/hostel/indents/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // 6e. Resident Outstation Leaves
+  getHostelLeaves: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.rollNumber && params.rollNumber !== 'ALL') q.append('rollNumber', params.rollNumber);
+    if (params.hostel && params.hostel !== 'ALL') q.append('hostel', params.hostel);
+    if (params.status && params.status !== 'ALL') q.append('status', params.status);
+    if (params.search) q.append('search', params.search);
+    const qs = q.toString();
+    return request(`/hostel/leaves${qs ? '?' + qs : ''}`);
+  },
+  createHostelLeave: (payload) =>
+    request('/hostel/leaves', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateHostelLeave: (id, payload) =>
+    request(`/hostel/leaves/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  actionHostelLeave: (id, action, remarks) =>
+    request(`/hostel/leaves/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action, remarks }),
+    }),
+  deleteHostelLeave: (id) =>
+    request(`/hostel/leaves/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // 6f. Gate Passes (Update & Delete)
+  updateHostelGatePass: (id, payload) =>
+    request(`/hostel/gate-passes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteHostelGatePass: (id) =>
+    request(`/hostel/gate-passes/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // 6g. Maintenance Complaints (Update & Delete)
+  updateComplaint: (id, payload) =>
+    request(`/hostel/complaints/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteComplaint: (id) =>
+    request(`/hostel/complaints/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // 6h. Cleanliness Complaints (Update & Delete)
+  editCleanlinessComplaint: (id, payload) =>
+    request(`/hostel/cleanliness-complaints/${id}/edit`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteCleanlinessComplaint: (id) =>
+    request(`/hostel/cleanliness-complaints/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // 6i. Food Feedback (Update & Delete)
+  updateFoodFeedback: (id, payload) =>
+    request(`/hostel/food-feedback/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteFoodFeedback: (id) =>
+    request(`/hostel/food-feedback/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // 6j. Visitors (Update & Delete)
+  updateVisitor: (id, payload) =>
+    request(`/hostel/visitors/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteVisitor: (id) =>
+    request(`/hostel/visitors/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // 6k. Residents Allocation & Management
+  getHostelResidents: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.hostelId && params.hostelId !== 'ALL') q.append('hostelId', params.hostelId);
+    if (params.search) q.append('search', params.search);
+    const qs = q.toString();
+    return request(`/hostel/residents${qs ? '?' + qs : ''}`);
+  },
+  updateHostelResident: (rollNumber, payload) =>
+    request(`/hostel/residents/${rollNumber}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteHostelResident: (rollNumber) =>
+    request(`/hostel/residents/${rollNumber}`, {
+      method: 'DELETE',
+    }),
+
+  // Warden Directory & CMS Full Dossier
+  getWardens: () => request('/hostel/wardens'),
+  getWardenProfile: (id) => request(`/hostel/wardens/${encodeURIComponent(id)}`),
+  createWarden: (payload) =>
+    request('/hostel/wardens', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateWardenStatus: (id, status, reason = 'Administrative decision') =>
+    request(`/hostel/wardens/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, reason }),
+    }),
+  updateWardenDutyStatus: (id, dutyStatus, reason = 'Duty status updated') =>
+    request(`/hostel/wardens/${encodeURIComponent(id)}/duty-status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ dutyStatus, reason }),
+    }),
+  getStaffLeaves: () => request('/hostel/staff-leaves'),
+  applyStaffLeave: (payload) =>
+    request('/hostel/staff-leaves', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateStaffLeaveStatus: (id, status, remarks = '') =>
+    request(`/hostel/staff-leaves/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, remarks }),
+    }),
+  updateWardenProfile: (id, payload) =>
+    request(`/hostel/wardens/${encodeURIComponent(id)}/profile`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  addWardenDocument: (id, doc) =>
+    request(`/hostel/wardens/${encodeURIComponent(id)}/documents`, {
+      method: 'POST',
+      body: JSON.stringify(doc),
+    }),
+
+  // Warden Granular Permissions
+  getAllWardenPermissions: () => request('/hostel/wardens/permissions'),
+  getWardenPermissions: (id) => request(`/hostel/wardens/${encodeURIComponent(id)}/permissions`),
+  updateWardenPermissions: (id, permissions, applyToAll = false) =>
+    request(`/hostel/wardens/${encodeURIComponent(id)}/permissions`, {
+      method: 'PUT',
+      body: JSON.stringify({ permissions, applyToAll }),
+    }),
+  applyWardenPermissionsToAll: (permissions) =>
+    request('/hostel/wardens/permissions/apply-all', {
+      method: 'POST',
+      body: JSON.stringify({ permissions }),
+    }),
+
+  // Hostel Attendance Roll Call & Records
+  getHostelAttendance: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.hostel) q.set('hostel', params.hostel);
+    if (params.date) q.set('date', params.date);
+    if (params.session) q.set('session', params.session);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return request(`/hostel/attendance${qs}`);
+  },
+  getHostelAttendanceById: (id) => request(`/hostel/attendance/${encodeURIComponent(id)}`),
+  getHostelRoster: (hostelName) => request(`/hostel/attendance/roster/${encodeURIComponent(hostelName)}`),
+  getStudentLatestHostelAttendance: (identifier) => request(`/hostel/attendance/student/${encodeURIComponent(identifier)}`),
+  submitHostelAttendance: (payload) =>
+    request('/hostel/attendance', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  // Hostel Rules & Curfew Policies
+  getHostelRules: () => request('/hostel/rules'),
+  addHostelRule: (payload) =>
+    request('/hostel/rules', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateHostelRule: (id, payload) =>
+    request(`/hostel/rules/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteHostelRule: (id) =>
+    request(`/hostel/rules/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+  resetHostelRules: () =>
+    request('/hostel/rules/reset', {
+      method: 'POST',
     }),
 
 
@@ -1066,6 +1383,10 @@ export const api = {
     const q = new URLSearchParams(params).toString();
     return request(`/reports/documents${q ? '?' + q : ''}`);
   },
+  getFeesReport: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/reports/fees${q ? '?' + q : ''}`);
+  },
   downloadReportExcel: async (params = {}) => {
     const q = new URLSearchParams(params).toString();
     const token = localStorage.getItem('collegeflow_token');
@@ -1437,6 +1758,10 @@ export const api = {
     const q = new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined && v !== '')).toString();
     return request(`/reports/documents${q ? '?' + q : ''}`);
   },
+  getFeesReport: (params = {}) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined && v !== '')).toString();
+    return request(`/reports/fees${q ? '?' + q : ''}`);
+  },
   downloadReportExcel: async (params = {}) => {
     const q = new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined && v !== '')).toString();
     const url = `${API_BASE_URL}/reports/export?${q}`;
@@ -1741,12 +2066,41 @@ export const api = {
     request(`/admission/applicants/${encodeURIComponent(applicantId)}/approve`, {
       method: 'POST',
     }),
+
+  // Calendar Notes & Reminder Management
+  getCalendarNotes: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/calendar-notes${query ? '?' + query : ''}`);
+  },
+  getPendingCalendarReminders: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/calendar-notes/pending-reminders${query ? '?' + query : ''}`);
+  },
+  createCalendarNote: (data) =>
+    request('/calendar-notes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateCalendarNote: (id, data) =>
+    request(`/calendar-notes/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  submitCalendarNote: (id) =>
+    request(`/calendar-notes/${encodeURIComponent(id)}/submit`, {
+      method: 'PATCH',
+    }),
+  deleteCalendarNote: (id) =>
+    request(`/calendar-notes/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+
 };
 
 
-export { feesApi } from './feesApi';
-export { notesApi } from './notesApi';
-export { facultyApi } from './facultyApi';
-export { hodApi } from './hodApi';
+export { feesApi } from './feesApi.js';
+export { notesApi } from './notesApi.js';
+export { facultyApi } from './facultyApi.js';
+export { hodApi } from './hodApi.js';
 export default api;
 

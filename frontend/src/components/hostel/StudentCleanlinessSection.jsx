@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   Upload,
   Image,
-  Info
+  Info,
+  FileText
 } from 'lucide-react';
 import {
   getStudentCleanlinessComplaints,
@@ -30,14 +31,15 @@ import {
 import { getActiveStudent } from '../../services/studentStore.js';
 import './HostelExtraSections.css';
 
-export default function StudentCleanlinessSection() {
+export default function StudentCleanlinessSection({ account }) {
   const activeStudent = getActiveStudent();
-  const studentRoll = activeStudent?.rollNumber || '2305200001';
-  const studentName = activeStudent?.name || 'Rakesh Das';
-  const studentHostel = activeStudent?.hostelName || 'Sarojini Girls Residence (Block A)';
-  const studentBlock = activeStudent?.block || 'Block A';
-  const studentFloor = activeStudent?.floor || 'Floor 2';
-  const studentRoom = activeStudent?.roomNumber || '204';
+  const effectiveUser = account || activeStudent;
+  const studentRoll = effectiveUser?.registrationNumber || effectiveUser?.rollNumber || effectiveUser?.identifier || '2305201001';
+  const studentName = effectiveUser?.name || 'Aman Kumar Sharma';
+  const studentHostel = effectiveUser?.hostelName || 'Sarojini Girls Residence (Block A)';
+  const studentBlock = effectiveUser?.block || 'Block A';
+  const studentFloor = effectiveUser?.floor || 'Floor 2';
+  const studentRoom = effectiveUser?.roomNumber || '204';
 
   const [complaints, setComplaints] = useState([]);
   const [toastMsg, setToastMsg] = useState(null);
@@ -47,6 +49,7 @@ export default function StudentCleanlinessSection() {
   const [selectedDetailModal, setSelectedDetailModal] = useState(null);
   const [verificationModalComplaint, setVerificationModalComplaint] = useState(null);
   const [reopenModalComplaint, setReopenModalComplaint] = useState(null);
+  const [viewingDocModal, setViewingDocModal] = useState(null);
 
   // Submit Form State
   const [formCategory, setFormCategory] = useState('Room Cleaning');
@@ -81,7 +84,7 @@ export default function StudentCleanlinessSection() {
   };
 
   const refreshComplaints = () => {
-    getStudentCleanlinessComplaints(studentRoll).then(list => {
+    getStudentCleanlinessComplaints(studentRoll, { studentName }).then(list => {
       setComplaints(list);
     });
   };
@@ -92,7 +95,7 @@ export default function StudentCleanlinessSection() {
       refreshComplaints();
     });
     return unsub;
-  }, [studentRoll]);
+  }, [studentRoll, studentName]);
 
   // Metric Summaries
   const totalSubmitted = complaints.length;
@@ -121,7 +124,7 @@ export default function StudentCleanlinessSection() {
   }, [complaints, filterCategory, filterPriority, filterStatus, searchQuery]);
 
   // Handle Submit Cleanliness Complaint
-  const handleLodgeComplaint = async (e) => {
+  const handleLodgeComplaint = (e) => {
     e.preventDefault();
     if (!formTitle.trim()) {
       alert('Please enter a complaint title.');
@@ -132,40 +135,87 @@ export default function StudentCleanlinessSection() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const created = await submitCleanlinessComplaint({
-        studentId: activeStudent?.id || 'std-active',
-        studentName,
-        rollNumber: studentRoll,
-        hostel: studentHostel,
-        block: studentBlock,
-        floor: studentFloor,
-        roomNumber: studentRoom,
-        category: formCategory,
-        title: formTitle,
-        description: formDescription,
-        location: formLocation,
-        priority: formPriority,
-        preferredTime: formPreferredTime,
-        attachmentUrl: formAttachment
-      });
+    const complaintData = {
+      studentId: effectiveUser?.id || activeStudent?.id || 'std-active',
+      studentName,
+      rollNumber: studentRoll,
+      hostel: studentHostel,
+      block: studentBlock,
+      floor: studentFloor,
+      roomNumber: studentRoom,
+      category: formCategory,
+      title: formTitle.trim(),
+      description: formDescription.trim(),
+      location: formLocation,
+      priority: formPriority,
+      preferredTime: formPreferredTime,
+      attachmentUrl: formAttachment,
+      supportingDocument: formAttachment
+    };
 
-      showToast(`✓ Cleanliness Complaint #${created.complaintCode} submitted to Housekeeping & Warden.`);
-      setIsSubmitModalOpen(false);
-      setFormTitle('');
-      setFormDescription('');
-      setFormAttachment(null);
-      refreshComplaints();
-    } catch (err) {
-      alert(err.message || 'Failed to lodge cleanliness complaint.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    const isSarojini = (studentHostel || '').toLowerCase().includes('sarojini');
+    const complaintCode = `CLN-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const complaintId = `cln-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const optimisticRecord = {
+      id: complaintId,
+      complaintCode,
+      ...complaintData,
+      assignedWardenId: isSarojini ? 'WRD-G01' : 'WRD-B01',
+      assignedWardenName: isSarojini ? 'Mrs. Nibedita Das' : 'Mr. Rajesh Jena',
+      assignedStaffId: 'STF-HK-01',
+      assignedStaffName: 'Mrs. Laxmi Das (Housekeeping)',
+      status: 'Submitted',
+      statusHistory: [
+        {
+          id: `h-${Date.now()}`,
+          status: 'Submitted',
+          timestamp: new Date().toISOString(),
+          note: 'Lodged by resident',
+          actor: studentName,
+        }
+      ],
+      internalNotes: '',
+      cleaningInstructions: '',
+      workCompletedAt: null,
+      resolvedAt: null,
+      resolvedBy: null,
+      studentVerifiedAt: null,
+      studentVerificationResult: null,
+      reopenedAt: null,
+      reopenReason: null,
+      rejectionReason: null,
+      isEscalated: false,
+      escalatedAt: null,
+      escalationReason: null,
+      resolutionDeadline: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // 1. Immediately prepend into complaints state so it displays instantaneously in table with status (<1ms)
+    setComplaints(prev => [optimisticRecord, ...prev.filter(c => c.id !== optimisticRecord.id)]);
+
+    // 2. Instantly close modal, clear form, and show success toast (<1ms)
+    setIsSubmitModalOpen(false);
+    setIsSubmitting(false);
+    setFormTitle('');
+    setFormDescription('');
+    setFormAttachment(null);
+    showToast(`✓ Cleanliness Complaint #${optimisticRecord.complaintCode} submitted to Housekeeping & Warden.`);
+
+    // 3. Persist locally and sync in background
+    submitCleanlinessComplaint({ ...optimisticRecord, ...complaintData })
+      .then((created) => {
+        setComplaints(prev => prev.map(c => c.id === optimisticRecord.id ? { ...c, ...created } : c));
+        refreshComplaints();
+      })
+      .catch((err) => {
+        console.warn('Background cleanliness complaint sync error:', err.message);
+      });
   };
 
   // Handle Verification Submit
-  const handleVerificationSubmit = async (e) => {
+  const handleVerificationSubmit = (e) => {
     e.preventDefault();
     if (!verificationModalComplaint) return;
 
@@ -174,35 +224,47 @@ export default function StudentCleanlinessSection() {
       return;
     }
 
-    setIsVerifying(true);
-    try {
-      await verifyCleanlinessComplaint(
-        verificationModalComplaint.id,
-        verifyResult,
-        verifyResult === 'Confirmed Cleaned' ? verifyRating : undefined,
-        verifyResult === 'Confirmed Cleaned' ? verifyFeedback : undefined,
-        verifyResult === 'Unresolved' ? verifyUnresolvedReason : undefined,
-        studentName
-      );
+    const complaintToVerify = verificationModalComplaint;
+    const result = verifyResult;
+    const rating = verifyRating;
+    const feedback = verifyFeedback;
+    const unresolvedReason = verifyUnresolvedReason;
 
-      if (verifyResult === 'Confirmed Cleaned') {
-        showToast(`✓ Cleanliness complaint #${verificationModalComplaint.complaintCode} confirmed as Resolved.`);
-      } else {
-        showToast(`⚠️ Complaint #${verificationModalComplaint.complaintCode} returned and reopened for re-cleaning.`);
-      }
-      setVerificationModalComplaint(null);
-      setVerifyFeedback('');
-      setVerifyUnresolvedReason('');
-      refreshComplaints();
-    } catch (err) {
-      alert(err.message || 'Failed to submit verification.');
-    } finally {
-      setIsVerifying(false);
+    // Immediately update local UI state (<1ms)
+    setComplaints(prev => prev.map(c => c.id === complaintToVerify.id ? {
+      ...c,
+      status: result === 'Confirmed Cleaned' ? 'Resolved' : 'Reopened',
+      studentVerificationResult: result
+    } : c));
+
+    // Instantly close modal and show toast (<1ms)
+    setVerificationModalComplaint(null);
+    setIsVerifying(false);
+    setVerifyFeedback('');
+    setVerifyUnresolvedReason('');
+
+    if (result === 'Confirmed Cleaned') {
+      showToast(`✓ Cleanliness complaint #${complaintToVerify.complaintCode} confirmed as Resolved.`);
+    } else {
+      showToast(`⚠️ Complaint #${complaintToVerify.complaintCode} returned and reopened for re-cleaning.`);
     }
+
+    verifyCleanlinessComplaint(
+      complaintToVerify.id,
+      result,
+      result === 'Confirmed Cleaned' ? rating : undefined,
+      result === 'Confirmed Cleaned' ? feedback : undefined,
+      result === 'Unresolved' ? unresolvedReason : undefined,
+      studentName
+    ).then(() => {
+      refreshComplaints();
+    }).catch(err => {
+      alert(err.message || 'Failed to submit verification.');
+    });
   };
 
   // Handle Reopen Submit
-  const handleReopenSubmit = async (e) => {
+  const handleReopenSubmit = (e) => {
     e.preventDefault();
     if (!reopenModalComplaint) return;
     if (!reopenReason.trim()) {
@@ -210,18 +272,29 @@ export default function StudentCleanlinessSection() {
       return;
     }
 
-    setIsReopening(true);
-    try {
-      await reopenCleanlinessComplaint(reopenModalComplaint.id, reopenReason, null, studentName);
-      showToast(`⚠️ Cleanliness complaint #${reopenModalComplaint.complaintCode} reopened.`);
-      setReopenModalComplaint(null);
-      setReopenReason('');
-      refreshComplaints();
-    } catch (err) {
-      alert(err.message || 'Failed to reopen complaint.');
-    } finally {
-      setIsReopening(false);
-    }
+    const complaintToReopen = reopenModalComplaint;
+    const reason = reopenReason;
+
+    // Immediately update local UI state (<1ms)
+    setComplaints(prev => prev.map(c => c.id === complaintToReopen.id ? {
+      ...c,
+      status: 'Reopened',
+      reopenReason: reason
+    } : c));
+
+    // Instantly close modal and show toast (<1ms)
+    setReopenModalComplaint(null);
+    setIsReopening(false);
+    setReopenReason('');
+    showToast(`⚠️ Cleanliness complaint #${complaintToReopen.complaintCode} reopened.`);
+
+    reopenCleanlinessComplaint(complaintToReopen.id, reason, null, studentName)
+      .then(() => {
+        refreshComplaints();
+      })
+      .catch(err => {
+        alert(err.message || 'Failed to reopen complaint.');
+      });
   };
 
   const getStatusBadgeClass = (status) => {
@@ -397,6 +470,7 @@ export default function StudentCleanlinessSection() {
                 <th>Category &amp; Location</th>
                 <th>Room Particulars</th>
                 <th>Title &amp; Description</th>
+                <th>Supporting Document</th>
                 <th>Priority</th>
                 <th>Status</th>
                 <th>Assigned Staff</th>
@@ -406,7 +480,7 @@ export default function StudentCleanlinessSection() {
             <tbody>
               {filteredComplaints.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#64748b' }}>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#64748b' }}>
                     <Sparkles size={32} style={{ margin: '0 auto 8px auto', display: 'block', opacity: 0.5 }} />
                     No cleanliness complaints found for the selected criteria.
                   </td>
@@ -433,6 +507,45 @@ export default function StudentCleanlinessSection() {
                       <div style={{ fontSize: '0.78rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {item.description}
                       </div>
+                    </td>
+                    <td>
+                      {item.attachmentUrl || item.supportingDocument ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setViewingDocModal({
+                              url: item.attachmentUrl || item.supportingDocument,
+                              code: item.complaintCode,
+                              title: item.title,
+                              studentName: item.studentName,
+                              rollNumber: item.rollNumber,
+                              hostel: item.hostel,
+                              room: item.roomNumber,
+                              date: item.createdAt
+                            })}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '4px 9px',
+                              background: '#eff6ff',
+                              color: '#1d4ed8',
+                              border: '1px solid #bfdbfe',
+                              borderRadius: '6px',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                            title="View supporting document/photograph"
+                          >
+                            <Eye size={12} />
+                            <span>View</span>
+                          </button>
+                          <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>Attached</span>
+                        </div>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontStyle: 'italic' }}>None</span>
+                      )}
                     </td>
                     <td>
                       <span className={`h-badge ${
@@ -1266,6 +1379,156 @@ export default function StudentCleanlinessSection() {
           </div>
         </div>
       )}
+      {/* Supporting Document Viewer Modal */}
+      {viewingDocModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '1rem'
+          }}
+          onClick={() => setViewingDocModal(null)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '14px',
+              maxWidth: '720px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{
+              padding: '1rem 1.25rem',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: '#dbeafe',
+                  color: '#1d4ed8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                    Supporting Document / Photograph
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                    Complaint Ref: <strong style={{ color: '#7c3aed' }}>{viewingDocModal.code}</strong>
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingDocModal(null)}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '6px',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#475569'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1, textAlign: 'center', background: '#0b1120' }}>
+              <img
+                src={viewingDocModal.url}
+                alt={'Supporting evidence for ' + viewingDocModal.code}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '440px',
+                  objectFit: 'contain',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)'
+                }}
+              />
+            </div>
+
+            <div style={{ padding: '1rem 1.25rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', fontSize: '0.78rem', color: '#475569', marginBottom: '12px' }}>
+                <div>👤 <strong>Student:</strong> {viewingDocModal.studentName} ({viewingDocModal.rollNumber})</div>
+                <div>🏠 <strong>Hostel &amp; Room:</strong> {viewingDocModal.hostel} · Rm {viewingDocModal.room}</div>
+                <div>📋 <strong>Issue:</strong> {viewingDocModal.title}</div>
+                <div>📅 <strong>Lodged Date:</strong> {viewingDocModal.date ? new Date(viewingDocModal.date).toLocaleDateString() : 'N/A'}</div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckCircle2 size={14} /> Verified Supporting Evidence Document
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <a
+                    href={viewingDocModal.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '6px 12px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      color: '#334155',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    Open Full Size
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setViewingDocModal(null)}
+                    style={{
+                      padding: '6px 16px',
+                      background: '#2563eb',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      color: '#ffffff',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Done Viewing
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

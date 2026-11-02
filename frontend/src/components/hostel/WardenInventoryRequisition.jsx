@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { isWardenSuspended, getWardenPermissions, getWardenIdFromAccount } from '../../services/wardenManagementStore.js';
 import {
   Layers,
   Package,
@@ -37,15 +38,21 @@ import {
   ShieldAlert,
   SlidersHorizontal,
   LayoutGrid,
-  Table as TableIcon
+  Table as TableIcon,
+  Boxes
 } from 'lucide-react';
 import {
   getAllIndents,
   raiseNewIndent,
   deleteIndent,
+  resetIndentsToDefault,
   PRESET_MATERIALS
 } from '../../services/hostelIndentStore.js';
+import { getRoomsForHostelAndFloor } from '../../services/hostelRoomStore.js';
+import { getAllHostels } from '../../services/hostelAttendanceStore.js';
 import './WardenInventoryRequisition.css';
+import './HostelIndentSection.css';
+import RequisitionFormDetailView from './RequisitionFormDetailView.jsx';
 
 // 13 REQUIRED REQUEST TYPES
 const REQUEST_TYPES = [
@@ -192,13 +199,54 @@ export default function WardenInventoryRequisition({ account }) {
 
   // Navigation Tabs: 'overview' | 'create' | 'my-requests' | 'recommendations'
   const [activeTab, setActiveTab] = useState('overview');
+  const [isSuspended, setIsSuspended] = useState(() => isWardenSuspended(account || wardenName));
+  const [permsTick, setPermsTick] = useState(0);
+
+  const wardenId = useMemo(() => getWardenIdFromAccount(account || wardenName), [account, wardenName]);
+
+  useEffect(() => {
+    const handleStatusSync = () => {
+      setIsSuspended(isWardenSuspended(account || wardenName));
+    };
+    const handlePermSync = () => setPermsTick(t => t + 1);
+    const handleHostelSync = () => {
+      const all = getAllHostels();
+      if (all && all.length > 0) setHostelList(all);
+    };
+
+    window.addEventListener('bput_warden_status_changed', handleStatusSync);
+    window.addEventListener('bput_warden_permissions_changed', handlePermSync);
+    window.addEventListener('bput_hostels_updated', handleHostelSync);
+    window.addEventListener('storage', handleStatusSync);
+    window.addEventListener('storage', handlePermSync);
+    window.addEventListener('storage', handleHostelSync);
+
+    return () => {
+      window.removeEventListener('bput_warden_status_changed', handleStatusSync);
+      window.removeEventListener('bput_warden_permissions_changed', handlePermSync);
+      window.removeEventListener('bput_hostels_updated', handleHostelSync);
+      window.removeEventListener('storage', handleStatusSync);
+      window.removeEventListener('storage', handlePermSync);
+      window.removeEventListener('storage', handleHostelSync);
+    };
+  }, [account, wardenName]);
+
+  const canCreateRequisitions = useMemo(() => {
+    if (isSuspended) return false;
+    const perms = getWardenPermissions(wardenId);
+    return perms.createInventoryRequisitions !== false;
+  }, [isSuspended, wardenId, permsTick]);
 
   // Shared Indents State
   const [indents, setIndents] = useState(() => getAllIndents());
   const [toastMsg, setToastMsg] = useState(null);
+  const [hostelList, setHostelList] = useState(() => {
+    const all = getAllHostels();
+    return all && all.length > 0 ? all : AUTHORIZED_HOSTELS.map(h => ({ name: h }));
+  });
 
-  // View Mode in My Requests: 'grid' | 'table'
-  const [viewMode, setViewMode] = useState('grid');
+  // View Mode in My Requests: 'table' (Image 1 ERP Table default) | 'grid'
+  const [viewMode, setViewMode] = useState('table');
 
   // Search & Filters for My Requests
   const [searchQuery, setSearchQuery] = useState('');
@@ -207,8 +255,16 @@ export default function WardenInventoryRequisition({ account }) {
   const [filterType, setFilterType] = useState('ALL');
   const [filterHostel, setFilterHostel] = useState('ALL');
 
+  // Image 1 ERP Table Filters
+  const [tableSearch, setTableSearch] = useState('');
+  const [tableStatus, setTableStatus] = useState('ALL');
+  const [tableMaterial, setTableMaterial] = useState('ALL');
+  const [tableRaisedBy, setTableRaisedBy] = useState('ALL');
+  const [showWarningBanner, setShowWarningBanner] = useState(true);
+
   // Selected Request Modal (7-Stage Details)
   const [selectedRequestModal, setSelectedRequestModal] = useState(null);
+  const [expandedRowId, setExpandedRowId] = useState(null);
 
   // Confirmation Modal state
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -224,7 +280,7 @@ export default function WardenInventoryRequisition({ account }) {
     quantity: 1,
     unit: 'Pieces',
     hostelName: defaultHostel,
-    roomLocation: '',
+    roomLocation: 'Room 101',
     priority: 'Medium',
     expectedDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
     estimatedCost: '',
@@ -241,6 +297,7 @@ export default function WardenInventoryRequisition({ account }) {
   };
 
   const [formData, setFormData] = useState(initialFormState);
+  const [indentFloor, setIndentFloor] = useState('1st Floor');
   const [formErrors, setFormErrors] = useState({});
   const [isManualEntry, setIsManualEntry] = useState(false);
 
@@ -416,6 +473,14 @@ export default function WardenInventoryRequisition({ account }) {
 
   // Form Action 1: Save as Draft
   const handleSaveDraft = () => {
+    if (isSuspended) {
+      showToast('⚠️ Action blocked: Warden account is suspended. All operations are locked to Read-Only.');
+      return;
+    }
+    if (!canCreateRequisitions) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     if (!formData.requestTitle.trim() && !formData.productName.trim()) {
       showToast('Please enter at least a Request Title or Product Name to save a draft.');
       return;
@@ -444,6 +509,14 @@ export default function WardenInventoryRequisition({ account }) {
   // Form Action 3: Trigger Submit (Opens Confirmation Modal)
   const handleInitiateSubmit = (e) => {
     if (e) e.preventDefault();
+    if (isSuspended) {
+      showToast('⚠️ Action blocked: Warden account is suspended. Submitting requisitions is disabled.');
+      return;
+    }
+    if (!canCreateRequisitions) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     if (!validateForm()) {
       showToast('Please complete all required fields highlighted in red.');
       return;
@@ -460,6 +533,14 @@ export default function WardenInventoryRequisition({ account }) {
 
   // Confirm Submission in Modal
   const handleConfirmSubmission = () => {
+    if (isSuspended) {
+      showToast('⚠️ Action blocked: Warden account is suspended.');
+      return;
+    }
+    if (!canCreateRequisitions) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     if (!pendingSubmitData) return;
 
     const { newIndent } = raiseNewIndent(pendingSubmitData);
@@ -492,6 +573,10 @@ export default function WardenInventoryRequisition({ account }) {
 
   // Submit existing Draft from My Requests
   const handleSubmitExistingDraft = (draftItem) => {
+    if (isSuspended) {
+      showToast('⚠️ Action blocked: Warden account is suspended.');
+      return;
+    }
     const { newIndent } = raiseNewIndent({
       ...draftItem,
       isDraft: false,
@@ -503,6 +588,10 @@ export default function WardenInventoryRequisition({ account }) {
 
   // Delete Draft
   const handleDeleteDraft = (draftId) => {
+    if (isSuspended) {
+      showToast('⚠️ Action blocked: Warden account is suspended.');
+      return;
+    }
     deleteIndent(draftId);
     refreshIndents();
     showToast('Draft deleted.');
@@ -540,6 +629,80 @@ export default function WardenInventoryRequisition({ account }) {
       return matchSearch && matchStatus && matchPriority && matchType && matchHostel;
     });
   }, [indents, searchQuery, filterStatus, filterPriority, filterType, filterHostel]);
+
+  // Detailed Indent Stats matching Image 1
+  const indentStats = useMemo(() => {
+    const total = indents.length;
+    const pending = indents.filter(i => !i.isDraft && (!i.isApproved && i.status !== 'Rejected')).length;
+    const approved = indents.filter(i => i.isApproved).length;
+    const issued = indents.filter(i => i.issued).length;
+    const totalCost = indents.reduce((acc, curr) => {
+      const num = parseFloat(String(curr.approxCost || '').replace(/[^0-9.]/g, '') || curr.costNum || 0);
+      return acc + (isNaN(num) ? 0 : num);
+    }, 0);
+    return { total, pending, approved, issued, totalCost };
+  }, [indents]);
+
+  // Filtered Indents for Image 1 ERP Table
+  const filteredIndentsForTable = useMemo(() => {
+    return indents.filter(item => {
+      // Material match
+      const matName = item.materialName || item.productName || '';
+      const matchMat = tableMaterial === 'ALL' || matName.toLowerCase().includes(tableMaterial.toLowerCase());
+
+      // Status match
+      let matchStat = true;
+      if (tableStatus === 'Approved') matchStat = item.isApproved === true;
+      else if (tableStatus === 'Pending') matchStat = !item.isApproved && item.status !== 'Rejected' && !item.isDraft;
+      else if (tableStatus === 'Issued') matchStat = item.issued === true;
+      else if (tableStatus === 'Rejected') matchStat = item.status === 'Rejected';
+
+      // Raised By match
+      const raised = item.raisedBy || '';
+      const matchRaised = tableRaisedBy === 'ALL' || raised.toLowerCase().includes(tableRaisedBy.toLowerCase());
+
+      // Search match
+      const q = (tableSearch || searchQuery).toLowerCase().trim();
+      const matchSearch = !q ||
+        (item.indentNo && item.indentNo.toLowerCase().includes(q)) ||
+        (item.referenceNo && item.referenceNo.toLowerCase().includes(q)) ||
+        matName.toLowerCase().includes(q) ||
+        (item.code && item.code.toLowerCase().includes(q)) ||
+        (item.purpose && item.purpose.toLowerCase().includes(q)) ||
+        raised.toLowerCase().includes(q);
+
+      return matchMat && matchStat && matchRaised && matchSearch;
+    });
+  }, [indents, tableMaterial, tableStatus, tableRaisedBy, tableSearch, searchQuery]);
+
+  // CSV Export
+  const exportIndentsToCsv = (items) => {
+    const headers = ['#', 'Requisition/Indent No.', 'Material Name', 'Code', 'Quantity', 'Approx Cost', 'Purpose', 'Expected Date', 'Raised By', 'Current Level', 'Is Approved', 'Issued', 'Status'];
+    const rows = items.map((item, idx) => [
+      idx + 1,
+      `"${item.indentNo || item.referenceNo || ''}"`,
+      `"${item.materialName || item.productName || ''}"`,
+      `"${item.code || ''}"`,
+      `"${item.quantity || ''}"`,
+      `"${item.approxCost || ''}"`,
+      `"${item.purpose || ''}"`,
+      `"${item.expectedDate || ''}"`,
+      `"${item.raisedBy || ''}"`,
+      `"${item.currentLevel || ''}"`,
+      item.isApproved ? 'Yes' : 'No',
+      item.issued ? 'Yes' : 'No',
+      `"${item.status || ''}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `hostel_indent_register_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Exported Indent register to CSV spreadsheet.');
+  };
 
   // Helper for Status Badge Class & Label
   const getStatusBadge = (item) => {
@@ -633,6 +796,29 @@ export default function WardenInventoryRequisition({ account }) {
         </div>
       )}
 
+      {isSuspended && (
+        <div style={{
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: '10px',
+          padding: '14px 18px',
+          margin: '12px 16px 16px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          color: '#991b1b',
+          boxShadow: '0 2px 6px rgba(220, 38, 38, 0.08)'
+        }}>
+          <AlertTriangle size={24} color="#dc2626" style={{ flexShrink: 0 }} />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: '0.96rem' }}>⚠️ Warden Account Suspended by Hostel Administration (Read-Only Mode)</div>
+            <p style={{ margin: '3px 0 0', fontSize: '0.85rem', color: '#b91c1c', lineHeight: 1.4 }}>
+              This warden account is currently in <strong>Read-Only view mode</strong>. You can browse all requisitions, check sanction statuses, and inspect inventory assets, but raising new indents, saving drafts, or making modifications is strictly disabled.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ====================================================================
           A. PAGE HEADER
           ==================================================================== */}
@@ -656,7 +842,13 @@ export default function WardenInventoryRequisition({ account }) {
           <button
             type="button"
             className="warden-btn-primary"
-            onClick={() => setActiveTab('create')}
+            onClick={() => {
+              if (!canCreateRequisitions) {
+                showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+                return;
+              }
+              setActiveTab('create');
+            }}
             title="Create a new maintenance report or material requisition"
           >
             <Plus size={18} />
@@ -745,7 +937,13 @@ export default function WardenInventoryRequisition({ account }) {
         <button
           type="button"
           className={`warden-tab-btn ${activeTab === 'create' ? 'active' : ''}`}
-          onClick={() => setActiveTab('create')}
+          onClick={() => {
+            if (!canCreateRequisitions) {
+              showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+              return;
+            }
+            setActiveTab('create');
+          }}
         >
           <Plus size={17} />
           <span>Create Request</span>
@@ -1220,30 +1418,61 @@ export default function WardenInventoryRequisition({ account }) {
                     id="req-hostel"
                     className={`warden-select ${formErrors.hostelName ? 'has-error' : ''}`}
                     value={formData.hostelName}
-                    onChange={(e) => handleInputChange('hostelName', e.target.value)}
+                    onChange={(e) => {
+                      const newHostel = e.target.value;
+                      handleInputChange('hostelName', newHostel);
+                      const available = getRoomsForHostelAndFloor(newHostel, indentFloor);
+                      handleInputChange('roomLocation', available[0]?.label || 'Room 101');
+                    }}
                   >
-                    {AUTHORIZED_HOSTELS.map(h => (
-                      <option key={h} value={h}>{h}</option>
-                    ))}
+                    {hostelList.map(h => {
+                      const hName = typeof h === 'string' ? h : (h.name || h.id);
+                      return <option key={hName} value={hName}>{hName}</option>;
+                    })}
                   </select>
                   {formErrors.hostelName && (
                     <span className="warden-field-error">{formErrors.hostelName}</span>
                   )}
                 </div>
 
-                {/* 8. Room / Location */}
+                {/* 7b. Floor Selection */}
+                <div className="warden-form-field">
+                  <label htmlFor="req-floor">
+                    Floor <span className="warden-req-star">*</span>
+                  </label>
+                  <select
+                    id="req-floor"
+                    className="warden-select"
+                    value={indentFloor}
+                    onChange={(e) => {
+                      const newFloor = e.target.value;
+                      setIndentFloor(newFloor);
+                      const available = getRoomsForHostelAndFloor(formData.hostelName, newFloor);
+                      handleInputChange('roomLocation', available[0]?.label || 'Room 101');
+                    }}
+                  >
+                    <option value="1st Floor">1st Floor</option>
+                    <option value="2nd Floor">2nd Floor</option>
+                    <option value="3rd Floor">3rd Floor</option>
+                  </select>
+                </div>
+
+                {/* 8. Room / Location Dropdown */}
                 <div className="warden-form-field">
                   <label htmlFor="req-room">
-                    Room / Location <span className="warden-req-star">*</span>
+                    Room Number <span className="warden-req-star">*</span>
                   </label>
-                  <input
+                  <select
                     id="req-room"
-                    type="text"
-                    className={`warden-input ${formErrors.roomLocation ? 'has-error' : ''}`}
-                    placeholder="e.g., Room 204 / 2nd Floor Corridor / Study Room / Bathroom Block"
+                    className={`warden-select ${formErrors.roomLocation ? 'has-error' : ''}`}
                     value={formData.roomLocation}
                     onChange={(e) => handleInputChange('roomLocation', e.target.value)}
-                  />
+                    required
+                  >
+                    {getRoomsForHostelAndFloor(formData.hostelName, indentFloor).map(r => (
+                      <option key={r.roomNo} value={r.label}>{r.label}</option>
+                    ))}
+                  </select>
                   {formErrors.roomLocation && (
                     <span className="warden-field-error">{formErrors.roomLocation}</span>
                   )}
@@ -1500,303 +1729,823 @@ export default function WardenInventoryRequisition({ account }) {
                 <span>Reset Form</span>
               </button>
 
-              <button
-                type="submit"
-                className="warden-btn-submit"
-                title="Submit this requisition to the Hostel Admin for review"
-              >
+              {isSuspended ? (
+                <button
+                  type="button"
+                  className="warden-btn-submit"
+                  disabled
+                  style={{ opacity: 0.6, cursor: 'not-allowed', background: '#94a3b8' }}
+                  title="Warden account is suspended"
+                >
+                  🔒 Indents Disabled (Account Suspended)
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="warden-btn-submit"
+                  title="Submit this requisition to the Hostel Admin for review"
+                >
                 <Send size={18} />
                 <span>Submit to Hostel Admin</span>
               </button>
+              )}
             </div>
           </form>
         </div>
       )}
 
       {/* ====================================================================
-          TAB 3: MY REQUESTS — REQUEST TRACKING
+          TAB 3: MY REQUESTS — INDENT STATUS (EXACT IMAGE 1 REPLICA)
           ==================================================================== */}
       {activeTab === 'my-requests' && (
-        <div className="warden-tracking-wrap">
-          {/* Filter Bar */}
-          <div className="warden-filter-bar">
-            {/* Search */}
-            <div className="warden-search-box">
-              <Search size={16} />
-              <input
-                type="text"
-                className="warden-search-input"
-                placeholder="Search by title, product, reference, or room..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        <div className="indent-section-body" style={{ padding: 0, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* 1. Hero Header Banner */}
+          <div className="indent-hero-banner" style={{
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%)',
+            borderRadius: '16px',
+            padding: '1.5rem 2rem',
+            color: '#ffffff',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1.25rem',
+            boxShadow: '0 10px 28px -5px rgba(30, 58, 138, 0.35)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', zIndex: 1 }}>
+              <div style={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '14px',
+                background: 'rgba(255, 255, 255, 0.15)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                backdropFilter: 'blur(10px)',
+                display: 'grid',
+                placeItems: 'center',
+                color: '#ffffff',
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
+                flexShrink: 0
+              }}>
+                <Boxes size={26} />
+              </div>
+              <div>
+                <h2 style={{
+                  margin: 0,
+                  fontSize: '1.45rem',
+                  fontWeight: 800,
+                  letterSpacing: '-0.02em',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  flexWrap: 'wrap'
+                }}>
+                  Indent Status
+                  <span style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    padding: '3px 10px',
+                    borderRadius: '20px',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255, 255, 255, 0.35)'
+                  }}>
+                    Hostel Warden (Requisitioner)
+                  </span>
+                </h2>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem', color: '#bfdbfe', maxWidth: '600px' }}>
+                  Track filed material indents, store dispatch status, and manage residential facility requisitions
+                </p>
+              </div>
             </div>
 
-            {/* Filter Selects */}
-            <div className="warden-filter-selects">
-              {/* Status */}
-              <select
-                className="warden-filter-select"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', zIndex: 1 }}>
+              <button
+                type="button"
+                onClick={() => setActiveTab('create')}
+                style={{
+                  background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+                }}
+                title="Raise New Indent for Hostel Needs"
               >
-                <option value="ALL">All Statuses</option>
-                <option value="Pending Admin Approval">Pending Admin Approval</option>
-                <option value="Approved">Approved</option>
-                <option value="Completed">Completed / Issued</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Draft">Drafts</option>
-              </select>
+                <Plus size={16} />
+                <span>RAISE IND</span>
+              </button>
 
-              {/* Priority */}
-              <select
-                className="warden-filter-select"
-                value={filterPriority}
-                onChange={(e) => setFilterPriority(e.target.value)}
+              <button
+                type="button"
+                onClick={() => window.print()}
+                style={{
+                  background: '#ea580c',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '9px 16px',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 12px rgba(234, 88, 12, 0.3)'
+                }}
+                title="Export Indent Register to PDF"
               >
-                <option value="ALL">All Priorities</option>
-                <option value="Urgent">Urgent</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
-              </select>
+                <Printer size={15} />
+                <span>PDF</span>
+              </button>
 
-              {/* Request Type */}
-              <select
-                className="warden-filter-select"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
+              <button
+                type="button"
+                onClick={() => exportIndentsToCsv(filteredIndentsForTable)}
+                style={{
+                  background: '#0284c7',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '9px 16px',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
+                }}
+                title="Export Indent Register to Excel"
               >
-                <option value="ALL">All Request Types</option>
-                {REQUEST_TYPES.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-
-              {/* Hostel */}
-              <select
-                className="warden-filter-select"
-                value={filterHostel}
-                onChange={(e) => setFilterHostel(e.target.value)}
-              >
-                <option value="ALL">All Hostels</option>
-                {AUTHORIZED_HOSTELS.map(h => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
-              </select>
+                <FileSpreadsheet size={15} />
+                <span>EXCEL</span>
+              </button>
 
               {/* View Toggle */}
-              <div className="warden-view-toggle">
+              <div style={{
+                display: 'inline-flex',
+                background: 'rgba(255, 255, 255, 0.15)',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                padding: '2px',
+                marginLeft: '4px'
+              }}>
                 <button
                   type="button"
-                  className={`warden-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
-                  onClick={() => setViewMode('grid')}
-                  title="Card Grid View"
-                >
-                  <LayoutGrid size={16} />
-                </button>
-                <button
-                  type="button"
-                  className={`warden-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+                  style={{
+                    border: 'none',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    background: viewMode === 'table' ? '#ffffff' : 'transparent',
+                    color: viewMode === 'table' ? '#1e3a8a' : '#ffffff',
+                    fontWeight: 700
+                  }}
                   onClick={() => setViewMode('table')}
                   title="ERP Table View"
                 >
-                  <TableIcon size={16} />
+                  <TableIcon size={14} />
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    border: 'none',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    background: viewMode === 'grid' ? '#ffffff' : 'transparent',
+                    color: viewMode === 'grid' ? '#1e3a8a' : '#ffffff',
+                    fontWeight: 700
+                  }}
+                  onClick={() => setViewMode('grid')}
+                  title="Card Grid View"
+                >
+                  <LayoutGrid size={14} />
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Results Count Banner */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            fontSize: '0.85rem',
-            color: '#64748b',
-            padding: '0 0.25rem'
-          }}>
-            <span>Showing <strong>{filteredRequests.length}</strong> requisition record(s)</span>
-            {searchQuery && (
-              <button
-                type="button"
-                style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontWeight: 600 }}
-                onClick={() => setSearchQuery('')}
-              >
-                Clear Search
-              </button>
-            )}
+          {/* 2. Executive 5-KPI Cards */}
+          <div className="indent-kpi-grid">
+            <div
+              className={`indent-kpi-card ${tableStatus === 'ALL' ? 'active-filter' : ''}`}
+              onClick={() => setTableStatus('ALL')}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="indent-kpi-header">
+                <span className="indent-kpi-title">Total Requisitions</span>
+                <div className="indent-kpi-icon-wrap blue"><Boxes size={20} /></div>
+              </div>
+              <div className="indent-kpi-value">{indentStats.total}</div>
+              <div className="indent-kpi-footer">
+                <span className="indent-kpi-badge neutral">Catalog Log</span>
+                <span className="indent-kpi-subtext">All filed indents</span>
+              </div>
+            </div>
+
+            <div
+              className={`indent-kpi-card ${tableStatus === 'Pending' ? 'active-filter' : ''}`}
+              onClick={() => setTableStatus('Pending')}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="indent-kpi-header">
+                <span className="indent-kpi-title">Pending Sanctions</span>
+                <div className="indent-kpi-icon-wrap amber"><Clock size={20} /></div>
+              </div>
+              <div className="indent-kpi-value warning">
+                {indentStats.pending}
+                {indentStats.pending > 0 && <span className="indent-pulse-indicator" />}
+              </div>
+              <div className="indent-kpi-footer">
+                <span className="indent-kpi-badge amber">Awaiting Admin</span>
+                <span className="indent-kpi-subtext">Action required</span>
+              </div>
+            </div>
+
+            <div
+              className={`indent-kpi-card ${tableStatus === 'Approved' ? 'active-filter' : ''}`}
+              onClick={() => setTableStatus('Approved')}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="indent-kpi-header">
+                <span className="indent-kpi-title">Approved by Admin</span>
+                <div className="indent-kpi-icon-wrap emerald"><CheckCircle2 size={20} /></div>
+              </div>
+              <div className="indent-kpi-value success">{indentStats.approved}</div>
+              <div className="indent-kpi-footer">
+                <span className="indent-kpi-badge emerald">Store Authorized</span>
+                <span className="indent-kpi-subtext">Sanction granted</span>
+              </div>
+            </div>
+
+            <div
+              className={`indent-kpi-card ${tableStatus === 'Issued' ? 'active-filter' : ''}`}
+              onClick={() => setTableStatus('Issued')}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="indent-kpi-header">
+                <span className="indent-kpi-title">Store Dispatched</span>
+                <div className="indent-kpi-icon-wrap sky"><PackageCheck size={20} /></div>
+              </div>
+              <div className="indent-kpi-value sky">{indentStats.issued}</div>
+              <div className="indent-kpi-footer">
+                <span className="indent-kpi-badge sky">Delivered</span>
+                <span className="indent-kpi-subtext">Issued to hostels</span>
+              </div>
+            </div>
+
+            <div className="indent-kpi-card">
+              <div className="indent-kpi-header">
+                <span className="indent-kpi-title">Est. Procurement Value</span>
+                <div className="indent-kpi-icon-wrap purple"><DollarSign size={20} /></div>
+              </div>
+              <div className="indent-kpi-value purple">
+                ₹{indentStats.totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="indent-kpi-footer">
+                <span className="indent-kpi-badge purple">Budget Supervised</span>
+                <span className="indent-kpi-subtext">Campus allocation</span>
+              </div>
+            </div>
           </div>
 
-          {/* VIEW 1: MODERN CARD GRID */}
-          {viewMode === 'grid' && (
-            <div className="warden-requests-grid">
-              {filteredRequests.length === 0 ? (
-                <div style={{
-                  gridColumn: '1 / -1',
-                  textAlign: 'center',
-                  padding: '3rem 1rem',
-                  background: '#ffffff',
-                  borderRadius: '14px',
-                  border: '1px dashed #cbd5e1'
-                }}>
-                  <Package size={40} color="#94a3b8" />
-                  <h4 style={{ margin: '0.75rem 0 0.25rem 0', color: '#334155' }}>No requisitions match your filter criteria</h4>
-                  <p style={{ margin: 0, fontSize: '0.84rem', color: '#64748b' }}>
-                    Try clearing filters or click "+ Create New Request" to raise a new report.
-                  </p>
+          {/* 3. Modern Alert Banner */}
+          {showWarningBanner && indentStats.pending > 0 && (
+            <div className="indent-alert-banner">
+              <div className="indent-alert-left">
+                <div className="indent-alert-icon-box">
+                  <AlertTriangle size={20} />
                 </div>
-              ) : (
-                filteredRequests.map(req => (
-                  <div key={req.id} className="warden-req-card">
-                    {/* Top Row */}
-                    <div className="warden-card-top-row">
-                      <span className="warden-card-ref">{req.referenceNo}</span>
-                      <div className="warden-card-badges">
-                        {getPriorityBadge(req.priority)}
-                        {getStatusBadge(req)}
-                      </div>
-                    </div>
-
-                    {/* Title & Product */}
-                    <div className="warden-card-body">
-                      <div className="warden-card-title">{req.requestTitle || req.productName}</div>
-                      <div className="warden-card-prod">
-                        <Wrench size={13} color="#64748b" />
-                        <span>{req.productName}</span>
-                      </div>
-                    </div>
-
-                    {/* Details Grid */}
-                    <div className="warden-card-details-grid">
-                      <div className="warden-card-kv">
-                        <small>Quantity</small>
-                        <span>{req.quantity}</span>
-                      </div>
-                      <div className="warden-card-kv">
-                        <small>Approx Cost</small>
-                        <span>{req.approxCost || `₹${req.estimatedCost || '0.00'}`}</span>
-                      </div>
-                      <div className="warden-card-kv">
-                        <small>Location</small>
-                        <span title={req.roomLocation}>{req.roomLocation}</span>
-                      </div>
-                      <div className="warden-card-kv">
-                        <small>Expected Date</small>
-                        <span>{req.expectedDate}</span>
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="warden-card-footer">
-                      <span className="warden-card-time">{req.submittedAt}</span>
-
-                      <div style={{ display: 'flex', gap: '0.4rem' }}>
-                        {req.isDraft ? (
-                          <>
-                            <button
-                              type="button"
-                              className="warden-card-btn-view"
-                              style={{ background: '#2563eb', color: '#ffffff', borderColor: '#2563eb' }}
-                              onClick={() => handleSubmitExistingDraft(req)}
-                            >
-                              <Send size={13} /> Submit
-                            </button>
-                            <button
-                              type="button"
-                              style={{
-                                background: '#fef2f2', border: '1px solid #fecaca',
-                                color: '#dc2626', borderRadius: '8px', padding: '0.4rem', cursor: 'pointer'
-                              }}
-                              onClick={() => handleDeleteDraft(req.id)}
-                              title="Delete Draft"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className="warden-card-btn-view"
-                            onClick={() => setSelectedRequestModal(req)}
-                          >
-                            <Eye size={14} /> View Details &amp; Timeline
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+                <div className="indent-alert-text">
+                  <strong>Requisitions Awaiting Review:</strong> You have <strong>{indentStats.pending} pending requisition(s)</strong> awaiting Hostel Admin sanction &amp; store issuance.
+                </div>
+              </div>
+              <div className="indent-alert-actions">
+                <button
+                  type="button"
+                  className="indent-alert-btn-filter"
+                  onClick={() => setTableStatus('Pending')}
+                >
+                  Review Pending ({indentStats.pending})
+                </button>
+                <button
+                  type="button"
+                  className="indent-alert-close-btn"
+                  onClick={() => setShowWarningBanner(false)}
+                  title="Dismiss alert"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
           )}
 
-          {/* VIEW 2: CLEAN ERP TABLE */}
+          {/* 4. Filter Strip with Search & Status Pills */}
+          <div className="indent-toolbar-card">
+            <div className="indent-toolbar-top-row">
+              <div className="indent-search-box-modern">
+                <Search size={16} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search Indent No, Material Name, Code, Purpose, Raised By..."
+                  value={tableSearch}
+                  onChange={e => setTableSearch(e.target.value)}
+                />
+                {tableSearch && (
+                  <button
+                    type="button"
+                    className="search-clear-btn"
+                    onClick={() => setTableSearch('')}
+                    title="Clear search"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              <div className="indent-action-buttons-group">
+                <button
+                  type="button"
+                  className="indent-btn-action-ghost"
+                  onClick={() => {
+                    const def = resetIndentsToDefault();
+                    setIndents(def);
+                    setTableSearch('');
+                    setTableMaterial('ALL');
+                    setTableRaisedBy('ALL');
+                    setTableStatus('ALL');
+                    showToast('Indent records reset to university sample defaults.');
+                  }}
+                  title="Reset to default sample data"
+                >
+                  <RotateCcw size={13} />
+                  <span>Reset</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="indent-toolbar-bottom-row">
+              <div className="indent-status-pills-wrap">
+                <span className="filter-pill-label">Status:</span>
+                {[
+                  { id: 'ALL', label: 'All', count: indentStats.total },
+                  { id: 'Pending', label: 'Pending', count: indentStats.pending, alert: indentStats.pending > 0 },
+                  { id: 'Approved', label: 'Approved', count: indentStats.approved },
+                  { id: 'Issued', label: 'Issued', count: indentStats.issued },
+                  { id: 'Rejected', label: 'Rejected', count: indents.filter(i => i.status === 'Rejected').length }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`indent-status-pill ${tableStatus === tab.id ? 'active' : ''} ${tab.alert ? 'has-alert' : ''}`}
+                    onClick={() => setTableStatus(tab.id)}
+                  >
+                    <span>{tab.label}</span>
+                    <span className="pill-badge">{tab.count}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="indent-select-filters-wrap">
+                <select
+                  className="indent-select-filter"
+                  value={tableMaterial}
+                  onChange={e => setTableMaterial(e.target.value)}
+                >
+                  <option value="ALL">— All Materials —</option>
+                  {PRESET_MATERIALS.filter(m => m.name !== 'CUSTOM_ITEM').map(m => (
+                    <option key={m.code} value={m.name}>{m.name}</option>
+                  ))}
+                </select>
+
+                <select
+                  className="indent-select-filter"
+                  value={tableRaisedBy}
+                  onChange={e => setTableRaisedBy(e.target.value)}
+                >
+                  <option value="ALL">— Raised By —</option>
+                  <option value="Tanmaya">Mr. Tanmaya Kumar Routray</option>
+                  <option value="Nibedita">Mrs. Nibedita Das</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* VIEW 1: MODERN ERP INDENT STATUS TABLE (DEFAULT) */}
           {viewMode === 'table' && (
-            <div className="warden-table-wrap">
-              <table className="warden-table">
+            <div className="indent-table-container-modern">
+              <table className="indent-data-table-modern">
                 <thead>
                   <tr>
-                    <th>Reference</th>
-                    <th>Request Title &amp; Product</th>
-                    <th>Quantity</th>
-                    <th>Hostel &amp; Location</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Submitted</th>
-                    <th style={{ textAlign: 'right' }}>Action</th>
+                    <th style={{ width: '45px', textAlign: 'center' }}>#</th>
+                    <th style={{ minWidth: '135px' }}>Requisition / Indent No.</th>
+                    <th style={{ minWidth: '220px' }}>Material Name</th>
+                    <th style={{ width: '90px' }}>Code</th>
+                    <th style={{ width: '95px' }}>Quantity</th>
+                    <th style={{ width: '115px' }}>Approx Cost</th>
+                    <th style={{ minWidth: '130px' }}>Purpose</th>
+                    <th style={{ width: '115px' }}>Expected Date</th>
+                    <th style={{ minWidth: '165px' }}>Raised By</th>
+                    <th style={{ width: '130px' }}>Current Level</th>
+                    <th style={{ width: '95px', textAlign: 'center' }}>Approval</th>
+                    <th style={{ width: '85px', textAlign: 'center' }}>Issued?</th>
+                    <th style={{ width: '150px', textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {filteredRequests.length === 0 ? (
+                  {filteredIndentsForTable.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
-                        No requisitions found matching the filter criteria.
+                      <td colSpan={13} style={{ textAlign: 'center', padding: '3.5rem', color: '#64748b' }}>
+                        <Boxes size={36} color="#cbd5e1" style={{ margin: '0 auto 10px', display: 'block' }} />
+                        <strong style={{ fontSize: '1rem', color: '#1e293b' }}>No requisitions matching selected filters</strong>
+                        <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>
+                          Try clearing search criteria or adjusting the status pill filters.
+                        </div>
                       </td>
                     </tr>
                   ) : (
-                    filteredRequests.map(req => (
-                      <tr key={req.id}>
-                        <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#2563eb' }}>
-                          {req.referenceNo}
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{req.requestTitle}</div>
-                          <small style={{ color: '#64748b' }}>{req.productName} ({req.requestType})</small>
-                        </td>
-                        <td style={{ fontWeight: 600 }}>{req.quantity}</td>
-                        <td>
-                          <div>{req.roomLocation}</div>
-                          <small style={{ color: '#64748b' }}>{req.hostelName}</small>
-                        </td>
-                        <td>{getPriorityBadge(req.priority)}</td>
-                        <td>{getStatusBadge(req)}</td>
-                        <td style={{ fontSize: '0.8rem', color: '#64748b' }}>{req.submittedAt}</td>
-                        <td style={{ textAlign: 'right' }}>
-                          {req.isDraft ? (
-                            <button
-                              type="button"
-                              className="warden-card-btn-view"
-                              style={{ background: '#2563eb', color: '#ffffff' }}
-                              onClick={() => handleSubmitExistingDraft(req)}
-                            >
-                              <Send size={13} /> Submit
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="warden-card-btn-view"
-                              onClick={() => setSelectedRequestModal(req)}
-                            >
-                              <Eye size={13} /> Timeline
-                            </button>
+                    filteredIndentsForTable.map((item) => {
+                      const isExpanded = expandedRowId === item.id;
+                      return (
+                        <React.Fragment key={item.id}>
+                          <tr className={item.status === 'Pending' ? 'row-pending' : ''} style={{
+                            background: isExpanded ? '#f8fafc' : undefined
+                          }}>
+                            {/* Expand Chevron Column */}
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                className="expand-chevron-btn"
+                                onClick={() => setExpandedRowId(isExpanded ? null : item.id)}
+                                title={isExpanded ? 'Collapse Form Details' : 'Expand Form Details'}
+                              >
+                                {isExpanded ? '▼' : '▶'}
+                              </button>
+                            </td>
+
+                            {/* Requisition ID */}
+                            <td>
+                              <span
+                                className="indent-ref-mono"
+                                onClick={() => setSelectedRequestModal(item)}
+                                title="Click to view full dossier"
+                                style={{ cursor: 'pointer' }}
+                              >
+                                {item.indentNo || item.referenceNo?.replace(/^REQ-/, '')}
+                              </span>
+                            </td>
+
+                            {/* Material Name */}
+                            <td>
+                              <div className="material-name-primary">
+                                {item.materialName || item.productName}
+                              </div>
+                              {item.isCustom && (
+                                <span className="custom-item-chip" style={{
+                                  display: 'inline-block',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 800,
+                                  background: '#fef3c7',
+                                  color: '#b45309',
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  border: '1px solid #fde68a',
+                                  marginTop: '2px'
+                                }}>
+                                  ★ Custom Warden Requisition
+                                </span>
+                              )}
+                              {(item.remarks || item.justification) && (
+                                <div className="material-remarks-sub" style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+                                  {item.remarks || item.justification}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Code */}
+                            <td>
+                              <span className="indent-code-badge">{item.code || 'REQ-MAT'}</span>
+                            </td>
+
+                            {/* Quantity */}
+                            <td>
+                              <span className="indent-qty-pill">{item.quantity}</span>
+                            </td>
+
+                            {/* Approx Cost */}
+                            <td>
+                              <span className="indent-cost-text">
+                                {item.approxCost ? item.approxCost : `₹${Number(item.costNum || 0).toFixed(2)}`}
+                              </span>
+                            </td>
+
+                            {/* Purpose */}
+                            <td>
+                              <span className="purpose-pill" title={item.purpose || `${item.hostelName} - ${item.roomLocation}`}>
+                                {item.purpose || `${item.hostelName} - ${item.roomLocation}`}
+                              </span>
+                            </td>
+
+                            {/* Expected Date */}
+                            <td style={{ color: '#475569', fontSize: '0.82rem' }}>
+                              {item.expectedDate}
+                            </td>
+
+                            {/* Raised By */}
+                            <td>
+                              <div className="requisitioner-cell">
+                                <div className="requisitioner-name">{item.raisedBy}</div>
+                                <small style={{ fontSize: '0.72rem', color: '#64748b' }}>Hostel Warden</small>
+                              </div>
+                            </td>
+
+                            {/* Current Level */}
+                            <td>
+                              <span className={`level-pill ${(item.currentLevel || '').includes('Level-2') || (item.currentLevel || '').includes('Store Dispatched') ? 'level-2' : ''}`}>
+                                {item.currentLevel || (item.isApproved ? 'Level-2 (Store Issued)' : 'Level-1 (Pending Review)')}
+                              </span>
+                            </td>
+
+                            {/* Approval */}
+                            <td style={{ textAlign: 'center' }}>
+                              {item.isApproved ? (
+                                <div className="icon-check-circle" title={`Approved by ${item.approvedBy || 'Hostel Admin'}`}>
+                                  <Check size={14} strokeWidth={3} />
+                                </div>
+                              ) : item.status === 'Rejected' ? (
+                                <span className="status-rejected-tag">Rejected</span>
+                              ) : (
+                                <div className="icon-pending-clock" title="Awaiting Hostel Admin Sanction">
+                                  <Clock size={14} />
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Issued? */}
+                            <td style={{ textAlign: 'center' }}>
+                              {item.issued ? (
+                                <div className="icon-check-circle" title="Dispatched from University Central Store">
+                                  <Check size={14} strokeWidth={3} />
+                                </div>
+                              ) : (
+                                <div className="icon-pending-clock" title="Awaiting Store Issuance">
+                                  <Clock size={14} />
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Action Column */}
+                            <td style={{ textAlign: 'center' }}>
+                              <div className="indent-action-cell-group" style={{ display: 'inline-flex', gap: '5px', alignItems: 'center' }}>
+                                <button
+                                  type="button"
+                                  className="btn-action-modern view"
+                                  onClick={() => setSelectedRequestModal(item)}
+                                  title="View Full Specification Slip"
+                                  style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #cbd5e1',
+                                    background: '#ffffff',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    color: '#0f172a',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                >
+                                  <Eye size={12} /> View
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="btn-action-modern view"
+                                  onClick={() => {
+                                    setSelectedRequestModal(item);
+                                    setTimeout(() => window.print(), 300);
+                                  }}
+                                  title="Print Indent Voucher"
+                                  style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #cbd5e1',
+                                    background: '#ffffff',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    color: '#0f172a',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                >
+                                  <Printer size={12} />
+                                </button>
+
+                                {item.status === 'Pending' && !item.isDraft && (
+                                  <button
+                                    type="button"
+                                    className="btn-action-modern reject"
+                                    onClick={() => {
+                                      if (window.confirm(`Cancel pending requisition #${item.indentNo || item.id}?`)) {
+                                        deleteIndent(item.id);
+                                        setIndents(getAllIndents());
+                                        showToast(`Requisition #${item.indentNo || item.id} cancelled.`);
+                                      }
+                                    }}
+                                    title="Cancel Pending Requisition"
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #fecaca',
+                                      background: '#fef2f2',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 700,
+                                      color: '#dc2626',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                  >
+                                    <X size={12} /> Cancel
+                                  </button>
+                                )}
+
+                                {item.isDraft && (
+                                  <button
+                                    type="button"
+                                    className="btn-action-modern approve"
+                                    onClick={() => handleSubmitExistingDraft(item)}
+                                    title="Submit Draft to Hostel Admin"
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #bfdbfe',
+                                      background: '#eff6ff',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 700,
+                                      color: '#2563eb',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                  >
+                                    <Send size={12} /> Submit
+                                  </button>
+                                )}
+
+                                {item.issued && (
+                                  <span className="indent-completed-badge" style={{
+                                    fontSize: '0.72rem',
+                                    fontWeight: 800,
+                                    color: '#059669',
+                                    background: '#ecfdf5',
+                                    padding: '3px 7px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #a7f3d0',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}>
+                                    <CheckCircle2 size={11} /> Completed
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+
+                          {/* Accordion Expanded Detail View */}
+                          {isExpanded && (
+                            <tr className="indent-expanded-row">
+                              <td colSpan={13} style={{ padding: '1rem', background: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
+                                <RequisitionFormDetailView
+                                  item={item}
+                                  isHostelAdmin={false}
+                                  onSubmitDraft={handleSubmitExistingDraft}
+                                  onClose={() => setExpandedRowId(null)}
+                                />
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                      </tr>
-                    ))
+                        </React.Fragment>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* VIEW 2: CARD GRID VIEW (Optional toggle) */}
+          {viewMode === 'grid' && (
+            <div style={{ marginTop: '1rem' }}>
+              <div className="warden-filter-bar">
+                <div className="warden-search-box">
+                  <Search size={16} />
+                  <input
+                    type="text"
+                    className="warden-search-input"
+                    placeholder="Search by title, product, reference, or room..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="warden-filter-selects">
+                  <select
+                    className="warden-filter-select"
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="Pending Admin Approval">Pending Admin Approval</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Completed">Completed / Issued</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="Draft">Drafts</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="warden-requests-grid">
+                {filteredRequests.length === 0 ? (
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    textAlign: 'center',
+                    padding: '3rem 1rem',
+                    background: '#ffffff',
+                    borderRadius: '14px',
+                    border: '1px dashed #cbd5e1'
+                  }}>
+                    <Package size={40} color="#94a3b8" />
+                    <h4 style={{ margin: '0.75rem 0 0.25rem 0', color: '#334155' }}>No requisitions match your filter criteria</h4>
+                  </div>
+                ) : (
+                  filteredRequests.map(req => (
+                    <div key={req.id} className="warden-req-card">
+                      <div className="warden-card-top-row">
+                        <span className="warden-card-ref">{req.referenceNo}</span>
+                        <div className="warden-card-badges">
+                          {getPriorityBadge(req.priority)}
+                          {getStatusBadge(req)}
+                        </div>
+                      </div>
+                      <div className="warden-card-body">
+                        <div className="warden-card-title">{req.requestTitle || req.productName}</div>
+                        <div className="warden-card-prod">
+                          <Wrench size={13} color="#64748b" />
+                          <span>{req.productName}</span>
+                        </div>
+                      </div>
+                      <div className="warden-card-details-grid">
+                        <div className="warden-card-kv">
+                          <small>Quantity</small>
+                          <span>{req.quantity}</span>
+                        </div>
+                        <div className="warden-card-kv">
+                          <small>Approx Cost</small>
+                          <span>{req.approxCost || `₹${req.estimatedCost || '0.00'}`}</span>
+                        </div>
+                        <div className="warden-card-kv">
+                          <small>Location</small>
+                          <span title={req.roomLocation}>{req.roomLocation}</span>
+                        </div>
+                        <div className="warden-card-kv">
+                          <small>Expected Date</small>
+                          <span>{req.expectedDate}</span>
+                        </div>
+                      </div>
+                      <div className="warden-card-footer">
+                        <span className="warden-card-time">{req.submittedAt}</span>
+                        <button
+                          type="button"
+                          className="warden-card-btn-view"
+                          onClick={() => setSelectedRequestModal(req)}
+                        >
+                          <Eye size={14} /> View Details &amp; Timeline
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -2104,142 +2853,16 @@ export default function WardenInventoryRequisition({ account }) {
                 </div>
               )}
 
-              {/* Requisition Data Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '1rem',
-                background: '#f8fafc',
-                padding: '1.25rem',
-                borderRadius: '12px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div>
-                  <small style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Product / Material Name
-                  </small>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-                    {selectedRequestModal.productName}
-                  </div>
-                </div>
-
-                <div>
-                  <small style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Quantity &amp; Unit
-                  </small>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-                    {selectedRequestModal.quantity}
-                  </div>
-                </div>
-
-                <div>
-                  <small style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Hostel Block
-                  </small>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>
-                    {selectedRequestModal.hostelName}
-                  </div>
-                </div>
-
-                <div>
-                  <small style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Room / Location
-                  </small>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>
-                    {selectedRequestModal.roomLocation}
-                  </div>
-                </div>
-
-                <div>
-                  <small style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Estimated Total Cost
-                  </small>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#16a34a' }}>
-                    {selectedRequestModal.approxCost || `₹${selectedRequestModal.estimatedCost || '0.00'}`}
-                  </div>
-                </div>
-
-                <div>
-                  <small style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Expected Completion Date
-                  </small>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>
-                    {selectedRequestModal.expectedDate}
-                  </div>
-                </div>
+              {/* Complete 3-Section Application Form Format matching Image 1 */}
+              <div style={{ marginTop: '1.25rem' }}>
+                <RequisitionFormDetailView
+                  item={selectedRequestModal}
+                  isHostelAdmin={false}
+                  isModal={true}
+                  onSubmitDraft={handleSubmitExistingDraft}
+                  onClose={() => setSelectedRequestModal(null)}
+                />
               </div>
-
-              {/* Full Problem Description */}
-              <div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  Warden Problem Description &amp; Justification
-                </div>
-                <div style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  padding: '1rem',
-                  fontSize: '0.88rem',
-                  color: '#1e293b',
-                  lineHeight: 1.5
-                }}>
-                  {selectedRequestModal.description || selectedRequestModal.remarks || 'No detailed description provided.'}
-                </div>
-              </div>
-
-              {/* Problem Diagnostic Indicators */}
-              {(selectedRequestModal.itemCondition || selectedRequestModal.repairPossible) && (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '0.75rem',
-                  fontSize: '0.82rem'
-                }}>
-                  <div style={{ background: '#f8fafc', padding: '0.65rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.72rem' }}>Condition:</span>
-                    <strong>{selectedRequestModal.itemCondition || 'N/A'}</strong>
-                  </div>
-                  <div style={{ background: '#f8fafc', padding: '0.65rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.72rem' }}>Repair Possible:</span>
-                    <strong>{selectedRequestModal.repairPossible || 'N/A'}</strong>
-                  </div>
-                  <div style={{ background: '#f8fafc', padding: '0.65rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.72rem' }}>Safety Hazard:</span>
-                    <strong style={{ color: selectedRequestModal.safetyHazard ? '#dc2626' : '#10b981' }}>
-                      {selectedRequestModal.safetyHazard ? 'YES - Active Hazard' : 'No Hazard'}
-                    </strong>
-                  </div>
-                </div>
-              )}
-
-              {/* Attachments if any */}
-              {selectedRequestModal.attachments && selectedRequestModal.attachments.length > 0 && (
-                <div>
-                  <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                    Supporting Photographic Evidences ({selectedRequestModal.attachments.length})
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    {selectedRequestModal.attachments.map((att, idx) => (
-                      <div key={idx} style={{
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        padding: '0.5rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        background: '#ffffff'
-                      }}>
-                        {att.previewUrl ? (
-                          <img src={att.previewUrl} alt={att.name} style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} />
-                        ) : (
-                          <FileText size={20} color="#2563eb" />
-                        )}
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{att.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="warden-modal-footer">

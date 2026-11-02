@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Settings,
   Shield,
@@ -28,9 +28,51 @@ import {
   resetHostelRulesToDefault,
   subscribeHostelRules
 } from '../../services/hostelRulesStore.js';
+import { getWardenPermissions, getWardenIdFromAccount } from '../../services/wardenManagementStore.js';
 import './HostelExtraSections.css';
 
-export default function HostelSettingsRulesSection({ isHostelAdmin }) {
+export default function HostelSettingsRulesSection({ account, isHostelAdmin, canEditConfiguration: propCanEdit, isStudent = false }) {
+  const [permsTick, setPermsTick] = useState(0);
+
+  useEffect(() => {
+    const handlePerms = () => setPermsTick(t => t + 1);
+    window.addEventListener('bput_warden_permissions_changed', handlePerms);
+    window.addEventListener('storage', handlePerms);
+    return () => {
+      window.removeEventListener('bput_warden_permissions_changed', handlePerms);
+      window.removeEventListener('storage', handlePerms);
+    };
+  }, []);
+
+  const storedRole = useMemo(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('collegeflow_user'));
+      return u?.role?.toLowerCase() || '';
+    } catch {
+      return '';
+    }
+  }, []);
+
+  const effectiveRole = (account?.role || storedRole || '').toLowerCase();
+  const isStudentRole = isStudent || effectiveRole === 'student';
+  const wardenId = useMemo(() => {
+    if (isStudentRole) return null;
+    return getWardenIdFromAccount(account);
+  }, [account, isStudentRole]);
+
+  const canEditConfiguration = useMemo(() => {
+    // 1. Students can NEVER edit rules or curfew under any circumstance (Strict Read-Only)
+    if (isStudentRole) return false;
+    // 2. Hostel Admin has full configuration authority
+    if (isHostelAdmin) return true;
+    // 3. Non-warden accounts cannot edit
+    if (effectiveRole && effectiveRole !== 'warden') return false;
+    // 4. Scoped permission check for warden directly from authoritative matrix
+    const resolvedWardenId = wardenId || getWardenIdFromAccount(account) || 'WRD-101';
+    const perms = getWardenPermissions(resolvedWardenId);
+    return Boolean(perms.editHostelConfiguration);
+  }, [isStudentRole, propCanEdit, isHostelAdmin, effectiveRole, wardenId, account, permsTick]);
+
   // Authoritative rules state synchronized across Admin, Warden & Student
   const [rules, setRules] = useState(() => getAllHostelRules());
 
@@ -74,6 +116,11 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
     setTimeout(() => setToastMsg(null), 3500);
   };
 
+  const currentAuthor = useMemo(() => {
+    if (isHostelAdmin) return account?.name ? `${account.name} (Hostel Admin)` : 'Hostel Administrator';
+    return account?.name ? `${account.name} (Resident Warden)` : 'Hostel Warden';
+  }, [isHostelAdmin, account]);
+
   const toggleCategory = (cat) => {
     setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
   };
@@ -88,6 +135,10 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
 
   // Open Add Modal
   const handleOpenAddModal = (defaultCategory = 'Curfew & Gate Timings') => {
+    if (!canEditConfiguration) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     setFormData({
       category: defaultCategory,
       customCategory: '',
@@ -100,6 +151,10 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
 
   // Open Edit Modal
   const handleOpenEditModal = (categoryName, item) => {
+    if (!canEditConfiguration) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     setEditingRule({
       id: item.id,
       category: categoryName,
@@ -118,6 +173,10 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
 
   // Open Delete Modal
   const handleOpenDeleteModal = (categoryName, item) => {
+    if (!canEditConfiguration) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     setDeletingRule({
       id: item.id,
       category: categoryName,
@@ -128,12 +187,16 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
   // Handle Add Form Submit
   const handleSaveNewRule = (e) => {
     e.preventDefault();
+    if (!canEditConfiguration) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     if (!formData.title.trim()) {
       alert('Please enter a Rule / Curfew Title.');
       return;
     }
 
-    const targetCategory = formData.category === '__CUSTOM__' 
+    const targetCategory = formData.category === '__CUSTOM__'
       ? (formData.customCategory.trim() || 'General Hostel Policies')
       : formData.category;
 
@@ -143,7 +206,8 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
         title: formData.title,
         value: formData.value || 'Enforced',
         description: formData.description,
-        author: isHostelAdmin ? 'Hostel Administrator' : 'Hostel Administration'
+        author: currentAuthor,
+        user: account
       });
 
       // Ensure newly added category is expanded
@@ -158,13 +222,17 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
   // Handle Edit Form Submit
   const handleSaveEditRule = (e) => {
     e.preventDefault();
+    if (!canEditConfiguration) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     if (!editingRule) return;
     if (!formData.title.trim()) {
       alert('Please enter a Rule / Curfew Title.');
       return;
     }
 
-    const targetCategory = formData.category === '__CUSTOM__' 
+    const targetCategory = formData.category === '__CUSTOM__'
       ? (formData.customCategory.trim() || editingRule.category)
       : formData.category;
 
@@ -174,7 +242,8 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
         title: formData.title,
         value: formData.value,
         description: formData.description,
-        author: isHostelAdmin ? 'Hostel Administrator' : 'Hostel Administration'
+        author: currentAuthor,
+        user: account
       });
 
       setExpandedCats(prev => ({ ...prev, [targetCategory]: true }));
@@ -187,16 +256,24 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
 
   // Handle Delete Rule
   const handleConfirmDeleteRule = () => {
+    if (!canEditConfiguration) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
     if (!deletingRule) return;
     const ruleTitle = deletingRule.title;
-    deleteHostelRule(deletingRule.id);
+    deleteHostelRule(deletingRule.id, account);
     setDeletingRule(null);
     showToast(`Rule "${ruleTitle}" removed from all warden and student portals.`);
   };
 
   // Handle Reset to Default Rules
   const handleResetDefaults = () => {
-    resetHostelRulesToDefault();
+    if (!canEditConfiguration) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
+    resetHostelRulesToDefault(account);
     setIsResetConfirmOpen(false);
     showToast('Hostel rules & curfews reset to institutional baseline defaults.');
   };
@@ -205,7 +282,7 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
   const filteredRules = rules.map(cat => {
     if (!searchQuery.trim()) return cat;
     const q = searchQuery.toLowerCase();
-    const matchingItems = cat.items.filter(item => 
+    const matchingItems = cat.items.filter(item =>
       item.title.toLowerCase().includes(q) ||
       (item.value && item.value.toLowerCase().includes(q)) ||
       (item.description && item.description.toLowerCase().includes(q))
@@ -249,7 +326,7 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
           <p>Institutional Residence Code · Gate Pass Thresholds · Curfew Schedules · Authority Governance</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-          {isHostelAdmin && (
+          {canEditConfiguration && (
             <>
               <button
                 type="button"
@@ -276,11 +353,37 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
       </div>
 
       {/* Warden Read-Only Notice Banner */}
-      {!isHostelAdmin && (
-        <div className="warden-rules-notice-banner">
-          <Info size={16} />
+      {!canEditConfiguration && (
+        <div
+          className="warden-rules-notice-banner"
+          onClick={() => showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.')}
+          style={{
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderLeft: '4px solid #64748b',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '1rem',
+            color: '#334155',
+            fontSize: '0.88rem',
+            cursor: 'pointer'
+          }}
+          title="Click to view permission details"
+        >
+          <Lock size={18} color="#64748b" style={{ flexShrink: 0 }} />
           <span>
-            <strong>Warden Supervisory Mode:</strong> Hostel curfew timings, safety protocols, and disciplinary codes are centrally configured by the <strong>Hostel Administrator</strong>. Any updates reflect immediately across this portal and all resident student dashboards.
+            {isStudentRole ? (
+              <>
+                <strong>Student Resident Notice:</strong> Hostel rules, curfew schedules, and visitor hours are published for resident student compliance. Any policy updates are centrally managed by the <strong>Hostel Administration and Resident Wardens</strong>.
+              </>
+            ) : (
+              <>
+                <strong>View-Only Mode:</strong> You are viewing official hostel rules, curfews, and safety policies in read-only mode. All updates made by the <strong>Hostel Administrator</strong> automatically synchronize here and across student portals in real time. Permission from the Administrator is required to add, edit, or delete rules.
+              </>
+            )}
           </span>
         </div>
       )}
@@ -383,7 +486,7 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
                     </span>
                   </h4>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {isHostelAdmin && (
+                    {canEditConfiguration && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -425,7 +528,7 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <span className="h-badge h-badge-medium" style={{ fontWeight: 700 }}>{item.value}</span>
-                              {isHostelAdmin && (
+                              {canEditConfiguration ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <button
                                     type="button"
@@ -444,6 +547,23 @@ export default function HostelSettingsRulesSection({ isHostelAdmin }) {
                                     <Trash2 size={12} /> Delete
                                   </button>
                                 </div>
+                              ) : (
+                                <span
+                                  onClick={() => showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.')}
+                                  title="Click for permission status"
+                                  style={{
+                                    fontSize: '0.72rem',
+                                    color: '#64748b',
+                                    background: '#f1f5f9',
+                                    border: '1px solid #e2e8f0',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  View Only
+                                </span>
                               )}
                             </div>
                           </div>

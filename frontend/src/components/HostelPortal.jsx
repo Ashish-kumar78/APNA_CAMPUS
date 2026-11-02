@@ -28,6 +28,7 @@ import {
   Printer,
   ArrowRight,
   Info,
+  Upload,
   Check,
   QrCode,
   FileCheck,
@@ -217,7 +218,8 @@ export default function HostelPortal({ account, onLogout }) {
   const [adminActionTab, setAdminActionTab] = useState('NOTE'); // 'NOTE' | 'REASSIGN' | 'CLOSE'
   const [adminNoteInput, setAdminNoteInput] = useState('');
   const [adminReassignStaffInput, setAdminReassignStaffInput] = useState('Mr. Suresh Mohapatra (Plumber)');
-  const [complaintsSubTab, setComplaintsSubTab] = useState('maintenance'); // 'maintenance' | 'cleanliness'
+  const [complaintsSubTab, setComplaintsSubTab] = useState('maintenance');
+  const [viewingDocModal, setViewingDocModal] = useState(null); // 'maintenance' | 'cleanliness'
 
   const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
   const [complaintForm, setComplaintForm] = useState({
@@ -289,6 +291,33 @@ export default function HostelPortal({ account, onLogout }) {
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  const handleUploadPortalComplaintDoc = (complaintId, file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result;
+      setComplaints(prev => prev.map(c => c.id === complaintId ? {
+        ...c,
+        attachmentUrl: dataUrl,
+        supportingDocument: dataUrl
+      } : c));
+      if (selectedAdminComplaintModal && selectedAdminComplaintModal.id === complaintId) {
+        setSelectedAdminComplaintModal(prev => ({
+          ...prev,
+          attachmentUrl: dataUrl,
+          supportingDocument: dataUrl
+        }));
+      }
+      try {
+        await api.uploadComplaintDocument(complaintId, { attachmentUrl: dataUrl, supportingDocument: dataUrl });
+      } catch (err) {
+        console.warn('Backend uploadComplaintDocument fallback:', err);
+      }
+      showToast('✓ Supporting document/photograph uploaded & synchronized with Warden & Admin!');
+    };
+    reader.readAsDataURL(file);
   };
 
   // Reconciled Metrics Calculations
@@ -2847,6 +2876,7 @@ export default function HostelPortal({ account, onLogout }) {
                       <th>Student &amp; Room</th>
                       <th>Category &amp; Priority</th>
                       <th>Issue Description</th>
+                      <th>Supporting Document</th>
                       <th>Assigned Warden</th>
                       <th>Assigned Technician</th>
                       <th>Status</th>
@@ -2900,6 +2930,75 @@ export default function HostelPortal({ account, onLogout }) {
                               <small style={{ color: '#64748b', display: 'block', maxWidth: '240px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {c.description}
                               </small>
+                            )}
+                          </td>
+                          <td>
+                            {c.attachmentUrl || c.supportingDocument || c.photoUrl ? (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setViewingDocModal({
+                                    url: c.attachmentUrl || c.supportingDocument || c.photoUrl,
+                                    code: c.id,
+                                    title: c.title,
+                                    studentName: c.studentName,
+                                    rollNumber: c.rollNumber,
+                                    hostel: c.hostel,
+                                    room: c.roomNumber,
+                                    date: c.filedDate || 'Recent'
+                                  })}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '4px 9px',
+                                    background: '#eff6ff',
+                                    color: '#1d4ed8',
+                                    border: '1px solid #bfdbfe',
+                                    borderRadius: '6px',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer'
+                                  }}
+                                  title="View supporting document/photograph"
+                                >
+                                  <Eye size={12} />
+                                  <span>View</span>
+                                </button>
+                                <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>Attached</span>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <label
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '3px 8px',
+                                    background: '#f8fafc',
+                                    color: '#475569',
+                                    border: '1px dashed #cbd5e1',
+                                    borderRadius: '6px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Upload photo / document evidence"
+                                >
+                                  <Upload size={12} />
+                                  <span>Upload Photo</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    style={{ display: 'none' }}
+                                    onChange={(e) => {
+                                      if (e.target.files && e.target.files[0]) {
+                                        handleUploadPortalComplaintDoc(c.id, e.target.files[0]);
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              </div>
                             )}
                           </td>
                           <td>
@@ -4425,6 +4524,77 @@ export default function HostelPortal({ account, onLogout }) {
                   </div>
                 </div>
 
+                {/* Supporting Document / Evidence */}
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                    📎 Supporting Document / Photograph Evidence:
+                  </div>
+                  {selectedAdminComplaintModal.attachmentUrl || selectedAdminComplaintModal.supportingDocument ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <img
+                        src={selectedAdminComplaintModal.attachmentUrl || selectedAdminComplaintModal.supportingDocument}
+                        alt="Supporting evidence"
+                        style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '6px', background: '#0b1120' }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          className="admin-action-btn-secondary"
+                          style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                          onClick={() => setViewingDocModal({
+                            url: selectedAdminComplaintModal.attachmentUrl || selectedAdminComplaintModal.supportingDocument,
+                            code: selectedAdminComplaintModal.id,
+                            title: selectedAdminComplaintModal.title,
+                            studentName: selectedAdminComplaintModal.studentName,
+                            rollNumber: selectedAdminComplaintModal.rollNumber,
+                            hostel: selectedAdminComplaintModal.hostel,
+                            room: selectedAdminComplaintModal.roomNumber,
+                            date: selectedAdminComplaintModal.filedDate
+                          })}
+                        >
+                          <Eye size={13} /> View Fullscreen
+                        </button>
+                        <label
+                          className="admin-action-btn-secondary"
+                          style={{ padding: '4px 10px', fontSize: '0.78rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <Upload size={13} /> Replace Document
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                handleUploadPortalComplaintDoc(selectedAdminComplaintModal.id, e.target.files[0]);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.78rem', color: '#64748b' }}>No document attached yet.</span>
+                      <label
+                        className="admin-action-btn-secondary"
+                        style={{ padding: '4px 10px', fontSize: '0.78rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Upload size={13} /> Upload Supporting Photo
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleUploadPortalComplaintDoc(selectedAdminComplaintModal.id, e.target.files[0]);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
                 {/* Verified Student Feedback (if available) */}
                 {selectedAdminComplaintModal.feedbackRating && (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', marginBottom: '1rem' }}>
@@ -5139,6 +5309,155 @@ export default function HostelPortal({ account, onLogout }) {
                     </button>
                   </>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Supporting Document Viewer Modal */}
+      {viewingDocModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '1rem'
+          }}
+          onClick={() => setViewingDocModal(null)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '14px',
+              maxWidth: '720px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{
+              padding: '1rem 1.25rem',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: '#dbeafe',
+                  color: '#1d4ed8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                    Supporting Document / Photograph
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                    Complaint Ref: <strong style={{ color: '#7c3aed' }}>{viewingDocModal.code}</strong>
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingDocModal(null)}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '6px',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#475569'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1, textAlign: 'center', background: '#0b1120' }}>
+              <img
+                src={viewingDocModal.url}
+                alt={'Supporting evidence for ' + viewingDocModal.code}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '440px',
+                  objectFit: 'contain',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)'
+                }}
+              />
+            </div>
+
+            <div style={{ padding: '1rem 1.25rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', fontSize: '0.78rem', color: '#475569', marginBottom: '12px' }}>
+                <div>👤 <strong>Student:</strong> {viewingDocModal.studentName} ({viewingDocModal.rollNumber})</div>
+                <div>🏠 <strong>Hostel &amp; Room:</strong> {viewingDocModal.hostel} · Rm {viewingDocModal.room}</div>
+                <div>📋 <strong>Issue:</strong> {viewingDocModal.title}</div>
+                <div>📅 <strong>Lodged Date:</strong> {viewingDocModal.date ? new Date(viewingDocModal.date).toLocaleDateString() : 'N/A'}</div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckCircle2 size={14} /> Verified Supporting Evidence Document
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <a
+                    href={viewingDocModal.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '6px 12px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      color: '#334155',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    Open Full Size
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setViewingDocModal(null)}
+                    style={{
+                      padding: '6px 16px',
+                      background: '#2563eb',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      color: '#ffffff',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Done Viewing
+                  </button>
+                </div>
               </div>
             </div>
           </div>

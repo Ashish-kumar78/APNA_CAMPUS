@@ -452,3 +452,1048 @@
   gap: 8px;
   margin-top: 6px;
 }
+
+/* ==============================================================================
+   REDESIGNED APNA CAMPUS FACULTY DASHBOARD (REFERENCE MATCH)
+   ============================================================================== */
+
+.fac-dash-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.25rem 0 2rem;
+  font-family: inherit;
+  color: #0f172a;
+}
+
+/* 1. Welcome Banner */
+.fac-welcome-banner {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #4f46e5 100%);
+  border-radius: 18px;
+  padding: 1.6rem 2.2rem;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.35);
+}
+
+.fac-banner-bg-silhouette {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  top: 0;
+  width: 55%;
+  pointer-events: none;
+  opacity: 0.16;
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  background-size: cover;
+}
+
+.fac-banner-content {
+  position: relative;
+  z-index: 2;
+  max-width: 650px;
+}
+
+.fac-banner-title {
+  font-size: 1.65rem;
+  font-weight: 800;
+  margin: 0 0 0.4rem 0;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.fac-banner-tagline {
+  font-size: 0.95rem;
+  color: #e0e7ff;
+  margin: 0 0 1rem 0;
+  font-weight: 400;
+}
+
+.fac-banner-notice-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: #f8fafc;
+}
+
+.fac-notice-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.fac-banner-datetime-card {
+  position: relative;
+  z-index: 2;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.fac-datetime-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.fac-datetime-line.fac-time-accent {
+  color: #60a5fa;
+  font-weight: 700;
+}
+
+/* 2. Faculty Profile + 4 KPI Cards Row */
+.fac-profile-kpi-row {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+@media (max-width: 1200px) {
+  .fac-profile-kpi-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fac-profile-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1.25rem 1.4rem;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.fac-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 1rem;
+}
+
+.fac-avatar-wrap {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #bfdbfe;
+  flex-shrink: 0;
+  background: #eff6ff;
+}
+
+.fac-profile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fac-profile-intro {
+  flex: 1;
+  min-width: 0;
+}
+
+.fac-profile-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fac-profile-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fac-view-profile-btn {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.fac-view-profile-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.fac-profile-id-pill {
+  display: inline-block;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #2563eb;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.fac-profile-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  padding-top: 0.85rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.fac-profile-detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.fac-detail-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.fac-detail-value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 4 KPI Cards Grid */
+.fac-kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.1rem;
+}
+
+@media (max-width: 900px) {
+  .fac-kpis-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.fac-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1.1rem;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.fac-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07);
+}
+
+.fac-kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.fac-kpi-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+}
+
+.fac-kpi-icon-wrap.bg-blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.fac-kpi-icon-wrap.bg-green {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.fac-kpi-icon-wrap.bg-orange {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.fac-kpi-icon-wrap.bg-purple {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+.fac-kpi-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.fac-kpi-trend.trend-up {
+  color: #10b981;
+}
+
+.fac-kpi-trend.trend-down {
+  color: #ef4444;
+}
+
+.fac-kpi-body {
+  margin-bottom: 0.5rem;
+}
+
+.fac-kpi-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  display: block;
+}
+
+.fac-kpi-number {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+.fac-kpi-sparkline {
+  height: 32px;
+  width: 100%;
+  margin-top: auto;
+}
+
+.spark-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 3. Common Card Styles */
+.fac-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1.25rem 1.4rem;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+.fac-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.fac-card-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fac-card-title-icon {
+  flex-shrink: 0;
+}
+
+.fac-card-title {
+  font-size: 0.98rem;
+  font-weight: 750;
+  color: #0f172a;
+  margin: 0;
+}
+
+.fac-card-select {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+}
+
+.fac-view-all-link {
+  background: transparent;
+  border: none;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #2563eb;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.fac-view-all-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+/* 4. Row 4: Analytics Duo (Attendance Overview & Academic Performance - NO Quick Actions) */
+.fac-analytics-duo-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 960px) {
+  .fac-analytics-duo-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fac-donut-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 1rem;
+  flex: 1;
+  padding: 0.5rem 0;
+}
+
+.fac-donut-chart-wrap {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  display: grid;
+  place-items: center;
+}
+
+.fac-donut-center-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.donut-big-val {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.donut-sub-lbl {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.fac-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fac-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+}
+
+.fac-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fac-legend-dot.bg-green { background: #10b981; }
+.fac-legend-dot.bg-yellow { background: #f59e0b; }
+.fac-legend-dot.bg-blue { background: #3b82f6; }
+
+.fac-legend-name {
+  font-weight: 600;
+  color: #475569;
+  min-width: 60px;
+}
+
+.fac-legend-pct {
+  font-weight: 800;
+  color: #0f172a;
+  margin-left: auto;
+}
+
+.fac-card-footer {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fac-line-chart-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 200px;
+}
+
+.fac-cgpa-peak-badge {
+  position: absolute;
+  top: 5px;
+  right: 22%;
+  background: #ffffff;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* 5. Row 5: Trio (Events, Activities, Courses) */
+.fac-trio-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 1100px) {
+  .fac-trio-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Timeline */
+.fac-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fac-timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+}
+
+.fac-timeline-date {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+  flex-shrink: 0;
+}
+
+.tl-day {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.tl-mo {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.fac-timeline-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.tl-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tl-sub {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.fac-tag-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.tag-exam {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+.tag-assignment {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.tag-event {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.tag-holiday {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.tag-recess {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+/* Activities */
+.fac-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.fac-activity-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px;
+}
+
+.fac-act-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+.bg-amber-soft { background: #fef3c7; color: #d97706; }
+.bg-green-soft { background: #dcfce7; color: #16a34a; }
+.bg-red-soft { background: #fee2e2; color: #dc2626; }
+
+.fac-act-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fac-act-desc {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fac-act-time {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+/* My Courses Grid */
+.fac-courses-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.fac-course-pill-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.fac-course-pill-card:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.course-icon-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.bg-blue-soft { background: #eff6ff; color: #2563eb; }
+.bg-purple-soft { background: #f5f3ff; color: #7c3aed; }
+.bg-cyan-soft { background: #ecfeff; color: #0891b2; }
+.bg-indigo-soft { background: #e0e7ff; color: #4338ca; }
+
+.course-name-row {
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.course-code-row {
+  font-size: 0.68rem;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.course-progress-bar {
+  width: 100%;
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.course-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.course-pct-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #475569;
+}
+
+/* 6. Row 6: Bottom Trio (Schedule Table, Calendar, Holidays) */
+.fac-bottom-trio-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 1200px) {
+  .fac-bottom-trio-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fac-table-responsive {
+  overflow-x: auto;
+}
+
+.fac-mini-schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  text-align: left;
+}
+
+.fac-mini-schedule-table th {
+  color: #64748b;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.fac-mini-schedule-table td {
+  padding: 10px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.fac-mini-schedule-table td.time-cell {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.fac-mini-schedule-table td.time-cell.highlight-cell {
+  color: #2563eb;
+}
+
+.fac-mini-schedule-table td.sub-cell {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.fac-mini-schedule-table td.room-cell {
+  color: #64748b;
+}
+
+.fac-status-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.pill-completed {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.pill-ongoing {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.pill-upcoming {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.fac-action-outline-btn {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fac-action-outline-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.fac-action-solid-btn {
+  background: #2563eb;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  padding: 3px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  transition: all 0.15s ease;
+}
+
+.fac-action-solid-btn:hover {
+  background: #1d4ed8;
+}
+
+/* Calendar Widget */
+.fac-cal-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-btn-arrow {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: #475569;
+}
+
+.cal-cur-month {
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.cal-btn-today {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.fac-calendar-widget {
+  margin-top: 0.5rem;
+}
+
+.fac-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.fac-cal-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.fac-cal-day {
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.fac-cal-day.is-other-month {
+  color: #cbd5e1;
+}
+
+.fac-cal-day.is-today-highlight {
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.fac-cal-day.is-exam-day {
+  background: #fee2e2;
+  color: #b91c1c;
+  font-weight: 800;
+}
+
+.fac-cal-day.is-deadline-day {
+  background: #fef3c7;
+  color: #b45309;
+  font-weight: 800;
+}
+
+.fac-cal-day.is-event-day {
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 800;
+}
+
+.fac-cal-day.is-purple-day {
+  background: #f3e8ff;
+  color: #7e22ce;
+  font-weight: 800;
+}
+
+/* Holidays */
+.fac-holiday-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fac-holiday-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fac-holiday-item:last-child {
+  border-bottom: none;
+}
+
+.fac-hol-date {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  min-width: 80px;
+}
+
+.fac-hol-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.hol-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hol-sub {
+  font-size: 0.68rem;
+  color: #64748b;
+}

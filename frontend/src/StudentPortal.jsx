@@ -1,3 +1,4 @@
+import CalendarWidget from './components/CalendarWidget.jsx';
 import { useEffect, useMemo, useState } from 'react'
 import { AppLayout } from './components/Navigation'
 import {
@@ -66,6 +67,7 @@ import CanteenPage from './pages/CanteenPage.jsx'
 import StudentHostelPage from './pages/StudentHostelPage.jsx'
 import ClassNotesPage from './pages/ClassNotesPage.jsx'
 import ScholarshipPage from './pages/ScholarshipPage.jsx'
+import BonafidePage from './pages/BonafidePage.jsx'
 import CampusConnect from './components/CampusConnect/CampusConnect.jsx'
 import AcademicResourcesSection from './components/CampusConnect/AcademicResourcesSection.jsx'
 import LeadershipScoreboardSection from './components/CampusConnect/LeadershipScoreboardSection.jsx'
@@ -135,8 +137,6 @@ const studentNavSections = [
     title: 'CAMPUS',
     items: [
       { label: 'Hostel Residence', icon: Building2, page: 'hostel' },
-      { label: 'Food Feedback', icon: Utensils, page: 'food-feedback' },
-      { label: 'Room Cleanliness', icon: Sparkles, page: 'cleanliness-complaints' },
       { label: 'Library', icon: LibraryBig, page: 'library' },
       { label: 'Self Development & Placement', icon: TrendingUp, page: 'placement' },
       { label: 'Internship', icon: Briefcase, page: 'internship' },
@@ -724,10 +724,10 @@ function StudentPortal({ account, onLogout }) {
                 )}
               {activePage === 'class-notes' && <ClassNotesPage account={account} />}
               {activePage === 'marks' && <MarksPage initialRole="student" />}
-              {activePage === 'hostel' && <StudentHostelPage defaultTab="overview" />}
-              {activePage === 'gate-pass' && <StudentHostelPage defaultTab="gate-pass" />}
-              {activePage === 'food-feedback' && <StudentHostelPage defaultTab="food-feedback" />}
-              {activePage === 'cleanliness-complaints' && <StudentHostelPage defaultTab="cleanliness" />}
+              {activePage === 'hostel' && <StudentHostelPage defaultTab="gate-pass" account={account} />}
+              {activePage === 'gate-pass' && <StudentHostelPage defaultTab="gate-pass" account={account} />}
+              {activePage === 'food-feedback' && <StudentHostelPage defaultTab="food-feedback" account={account} />}
+              {activePage === 'cleanliness-complaints' && <StudentHostelPage defaultTab="cleanliness" account={account} />}
               {activePage === 'fees' && <FeesPage />}
               {activePage === 'canteen' && <CanteenPage account={account} />}
               {activePage === 'attendance' && <AttendancePage />}
@@ -976,34 +976,7 @@ function StudentPortal({ account, onLogout }) {
 
               {/* Bottom Grid: Calendar & Holiday List Side-by-Side */}
               <div className="dash-grid-duo">
-                <section className="dash-card dash-calendar" id="calendar">
-                  <header className="dash-card-head">
-                    <h3><span className="dash-head-icon"><CalendarDays size={15} /></span>Calendar</h3>
-                    <div className="dash-cal-controls">
-                      <button type="button" onClick={() => updateMonth(-1)} aria-label="Previous month"><ChevronLeft size={15} /></button>
-                      <strong>{monthLabel}</strong>
-                      <button type="button" onClick={() => updateMonth(1)} aria-label="Next month"><ChevronRight size={15} /></button>
-                    </div>
-                  </header>
-                  <div className="dash-cal-weekdays">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}</div>
-                  <div className="dash-cal-days">
-                    {calendarDays.map(({ key, day, inMonth, isToday, isSunday }) => {
-                      const holidayName = holidayMap[key]
-                      return (
-                        <span
-                          className={['dash-day', inMonth ? '' : 'is-outside', isToday ? 'is-today' : '', holidayName ? 'is-holiday' : '', isSunday ? 'is-sunday' : ''].join(' ')}
-                          title={holidayName || undefined}
-                          key={key}
-                        >{day}</span>
-                      )
-                    })}
-                  </div>
-                  <div className="dash-legend">
-                    <span><i className="lg-holiday" />Holiday</span>
-                    <span><i className="lg-sunday" />Sunday</span>
-                    <span><i className="lg-today" />Today</span>
-                  </div>
-                </section>
+                <CalendarWidget account={account} />
 
                 <section className="dash-card dash-holidays" id="holidays">
                   <header className="dash-card-head">

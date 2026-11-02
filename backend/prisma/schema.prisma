@@ -738,6 +738,14 @@ model StaffRoster {
   updatedAt           DateTime @updatedAt
 }
 
+model WardenPermissionSetting {
+  id          String   @id @default(cuid())
+  wardenId    String   @unique
+  permissions Json
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
 model Notice {
   id         String   @id @default(cuid())
   title      String
@@ -2046,4 +2054,33 @@ model face_attendance_logs {
 }
 
 
+model CalendarNote {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  userRole      String?   @map("user_role")
+  userEmail     String?   @map("user_email")
+  userName      String?   @map("user_name")
+  title         String
+  description   String?   @db.Text
+  scheduledDate String    @map("scheduled_date")
+  status        String    @default("PENDING")
+  completedAt   DateTime? @map("completed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
+  @@index([userId, status])
+  @@index([scheduledDate])
+  @@map("calendar_notes")
+}
+
+
+model UserPreference {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  theme     String   @default("light")
+  language  String   @default("en")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_preferences")
+}

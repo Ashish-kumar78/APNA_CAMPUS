@@ -29,11 +29,22 @@ import {
 import { getActiveStudent } from '../../services/studentStore.js';
 import './HostelExtraSections.css';
 
-export default function StudentFoodFeedbackSection() {
+export default function StudentFoodFeedbackSection({ account }) {
+  const storedUser = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('collegeflow_user');
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }, []);
+
   const activeStudent = getActiveStudent();
-  const studentRoll = activeStudent?.rollNumber || '2305200001';
-  const studentName = activeStudent?.name || 'Rakesh Das';
-  const studentHostel = activeStudent?.hostelName || 'Sarojini Girls Residence (Block A)';
+  const effectiveUser = account || storedUser || activeStudent;
+
+  const studentRoll = effectiveUser?.registrationNumber || effectiveUser?.rollNumber || effectiveUser?.identifier || activeStudent?.registrationNumber || activeStudent?.rollNumber || '2305201001';
+  const studentName = effectiveUser?.name || activeStudent?.name || 'Aman Kumar Sharma';
+  const studentHostel = effectiveUser?.hostelName || activeStudent?.hostelName || 'Sarojini Girls Residence (Block A)';
 
   const [activeMainTab, setActiveMainTab] = useState('menu'); // 'menu' | 'feedback'
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -82,7 +93,7 @@ export default function StudentFoodFeedbackSection() {
 
   // Load feedback list
   const refreshFeedback = () => {
-    getStudentFoodFeedback(studentRoll).then(list => {
+    getStudentFoodFeedback(studentRoll, { studentName }).then(list => {
       setFeedbackList(list);
     });
   };
@@ -93,7 +104,7 @@ export default function StudentFoodFeedbackSection() {
       refreshFeedback();
     });
     return unsub;
-  }, [studentRoll]);
+  }, [studentRoll, studentName]);
 
   // Food items derived from menu for the selected form date and meal type
   const formFoodItems = useMemo(() => {
@@ -104,7 +115,7 @@ export default function StudentFoodFeedbackSection() {
 
   // Metric summaries
   const totalSubmitted = feedbackList.length;
-  const pendingFeedback = feedbackList.filter(f => f.status !== 'Resolved').length;
+  const pendingFeedback = feedbackList.filter(f => f.status === 'Pending' || f.status === 'Submitted' || f.status === 'Under Review' || (f.status !== 'Approved' && f.status !== 'Resolved')).length;
   const avgStudentRating = totalSubmitted > 0
     ? (feedbackList.reduce((acc, curr) => acc + curr.overallRating, 0) / totalSubmitted).toFixed(1)
     : '4.8';
@@ -113,7 +124,13 @@ export default function StudentFoodFeedbackSection() {
   const filteredHistory = useMemo(() => {
     return feedbackList.filter(f => {
       if (filterMealType !== 'ALL' && f.mealType.toLowerCase() !== filterMealType.toLowerCase()) return false;
-      if (filterStatus !== 'ALL' && f.status.toLowerCase() !== filterStatus.toLowerCase()) return false;
+      if (filterStatus !== 'ALL') {
+        const itemStatus = (f.status || '').toLowerCase();
+        const selStatus = filterStatus.toLowerCase();
+        if (selStatus === 'pending' && itemStatus !== 'pending' && itemStatus !== 'submitted') return false;
+        if (selStatus === 'approved' && itemStatus !== 'approved' && itemStatus !== 'resolved') return false;
+        if (selStatus !== 'pending' && selStatus !== 'approved' && itemStatus !== selStatus) return false;
+      }
       if (filterRating !== 'ALL' && f.overallRating !== Number(filterRating)) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -121,14 +138,15 @@ export default function StudentFoodFeedbackSection() {
           f.feedbackCode?.toLowerCase().includes(q) ||
           f.comments?.toLowerCase().includes(q) ||
           f.category?.toLowerCase().includes(q) ||
-          f.foodItems?.toLowerCase().includes(q)
+          f.foodItems?.toLowerCase().includes(q) ||
+          f.status?.toLowerCase().includes(q)
         );
       }
       return true;
     });
   }, [feedbackList, filterMealType, filterStatus, filterRating, searchQuery]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -137,34 +155,50 @@ export default function StudentFoodFeedbackSection() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const created = await submitFoodFeedback({
-        studentId: activeStudent?.id || 'std-active',
-        studentName,
-        rollNumber: studentRoll,
-        hostelName: studentHostel,
-        mealDate: formMealDate,
-        mealType: formMealType,
-        foodItems: formFoodItems,
-        qualityRating,
-        tasteRating,
-        temperatureRating,
-        hygieneRating,
-        quantity: formQuantity,
-        overallRating,
-        category: formCategory,
-        comments
-      });
+    const payload = {
+      studentId: effectiveUser?.id || activeStudent?.id || 'std-active',
+      studentName,
+      rollNumber: studentRoll,
+      hostelName: studentHostel,
+      mealDate: formMealDate,
+      mealType: formMealType,
+      foodItems: formFoodItems,
+      qualityRating,
+      tasteRating,
+      temperatureRating,
+      hygieneRating,
+      quantity: formQuantity,
+      overallRating,
+      category: formCategory,
+      comments,
+      status: 'Pending'
+    };
 
-      showToast(`✓ Food Feedback #${created.feedbackCode} submitted to Hostel Warden.`);
-      setComments('');
-      refreshFeedback();
-    } catch (err) {
-      alert(err.message || 'Failed to submit feedback.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // 1. Immediately create optimistic record and display in history (<1ms)
+    const optimisticRecord = {
+      id: `ffb-opt-${Date.now()}`,
+      feedbackCode: `FFB-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      ...payload,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setFeedbackList(prev => [optimisticRecord, ...prev.filter(f => f.id !== optimisticRecord.id)]);
+
+    // 2. Instantly reset inputs and show toast (<1ms)
+    setComments('');
+    setIsSubmitting(false);
+    showToast(`✓ Food Feedback #${optimisticRecord.feedbackCode} submitted with Pending status.`);
+
+    // 3. Persist locally and sync in background
+    submitFoodFeedback(payload)
+      .then((created) => {
+        setFeedbackList(prev => prev.map(f => f.id === optimisticRecord.id ? created : f));
+        refreshFeedback();
+      })
+      .catch((err) => {
+        setFeedbackList(prev => prev.filter(f => f.id !== optimisticRecord.id));
+        alert(err.message || 'Failed to submit feedback.');
+      });
   };
 
   const renderStarSelector = (val, setVal, label) => (
@@ -623,9 +657,9 @@ export default function StudentFoodFeedbackSection() {
                   onChange={e => setFilterStatus(e.target.value)}
                 >
                   <option value="ALL">All Statuses</option>
-                  <option value="Submitted">Submitted</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Approved">Approved</option>
                   <option value="Under Review">Under Review</option>
-                  <option value="Action Required">Action Required</option>
                   <option value="Resolved">Resolved</option>
                 </select>
 
@@ -693,20 +727,49 @@ export default function StudentFoodFeedbackSection() {
                           </td>
                           <td>
                             <span className={`h-badge ${
-                              item.status === 'Resolved' ? 'h-badge-approved' :
-                              item.status === 'Under Review' ? 'h-badge-medium' :
-                              item.status === 'Action Required' ? 'h-badge-leave' : 'h-badge-low'
-                            }`}>
-                              {item.status}
+                              item.status === 'Approved' || item.status === 'Resolved' ? 'h-badge-approved' :
+                              item.status === 'Pending' || item.status === 'Submitted' ? 'h-badge-leave' :
+                              item.status === 'Under Review' ? 'h-badge-medium' : 'h-badge-low'
+                            }`} style={
+                              item.status === 'Pending' || item.status === 'Submitted' ? {
+                                background: '#fffbeb',
+                                color: '#b45309',
+                                border: '1px solid #fde68a',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontWeight: 700
+                              } : item.status === 'Approved' || item.status === 'Resolved' ? {
+                                background: '#ecfdf5',
+                                color: '#047857',
+                                border: '1px solid #a7f3d0',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontWeight: 700
+                              } : undefined
+                            }>
+                              {(item.status === 'Pending' || item.status === 'Submitted') && <Clock size={12} />}
+                              {(item.status === 'Approved' || item.status === 'Resolved') && <CheckCircle2 size={12} />}
+                              {item.status === 'Submitted' ? 'Pending' : (item.status === 'Resolved' ? 'Approved' : item.status)}
                             </span>
                           </td>
-                          <td style={{ maxWidth: '200px', fontSize: '0.8rem' }}>
-                            {item.response ? (
-                              <span style={{ color: '#059669', fontWeight: 700 }}>
-                                ✓ Responded by {item.respondedBy || 'Warden'}
-                              </span>
+                          <td style={{ maxWidth: '240px', fontSize: '0.8rem' }}>
+                            {item.response || item.status === 'Approved' || item.status === 'Resolved' ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <CheckCircle2 size={13} color="#059669" /> Approved by {item.respondedBy || 'Hostel Administration'}
+                                </span>
+                                {item.response && (
+                                  <span style={{ fontSize: '0.76rem', color: '#334155', fontStyle: 'italic', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    "{item.response}"
+                                  </span>
+                                )}
+                              </div>
                             ) : (
-                              <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Pending Response</span>
+                              <span style={{ color: '#d97706', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={12} /> Pending Warden Review
+                              </span>
                             )}
                           </td>
                           <td>
@@ -857,3 +920,4 @@ export default function StudentFoodFeedbackSection() {
     </div>
   );
 }
+

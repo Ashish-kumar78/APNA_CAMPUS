@@ -20,7 +20,11 @@ export class ReportQueryDto {
 
   @IsOptional()
   @IsString()
-  reportType?: string; // 'attendance' | 'cgpa' | 'sgpa' | 'document'
+  reportType?: string; // 'attendance' | 'cgpa' | 'sgpa' | 'document' | 'fees'
+
+  @IsOptional()
+  @IsString()
+  feeStatus?: string;
 
   @IsOptional()
   @IsString()

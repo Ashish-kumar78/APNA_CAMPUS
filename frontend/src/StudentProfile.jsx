@@ -37,7 +37,7 @@ import CanteenPage from './pages/CanteenPage.jsx'
 import HealthPage from './pages/HealthPage.jsx'
 import UniversityMarksView from './components/UniversityMarksView.jsx'
 
-import { findStudentByQuery, defaultDemoStudent, getStudentDocuments, addStudentDocument } from './services/studentStore.js'
+import { findStudentByQuery, defaultDemoStudent, getStudentDocuments, addStudentDocument, getLatestHostelAttendanceDate, formatToDDMMYYYY } from './services/studentStore.js'
 import { api } from './services/api.js'
 
 const profileTabs = [
@@ -76,11 +76,51 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
     }
   }, [account?.registrationNumber, account?.name])
 
-  // Merge account prop with complete student store record if available
-  const student = useMemo(() => {
+  // Dynamic student record with live sync on hostel attendance submissions
+  const [liveStudent, setLiveStudent] = useState(() => {
     const matched = findStudentByQuery(account?.registrationNumber || account?.rollNumber || account?.name)
     return { ...defaultDemoStudent, ...account, ...(matched || {}) }
-  }, [account])
+  })
+
+  useEffect(() => {
+    const refreshStudent = () => {
+      const matched = findStudentByQuery(account?.registrationNumber || account?.rollNumber || account?.name)
+      setLiveStudent({ ...defaultDemoStudent, ...account, ...(matched || {}) })
+    }
+    refreshStudent()
+    window.addEventListener('cms_students_changed', refreshStudent)
+    window.addEventListener('bput_hostel_attendance_submitted', refreshStudent)
+    window.addEventListener('bput_hostel_attendance_updated', refreshStudent)
+    window.addEventListener('bput_student_hostel_attendance_changed', refreshStudent)
+    window.addEventListener('storage', refreshStudent)
+
+    // Backend sync: retrieve authoritative latest hostel attendance date
+    if (typeof api !== 'undefined' && api.getHostelAttendance) {
+      api.getHostelAttendance().then(res => {
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const sorted = [...res.data].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+          const latestSheet = sorted[0]
+          if (latestSheet && latestSheet.date) {
+            const formatted = formatToDDMMYYYY(latestSheet.date)
+            setLiveStudent(prev => {
+              if (prev.lastHostelAttendanceDate === formatted) return prev
+              return { ...prev, lastHostelAttendanceDate: formatted }
+            })
+          }
+        }
+      }).catch(() => {})
+    }
+
+    return () => {
+      window.removeEventListener('cms_students_changed', refreshStudent)
+      window.removeEventListener('bput_hostel_attendance_submitted', refreshStudent)
+      window.removeEventListener('bput_hostel_attendance_updated', refreshStudent)
+      window.removeEventListener('bput_student_hostel_attendance_changed', refreshStudent)
+      window.removeEventListener('storage', refreshStudent)
+    }
+  }, [account?.registrationNumber, account?.rollNumber, account?.name])
+
+  const student = liveStudent
 
   // Dynamic student documents list
   const [studentDocs, setStudentDocs] = useState(() =>
@@ -168,7 +208,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
   const emailName = fullName.toLowerCase().replaceAll(' ', '.')
   const summaryRows = [
     ['Last Date of Class Attendance', student.lastClassAttendanceDate || '14/10/2026'],
-    ['Last Date of Hostel Attendance', student.lastHostelAttendanceDate || '16/10/2026'],
+    ['Last Date of Hostel Attendance', student.lastHostelAttendanceDate || getLatestHostelAttendanceDate(student) || '16/10/2026'],
     ['Registration No.', regNumber],
     ['Serial No.', student.rollNumber || '01'],
     ['Name', fullName.toUpperCase()],

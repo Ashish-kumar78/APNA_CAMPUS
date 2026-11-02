@@ -1,7 +1,7 @@
 // Faculty-to-Student Academic Notification System API Client
 // Connects to NestJS Backend (/api/notifications/*) with robust local persistence fallback
 
-import { api } from './api';
+import { api } from './api.js';
 
 const NOTIFICATIONS_STORAGE_KEY = 'apna_campus_faculty_notifications_v2';
 

@@ -1176,3 +1176,520 @@ button {
 }
 
 
+/* ==========================================================================
+   COMPLETE COMPREHENSIVE DARK THEME SYSTEM FOR ALL CMS ROLES
+   Automatically applies attractive, high-contrast, professional styling
+   when Dark Mode is activated across every dashboard and component.
+   ========================================================================== */
+html[data-theme="dark"],
+html.dark-mode,
+html.dark,
+body.dark-theme,
+body.dark-mode {
+  --color-background: #0b1120;
+  --color-surface: #1e293b;
+  --color-surface-hover: #334155;
+  --color-border: #334155;
+  --color-border-subtle: #1e293b;
+  --color-border-strong: #475569;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-sidebar: #060d1a;
+  --color-sidebar-gradient: linear-gradient(180deg, #060d1a 0%, #0b1730 100%);
+  --d-ink: #f8fafc;
+  --d-ink-2: #cbd5e1;
+  --d-muted: #94a3b8;
+  --d-line: #334155;
+  --d-bg: #0b1120;
+  --d-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45);
+  --bg-primary: #0b1120;
+  --bg-secondary: #1e293b;
+  --card-bg: #1e293b;
+  --border-color: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  background-color: #0b1120 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] body,
+html.dark-mode body,
+body.dark-theme {
+  background-color: #0b1120 !important;
+  color: #f8fafc !important;
+}
+
+/* 1. Header & Navigation */
+html[data-theme="dark"] .apna-topbar,
+html.dark-mode .apna-topbar {
+  background-color: #0f172a !important;
+  border-bottom: 1px solid #1e293b !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .apna-topbar-title,
+html.dark-mode .apna-topbar-title {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .apna-topbar-icon-btn,
+html.dark-mode .apna-topbar-icon-btn {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .apna-topbar-icon-btn:hover,
+html.dark-mode .apna-topbar-icon-btn:hover {
+  background: #334155 !important;
+  color: #ffffff !important;
+  border-color: #475569 !important;
+}
+
+html[data-theme="dark"] .apna-search-input,
+html.dark-mode .apna-search-input {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .apna-search-input::placeholder,
+html.dark-mode .apna-search-input::placeholder {
+  color: #64748b !important;
+}
+
+html[data-theme="dark"] .apna-user-pill-btn,
+html.dark-mode .apna-user-pill-btn {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .apna-user-name,
+html.dark-mode .apna-user-name {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .apna-breadcrumb-bar,
+html.dark-mode .apna-breadcrumb-bar {
+  background-color: #0f172a !important;
+  border-bottom-color: #1e293b !important;
+}
+
+html[data-theme="dark"] .apna-user-menu,
+html[data-theme="dark"] .apna-lang-menu,
+html.dark-mode .apna-user-menu,
+html.dark-mode .apna-lang-menu {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6) !important;
+}
+
+html[data-theme="dark"] .apna-user-menu-item,
+html[data-theme="dark"] .apna-lang-menu-item,
+html.dark-mode .apna-user-menu-item,
+html.dark-mode .apna-lang-menu-item {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .apna-user-menu-item:hover,
+html[data-theme="dark"] .apna-lang-menu-item:hover,
+html.dark-mode .apna-user-menu-item:hover,
+html.dark-mode .apna-lang-menu-item:hover {
+  background-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* 2. Workspace, Dashboards, and Layout Bodies */
+html[data-theme="dark"] .apna-layout-body,
+html[data-theme="dark"] .apna-main-workspace,
+html[data-theme="dark"] .apna-page-content,
+html[data-theme="dark"] .role-dash-wrapper,
+html[data-theme="dark"] .dash,
+html[data-theme="dark"] .portal-body,
+html[data-theme="dark"] .fac-portal-wrapper,
+html[data-theme="dark"] .student-portal-container,
+html[data-theme="dark"] .portal-layout,
+html.dark-mode .apna-layout-body,
+html.dark-mode .apna-main-workspace,
+html.dark-mode .apna-page-content,
+html.dark-mode .role-dash-wrapper,
+html.dark-mode .dash,
+html.dark-mode .portal-body,
+html.dark-mode .fac-portal-wrapper,
+html.dark-mode .student-portal-container {
+  background-color: #0b1120 !important;
+  color: #f8fafc !important;
+}
+
+/* 3. Cards across ALL Roles & Dashboards */
+html[data-theme="dark"] .dash-card,
+html[data-theme="dark"] .dash-stat,
+html[data-theme="dark"] .dash-info,
+html[data-theme="dark"] .portal-card,
+html[data-theme="dark"] .portal-panel,
+html[data-theme="dark"] .fac-card,
+html[data-theme="dark"] .admin-card,
+html[data-theme="dark"] .hostel-card,
+html[data-theme="dark"] .hostel-kpi-card,
+html[data-theme="dark"] .fee-card,
+html[data-theme="dark"] .library-card,
+html[data-theme="dark"] .transport-card,
+html[data-theme="dark"] .placement-card,
+html[data-theme="dark"] .exam-card,
+html[data-theme="dark"] .canteen-card,
+html[data-theme="dark"] .dash-stats-2x2 .dash-stat,
+html[data-theme="dark"] .dash-card.dash-info,
+html.dark-mode .dash-card,
+html.dark-mode .dash-stat,
+html.dark-mode .dash-info,
+html.dark-mode .portal-card,
+html.dark-mode .portal-panel,
+html.dark-mode .fac-card,
+html.dark-mode .admin-card,
+html.dark-mode .hostel-card,
+html.dark-mode .hostel-kpi-card,
+html.dark-mode .dash-stats-2x2 .dash-stat {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 4px 18px -4px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-theme="dark"] .dash-card-head,
+html[data-theme="dark"] .fac-card-header,
+html[data-theme="dark"] .portal-panel-heading,
+html.dark-mode .dash-card-head,
+html.dark-mode .fac-card-header,
+html.dark-mode .portal-panel-heading {
+  border-bottom-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .dash-card-head h3,
+html[data-theme="dark"] .fac-card-title,
+html[data-theme="dark"] .portal-panel-title,
+html.dark-mode .dash-card-head h3,
+html.dark-mode .fac-card-title,
+html.dark-mode .portal-panel-title {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .dash-stat-label,
+html[data-theme="dark"] .dash-stat-foot,
+html[data-theme="dark"] .dash-stat-desc,
+html.dark-mode .dash-stat-label,
+html.dark-mode .dash-stat-foot,
+html.dark-mode .dash-stat-desc {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .dash-stat-value,
+html.dark-mode .dash-stat-value {
+  color: #f8fafc !important;
+}
+
+/* 4. Tables and Grids across all Roles */
+html[data-theme="dark"] table,
+html[data-theme="dark"] .dash-table,
+html[data-theme="dark"] .dash-overview-table,
+html[data-theme="dark"] .admin-table,
+html[data-theme="dark"] .hostel-table,
+html[data-theme="dark"] .portal-table,
+html.dark-mode table,
+html.dark-mode .dash-table,
+html.dark-mode .dash-overview-table,
+html.dark-mode .admin-table,
+html.dark-mode .hostel-table {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] thead tr,
+html[data-theme="dark"] th,
+html.dark-mode thead tr,
+html.dark-mode th {
+  background-color: #0f172a !important;
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] tbody tr,
+html[data-theme="dark"] td,
+html.dark-mode tbody tr,
+html.dark-mode td {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] tbody tr:hover,
+html[data-theme="dark"] tbody tr:hover td,
+html.dark-mode tbody tr:hover,
+html.dark-mode tbody tr:hover td {
+  background-color: #283548 !important;
+}
+
+/* 5. Inputs, Dropdowns, Textareas, and Forms */
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html.dark-mode input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+html.dark-mode select,
+html.dark-mode textarea {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus,
+html.dark-mode input:focus,
+html.dark-mode select:focus,
+html.dark-mode textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* 6. Calendar Widget in Dark Mode */
+html[data-theme="dark"] .dash-calendar,
+html.dark-mode .dash-calendar {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .dash-cal-controls strong,
+html.dark-mode .dash-cal-controls strong {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .dash-cal-controls button,
+html.dark-mode .dash-cal-controls button {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .dash-cal-controls button:hover,
+html.dark-mode .dash-cal-controls button:hover {
+  background: #334155 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .dash-day,
+html.dark-mode .dash-day {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .dash-day:hover,
+html.dark-mode .dash-day:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .dash-day.is-outside,
+html.dark-mode .dash-day.is-outside {
+  color: #475569;
+}
+
+html[data-theme="dark"] .dash-day.is-sunday,
+html.dark-mode .dash-day.is-sunday {
+  color: #fb7185;
+}
+
+html[data-theme="dark"] .dash-day.is-holiday,
+html.dark-mode .dash-day.is-holiday {
+  background: #451a03 !important;
+  color: #fed7aa !important;
+  box-shadow: inset 0 0 0 1px #7c2d12 !important;
+}
+
+html[data-theme="dark"] .dash-legend,
+html.dark-mode .dash-legend {
+  color: #94a3b8 !important;
+}
+
+/* 7. Modals, Popups, and Notification Drawers */
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .calendar-reminder-modal,
+html[data-theme="dark"] .notification-drawer,
+html[data-theme="dark"] .role-modal-card,
+html.dark-mode .modal-content,
+html.dark-mode .calendar-reminder-modal,
+html.dark-mode .notification-drawer,
+html.dark-mode .role-modal-card {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+}
+
+/* 8. Announcements, Lists, and Quick Actions */
+html[data-theme="dark"] .dash-announcement,
+html[data-theme="dark"] .dash-holiday,
+html[data-theme="dark"] .dash-action,
+html[data-theme="dark"] .dash-quick-link,
+html.dark-mode .dash-announcement,
+html.dark-mode .dash-holiday,
+html.dark-mode .dash-action,
+html.dark-mode .dash-quick-link {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .dash-announcement:hover,
+html[data-theme="dark"] .dash-holiday:hover,
+html[data-theme="dark"] .dash-action:hover,
+html.dark-mode .dash-announcement:hover,
+html.dark-mode .dash-holiday:hover,
+html.dark-mode .dash-action:hover {
+  background-color: #283548 !important;
+}
+
+html[data-theme="dark"] .dash-filter-pill,
+html.dark-mode .dash-filter-pill {
+  background-color: #0f172a !important;
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .dash-filter-pill.active,
+html.dark-mode .dash-filter-pill.active {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+/* 9. Comprehensive Dark Palette Variables & Dashboard Systems */
+html[data-theme="dark"],
+html.dark-mode {
+  --d-ink: #f8fafc;
+  --d-ink-2: #cbd5e1;
+  --d-muted: #94a3b8;
+  --d-line: #334155;
+  --d-line-soft: #1e293b;
+  --d-bg: #0b1120;
+  --d-surface: #1e293b;
+  --d-surface-alt: #0f172a;
+  color-scheme: dark;
+}
+
+/* 10. Universal Headings & Text Clarity */
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] h5,
+html[data-theme="dark"] h6,
+html.dark-mode h1,
+html.dark-mode h2,
+html.dark-mode h3,
+html.dark-mode h4,
+html.dark-mode h5,
+html.dark-mode h6 {
+  color: #f8fafc !important;
+}
+
+/* 11. Role Dashboards, Staff Roster, Indents & Warden Modules */
+html[data-theme="dark"] .staff-card,
+html[data-theme="dark"] .warden-card,
+html[data-theme="dark"] .hostel-indent-container,
+html[data-theme="dark"] .requisition-table-wrap,
+html[data-theme="dark"] .photo-upload-zone,
+html[data-theme="dark"] .avatar-preset-btn,
+html[data-theme="dark"] .dossier-card,
+html[data-theme="dark"] .doc-preview-modal,
+html[data-theme="dark"] .preview-modal-overlay,
+html.dark-mode .staff-card,
+html.dark-mode .warden-card,
+html.dark-mode .hostel-indent-container,
+html.dark-mode .requisition-table-wrap,
+html.dark-mode .photo-upload-zone {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* 12. Inline White / Light Container Overrides */
+html[data-theme="dark"] [style*="background: white"],
+html[data-theme="dark"] [style*="background:white"],
+html[data-theme="dark"] [style*="background-color: white"],
+html[data-theme="dark"] [style*="background-color:white"],
+html[data-theme="dark"] [style*="background: #fff"],
+html[data-theme="dark"] [style*="background:#fff"],
+html[data-theme="dark"] [style*="background: #ffffff"],
+html[data-theme="dark"] [style*="background:#ffffff"],
+html[data-theme="dark"] [style*="background-color: #fff"],
+html[data-theme="dark"] [style*="background-color:#fff"],
+html[data-theme="dark"] [style*="background-color: #ffffff"],
+html[data-theme="dark"] [style*="background-color:#ffffff"],
+html.dark-mode [style*="background: white"],
+html.dark-mode [style*="background-color: white"],
+html.dark-mode [style*="background: #fff"],
+html.dark-mode [style*="background-color: #fff"] {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+/* 13. High-Contrast Text Overrides for Inline Dark Text */
+html[data-theme="dark"] [style*="color: #1e293b"],
+html[data-theme="dark"] [style*="color:#1e293b"],
+html[data-theme="dark"] [style*="color: #0f172a"],
+html[data-theme="dark"] [style*="color:#0f172a"],
+html[data-theme="dark"] [style*="color: #111827"],
+html[data-theme="dark"] [style*="color:#111827"],
+html[data-theme="dark"] [style*="color: #334155"],
+html[data-theme="dark"] [style*="color:#334155"],
+html.dark-mode [style*="color: #1e293b"],
+html.dark-mode [style*="color: #0f172a"],
+html.dark-mode [style*="color: #111827"] {
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] [style*="color: #64748b"],
+html[data-theme="dark"] [style*="color:#64748b"],
+html[data-theme="dark"] [style*="color: #475569"],
+html[data-theme="dark"] [style*="color:#475569"],
+html.dark-mode [style*="color: #64748b"],
+html.dark-mode [style*="color: #475569"] {
+  color: #94a3b8 !important;
+}
+
+/* 14. Warning & Notice Banners in Dark Mode */
+html[data-theme="dark"] .alert-warning,
+html[data-theme="dark"] .warning-banner,
+html[data-theme="dark"] [style*="background: rgb(254, 242, 242)"],
+html[data-theme="dark"] [style*="background-color: rgb(254, 242, 242)"],
+html[data-theme="dark"] [style*="background: #fef2f2"],
+html[data-theme="dark"] [style*="background-color: #fef2f2"],
+html.dark-mode [style*="background: #fef2f2"],
+html.dark-mode [style*="background-color: #fef2f2"] {
+  background-color: #450a0a !important;
+  border-color: #991b1b !important;
+  color: #fecaca !important;
+}
+
+/* 15. Smooth Dark Scrollbars */
+html[data-theme="dark"] ::-webkit-scrollbar,
+html.dark-mode ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-track,
+html.dark-mode ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb,
+html.dark-mode ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover,
+html.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+

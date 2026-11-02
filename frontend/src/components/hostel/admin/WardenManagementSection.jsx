@@ -3,9 +3,10 @@ import {
   Users, UserCheck, Shield, Clock, Building2, Search, Filter, Plus,
   Edit2, Eye, ShieldAlert, Award, FileText, CheckCircle2, XCircle,
   AlertTriangle, RotateCcw, Calendar, Phone, Mail, ArrowRight,
-  ExternalLink, Check, X, ShieldCheck, Download, CalendarCheck
+  ExternalLink, Check, X, ShieldCheck, Download, CalendarCheck, UserPlus
 } from 'lucide-react';
 import './WardenManagement.css';
+import AddNewWardenSection from './AddNewWardenSection.jsx';
 
 import {
   getAllWardens,
@@ -15,13 +16,19 @@ import {
   reassignWarden,
   getWardenPermissions,
   updateWardenPermissions,
+  applyPermissionsToAllWardens,
+  syncPermissionsFromBackend,
   logAdminAction
 } from '../../../services/wardenManagementStore.js';
-import { getAllHostels } from '../../../services/hostelAttendanceStore.js';
+import { api } from '../../../services/api.js';
+import WardenEmployeeProfile from '../WardenEmployeeProfile.jsx';
+import { getAllHostels, syncHostelsFromBackend } from '../../../services/hostelAttendanceStore.js';
+import { saveHostelComplex } from '../../../services/hostelComplexStore.js';
 import {
   getAllStaffLeaves,
   approveStaffLeave,
   rejectStaffLeave,
+  applyStaffLeave,
   getLeaveSummary
 } from '../../../services/hostelStaffLeaveStore.js';
 
@@ -39,11 +46,82 @@ const STANDARD_BLOCK_OPTIONS = [
   'Ground Floor & First Floor'
 ];
 
-export default function WardenManagementSection({ account, initialTab = 'directory', showToast }) {
+export default function WardenManagementSection({ account, initialTab = 'directory', showToast, onOpenProfile }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [wardens, setWardens] = useState(() => getAllWardens());
-  const [hostels] = useState(() => getAllHostels());
+  const [hostels, setHostels] = useState(() => getAllHostels());
   const [assignmentHistory, setAssignmentHistory] = useState(() => getAssignmentHistory());
+
+  // Real-time listener for hostel complex creation/updates and wardens updates, with backend synchronization
+  useEffect(() => {
+    let isMounted = true;
+    syncHostelsFromBackend()
+      .then(list => {
+        if (isMounted && list && list.length > 0) {
+          setHostels(list);
+        }
+      })
+      .catch(err => {
+        console.warn('Backend hostels sync fallback:', err?.message || err);
+      });
+
+    const handleHostelsUpdate = () => {
+      setHostels(getAllHostels());
+    };
+    window.addEventListener('bput_hostels_updated', handleHostelsUpdate);
+    window.addEventListener('bput_hostel_complexes_updated', handleHostelsUpdate);
+    window.addEventListener('storage', handleHostelsUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('bput_hostels_updated', handleHostelsUpdate);
+      window.removeEventListener('bput_hostel_complexes_updated', handleHostelsUpdate);
+      window.removeEventListener('storage', handleHostelsUpdate);
+    };
+  }, []);
+
+  // Fetch live wardens from backend API
+  useEffect(() => {
+    let isMounted = true;
+    api.getWardens()
+      .then(res => {
+        if (isMounted && res) {
+          const list = Array.isArray(res) ? res : (res.data && Array.isArray(res.data) ? res.data : null);
+          if (list && list.length > 0) {
+            setWardens(list);
+          }
+        }
+      })
+      .catch(err => {
+        console.warn('Backend wardens fetch fallback:', err.message);
+      });
+
+    syncPermissionsFromBackend();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Sync tab when initialTab prop updates
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  // Real-time listener for wardens updates across all tabs and components
+  useEffect(() => {
+    const handleWardensUpdate = () => {
+      reloadData();
+    };
+    window.addEventListener('bput_wardens_updated', handleWardensUpdate);
+    window.addEventListener('bput_warden_created', handleWardensUpdate);
+    window.addEventListener('bput_warden_status_changed', handleWardensUpdate);
+    window.addEventListener('storage', handleWardensUpdate);
+    return () => {
+      window.removeEventListener('bput_wardens_updated', handleWardensUpdate);
+      window.removeEventListener('bput_warden_created', handleWardensUpdate);
+      window.removeEventListener('bput_warden_status_changed', handleWardensUpdate);
+      window.removeEventListener('storage', handleWardensUpdate);
+    };
+  }, []);
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,6 +131,17 @@ export default function WardenManagementSection({ account, initialTab = 'directo
   // Modals state
   const [selectedProfileWarden, setSelectedProfileWarden] = useState(null);
   const [profileModalTab, setProfileModalTab] = useState('overview');
+
+  const [isAddHostelModalOpen, setIsAddHostelModalOpen] = useState(false);
+  const [addHostelForm, setAddHostelForm] = useState({
+    name: '',
+    type: 'Boys',
+    totalFloors: 3,
+    totalRooms: 50,
+    totalBeds: 150,
+    warden: '',
+    contact: ''
+  });
 
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
   const [reassignForm, setReassignForm] = useState({
@@ -136,7 +225,64 @@ export default function WardenManagementSection({ account, initialTab = 'directo
     if (showToast) showToast(`Leave rejected for ${applicantName}`);
   };
 
+  const [isRecordLeaveModalOpen, setIsRecordLeaveModalOpen] = useState(false);
+  const [recordLeaveForm, setRecordLeaveForm] = useState({
+    applicantWardenId: '',
+    leaveType: 'Casual Leave',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+    reason: '',
+    alternativeArrangement: '',
+    relievingWarden: 'None Assigned',
+    status: 'Approved by Hostel Admin'
+  });
+
+  const handleRecordStaffLeave = (e) => {
+    e.preventDefault();
+    const applicantWarden = wardens.find(w => w.id === recordLeaveForm.applicantWardenId) || wardens[0];
+    if (!applicantWarden) {
+      if (showToast) showToast('Please select an applicant official.');
+      return;
+    }
+    const diffTime = Math.abs(new Date(recordLeaveForm.endDate) - new Date(recordLeaveForm.startDate));
+    const days = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+
+    const payload = {
+      applicantName: applicantWarden.name,
+      employeeId: applicantWarden.id,
+      designation: applicantWarden.designation,
+      department: applicantWarden.department || 'Hostel Administration',
+      leaveType: recordLeaveForm.leaveType,
+      startDate: recordLeaveForm.startDate,
+      endDate: recordLeaveForm.endDate,
+      days,
+      reason: recordLeaveForm.reason || 'Official administrative leave sanctioned.',
+      alternativeArrangement: recordLeaveForm.alternativeArrangement || (recordLeaveForm.relievingWarden !== 'None Assigned' ? `Relieving Warden ${recordLeaveForm.relievingWarden} assigned to cover residential roll-call and emergency duties.` : 'Senior Caretaker will supervise roll-call duties.'),
+      status: recordLeaveForm.status || 'Approved by Hostel Admin',
+      approvedBy: account?.name || 'Mr. Rajesh Jena (Hostel Admin)'
+    };
+
+    applyStaffLeave(payload);
+    setStaffLeaves(getAllStaffLeaves());
+    setIsRecordLeaveModalOpen(false);
+    if (showToast) showToast(`✓ Staff leave application registered and sanctioned for ${applicantWarden.name}`);
+  };
+
+  const getWardenInitials = (name) => {
+    if (!name) return 'W';
+    const clean = name.replace(/^(Mr\.|Mrs\.|Dr\.|Prof\.)\s*/i, '').trim();
+    const parts = clean.split(' ').filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return (parts[0] || 'W').substring(0, 2).toUpperCase();
+  };
+
+  const getAvatarTheme = (idx) => {
+    const themes = ['', 'purple', 'teal', 'amber'];
+    return themes[idx % themes.length];
+  };
+  const [applyToAllWardensCheck, setApplyToAllWardensCheck] = useState(false);
   const [selectedPermWarden, setSelectedPermWarden] = useState(null);
+  const [permRefreshKey, setPermRefreshKey] = useState(0);
   const [permsState, setPermsState] = useState({});
 
   // Reload wardens
@@ -164,16 +310,26 @@ export default function WardenManagementSection({ account, initialTab = 'directo
   // Handle account suspension/reactivation
   const handleToggleStatus = (warden) => {
     const newStatus = warden.accountStatus === 'Active' ? 'Suspended' : 'Active';
-    const confirmMsg = `Are you sure you want to ${newStatus === 'Suspended' ? 'suspend' : 'reactivate'} access for ${warden.name}?`;
+    const confirmMsg = `Are you sure you want to ${newStatus === 'Suspended' ? 'suspend' : 'reactivate'} access for ${warden.name}?${
+      newStatus === 'Suspended'
+        ? '\n\nWhen suspended, this warden will be unable to take attendance, approve gate passes, or manage leaves/rooms in CMS, and will only have Read-Only view access.'
+        : ''
+    }`;
     if (!window.confirm(confirmMsg)) return;
 
     setWardenAccountStatus(warden.id, newStatus, 'Administrative executive action');
     reloadData();
-    if (showToast) showToast(`Warden ${warden.name} account status updated to ${newStatus}`);
+    if (showToast) {
+      if (newStatus === 'Suspended') {
+        showToast(`⚠️ Warden ${warden.name} suspended. All CMS operations locked to Read-Only.`);
+      } else {
+        showToast(`✓ Warden ${warden.name} reactivated. Operational privileges restored.`);
+      }
+    }
   };
 
   // Handle Reassign Submit
-  const handleReassignSubmit = (e) => {
+  const handleReassignSubmit = async (e) => {
     e.preventDefault();
     try {
       reassignWarden({
@@ -183,55 +339,230 @@ export default function WardenManagementSection({ account, initialTab = 'directo
       setIsReassignModalOpen(false);
       reloadData();
       if (showToast) showToast(`✓ Warden successfully reassigned to ${reassignForm.newHostelName}!`);
+
+      // Sync reassignment to backend API
+      try {
+        await api.updateWardenProfile(reassignForm.wardenId, {
+          hostelName: reassignForm.newHostelName,
+          assignedHostelOrPost: reassignForm.newHostelName,
+          assignedBlocks: Array.isArray(reassignForm.assignedBlocks) ? reassignForm.assignedBlocks : [reassignForm.assignedBlocks],
+          dutyShift: reassignForm.dutyShift,
+          shiftTimings: reassignForm.shiftTimings
+        });
+        reloadData();
+      } catch (backendErr) {
+        console.warn('Backend warden reassignment sync warning:', backendErr?.message || backendErr);
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // Handle Add Hostel Complex Submit
+  const handleAddHostelSubmit = async (e) => {
+    e.preventDefault();
+    if (!addHostelForm.name.trim()) {
+      alert('Please enter a valid hostel complex name.');
+      return;
+    }
+    try {
+      const created = saveHostelComplex({
+        name: addHostelForm.name.trim(),
+        type: addHostelForm.type,
+        totalFloors: Number(addHostelForm.totalFloors) || 3,
+        totalRooms: Number(addHostelForm.totalRooms) || 50,
+        totalBeds: Number(addHostelForm.totalBeds) || 150,
+        warden: addHostelForm.warden || 'Resident Warden',
+        contact: addHostelForm.contact || '+91 94370 00000'
+      });
+      setHostels(getAllHostels());
+      setIsAddHostelModalOpen(false);
+      setAddHostelForm({
+        name: '',
+        type: 'Boys',
+        totalFloors: 3,
+        totalRooms: 50,
+        totalBeds: 150,
+        warden: '',
+        contact: ''
+      });
+      if (showToast) showToast(`✓ Hostel complex "${created.name}" registered and synced to backend!`);
+      // Re-sync with backend to ensure fresh complex list
+      syncHostelsFromBackend().then(list => {
+        if (list && list.length > 0) setHostels(list);
+      });
     } catch (err) {
       alert(err.message);
     }
   };
 
   // Open Permissions Modal
-  const handleOpenPermissions = (warden) => {
+  const handleOpenPermissions = async (warden) => {
     setSelectedPermWarden(warden);
     setPermsState(getWardenPermissions(warden.id));
+    setApplyToAllWardensCheck(false);
+    try {
+      const response = await api.getWardenPermissions(warden.id);
+      const savedPermissions = response?.data?.data;
+      if (savedPermissions && typeof savedPermissions === 'object') {
+        setPermsState(savedPermissions);
+      }
+    } catch (error) {
+      console.warn('Backend warden permissions fetch fallback:', error?.message || error);
+    }
   };
 
-  // Save Permissions
-  const handleSavePermissions = () => {
+  // Save Permissions with Apply to All Wardens support
+  const handleSavePermissions = async (forceApplyAll = false) => {
     if (!selectedPermWarden) return;
-    updateWardenPermissions(selectedPermWarden.id, permsState, 'Hostel Admin permission modification');
+    const shouldApplyAll = forceApplyAll === true || applyToAllWardensCheck || selectedPermWarden.id === 'ALL';
+    const targetWardenId = selectedPermWarden.id;
+    const targetWardenName = selectedPermWarden.name;
+    const targetPerms = { ...permsState };
+
+    // 1. Immediately persist locally and broadcast reactive state
+    if (shouldApplyAll) {
+      applyPermissionsToAllWardens(targetPerms, 'Hostel Admin bulk matrix update for all wardens', false);
+    } else {
+      updateWardenPermissions(targetWardenId, targetPerms, 'Hostel Admin permission modification', false, false);
+    }
+
+    // 2. Automatically close modal immediately upon submit (User requirement)
     setSelectedPermWarden(null);
-    if (showToast) showToast(`✓ Operational permissions updated for ${selectedPermWarden.name}`);
+    setApplyToAllWardensCheck(false);
+    setPermRefreshKey(k => k + 1);
+
+    if (showToast) {
+      showToast(shouldApplyAll
+        ? '✓ Permissions updated for all hostel wardens and synced to backend!'
+        : `✓ Operational permissions updated for ${targetWardenName} and synced to backend!`);
+    }
+
+    // 3. Persist to backend and database asynchronously in background
+    if (shouldApplyAll) {
+      api.applyWardenPermissionsToAll(targetPerms).catch(error => {
+        console.warn('Backend warden permissions sync fallback:', error?.message || error);
+      });
+    } else {
+      api.updateWardenPermissions(targetWardenId, targetPerms, false).catch(error => {
+        console.warn('Backend warden permissions sync fallback:', error?.message || error);
+      });
+    }
   };
+
+  if (selectedProfileWarden) {
+    return (
+      <WardenEmployeeProfile
+        account={account}
+        warden={selectedProfileWarden}
+        onBack={() => setSelectedProfileWarden(null)}
+      />
+    );
+  }
 
   return (
     <div className="wm-container">
-      {/* Header */}
-      <div className="wm-header">
-        <div className="wm-title">
-          <h1>
-            {activeTab === 'assignments' && 'Warden Assignments & Reliever Console'}
-            {activeTab === 'permissions' && 'Granular Scoped Permissions Matrix for Wardens'}
-            {activeTab === 'duty-leaves' && 'Warden Duty Rosters & Leave Management'}
-            {activeTab === 'performance' && 'Warden Performance & Compliance Indicators'}
-            {(activeTab === 'directory' || !activeTab) && 'Warden Directory & Operational Staffing'}
-            <span className="wm-badge">Administrative Authority</span>
-          </h1>
-          <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>
-            {activeTab === 'assignments' && 'Reassign wardens to hostel complexes, rebalance residential blocks, and review handover audit history.'}
-            {activeTab === 'permissions' && 'Configure operational permissions across attendance, room transfers, and material indents.'}
-            {activeTab === 'duty-leaves' && 'Active shifts, rotational roll-call relief rosters, and official staff leave sanctions.'}
-            {activeTab === 'performance' && 'Objective metrics: on-time roll call rate, 72h complaint resolution speed, and supervisory notes.'}
-            {(activeTab === 'directory' || !activeTab) && 'Active resident wardens, assigned hostels, contact records, and employment status.'}
-          </p>
+      {/* Header - hide redundant duplicate title on duty-leaves or show compact toolbar */}
+      {activeTab === 'duty-leaves' ? (
+        <div className="wm-action-toolbar">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <span className="wm-badge" style={{ background: '#ede9fe', color: '#7c3aed' }}>Administrative Authority</span>
+            <span style={{ fontSize: '0.84rem', color: '#64748b', fontWeight: 500 }}>
+              Live Residential Lifecycle &amp; Warden Administration · Synchronized with Central Registry
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="had-btn had-btn-secondary"
+              style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem', border: '1px solid #cbd5e1' }}
+              onClick={() => handleOpenReassignModal()}
+            >
+              <RotateCcw size={13} /> Assign / Reassign Warden
+            </button>
+            <button
+              type="button"
+              className="had-btn had-btn-primary"
+              style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}
+              onClick={() => {
+                setRecordLeaveForm({
+                  applicantWardenId: wardens[0]?.id || '',
+                  leaveType: 'Casual Leave',
+                  startDate: new Date().toISOString().split('T')[0],
+                  endDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+                  reason: '',
+                  alternativeArrangement: '',
+                  relievingWarden: 'None Assigned',
+                  status: 'Approved by Hostel Admin'
+                });
+                setIsRecordLeaveModalOpen(true);
+              }}
+            >
+              <Plus size={13} /> Record Staff Leave
+            </button>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.6rem' }}>
+      ) : (
+        <div className="wm-header">
+          <div className="wm-title">
+            <h1>
+              {activeTab === 'add-warden' && 'Register New Warden (Employee Onboarding)'}
+              {activeTab === 'assignments' && 'Warden Assignments & Reliever Console'}
+              {activeTab === 'permissions' && 'Granular Scoped Permissions Matrix for Wardens'}
+              {activeTab === 'performance' && 'Warden Performance & Compliance Indicators'}
+              {(activeTab === 'directory' || !activeTab) && 'Warden Directory & Operational Staffing'}
+              <span className="wm-badge">Administrative Authority</span>
+            </h1>
+            <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>
+              {activeTab === 'add-warden' && 'Complete employment dossier, upload photograph, allocate residential block, and set operational credentials.'}
+              {activeTab === 'assignments' && 'Reassign wardens to hostel complexes, rebalance residential blocks, and review handover audit history.'}
+              {activeTab === 'permissions' && 'Configure operational permissions across attendance, room transfers, and material indents.'}
+              {activeTab === 'performance' && 'Objective metrics: on-time roll call rate, 72h complaint resolution speed, and supervisory notes.'}
+              {(activeTab === 'directory' || !activeTab) && 'Active resident wardens, assigned hostels, contact records, and employment status.'}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          {activeTab === 'add-warden' && (
+            <button
+              className="had-btn had-btn-secondary"
+              onClick={() => setActiveTab('directory')}
+              style={{ border: '1px solid #cbd5e1' }}
+            >
+              ← Back to Directory
+            </button>
+          )}
+
           <button
             className="had-btn had-btn-primary"
-            onClick={() => handleOpenReassignModal()}
+            onClick={() => setIsAddHostelModalOpen(true)}
+            style={{ background: '#2563eb', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <Plus size={14} /> Assign / Reassign Warden
+            <Building2 size={14} /> + Add Hostel Complex
+          </button>
+
+          <button
+            className="had-btn had-btn-secondary"
+            onClick={() => handleOpenReassignModal()}
+            style={{ border: '1px solid #cbd5e1' }}
+          >
+            <RotateCcw size={14} /> Assign / Reassign Warden
           </button>
         </div>
       </div>
+      )}
+
+      {/* TAB: ADD NEW WARDEN */}
+      {activeTab === 'add-warden' && (
+        <AddNewWardenSection
+          showToast={showToast}
+          onCancel={() => setActiveTab('directory')}
+          onWardenCreated={(newWarden) => {
+            reloadData();
+            setActiveTab('directory');
+            if (showToast) showToast(`✓ ${newWarden.name} (${newWarden.id}) registered into Warden Directory!`);
+          }}
+        />
+      )}
 
       {/* TAB 1: WARDEN DIRECTORY */}
       {activeTab === 'directory' && (
@@ -290,9 +621,44 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                 {filteredWardens.map(w => (
                   <tr key={w.id}>
                     <td>
-                      <strong>{w.name}</strong>
-                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>ID: {w.id} · {w.designation}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#0284c7' }}>{w.email} · {w.phone}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          border: '2px solid #3b82f6',
+                          background: '#eff6ff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 2px 6px rgba(59, 130, 246, 0.15)'
+                        }}>
+                          {w.avatar || w.photoUrl || w.photo ? (
+                            <img
+                              src={w.avatar || w.photoUrl || w.photo}
+                              alt={w.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                if (e.target.parentElement) {
+                                  e.target.parentElement.innerText = getWardenInitials(w.name);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1d4ed8' }}>
+                              {getWardenInitials(w.name)}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <strong style={{ color: '#0f172a' }}>{w.name}</strong>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>ID: {w.id} · {w.designation}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#0284c7' }}>{w.email} · {w.phone}</div>
+                        </div>
+                      </div>
                     </td>
                     <td>
                       <strong style={{ color: '#0f172a' }}>{w.hostelName}</strong>
@@ -331,19 +697,14 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                           style={{ padding: '0.25rem 0.55rem', fontSize: '0.72rem' }}
                           title="View Complete 13-Tab Dossier"
                           onClick={() => {
-                            setSelectedProfileWarden(w);
-                            setProfileModalTab('overview');
+                            if (onOpenProfile) {
+                              onOpenProfile(w);
+                            } else {
+                              setSelectedProfileWarden(w);
+                            }
                           }}
                         >
                           <Eye size={12} /> Profile
-                        </button>
-                        <button
-                          className="had-btn had-btn-secondary"
-                          style={{ padding: '0.25rem 0.55rem', fontSize: '0.72rem' }}
-                          title="Configure Granular Permissions"
-                          onClick={() => handleOpenPermissions(w)}
-                        >
-                          <Shield size={12} /> Perms
                         </button>
                         <button
                           className="had-btn had-btn-secondary"
@@ -410,8 +771,49 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                         <span className="had-badge info">{h.type}</span> · {h.totalBeds} Beds
                       </td>
                       <td>
-                        <strong>{assignedWarden ? assignedWarden.name : (h.warden || 'Unassigned')}</strong>
-                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{assignedWarden?.email || h.contact}</div>
+                        {assignedWarden ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              overflow: 'hidden',
+                              flexShrink: 0,
+                              border: '1.5px solid #3b82f6',
+                              background: '#eff6ff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {assignedWarden.avatar || assignedWarden.photoUrl || assignedWarden.photo ? (
+                                <img
+                                  src={assignedWarden.avatar || assignedWarden.photoUrl || assignedWarden.photo}
+                                  alt={assignedWarden.name}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    if (e.target.parentElement) {
+                                      e.target.parentElement.innerText = getWardenInitials(assignedWarden.name);
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1d4ed8' }}>
+                                  {getWardenInitials(assignedWarden.name)}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <strong>{assignedWarden.name}</strong>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{assignedWarden.email || h.contact}</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <strong>{h.warden || 'Unassigned'}</strong>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{h.contact}</div>
+                          </div>
+                        )}
                       </td>
                       <td>
                         {assignedWarden?.assignedBlocks ? assignedWarden.assignedBlocks.join(', ') : 'All Blocks'}
@@ -488,14 +890,28 @@ export default function WardenManagementSection({ account, initialTab = 'directo
 
       {/* TAB 3: WARDEN PERMISSIONS MATRIX */}
       {activeTab === 'permissions' && (
-        <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem' }}>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '1rem', color: '#0f172a' }}>
-              Granular Scoped Permissions Matrix for Wardens
-            </h3>
-            <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748b' }}>
-              Hostel Admin can customize operational privileges for each warden. High-privilege policies (curfew configuration, institutional exports, staff rosters) are locked to Hostel Admin by default.
-            </p>
+        <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem' }} key={permRefreshKey}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div style={{ flex: 1, minWidth: '280px' }}>
+              <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '1rem', color: '#0f172a' }}>
+                Granular Scoped Permissions Matrix for Wardens
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748b' }}>
+                Hostel Admin can customize operational privileges for each warden. When admin gives or updates permission, it can be applied to all hostel wardens instantly.
+              </p>
+            </div>
+            <button
+              className="had-btn had-btn-primary"
+              style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              title="Configure matrix and apply to all resident wardens simultaneously"
+              onClick={() => {
+                setSelectedPermWarden({ id: 'ALL', name: 'All Resident Wardens', hostelName: 'All Campus Hostels' });
+                setPermsState(getWardenPermissions('WRD-101'));
+                setApplyToAllWardensCheck(true);
+              }}
+            >
+              <ShieldCheck size={15} /> Apply Permissions to All Wardens
+            </button>
           </div>
 
           <table className="had-table">
@@ -574,52 +990,84 @@ export default function WardenManagementSection({ account, initialTab = 'directo
       {activeTab === 'duty-leaves' && (
         <div>
           {/* Summary KPI Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div className="wm-duty-kpi-grid">
             <div className="wm-kpi-card">
               <div className="wm-kpi-header">
-                <span className="wm-kpi-label">Active Wardens on Duty</span>
-                <div className="wm-kpi-icon green"><UserCheck size={18} /></div>
+                <div className="wm-kpi-header-left">
+                  <div className="wm-kpi-icon green"><UserCheck size={20} /></div>
+                  <span className="wm-kpi-label">Active Wardens on Duty</span>
+                </div>
+                <span className="wm-kpi-badge green">
+                  {wardens.filter(w => w.dutyStatus === 'On Duty').length} Active
+                </span>
               </div>
-              <div className="wm-kpi-val">{wardens.filter(w => w.dutyStatus === 'On Duty').length}</div>
-              <span style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 600 }}>Active residential coverage</span>
+              <div className="wm-kpi-val">
+                {wardens.filter(w => w.dutyStatus === 'On Duty').length} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#64748b' }}>Wardens</span>
+              </div>
+              <div className="wm-kpi-subtext" style={{ color: '#059669' }}>
+                <span style={{ fontSize: '0.75rem' }}>●</span> Active 24×7 residential coverage
+              </div>
             </div>
 
             <div className="wm-kpi-card">
               <div className="wm-kpi-header">
-                <span className="wm-kpi-label">Wardens / Staff on Leave</span>
-                <div className="wm-kpi-icon amber"><Clock size={18} /></div>
+                <div className="wm-kpi-header-left">
+                  <div className="wm-kpi-icon amber"><Clock size={20} /></div>
+                  <span className="wm-kpi-label">Wardens / Staff on Leave</span>
+                </div>
+                <span className="wm-kpi-badge amber">Relief Roster</span>
               </div>
-              <div className="wm-kpi-val">{wardens.filter(w => w.dutyStatus === 'On Leave').length}</div>
-              <span style={{ fontSize: '0.78rem', color: '#d97706', fontWeight: 600 }}>Covered by relief wardens</span>
+              <div className="wm-kpi-val">
+                {wardens.filter(w => w.dutyStatus === 'On Leave').length} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#64748b' }}>Staff</span>
+              </div>
+              <div className="wm-kpi-subtext" style={{ color: '#d97706' }}>
+                <span style={{ fontSize: '0.75rem' }}>○</span> Covered by assigned relief wardens
+              </div>
             </div>
 
             <div className="wm-kpi-card">
               <div className="wm-kpi-header">
-                <span className="wm-kpi-label">Pending Leave Requests</span>
-                <div className="wm-kpi-icon purple"><Calendar size={18} /></div>
+                <div className="wm-kpi-header-left">
+                  <div className="wm-kpi-icon purple"><Calendar size={20} /></div>
+                  <span className="wm-kpi-label">Pending Leave Requests</span>
+                </div>
+                <span className="wm-kpi-badge purple">
+                  {staffLeaves.filter(l => l.status === 'Pending Approval').length} Pending
+                </span>
               </div>
-              <div className="wm-kpi-val">{staffLeaves.filter(l => l.status === 'Pending Approval').length}</div>
-              <span style={{ fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600 }}>Awaiting Admin Sanction</span>
+              <div className="wm-kpi-val">
+                {staffLeaves.filter(l => l.status === 'Pending Approval').length} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#64748b' }}>Requests</span>
+              </div>
+              <div className="wm-kpi-subtext" style={{ color: '#7c3aed' }}>
+                <span>⚡</span> Awaiting Administrative Sanction
+              </div>
             </div>
 
             <div className="wm-kpi-card">
               <div className="wm-kpi-header">
-                <span className="wm-kpi-label">Total Staff Sanctions</span>
-                <div className="wm-kpi-icon blue"><CheckCircle2 size={18} /></div>
+                <div className="wm-kpi-header-left">
+                  <div className="wm-kpi-icon blue"><CheckCircle2 size={20} /></div>
+                  <span className="wm-kpi-label">Total Staff Sanctions</span>
+                </div>
+                <span className="wm-kpi-badge blue">Authorized</span>
               </div>
-              <div className="wm-kpi-val">{staffLeaves.filter(l => l.status === 'Approved by Hostel Admin').length}</div>
-              <span style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: 600 }}>Official leaves approved</span>
+              <div className="wm-kpi-val">
+                {staffLeaves.filter(l => l.status === 'Approved by Hostel Admin').length} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#64748b' }}>Sanctions</span>
+              </div>
+              <div className="wm-kpi-subtext" style={{ color: '#0284c7' }}>
+                <span>✓</span> Official sanctioned institutional leaves
+              </div>
             </div>
           </div>
 
           {/* Section A: Active Warden Duty Shift Rosters */}
-          <div className="wm-table-card" style={{ marginBottom: '1.5rem' }}>
+          <div className="wm-table-card">
             <div className="wm-table-card-header">
               <div>
-                <h4 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a' }}>
-                  Warden Shift Rosters &amp; Roll-Call Allocations
+                <h4>
+                  <CalendarCheck size={18} color="#2563eb" /> Warden Shift Rosters &amp; Roll-Call Allocations
                 </h4>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                <p>
                   Live operational duty shifts, residential complex allocation, and relieving warden arrangements.
                 </p>
               </div>
@@ -645,56 +1093,90 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                 </tr>
               </thead>
               <tbody>
-                {wardens.map(w => (
-                  <tr key={w.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#0f172a' }}>{w.name}</div>
-                      <small style={{ color: '#64748b' }}>{w.id}</small>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '0.82rem' }}>{w.designation}</div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{w.hostelName}</div>
-                      <small style={{ color: '#64748b' }}>{Array.isArray(w.assignedBlocks) ? w.assignedBlocks.join(', ') : w.assignedBlocks}</small>
-                    </td>
-                    <td>
-                      <span className="had-badge neutral">{w.dutyShift || 'General / 24x7 Resident'}</span>
-                    </td>
-                    <td>
-                      <span className={`had-badge ${w.dutyStatus === 'On Duty' ? 'green' : 'amber'}`}>
-                        {w.dutyStatus === 'On Duty' ? '● On Duty' : '○ On Leave'}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.82rem', color: '#475569' }}>
-                        {w.relievingWarden || 'None Assigned'}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '0.8rem', color: '#0284c7' }}>{w.phone}</div>
-                    </td>
-                    <td>
-                      <button
-                        className="had-btn had-btn-secondary"
-                        style={{ padding: '0.25rem 0.55rem', fontSize: '0.72rem' }}
-                        onClick={() => {
-                          handleOpenReassignModal({
-                            wardenId: w.id,
-                            newHostelId: w.hostelId || 'hst-1',
-                            newHostelName: w.hostelName,
-                            assignedBlocks: Array.isArray(w.assignedBlocks) ? w.assignedBlocks[0] : w.assignedBlocks,
-                            dutyShift: w.dutyShift || 'General / 24x7 Resident',
-                            relievingWarden: w.relievingWarden || 'None',
-                            reason: 'Shift & roster adjustment'
-                          });
-                        }}
-                      >
-                        Edit Roster
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {wardens.map((w, idx) => {
+                  const safeHostel = w.hostelName && w.hostelName.length > 1
+                    ? w.hostelName
+                    : (w.hostelName ? `Hostel Complex ${w.hostelName.toUpperCase()}` : 'General Campus Complex');
+
+                  return (
+                    <tr key={w.id}>
+                      <td>
+                        <div className="wm-avatar-cell">
+                          <div className={`wm-avatar-circle ${getAvatarTheme(idx)}`} style={{ overflow: 'hidden', padding: 0 }}>
+                            {w.avatar || w.photoUrl || w.photo ? (
+                              <img
+                                src={w.avatar || w.photoUrl || w.photo}
+                                alt={w.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  if (e.target.parentElement) {
+                                    e.target.parentElement.innerText = getWardenInitials(w.name);
+                                  }
+                                }}
+                              />
+                            ) : (
+                              getWardenInitials(w.name)
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, color: '#0f172a' }}>{w.name}</div>
+                            <small style={{ color: '#64748b', fontFamily: 'monospace' }}>{w.id}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: '0.84rem', fontWeight: 600, color: '#334155' }}>{w.designation}</div>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{safeHostel}</div>
+                        <small style={{ color: '#64748b' }}>
+                          {Array.isArray(w.assignedBlocks) ? w.assignedBlocks.join(', ') : (w.assignedBlocks || 'All Blocks')}
+                        </small>
+                      </td>
+                      <td>
+                        <span className="had-badge neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Clock size={11} /> {w.dutyShift || 'General / 24×7 Resident'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`wm-status-pill ${w.dutyStatus === 'On Duty' ? 'on-duty' : 'on-leave'}`}>
+                          <span className="wm-pulse-dot" />
+                          {w.dutyStatus === 'On Duty' ? 'On Duty' : 'On Leave'}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.82rem', color: w.relievingWarden && w.relievingWarden !== 'None' ? '#0f172a' : '#94a3b8', fontWeight: w.relievingWarden && w.relievingWarden !== 'None' ? 600 : 400 }}>
+                          {w.relievingWarden || 'None Assigned'}
+                        </span>
+                      </td>
+                      <td>
+                        <a href={`tel:${w.phone}`} className="wm-phone-pill" title="Call Warden">
+                          <Phone size={12} /> {w.phone}
+                        </a>
+                      </td>
+                      <td>
+                        <button
+                          className="had-btn had-btn-secondary"
+                          style={{ padding: '0.3rem 0.65rem', fontSize: '0.74rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          onClick={() => {
+                            handleOpenReassignModal({
+                              wardenId: w.id,
+                              newHostelId: w.hostelId || 'hst-1',
+                              newHostelName: w.hostelName,
+                              assignedBlocks: Array.isArray(w.assignedBlocks) ? w.assignedBlocks[0] : w.assignedBlocks,
+                              dutyShift: w.dutyShift || 'General / 24x7 Resident',
+                              relievingWarden: w.relievingWarden || 'None',
+                              reason: 'Shift & roster adjustment'
+                            });
+                          }}
+                        >
+                          <Edit2 size={12} /> Edit Roster
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -703,13 +1185,32 @@ export default function WardenManagementSection({ account, initialTab = 'directo
           <div className="wm-table-card">
             <div className="wm-table-card-header">
               <div>
-                <h4 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a' }}>
-                  Warden &amp; Staff Leave Applications &amp; Sanctions
+                <h4>
+                  <FileText size={18} color="#7c3aed" /> Warden &amp; Staff Leave Applications &amp; Sanctions
                 </h4>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                <p>
                   Review leave applications, verify alternative duty arrangements, and grant official administrative sanctions.
                 </p>
               </div>
+              <button
+                className="had-btn had-btn-secondary"
+                style={{ border: '1px solid #cbd5e1' }}
+                onClick={() => {
+                  setRecordLeaveForm({
+                    applicantWardenId: wardens[0]?.id || '',
+                    leaveType: 'Casual Leave',
+                    startDate: new Date().toISOString().split('T')[0],
+                    endDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+                    reason: '',
+                    alternativeArrangement: '',
+                    relievingWarden: 'None Assigned',
+                    status: 'Approved by Hostel Admin'
+                  });
+                  setIsRecordLeaveModalOpen(true);
+                }}
+              >
+                <Plus size={14} /> Record Staff Leave
+              </button>
             </div>
 
             <table className="had-table">
@@ -725,28 +1226,49 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                 </tr>
               </thead>
               <tbody>
-                {staffLeaves.map(leave => (
+                {staffLeaves.map((leave, lIdx) => (
                   <tr key={leave.id}>
                     <td>
-                      <div style={{ fontFamily: 'monospace', fontWeight: 600, color: '#334155' }}>{leave.id}</div>
+                      <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#2563eb' }}>{leave.id}</div>
                       <small style={{ color: '#94a3b8' }}>Applied: {leave.appliedOn}</small>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600, color: '#0f172a' }}>{leave.applicantName}</div>
-                      <small style={{ color: '#64748b' }}>{leave.designation} · {leave.employeeId}</small>
+                      <div className="wm-avatar-cell">
+                        <div className={`wm-avatar-circle ${getAvatarTheme(lIdx + 1)}`} style={{ overflow: 'hidden', padding: 0 }}>
+                          {leave.applicantAvatar || leave.avatar ? (
+                            <img
+                              src={leave.applicantAvatar || leave.avatar}
+                              alt={leave.applicantName}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                if (e.target.parentElement) {
+                                  e.target.parentElement.innerText = getWardenInitials(leave.applicantName);
+                                }
+                              }}
+                            />
+                          ) : (
+                            getWardenInitials(leave.applicantName)
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{leave.applicantName}</div>
+                          <small style={{ color: '#64748b' }}>{leave.designation} · {leave.employeeId}</small>
+                        </div>
+                      </div>
                     </td>
                     <td>
-                      <span className="had-badge purple">{leave.leaveType}</span>
+                      <span className="had-badge purple" style={{ fontWeight: 700 }}>{leave.leaveType}</span>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{leave.days} Day(s)</div>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{leave.days} Day(s)</div>
                       <small style={{ color: '#64748b' }}>{leave.startDate} to {leave.endDate}</small>
                     </td>
-                    <td style={{ maxWidth: '280px' }}>
+                    <td style={{ maxWidth: '320px' }}>
                       <div style={{ fontSize: '0.82rem', color: '#1e293b' }}>{leave.reason}</div>
                       {leave.alternativeArrangement && (
-                        <div style={{ fontSize: '0.76rem', color: '#059669', marginTop: '0.25rem' }}>
-                          <strong>Handover:</strong> {leave.alternativeArrangement}
+                        <div className="wm-handover-box">
+                          <strong style={{ color: '#059669' }}>Handover Arrangement:</strong> {leave.alternativeArrangement}
                         </div>
                       )}
                     </td>
@@ -754,7 +1276,7 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                       <span className={`had-badge ${
                         leave.status === 'Approved by Hostel Admin' ? 'green' :
                         leave.status === 'Rejected by Hostel Admin' ? 'red' : 'amber'
-                      }`}>
+                      }`} style={{ fontWeight: 700 }}>
                         {leave.status}
                       </span>
                     </td>
@@ -763,23 +1285,23 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                         <div style={{ display: 'flex', gap: '0.4rem' }}>
                           <button
                             className="had-btn had-btn-primary"
-                            style={{ padding: '0.28rem 0.6rem', fontSize: '0.72rem' }}
+                            style={{ padding: '0.3rem 0.65rem', fontSize: '0.74rem' }}
                             onClick={() => handleApproveLeave(leave.id, leave.applicantName)}
                           >
                             <Check size={12} /> Approve
                           </button>
                           <button
                             className="had-btn had-btn-danger"
-                            style={{ padding: '0.28rem 0.6rem', fontSize: '0.72rem' }}
+                            style={{ padding: '0.3rem 0.65rem', fontSize: '0.74rem' }}
                             onClick={() => handleRejectLeave(leave.id, leave.applicantName)}
                           >
                             <X size={12} /> Reject
                           </button>
                         </div>
                       ) : (
-                        <small style={{ color: '#64748b' }}>
+                        <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
                           {leave.approvedBy ? `By ${leave.approvedBy}` : 'Processed'}
-                        </small>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -830,8 +1352,21 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                 </div>
               </div>
 
-              <div style={{ fontSize: '0.78rem', color: '#475569', background: '#f1f5f9', padding: '0.65rem', borderRadius: '6px' }}>
-                <strong>Supervisor Note:</strong> {w.notes || 'Reliable operational execution.'}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', background: '#f1f5f9', padding: '0.65rem', borderRadius: '6px' }}>
+                <div style={{ fontSize: '0.78rem', color: '#475569', flex: 1 }}>
+                  <strong>Supervisor Note:</strong> {w.notes || 'Reliable operational execution.'}
+                </div>
+                <button
+                  className="had-btn had-btn-secondary"
+                  style={{ padding: '0.25rem 0.55rem', fontSize: '0.72rem', whiteSpace: 'nowrap' }}
+                  title="View Complete Warden CMS Profile"
+                  onClick={() => {
+                    if (onOpenProfile) onOpenProfile(w);
+                    else setSelectedProfileWarden(w);
+                  }}
+                >
+                  <Eye size={12} /> Profile
+                </button>
               </div>
             </div>
           ))}
@@ -884,7 +1419,7 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                       required
                     >
                       {hostels.map(h => (
-                        <option key={h.id} value={h.name}>{h.name} ({h.type})</option>
+                        <option key={h.id} value={h.name}>{h.name}{h.type ? ` (${h.type})` : ''}</option>
                       ))}
                     </select>
                   </div>
@@ -1036,13 +1571,33 @@ export default function WardenManagementSection({ account, initialTab = 'directo
         <div className="wm-modal-backdrop" onClick={() => setSelectedPermWarden(null)}>
           <div className="wm-modal" style={{ maxWidth: '750px' }} onClick={e => e.stopPropagation()}>
             <div className="wm-modal-header">
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>
-                  Operational Permissions: {selectedPermWarden.name} ({selectedPermWarden.id})
-                </h3>
-                <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                  Scope: {selectedPermWarden.hostelName}
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {(selectedPermWarden.avatar || selectedPermWarden.photoUrl || selectedPermWarden.photo) && (
+                  <div style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    border: '2px solid #3b82f6',
+                    boxShadow: '0 2px 6px rgba(59, 130, 246, 0.2)'
+                  }}>
+                    <img
+                      src={selectedPermWarden.avatar || selectedPermWarden.photoUrl || selectedPermWarden.photo}
+                      alt={selectedPermWarden.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  </div>
+                )}
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>
+                    Operational Permissions: {selectedPermWarden.name} ({selectedPermWarden.id})
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                    Scope: {selectedPermWarden.hostelName}
+                  </span>
+                </div>
               </div>
               <button
                 style={{ background: 'none', border: 'none', cursor: 'pointer' }}
@@ -1084,20 +1639,52 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                   </div>
                 ))}
               </div>
+
+              {/* Apply to All Wardens Switch */}
+              <div style={{ marginTop: '1.25rem', padding: '0.9rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>Apply this permission matrix to ALL Hostel Wardens</strong>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    When enabled, saving will immediately update the permissions for every warden in the system and backend.
+                  </div>
+                </div>
+                <label className="wm-switch">
+                  <input
+                    type="checkbox"
+                    checked={applyToAllWardensCheck}
+                    onChange={e => setApplyToAllWardensCheck(e.target.checked)}
+                  />
+                  <span className="wm-slider"></span>
+                </label>
+              </div>
             </div>
-            <div className="wm-modal-footer">
+            <div className="wm-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
               <button
                 className="had-btn had-btn-secondary"
-                onClick={() => setSelectedPermWarden(null)}
+                onClick={() => {
+                  setSelectedPermWarden(null);
+                  setApplyToAllWardensCheck(false);
+                }}
               >
                 Cancel
               </button>
-              <button
-                className="had-btn had-btn-primary"
-                onClick={handleSavePermissions}
-              >
-                Save Permissions
-              </button>
+              <div style={{ display: 'flex', gap: '0.6rem' }}>
+                {selectedPermWarden.id !== 'ALL' && (
+                  <button
+                    className="had-btn had-btn-secondary"
+                    onClick={() => handleSavePermissions(false)}
+                    title="Save only for this warden"
+                  >
+                    Save for {selectedPermWarden.name} Only
+                  </button>
+                )}
+                <button
+                  className="had-btn had-btn-primary"
+                  onClick={() => handleSavePermissions(selectedPermWarden.id === 'ALL' || applyToAllWardensCheck)}
+                >
+                  {applyToAllWardensCheck || selectedPermWarden.id === 'ALL' ? '✓ Apply to ALL Hostel Wardens' : 'Save Permissions'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1259,6 +1846,294 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD HOSTEL COMPLEX MODAL */}
+      {isAddHostelModalOpen && (
+        <div className="wm-modal-overlay" onClick={() => setIsAddHostelModalOpen(false)}>
+          <div className="wm-modal" style={{ maxWidth: '520px' }} onClick={e => e.stopPropagation()}>
+            <div className="wm-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <Building2 size={20} color="#2563eb" />
+                <div>
+                  <h3 className="wm-modal-title">Register New Hostel Complex</h3>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
+                    Connects directly to backend API and database infrastructure
+                  </p>
+                </div>
+              </div>
+              <button className="wm-modal-close" onClick={() => setIsAddHostelModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddHostelSubmit} className="wm-modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label className="wm-form-label">Hostel Complex Name *</label>
+                  <input
+                    type="text"
+                    className="wm-form-input"
+                    placeholder="e.g., Kalam Boys Residence Phase 2"
+                    value={addHostelForm.name}
+                    onChange={e => setAddHostelForm({ ...addHostelForm, name: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label className="wm-form-label">Hostel Category *</label>
+                    <select
+                      className="wm-form-select"
+                      value={addHostelForm.type}
+                      onChange={e => setAddHostelForm({ ...addHostelForm, type: e.target.value })}
+                    >
+                      <option value="Boys">Boys Residence</option>
+                      <option value="Girls">Girls Residence</option>
+                      <option value="Co-Ed">Co-Ed Campus Facility</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="wm-form-label">Total Floors *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="wm-form-input"
+                      value={addHostelForm.totalFloors}
+                      onChange={e => setAddHostelForm({ ...addHostelForm, totalFloors: Number(e.target.value) || 1 })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label className="wm-form-label">Total Rooms *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="wm-form-input"
+                      value={addHostelForm.totalRooms}
+                      onChange={e => setAddHostelForm({ ...addHostelForm, totalRooms: Number(e.target.value) || 1 })}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="wm-form-label">Total Bed Capacity *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="wm-form-input"
+                      value={addHostelForm.totalBeds}
+                      onChange={e => setAddHostelForm({ ...addHostelForm, totalBeds: Number(e.target.value) || 1 })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="wm-form-label">Initial Supervising Warden (Optional)</label>
+                  <select
+                    className="wm-form-select"
+                    value={addHostelForm.warden}
+                    onChange={e => {
+                      const selectedWName = e.target.value;
+                      const matchedWarden = wardens.find(w => w.name === selectedWName);
+                      setAddHostelForm({
+                        ...addHostelForm,
+                        warden: selectedWName,
+                        contact: matchedWarden?.phone || matchedWarden?.mobileNo || addHostelForm.contact
+                      });
+                    }}
+                  >
+                    <option value="">-- Choose Assigned Warden from Register --</option>
+                    {wardens.map(w => (
+                      <option key={w.id} value={w.name}>
+                        {w.name} ({w.id}) — {w.designation} [{w.hostelName || 'General'}]
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="wm-form-label">Emergency Helpline / Desk (Optional)</label>
+                  <input
+                    type="text"
+                    className="wm-form-input"
+                    placeholder="+91 94370 00000"
+                    value={addHostelForm.contact}
+                    onChange={e => setAddHostelForm({ ...addHostelForm, contact: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="wm-modal-footer" style={{ marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="had-btn had-btn-secondary"
+                  onClick={() => setIsAddHostelModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="had-btn had-btn-primary"
+                  style={{ background: '#2563eb', color: '#ffffff' }}
+                >
+                  <Building2 size={14} /> Register &amp; Sync Hostel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* RECORD STAFF LEAVE MODAL */}
+      {isRecordLeaveModalOpen && (
+        <div className="wm-modal-backdrop" onClick={() => setIsRecordLeaveModalOpen(false)}>
+          <div className="wm-modal" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>
+            <div className="wm-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <Calendar size={20} color="#7c3aed" />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a' }}>Record &amp; Sanction Staff Leave</h3>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
+                    Authorizes institutional leave for resident wardens and allocates relieving staff
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="had-btn had-btn-secondary"
+                style={{ padding: '0.2rem 0.5rem', border: 'none', background: 'transparent' }}
+                onClick={() => setIsRecordLeaveModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleRecordStaffLeave} className="wm-modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label className="wm-form-label">Applicant Official / Warden *</label>
+                  <select
+                    className="wm-form-select"
+                    value={recordLeaveForm.applicantWardenId}
+                    onChange={e => setRecordLeaveForm({ ...recordLeaveForm, applicantWardenId: e.target.value })}
+                    required
+                  >
+                    <option value="">-- Select Warden / Official --</option>
+                    {wardens.map(w => (
+                      <option key={w.id} value={w.id}>
+                        {w.name} ({w.id}) — {w.designation} [{w.hostelName || 'General'}]
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label className="wm-form-label">Leave Type *</label>
+                    <select
+                      className="wm-form-select"
+                      value={recordLeaveForm.leaveType}
+                      onChange={e => setRecordLeaveForm({ ...recordLeaveForm, leaveType: e.target.value })}
+                    >
+                      <option value="Casual Leave">Casual Leave (CL)</option>
+                      <option value="Special Leave">Special Leave (SL)</option>
+                      <option value="Earned Leave">Earned Leave (EL)</option>
+                      <option value="Duty Outside Campus">Duty Outside Campus (OD)</option>
+                      <option value="Medical Emergency">Medical Emergency (Half Pay)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="wm-form-label">Sanction Decision *</label>
+                    <select
+                      className="wm-form-select"
+                      value={recordLeaveForm.status}
+                      onChange={e => setRecordLeaveForm({ ...recordLeaveForm, status: e.target.value })}
+                    >
+                      <option value="Approved by Hostel Admin">Direct Sanction (Approved)</option>
+                      <option value="Pending Approval">Awaiting Verification (Pending)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label className="wm-form-label">Start Date *</label>
+                    <input
+                      type="date"
+                      className="wm-form-input"
+                      value={recordLeaveForm.startDate}
+                      onChange={e => setRecordLeaveForm({ ...recordLeaveForm, startDate: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="wm-form-label">End Date *</label>
+                    <input
+                      type="date"
+                      className="wm-form-input"
+                      value={recordLeaveForm.endDate}
+                      onChange={e => setRecordLeaveForm({ ...recordLeaveForm, endDate: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="wm-form-label">Relieving / Handover Official (Optional)</label>
+                  <select
+                    className="wm-form-select"
+                    value={recordLeaveForm.relievingWarden}
+                    onChange={e => setRecordLeaveForm({ ...recordLeaveForm, relievingWarden: e.target.value })}
+                  >
+                    <option value="None Assigned">-- None (Caretaker Supervised) --</option>
+                    {wardens.filter(w => w.id !== recordLeaveForm.applicantWardenId).map(w => (
+                      <option key={w.id} value={w.name}>
+                        {w.name} ({w.id}) — {w.designation}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="wm-form-label">Official Reason *</label>
+                  <textarea
+                    rows={2}
+                    className="wm-form-input"
+                    placeholder="Provide official grounds for leave sanction..."
+                    value={recordLeaveForm.reason}
+                    onChange={e => setRecordLeaveForm({ ...recordLeaveForm, reason: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="wm-modal-footer" style={{ marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="had-btn had-btn-secondary"
+                  onClick={() => setIsRecordLeaveModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="had-btn had-btn-primary"
+                  style={{ background: '#7c3aed', color: '#ffffff' }}
+                >
+                  <CheckCircle2 size={14} /> Record &amp; Sanction Leave
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -4,11 +4,14 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -27,7 +30,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
         errors = (res as any).errors || null;
       }
     } else if (exception instanceof Error) {
-      message = exception.message;
+      const raw = exception.message || '';
+      if (
+        raw.includes("Can't reach database server") ||
+        raw.includes('prisma') ||
+        raw.includes('P1001') ||
+        raw.includes('P1002')
+      ) {
+        this.logger.error(`Database connection issue: ${raw}`);
+        message = 'Database service is temporarily unreachable. Please use demo mode or verify connection.';
+      } else {
+        message = raw;
+      }
     }
 
     response.status(status).json({

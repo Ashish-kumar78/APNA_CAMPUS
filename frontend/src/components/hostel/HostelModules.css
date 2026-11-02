@@ -507,6 +507,126 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
+   TAKE ATTENDANCE PROMPT CARD (Before Roll-Call is Taken)
+   ───────────────────────────────────────────────────────────── */
+.take-attendance-prompt-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.take-attendance-prompt-left {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  flex: 1;
+  min-width: 280px;
+}
+
+.take-attendance-icon-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #bfdbfe;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+.take-attendance-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.take-attendance-ready-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+}
+
+.live-dot-blue {
+  width: 7px;
+  height: 7px;
+  background: #2563eb;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+  animation: pulseDotBlue 2s infinite ease-in-out;
+}
+
+@keyframes pulseDotBlue {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+.take-attendance-sub {
+  font-size: 0.86rem;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1.45;
+}
+
+.take-attendance-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-take-attendance-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-take-attendance-main:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+}
+
+.btn-take-attendance-main.disabled,
+.btn-take-attendance-main:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
    SUBMITTED ATTENDANCE SUMMARY CARD & DISABLED TABLE STATES
    ───────────────────────────────────────────────────────────── */
 .hostel-attendance-submitted-card {

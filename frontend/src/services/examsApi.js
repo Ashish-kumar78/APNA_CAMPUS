@@ -1,7 +1,7 @@
 // Autonomous Examination Management (CoE) Service Layer
 // Connects to NestJS Backend (/api/exams/*) with erpStore fallback
 
-import { api } from './api';
+import { api } from './api.js';
 import { erpStore } from './erpStore';
 
 export const examsApi = {

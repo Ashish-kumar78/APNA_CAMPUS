@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Clock, CheckCircle2, AlertTriangle, ShieldCheck, Search, Filter,
   Calendar, RotateCcw, Edit2, Eye, Download, Users, Check, X
@@ -14,7 +14,21 @@ import { logAdminAction } from '../../../services/wardenManagementStore.js';
 
 export default function HostelAdminAttendanceVerification({ account, showToast }) {
   const [attendances, setAttendances] = useState(() => getSubmittedAttendances());
-  const [hostels] = useState(() => getAllHostels());
+  const [hostels, setHostels] = useState(() => getAllHostels());
+
+  useEffect(() => {
+    const handleHostelsUpdate = () => {
+      setHostels(getAllHostels());
+    };
+    window.addEventListener('bput_hostels_updated', handleHostelsUpdate);
+    window.addEventListener('bput_hostel_complexes_updated', handleHostelsUpdate);
+    window.addEventListener('storage', handleHostelsUpdate);
+    return () => {
+      window.removeEventListener('bput_hostels_updated', handleHostelsUpdate);
+      window.removeEventListener('bput_hostel_complexes_updated', handleHostelsUpdate);
+      window.removeEventListener('storage', handleHostelsUpdate);
+    };
+  }, []);
 
   const [selectedHostel, setSelectedHostel] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');

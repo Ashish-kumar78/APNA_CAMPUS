@@ -1,3 +1,18 @@
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  AreaChart,
+  Area,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell
+} from 'recharts';
 import React, { useState, useEffect, useMemo } from 'react';
 import { AppLayout } from './Navigation';
 import {
@@ -10,7 +25,7 @@ import {
   FileSpreadsheet, RefreshCw, Search, Filter, AlertTriangle,
   FileText, Check, ArrowRight, CornerDownLeft, Info,
   Plus, CheckCircle2, ShieldCheck, Target, Server, HardHat,
-  FileBadge, Wrench, Sparkles, Clock, AlertOctagon
+  FileBadge, Wrench, Sparkles, Clock, AlertOctagon, MessageSquare
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import api from '../services/api.js';
@@ -180,6 +195,12 @@ const KPI = ({ label, value, sub, icon, color = '#2563eb', bg = '#eff6ff', topBa
 // ─── Main ManagementPortal Component ─────────────────────────────────────────
 
 export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
+  const [liveClockTime, setLiveClockTime] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setLiveClockTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Navigation & UI States
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('executive');
@@ -749,8 +770,9 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
         {/* Body Area */}
         <div className="mgmt-body">
 
-          {/* ─── Global Filter & Freshness Bar ───────────────────────────────── */}
-          <div className="mgmt-filter-bar">
+          {/* ─── Global Filter & Freshness Bar (for sub-tabs) ───────────────── */}
+          {activeTab !== 'executive' && (
+            <div className="mgmt-filter-bar">
             <div className="mgmt-filter-group">
               <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <Filter size={14} /> Cohort Filter:
@@ -794,440 +816,647 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
               </button>
             </div>
           </div>
+          )}
 
           {/* ═══════════════════════════════════════════════════════════════════
               TAB 1: EXECUTIVE OVERVIEW
           ═══════════════════════════════════════════════════════════════════ */}
           {activeTab === 'executive' && (
-            <div>
-              {/* ─── UNIFIED EXECUTIVE ACTION CENTER (High-Priority Actionable Queue) ─── */}
-              <div className="mgmt-panel" style={{ border: '1px solid #cbd5e1', borderRadius: 12, overflow: 'hidden', marginBottom: '1.5rem', background: '#fff' }}>
-                <div className="mgmt-panel-header" style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)', color: '#fff', padding: '1rem 1.25rem' }}>
-                  <div className="mgmt-panel-title">
-                    <h3 style={{ color: '#fff', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 10, margin: 0 }}>
-                      <AlertOctagon size={20} color="#fca5a5" /> Unified Executive Action Center
-                      <span className="mgmt-badge" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', borderColor: 'rgba(255,255,255,0.3)', fontSize: '0.72rem' }}>
-                        {actionCenter?.counts?.total || actionItemsComputed.length} Active Tasks
-                      </span>
-                    </h3>
-                    <p style={{ color: '#bfdbfe', margin: '4px 0 0', fontSize: '0.78rem' }}>
-                      Prioritized governance obligations, pending strategic sanctions, regulatory deadlines, and risk exceptions
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.72rem', background: 'rgba(239,68,68,0.2)', color: '#fee2e2', border: '1px solid rgba(239,68,68,0.4)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
-                      🚨 {actionCenter?.counts?.critical || actionItemsComputed.filter(i => i.priority === 'CRITICAL').length} Critical Urgency
-                    </span>
-                    <span style={{ fontSize: '0.72rem', background: 'rgba(245,158,11,0.2)', color: '#fef3c7', border: '1px solid rgba(245,158,11,0.4)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
-                      ⚠️ {actionCenter?.counts?.high || actionItemsComputed.filter(i => i.priority === 'HIGH').length} High Priority
-                    </span>
-                  </div>
-                </div>
-
-                {/* Filter Pills */}
-                <div style={{ display: 'flex', gap: 6, padding: '0.75rem 1.25rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', marginRight: 4 }}>Filter Tasks:</span>
-                  {[
-                    { id: 'ALL', label: `All Tasks (${actionItemsComputed.length})` },
-                    { id: 'APPROVALS', label: `Approvals (${actionItemsComputed.filter(i => i.sourceModule === 'Strategic Approvals').length})` },
-                    { id: 'CAPA', label: `CAPA & Exceptions (${actionItemsComputed.filter(i => i.sourceModule === 'CAPA Register' || i.sourceModule === 'Risk Radar').length})` },
-                    { id: 'GOVERNANCE', label: `Board & Compliance (${actionItemsComputed.filter(i => i.sourceModule === 'Governing Body' || i.category === 'Governance Milestone').length})` },
-                    { id: 'FINANCE', label: `Fee & Finance (${actionItemsComputed.filter(i => i.sourceModule === 'Fee & Finance').length})` },
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActionCategoryFilter(tab.id)}
-                      style={{
-                        padding: '4px 10px',
-                        fontSize: '0.74rem',
-                        fontWeight: 700,
-                        borderRadius: 6,
-                        border: '1px solid',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        background: actionCategoryFilter === tab.id ? '#1e40af' : '#fff',
-                        color: actionCategoryFilter === tab.id ? '#fff' : '#475569',
-                        borderColor: actionCategoryFilter === tab.id ? '#1e40af' : '#cbd5e1',
-                      }}
+            <div className="mgmt-dash-v2-container">
+              {/* 1. Contextual Header Toolbar */}
+              <div className="mgmt-context-toolbar">
+                <div className="mgmt-context-left">
+                  <div className="mgmt-context-field">
+                    <span className="mgmt-context-label">Academic Year</span>
+                    <select
+                      className="mgmt-context-select"
+                      value={academicYear}
+                      onChange={(e) => setAcademicYear(e.target.value)}
                     >
-                      {tab.label}
+                      <option value="2026-27">2026-27 (Current)</option>
+                      <option value="2025-26">2025-26</option>
+                      <option value="2024-25">2024-25</option>
+                    </select>
+                  </div>
+
+                  <div className="mgmt-context-field">
+                    <span className="mgmt-context-label">Department Scope</span>
+                    <select
+                      className="mgmt-context-select"
+                      value={deptFilter}
+                      onChange={(e) => setDeptFilter(e.target.value)}
+                    >
+                      <option value="All">All Departments</option>
+                      <option value="CSE">Computer Science & Engineering</option>
+                      <option value="ECE">Electronics & Communication</option>
+                      <option value="MECH">Mechanical Engineering</option>
+                      <option value="CIVIL">Civil Engineering</option>
+                      <option value="EE">Electrical Engineering</option>
+                      <option value="MBA">Master of Business Administration</option>
+                      <option value="BCA">Bachelor of Computer Applications</option>
+                      <option value="BSC">Science (B.Sc)</option>
+                      <option value="DIPLOMA">Diploma Programs</option>
+                    </select>
+                  </div>
+
+                  <div className="mgmt-context-field">
+                    <span className="mgmt-context-label">Semester</span>
+                    <select
+                      className="mgmt-context-select"
+                      value={semesterFilter}
+                      onChange={(e) => setSemesterFilter(e.target.value)}
+                    >
+                      <option value="Odd Semester (Jul-Dec 2026)">Odd Semester (Jul-Dec 2026)</option>
+                      <option value="Even Semester (Jan-Jun 2026)">Even Semester (Jan-Jun 2026)</option>
+                      <option value="All Semesters">All Semesters</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mgmt-context-right">
+                  <div className="mgmt-context-search-wrap">
+                    <Search size={14} className="mgmt-context-search-icon" />
+                    <input
+                      type="text"
+                      className="mgmt-context-search-input"
+                      placeholder="Search students, faculty, departments..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="mgmt-context-actions">
+                    <button
+                      type="button"
+                      className="mgmt-icon-pill-btn"
+                      title="Notifications"
+                      onClick={() => setActiveTab('governance')}
+                    >
+                      <Bell size={16} />
+                      <span className="mgmt-icon-pill-badge">12</span>
                     </button>
-                  ))}
-                </div>
+                    <button
+                      type="button"
+                      className="mgmt-icon-pill-btn"
+                      title="Messages & Communication"
+                      onClick={() => setActiveTab('governance')}
+                    >
+                      <MessageSquare size={16} />
+                      <span className="mgmt-icon-pill-badge">3</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mgmt-icon-pill-btn"
+                      title="Settings"
+                      onClick={() => setActiveTab('exceptions')}
+                    >
+                      <Settings size={16} />
+                    </button>
+                  </div>
 
-                {/* Action Items List */}
-                <div className="mgmt-panel-body" style={{ padding: '1rem 1.25rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    {filteredActionItems.map(item => (
-                      <div
-                        key={item.id}
-                        style={{
-                          background: item.priority === 'CRITICAL' ? '#fff5f5' : '#f8faff',
-                          border: `1px solid ${item.priority === 'CRITICAL' ? '#fecaca' : '#dbeafe'}`,
-                          borderLeft: `4px solid ${item.priority === 'CRITICAL' ? '#dc2626' : item.priority === 'HIGH' ? '#f59e0b' : '#3b82f6'}`,
-                          borderRadius: 8,
-                          padding: '0.85rem 1rem',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          gap: 14,
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        <div style={{ flex: '1 1 500px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                            <span style={{
-                              fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 4,
-                              background: item.sourceModule === 'Strategic Approvals' ? '#eff6ff' : item.sourceModule === 'CAPA Register' ? '#ecfdf5' : item.sourceModule === 'Risk Radar' ? '#fef2f2' : item.sourceModule === 'Governing Body' ? '#f5f3ff' : '#fefce8',
-                              color: item.sourceModule === 'Strategic Approvals' ? '#1d4ed8' : item.sourceModule === 'CAPA Register' ? '#047857' : item.sourceModule === 'Risk Radar' ? '#b91c1c' : item.sourceModule === 'Governing Body' ? '#6d28d9' : '#b45309',
-                              border: '1px solid currentColor',
-                            }}>
-                              {item.sourceModule}
-                            </span>
-                            <span style={{
-                              fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 4,
-                              background: item.priority === 'CRITICAL' ? '#dc2626' : '#f59e0b',
-                              color: '#fff',
-                            }}>
-                              {item.priority}
-                            </span>
-                            <span style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace', fontWeight: 700 }}>
-                              {item.recordId}
-                            </span>
-                            <span className="mgmt-status mgmt-status-neutral" style={{ fontSize: '0.68rem' }}>
-                              {item.status}
-                            </span>
-                          </div>
-
-                          <h4 style={{ margin: '0 0 4px', fontSize: '0.9rem', color: '#0f172a', fontWeight: 800 }}>
-                            {item.title}
-                          </h4>
-                          <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#475569', lineHeight: 1.4 }}>
-                            {item.description}
-                          </p>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '0.72rem', color: '#64748b', flexWrap: 'wrap' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <UserCheck size={13} color="#475569" /> <strong>Owner:</strong> {item.owner}
-                            </span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <Clock size={13} color="#475569" /> <strong>Deadline:</strong> {item.dueDate}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {item.sourceModule === 'Strategic Approvals' && (
-                            <>
-                              <button
-                                className="mgmt-btn mgmt-btn-primary"
-                                style={{ padding: '6px 12px', fontSize: '0.75rem' }}
-                                onClick={() => {
-                                  const prop = approvals.find(a => a.id === item.recordId);
-                                  if (prop) setSelectedProposal(prop);
-                                  else setActiveTab('approvals');
-                                }}
-                              >
-                                <CheckCircle size={13} /> Review &amp; Decide
-                              </button>
-                              <button
-                                className="mgmt-btn mgmt-btn-secondary"
-                                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
-                                onClick={() => setActiveTab('approvals')}
-                              >
-                                View Queue <ArrowRight size={12} />
-                              </button>
-                            </>
-                          )}
-
-                          {item.sourceModule === 'CAPA Register' && (
-                            <>
-                              <button
-                                className="mgmt-btn mgmt-btn-primary"
-                                style={{ padding: '6px 12px', fontSize: '0.75rem', background: '#059669', borderColor: '#059669' }}
-                                onClick={() => {
-                                  const capa = capaRecords.find(c => c.id === item.recordId);
-                                  setResolveCapaModal({
-                                    open: true,
-                                    record: capa || { id: item.recordId, title: item.title },
-                                    notes: '',
-                                    evidenceUrl: '',
-                                  });
-                                }}
-                              >
-                                <Check size={13} /> Resolve CAPA
-                              </button>
-                              <button
-                                className="mgmt-btn mgmt-btn-secondary"
-                                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
-                                onClick={() => setActiveTab('exceptions')}
-                              >
-                                CAPA Register <ArrowRight size={12} />
-                              </button>
-                            </>
-                          )}
-
-                          {item.sourceModule === 'Risk Radar' && (
-                            <button
-                              className="mgmt-btn mgmt-btn-secondary"
-                              style={{ padding: '6px 12px', fontSize: '0.75rem', color: '#b91c1c', borderColor: '#fca5a5' }}
-                              onClick={() => setActiveTab('exceptions')}
-                            >
-                              <AlertTriangle size={13} /> Investigate Risk <ArrowRight size={12} />
-                            </button>
-                          )}
-
-                          {item.sourceModule === 'Governing Body' && (
-                            <button
-                              className="mgmt-btn mgmt-btn-primary"
-                              style={{ padding: '6px 12px', fontSize: '0.75rem', background: '#7c3aed', borderColor: '#7c3aed' }}
-                              onClick={() => {
-                                const meet = boardMeetings.find(m => m.id === item.recordId);
-                                if (meet) setSelectedMeetingModal(meet);
-                                else setActiveTab('governance');
-                              }}
-                            >
-                              <Calendar size={13} /> View Agenda &amp; Dossier
-                            </button>
-                          )}
-
-                          {item.sourceModule === 'Fee & Finance' && (
-                            <button
-                              className="mgmt-btn mgmt-btn-secondary"
-                              style={{ padding: '6px 12px', fontSize: '0.75rem', color: '#b45309', borderColor: '#fde68a' }}
-                              onClick={() => setActiveTab('financials')}
-                            >
-                              <DollarSign size={13} /> Inspect Dues Ledger <ArrowRight size={12} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="mgmt-user-capsule">
+                    <div className="mgmt-user-avatar-circle">SA</div>
+                    <div className="mgmt-user-meta">
+                      <span className="mgmt-user-title">Super Administrator</span>
+                      <span className="mgmt-user-role-sub">Management</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Primary Strategic KPIs */}
-              <div className="mgmt-kpi-grid">
-                <KPI
-                  label="Total Students"
-                  value={totalStudents.toLocaleString()}
-                  sub="+4.2% YoY Intake"
-                  icon={<Users />}
-                  color="#2563eb"
-                  bg="#eff6ff"
-                  topBar="linear-gradient(90deg, #2563eb, #60a5fa)"
-                  onClick={() => setActiveTab('departments')}
-                  tooltip="Click to inspect Department Analytics"
+              {/* 2. Welcome Banner */}
+              <div className="mgmt-hero-banner">
+                <div
+                  className="mgmt-hero-bg-skyline"
+                  style={{ backgroundImage: 'url(/logo.png)' }}
                 />
-                <KPI
-                  label="Faculty Strength"
-                  value={totalFaculty}
-                  sub={overviewData?.kpis?.studentFacultyRatio ? `${overviewData.kpis.studentFacultyRatio} Ratio` : "1:15.6 Ratio"}
-                  icon={<GraduationCap />}
-                  color="#059669"
-                  bg="#ecfdf5"
-                  topBar="linear-gradient(90deg, #059669, #34d399)"
-                  trend="neutral"
-                  onClick={() => setActiveTab('departments')}
-                />
-                <KPI
-                  label="Fee Realization"
-                  value={overviewData?.kpis?.feeCollectedFormatted || "₹22.60 Cr"}
-                  sub={`${overviewData?.kpis?.feeRecoveryRate || 93.0}% Realized · ${overviewData?.kpis?.feeDueFormatted || "₹1.70 Cr"} Due`}
-                  icon={<DollarSign />}
-                  color="#d97706"
-                  bg="#fefce8"
-                  topBar="linear-gradient(90deg, #d97706, #fbbf24)"
-                  onClick={() => setActiveTab('financials')}
-                />
-                <KPI
-                  label="Placement Conversion"
-                  value={`${avgPlacement}%`}
-                  sub="87.0% Conversion · 435 Placed"
-                  icon={<Briefcase />}
-                  color="#7c3aed"
-                  bg="#f5f3ff"
-                  topBar="linear-gradient(90deg, #7c3aed, #a78bfa)"
-                  onClick={() => setActiveTab('placements')}
-                />
+                <div className="mgmt-hero-content">
+                  <h1 className="mgmt-hero-title">Management Dashboard</h1>
+                  <p className="mgmt-hero-subtitle">
+                    Complete overview of institutional performance, academic progress, financial health, and operational efficiency.
+                  </p>
+                </div>
+
+                <div className="mgmt-hero-live-card">
+                  <div className="mgmt-live-card-line">
+                    <Calendar size={13} />
+                    <span>
+                      {liveClockTime.toLocaleDateString('en-IN', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                  <div className="mgmt-live-card-line accent">
+                    <Clock size={13} />
+                    <span>
+                      {liveClockTime.toLocaleTimeString('en-IN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                      })}
+                    </span>
+                  </div>
+                  <div className="mgmt-live-status-pill">
+                    <span className="mgmt-live-dot" />
+                    <span>Live Dashboard ⌵</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Secondary Institutional Health KPIs */}
-              <div className="mgmt-kpi-grid">
-                <KPI
-                  label="Avg. Campus CGPA"
-                  value={avgCgpa}
-                  sub="Autonomous Grading Scale"
-                  icon={<Star />}
-                  color="#0891b2"
-                  bg="#ecfeff"
-                  topBar="linear-gradient(90deg, #0891b2, #22d3ee)"
-                  trend="up"
-                  onClick={() => setActiveTab('departments')}
-                />
-                <KPI
-                  label="Avg. Biometric Attendance"
-                  value={`${avgAttendance}%`}
-                  sub="Campus-wide Biometric Sync"
-                  icon={<Calendar />}
-                  color="#16a34a"
-                  bg="#f0fdf4"
-                  topBar="linear-gradient(90deg, #16a34a, #4ade80)"
-                  onClick={() => setActiveTab('departments')}
-                />
-                <KPI
-                  label="Hostel Bed Occupancy"
-                  value="88.0%"
-                  sub="880 / 1,000 Beds Occupied"
-                  icon={<Building />}
-                  color="#db2777"
-                  bg="#fdf2f8"
-                  topBar="linear-gradient(90deg, #db2777, #f9a8d4)"
-                  trend="neutral"
-                />
-                <KPI
-                  label="Autonomous Pass Rate"
-                  value="94.2%"
-                  sub="End-Sem Autonomous Result"
-                  icon={<Award />}
-                  color="#ea580c"
-                  bg="#fff7ed"
-                  topBar="linear-gradient(90deg, #ea580c, #fb923c)"
-                  onClick={() => setActiveTab('departments')}
-                />
+              {/* 3. 12 KPI Cards in 2 Rows of 6 */}
+              <div className="mgmt-kpis-12-grid">
+                {/* 1. Total Students */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('departments')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble blue">
+                      <GraduationCap size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">↑ 5%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Total Students</div>
+                    <div className="mgmt-card-value">2,490</div>
+                    <div className="mgmt-card-subtext">+112 this semester</div>
+                  </div>
+                </div>
+
+                {/* 2. Total Faculty */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('departments')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble purple">
+                      <Users size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">↑ 3%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Total Faculty</div>
+                    <div className="mgmt-card-value">160</div>
+                    <div className="mgmt-card-subtext">12 on leave</div>
+                  </div>
+                </div>
+
+                {/* 3. Total Staff */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('departments')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble green">
+                      <UserCheck size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">↑ 2%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Total Staff</div>
+                    <div className="mgmt-card-value">218</div>
+                    <div className="mgmt-card-subtext">6 non-teaching on leave</div>
+                  </div>
+                </div>
+
+                {/* 4. Total Revenue */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('financials')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble pink">
+                      <DollarSign size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">↑ 8%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Total Revenue</div>
+                    <div className="mgmt-card-value">₹ 22.60 Cr</div>
+                    <div className="mgmt-card-subtext">This academic year</div>
+                  </div>
+                </div>
+
+                {/* 5. Course Programs */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('departments')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble indigo">
+                      <BookOpen size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">↑ 4%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Course Programs</div>
+                    <div className="mgmt-card-value">87</div>
+                    <div className="mgmt-card-subtext">6 new this year</div>
+                  </div>
+                </div>
+
+                {/* 6. Average Attendance */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('departments')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble teal">
+                      <Activity size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">↑ 2.1%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Average Attendance</div>
+                    <div className="mgmt-card-value">88.7%</div>
+                    <div className="mgmt-card-subtext">Institutional average</div>
+                  </div>
+                </div>
+
+                {/* 7. Overall Pass Rate */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('departments')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble blue">
+                      <BarChart2 size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">↑ 3%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Overall Pass Rate</div>
+                    <div className="mgmt-card-value">84.0%</div>
+                    <div className="mgmt-card-subtext">Last semester</div>
+                  </div>
+                </div>
+
+                {/* 8. Placement Rate */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('placements')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble amber">
+                      <Briefcase size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">↑ 4%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Placement Rate</div>
+                    <div className="mgmt-card-value">88.0%</div>
+                    <div className="mgmt-card-subtext">Eligible students</div>
+                  </div>
+                </div>
+
+                {/* 9. Hostel Occupancy */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('departments')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble rose">
+                      <Building size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">↑ 1%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Hostel Occupancy</div>
+                    <div className="mgmt-card-value">94.2%</div>
+                    <div className="mgmt-card-subtext">1,154 / 1,225 beds</div>
+                  </div>
+                </div>
+
+                {/* 10. Library Usage */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('departments')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble blue">
+                      <Layers size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">↑ 12%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Library Usage</div>
+                    <div className="mgmt-card-value">32,450</div>
+                    <div className="mgmt-card-subtext">Books issued this year</div>
+                  </div>
+                </div>
+
+                {/* 11. Active Research Projects */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('departments')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble purple">
+                      <Search size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">↑ 9%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Active Research Projects</div>
+                    <div className="mgmt-card-value">36</div>
+                    <div className="mgmt-card-subtext">Funded & internal</div>
+                  </div>
+                </div>
+
+                {/* 12. Compliance Status */}
+                <div className="mgmt-card-v2" onClick={() => setActiveTab('governance')} style={{ cursor: 'pointer' }}>
+                  <div className="mgmt-card-top-row">
+                    <div className="mgmt-card-icon-bubble green">
+                      <CheckCircle2 size={20} />
+                    </div>
+                    <span className="mgmt-trend-badge green">100%</span>
+                  </div>
+                  <div>
+                    <div className="mgmt-card-label">Compliance Status</div>
+                    <div className="mgmt-card-value">100%</div>
+                    <div className="mgmt-card-subtext">All mandatory compliant</div>
+                  </div>
+                </div>
               </div>
 
-              {/* Operational Metrics Strip */}
-              <div className="mgmt-kpi-grid-6">
-                <KPI label="Library Volumes" value="32,450" sub="4,120 Active Loans" icon={<BookOpen />} color="#0891b2" bg="#ecfeff" trend="neutral" />
-                <KPI label="Research Papers" value="87" sub="23 Scopus / WoS Q1" icon={<Globe />} color="#7c3aed" bg="#f5f3ff" />
-                <KPI label="Bus Fleet" value="36" sub="18 Operational Zones" icon={<Bus />} color="#059669" bg="#ecfdf5" trend="neutral" />
-                <KPI label="Lab Equipment" value="240+" sub="92.5% Uptime" icon={<FlaskConical />} color="#ea580c" bg="#fff7ed" trend="neutral" />
-                <KPI label="Recruiters On-Campus" value="42" sub="FY 2026-27 Drives" icon={<UserCheck />} color="#2563eb" bg="#eff6ff" onClick={() => setActiveTab('placements')} />
-                <KPI label="Scholarships" value="154" sub="₹82.4 L Disbursed" icon={<Award />} color="#d97706" bg="#fefce8" onClick={() => setActiveTab('financials')} />
-              </div>
-
-              {/* ─── Executive Insights Section (Transparent, Rule-Based) ───── */}
-              <div className="mgmt-panel" style={{ background: '#f8faff', border: '1px solid #bfdbfe' }}>
-                <div className="mgmt-panel-header" style={{ background: '#eff6ff', borderBottom: '1px solid #dbeafe' }}>
-                  <div className="mgmt-panel-title">
-                    <h3 style={{ color: '#1e40af', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Activity size={18} color="#2563eb" /> Executive Decision Intelligence & Risk Indicators
+              {/* 4. Analytics Row (3 Columns) */}
+              <div className="mgmt-analytics-3col-grid">
+                {/* Card 1: Department Enrollment & Faculty Distribution */}
+                <div className="mgmt-chart-card">
+                  <div className="mgmt-chart-header">
+                    <h3 className="mgmt-chart-title">
+                      <BarChart2 size={16} color="#2563eb" />
+                      Department Enrollment &amp; Faculty Distribution
                     </h3>
-                    <p style={{ color: '#3b82f6' }}>Rule-based transparent institutional findings requiring Governing Body attention</p>
+                    <select className="mgmt-chart-mini-select" defaultValue="All Departments">
+                      <option>All Departments</option>
+                      <option>Engineering</option>
+                      <option>Management &amp; Tech</option>
+                    </select>
                   </div>
-                  <button
-                    className="mgmt-btn mgmt-btn-secondary"
-                    onClick={() => setActiveTab('exceptions')}
-                    style={{ background: '#fff' }}
-                  >
-                    View All Exceptions <ArrowRight size={13} />
-                  </button>
+
+                  <div className="mgmt-chart-legend">
+                    <div className="mgmt-legend-item">
+                      <span className="mgmt-legend-bullet" style={{ background: '#2563eb' }} />
+                      <span>Students</span>
+                    </div>
+                    <div className="mgmt-legend-item">
+                      <span className="mgmt-legend-bullet" style={{ background: '#10b981' }} />
+                      <span>Faculty</span>
+                    </div>
+                    <div className="mgmt-legend-item">
+                      <span className="mgmt-legend-bullet" style={{ background: '#f59e0b' }} />
+                      <span>Staff</span>
+                    </div>
+                  </div>
+
+                  <div style={{ width: '100%', height: 230 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={[
+                          { name: 'CSE', students: 620, faculty: 48, staff: 32 },
+                          { name: 'ECE', students: 480, faculty: 42, staff: 28 },
+                          { name: 'MECH', students: 420, faculty: 38, staff: 26 },
+                          { name: 'CIVIL', students: 380, faculty: 34, staff: 24 },
+                          { name: 'EE', students: 360, faculty: 30, staff: 22 },
+                          { name: 'MBA', students: 300, faculty: 26, staff: 18 },
+                          { name: 'BCA', students: 280, faculty: 24, staff: 16 },
+                          { name: 'B.Sc', students: 240, faculty: 22, staff: 14 },
+                          { name: 'Diploma', students: 210, faculty: 18, staff: 12 },
+                        ]}
+                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} domain={[0, 800]} ticks={[0, 200, 400, 600, 800]} />
+                        <RechartsTooltip contentStyle={{ background: '#0f172a', border: 'none', borderRadius: 8, color: '#fff', fontSize: 11 }} />
+                        <Bar dataKey="students" fill="#2563eb" radius={[3, 3, 0, 0]} maxBarSize={16} />
+                        <Bar dataKey="faculty" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={16} />
+                        <Bar dataKey="staff" fill="#f59e0b" radius={[3, 3, 0, 0]} maxBarSize={16} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
-                <div className="mgmt-panel-body" style={{ padding: '1.25rem' }}>
-                  <div className="mgmt-insights-grid">
-                    {insights.slice(0, 4).map(ins => (
-                      <div key={ins.id} className={`mgmt-insight-card severity-${ins.severity}`}>
-                        <div className="mgmt-insight-head">
-                          <span style={{
-                            fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 4,
-                            background: ins.severity === 'CRITICAL' ? '#fef2f2' : ins.severity === 'WARNING' ? '#fefce8' : '#eff6ff',
-                            color: ins.severity === 'CRITICAL' ? '#dc2626' : ins.severity === 'WARNING' ? '#d97706' : '#2563eb',
-                            border: '1px solid currentColor',
-                          }}>
-                            {ins.category} · {ins.severity}
-                          </span>
-                          <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>{ins.affectedEntity}</span>
-                        </div>
-                        <div className="mgmt-insight-title">{ins.title}</div>
-                        <div className="mgmt-insight-desc">{ins.description}</div>
-                        <div className="mgmt-insight-footer">
-                          <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
-                            Metric: <strong style={{ color: '#0f172a' }}>{ins.metric}</strong> (Target: {ins.threshold})
-                          </span>
-                          <button
-                            className="mgmt-insight-action"
-                            onClick={() => setActiveTab(ins.targetTab)}
+                {/* Card 2: Revenue & Expenditure Trend */}
+                <div className="mgmt-chart-card">
+                  <div className="mgmt-chart-header">
+                    <h3 className="mgmt-chart-title">
+                      <TrendingUp size={16} color="#059669" />
+                      Revenue &amp; Expenditure Trend
+                    </h3>
+                    <select className="mgmt-chart-mini-select" defaultValue="Current Year">
+                      <option>Current Year</option>
+                      <option>Previous Year</option>
+                    </select>
+                  </div>
+
+                  <div className="mgmt-chart-legend">
+                    <div className="mgmt-legend-item">
+                      <span className="mgmt-legend-bullet" style={{ background: '#10b981' }} />
+                      <span>Revenue</span>
+                    </div>
+                    <div className="mgmt-legend-item">
+                      <span className="mgmt-legend-bullet" style={{ background: '#f43f5e' }} />
+                      <span>Expenditure</span>
+                    </div>
+                  </div>
+
+                  <div style={{ width: '100%', height: 230 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={[
+                          { month: 'Apr', revenue: 1.4, expenditure: 1.1 },
+                          { month: 'May', revenue: 2.2, expenditure: 1.5 },
+                          { month: 'Jun', revenue: 2.8, expenditure: 1.7 },
+                          { month: 'Jul', revenue: 3.1, expenditure: 1.9 },
+                          { month: 'Aug', revenue: 3.1, expenditure: 1.9 },
+                          { month: 'Sep', revenue: 3.4, expenditure: 2.1 },
+                          { month: 'Oct', revenue: 3.6, expenditure: 2.2 },
+                        ]}
+                        margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                          </linearGradient>
+                          <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹ ${v} Cr`} domain={[0, 4]} ticks={[0, 1, 2, 3, 4]} />
+                        <RechartsTooltip formatter={(v) => [`₹ ${v} Cr`, '']} contentStyle={{ background: '#0f172a', border: 'none', borderRadius: 8, color: '#fff', fontSize: 11 }} />
+                        <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" />
+                        <Area type="monotone" dataKey="expenditure" stroke="#f43f5e" strokeWidth={2.5} fillOpacity={1} fill="url(#colorExp)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Card 3: Student Distribution by Program */}
+                <div className="mgmt-chart-card">
+                  <div className="mgmt-chart-header">
+                    <h3 className="mgmt-chart-title">
+                      <Users size={16} color="#7c3aed" />
+                      Student Distribution by Program
+                    </h3>
+                    <select className="mgmt-chart-mini-select" defaultValue="By Program">
+                      <option>By Program</option>
+                      <option>By Category</option>
+                      <option>By Gender</option>
+                    </select>
+                  </div>
+
+                  <div className="mgmt-donut-content-row">
+                    <div className="mgmt-donut-graphic-wrap">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPieChart>
+                          <Pie
+                            data={[
+                              { name: 'B.Tech', value: 1120, color: '#2563eb' },
+                              { name: 'BCA', value: 420, color: '#06b6d4' },
+                              { name: 'MBA', value: 280, color: '#10b981' },
+                              { name: 'Diploma', value: 260, color: '#f59e0b' },
+                              { name: 'B.Sc', value: 210, color: '#eab308' },
+                              { name: 'Others', value: 200, color: '#f43f5e' },
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={75}
+                            paddingAngle={2}
+                            dataKey="value"
                           >
-                            Investigate <ArrowRight size={12} />
-                          </button>
-                        </div>
+                            {[
+                              '#2563eb', '#06b6d4', '#10b981', '#f59e0b', '#eab308', '#f43f5e'
+                            ].map((col, idx) => (
+                              <Cell key={idx} fill={col} />
+                            ))}
+                          </Pie>
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
+                      <div className="mgmt-donut-center-kicker">
+                        <span className="mgmt-donut-center-val">2,490</span>
+                        <span className="mgmt-donut-center-sub">Students</span>
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="mgmt-donut-legend-list">
+                      {[
+                        { label: 'B.Tech', count: '1,120', pct: '45.0%', color: '#2563eb' },
+                        { label: 'BCA', count: '420', pct: '16.9%', color: '#06b6d4' },
+                        { label: 'MBA', count: '280', pct: '11.2%', color: '#10b981' },
+                        { label: 'Diploma', count: '260', pct: '10.4%', color: '#f59e0b' },
+                        { label: 'B.Sc', count: '210', pct: '8.4%', color: '#eab308' },
+                        { label: 'Others', count: '200', pct: '8.0%', color: '#f43f5e' },
+                      ].map((item, idx) => (
+                        <div key={idx} className="mgmt-donut-legend-row">
+                          <span className="mgmt-donut-legend-label">
+                            <span className="mgmt-legend-bullet" style={{ background: item.color }} />
+                            <span>{item.label}</span>
+                          </span>
+                          <span className="mgmt-donut-legend-stat">
+                            {item.count} ({item.pct})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Department Consolidated Summary Table */}
-              <div className="mgmt-panel">
-                <div className="mgmt-panel-header">
-                  <div className="mgmt-panel-title">
-                    <h3>Department-Wise Academic & Financial Performance Matrix</h3>
-                    <p>Consolidated autonomous metrics for all 8 departments — {academicYear}</p>
-                  </div>
-                  <button className="mgmt-btn mgmt-btn-secondary" onClick={handleExportActiveTab}>
-                    <Download size={14} /> Download CSV
-                  </button>
+              {/* 5. Department Performance Table Card */}
+              <div className="mgmt-perf-table-card">
+                <div className="mgmt-chart-header">
+                  <h3 className="mgmt-chart-title">
+                    <Building size={16} color="#2563eb" />
+                    Department-wise Academic &amp; Financial Performance
+                  </h3>
+                  <select className="mgmt-chart-mini-select" defaultValue="Current Semester">
+                    <option>Current Semester</option>
+                    <option>Previous Semester</option>
+                    <option>Annual Cumulative</option>
+                  </select>
                 </div>
-                <div className="mgmt-table-wrap">
-                  <table className="mgmt-table">
+
+                <div className="mgmt-table-responsive-box">
+                  <table className="mgmt-matrix-table">
                     <thead>
                       <tr>
                         <th>Department</th>
                         <th>HOD</th>
                         <th>Students</th>
                         <th>Faculty</th>
-                        <th>Ratio</th>
+                        <th>Staff</th>
                         <th>Avg CGPA</th>
                         <th>Attendance</th>
+                        <th>Pass Rate</th>
                         <th>Placement %</th>
                         <th>Fee Recovery</th>
-                        <th>Pass Rate</th>
-                        <th>Action</th>
+                        <th>Budget Utilization</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {departments.map(d => (
-                        <tr key={d.code}>
-                          <td><strong>{d.name}</strong></td>
-                          <td style={{ color: '#475569' }}>{d.hod}</td>
-                          <td><strong>{d.students}</strong></td>
-                          <td>{d.faculty}</td>
-                          <td style={{ color: '#64748b', fontWeight: 600 }}>{d.sfr || '1:16'}</td>
+                      {[
+                        { name: 'Computer Science & Engineering', code: 'CSE', hod: 'Dr. R. K. Sharma', students: 620, faculty: 48, staff: 32, cgpa: 8.42, attendance: 92, passRate: 89, placement: 85, feeRecovery: 94, budgetUtil: 78 },
+                        { name: 'Electronics & Communication', code: 'ECE', hod: 'Dr. S. L. Mehta', students: 480, faculty: 42, staff: 28, cgpa: 8.18, attendance: 88, passRate: 84, placement: 82, feeRecovery: 91, budgetUtil: 72 },
+                        { name: 'Mechanical Engineering', code: 'MECH', hod: 'Dr. P. K. Dash', students: 420, faculty: 38, staff: 26, cgpa: 7.96, attendance: 86, passRate: 81, placement: 75, feeRecovery: 88, budgetUtil: 68 },
+                        { name: 'Civil Engineering', code: 'CIVIL', hod: 'Dr. A. K. Nayak', students: 380, faculty: 34, staff: 24, cgpa: 7.84, attendance: 83, passRate: 78, placement: 70, feeRecovery: 86, budgetUtil: 65 },
+                        { name: 'Electrical Engineering', code: 'EE', hod: 'Dr. M. R. Patil', students: 360, faculty: 30, staff: 22, cgpa: 8.06, attendance: 87, passRate: 80, placement: 72, feeRecovery: 89, budgetUtil: 70 },
+                        { name: 'Master of Business Administration', code: 'MBA', hod: 'Dr. Neeta Verma', students: 300, faculty: 26, staff: 18, cgpa: 8.32, attendance: 91, passRate: 88, placement: 90, feeRecovery: 93, budgetUtil: 75 },
+                        { name: 'Bachelor of Computer Applications', code: 'BCA', hod: 'Dr. I. T. Swain', students: 280, faculty: 24, staff: 16, cgpa: 8.14, attendance: 89, passRate: 85, placement: 78, feeRecovery: 90, budgetUtil: 73 },
+                        { name: 'Science (B.Sc)', code: 'BSC', hod: 'Dr. G. P. Rao', students: 240, faculty: 22, staff: 14, cgpa: 8.01, attendance: 86, passRate: 82, placement: 65, feeRecovery: 87, budgetUtil: 71 },
+                        { name: 'Diploma Programs', code: 'DIPLOMA', hod: 'Dr. V. K. Singh', students: 210, faculty: 18, staff: 12, cgpa: 7.88, attendance: 84, passRate: 79, placement: 60, feeRecovery: 85, budgetUtil: 66 },
+                      ].map((row, idx) => (
+                        <tr key={idx}>
+                          <td><strong>{row.name}</strong></td>
+                          <td style={{ color: '#475569' }}>{row.hod}</td>
+                          <td><strong>{row.students}</strong></td>
+                          <td>{row.faculty}</td>
+                          <td>{row.staff}</td>
+                          <td className="mgmt-matrix-cgpa">{row.cgpa.toFixed(2)}</td>
                           <td>
-                            <strong style={{ color: d.cgpa >= 8.0 ? '#059669' : d.cgpa >= 7.5 ? '#d97706' : '#ef4444' }}>
-                              {d.cgpa}
-                            </strong>
+                            <div className="mgmt-cell-bar-wrap">
+                              <div className="mgmt-cell-bar-track">
+                                <div className="mgmt-cell-bar-fill" style={{ width: `${row.attendance}%`, background: '#10b981' }} />
+                              </div>
+                              <span className="mgmt-cell-bar-pct">{row.attendance}%</span>
+                            </div>
                           </td>
                           <td>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: 3 }}>{d.attendance}%</div>
-                            <ProgressBar value={d.attendance} color={d.attendance >= 90 ? '#059669' : d.attendance >= 86 ? '#d97706' : '#ef4444'} />
+                            <div className="mgmt-cell-bar-wrap">
+                              <div className="mgmt-cell-bar-track">
+                                <div className="mgmt-cell-bar-fill" style={{ width: `${row.passRate}%`, background: '#2563eb' }} />
+                              </div>
+                              <span className="mgmt-cell-bar-pct">{row.passRate}%</span>
+                            </div>
                           </td>
                           <td>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: 3 }}>{d.placement}%</div>
-                            <ProgressBar value={d.placement} color="#7c3aed" />
+                            <div className="mgmt-cell-bar-wrap">
+                              <div className="mgmt-cell-bar-track">
+                                <div className="mgmt-cell-bar-fill" style={{ width: `${row.placement}%`, background: '#8b5cf6' }} />
+                              </div>
+                              <span className="mgmt-cell-bar-pct">{row.placement}%</span>
+                            </div>
                           </td>
                           <td>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: 3 }}>{d.feeRecovery}%</div>
-                            <ProgressBar value={d.feeRecovery} color="#2563eb" />
+                            <div className="mgmt-cell-bar-wrap">
+                              <div className="mgmt-cell-bar-track">
+                                <div className="mgmt-cell-bar-fill" style={{ width: `${row.feeRecovery}%`, background: '#f59e0b' }} />
+                              </div>
+                              <span className="mgmt-cell-bar-pct">{row.feeRecovery}%</span>
+                            </div>
                           </td>
                           <td>
-                            <span className={`mgmt-status ${d.pass >= 95 ? 'mgmt-status-success' : d.pass >= 90 ? 'mgmt-status-info' : 'mgmt-status-warning'}`}>
-                              {d.pass}%
-                            </span>
+                            <div className="mgmt-cell-bar-wrap">
+                              <div className="mgmt-cell-bar-track">
+                                <div className="mgmt-cell-bar-fill" style={{ width: `${row.budgetUtil}%`, background: '#06b6d4' }} />
+                              </div>
+                              <span className="mgmt-cell-bar-pct">{row.budgetUtil}%</span>
+                            </div>
                           </td>
                           <td>
                             <button
-                              className="mgmt-btn mgmt-btn-secondary"
-                              style={{ padding: '4px 8px', fontSize: '0.73rem' }}
-                              onClick={() => setSelectedDeptDetail(d)}
+                              type="button"
+                              className="mgmt-view-btn-pill"
+                              onClick={() => {
+                                const deptObj = departments.find(d => d.code === row.code) || {
+                                  name: row.name,
+                                  code: row.code,
+                                  hod: row.hod,
+                                  students: row.students,
+                                  faculty: row.faculty,
+                                  cgpa: row.cgpa,
+                                  attendance: row.attendance,
+                                  placement: row.placement,
+                                  feeRecovery: row.feeRecovery,
+                                  pass: row.passRate,
+                                  scholarships: 24,
+                                  sfr: '1:15',
+                                  budgetAllocated: 50000000,
+                                  budgetSpent: 38000000,
+                                  budgetUtilization: row.budgetUtil
+                                };
+                                setSelectedDeptDetail(deptObj);
+                              }}
                             >
-                              <Eye size={12} /> Inspect
+                              <Eye size={12} /> View
                             </button>
                           </td>
                         </tr>
@@ -1237,113 +1466,116 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
                 </div>
               </div>
 
-              {/* ─── Institutional Strategy & 5-Year Strategic Plan (2025–2030) ───── */}
-              <div className="mgmt-panel" style={{ marginTop: '1.5rem' }}>
-                <div className="mgmt-panel-header">
-                  <div className="mgmt-panel-title">
-                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Target size={18} color="#2563eb" /> Institutional Strategy &amp; 5-Year Master Targets (2025–2030)
+              {/* 6. Bottom Row (3 Columns) */}
+              <div className="mgmt-bottom-3col-grid">
+                {/* Column 1: Strategic Objectives & Key Initiatives */}
+                <div className="mgmt-bottom-card">
+                  <div className="mgmt-bottom-card-header">
+                    <h3 className="mgmt-bottom-card-title">
+                      <Target size={16} color="#e11d48" />
+                      Strategic Objectives &amp; Key Initiatives
                     </h3>
-                    <p>Governing Body benchmarks for National Rankings, Accreditation, Placements, and Green Campus</p>
+                    <span className="mgmt-view-all-link" onClick={() => setActiveTab('governance')}>
+                      View All
+                    </span>
                   </div>
-                  <span className="mgmt-badge" style={{ background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}>
-                    <Sparkles size={12} /> Strategic Plan 2030
-                  </span>
-                </div>
 
-                <div className="mgmt-panel-body" style={{ padding: '1.25rem' }}>
-                  <div className="mgmt-strategy-grid">
-                    {(strategyTargets.length > 0 ? strategyTargets : [
-                      { id: 'STRAT-01', dimension: 'National Ranking (NIRF)', targetMetric: 'NIRF Rank < 100', currentMetric: 'Band 151-200 (Rank 164)', targetYear: '2027', progressPct: 78, status: 'On Track', leadOfficer: 'Director & IQAC', initiatives: 'Faculty Ph.D ratio push, Scopus publication grants, sponsored R&D outreach.' },
-                      { id: 'STRAT-02', dimension: 'Autonomous Re-Accreditation', targetMetric: 'NAAC Grade A++ (Score >= 3.51)', currentMetric: 'NAAC A+ (Score 3.38)', targetYear: '2026', progressPct: 94, status: 'Ahead', leadOfficer: 'Dr. P. K. Pattnaik (IQAC Director)', initiatives: 'SSR documentation finalized; mock peer visit completed; QlM/QnM verified.' },
-                      { id: 'STRAT-03', dimension: 'Graduate Placement CTC', targetMetric: 'Placement >= 95%, Median >= ₹7.5 LPA', currentMetric: '87.0% Placed, Median ₹6.2 LPA', targetYear: '2027', progressPct: 84, status: 'On Track', leadOfficer: 'Dean Industry Relations & TPO', initiatives: 'Pre-placement coding bootcamps, corporate CoEs with Cisco, AWS, and Dassault.' },
-                      { id: 'STRAT-04', dimension: 'Extramural Research Grants', targetMetric: '₹5.0 Cr Annual Sanctioned Grants', currentMetric: '₹3.4 Cr Active Grants (DST, SERB)', targetYear: '2028', progressPct: 68, status: 'Needs Attention', leadOfficer: 'Dean Research & Consultancy', initiatives: 'Matching seed capital grant of ₹25L per department for interdisciplinary lab projects.' },
-                      { id: 'STRAT-05', dimension: 'Sustainable Green Campus', targetMetric: '100% Renewable Daytime Power & Zero Waste', currentMetric: '42% Solar Coverage (150 kW Grid)', targetYear: '2028', progressPct: 62, status: 'On Track', leadOfficer: 'Chief Estate Officer', initiatives: 'Rooftop solar expansion Phase II; biogas digester; rainwater harvesting recharge wells.' },
-                    ]).map(item => (
-                      <div key={item.id} className="mgmt-strategy-card">
-                        <div>
-                          <div className="mgmt-strategy-head">
-                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1e40af' }}>{item.dimension}</span>
-                            <span className={`mgmt-status ${item.status === 'Ahead' ? 'mgmt-status-success' : item.status === 'On Track' ? 'mgmt-status-info' : 'mgmt-status-warning'}`}>
-                              {item.status}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>
-                            {item.targetMetric}
-                          </div>
-                          <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: 10 }}>
-                            Current: <strong style={{ color: '#0f172a' }}>{item.currentMetric}</strong> · Target: <strong>{item.targetYear}</strong>
-                          </div>
-                          <div style={{ marginBottom: 10 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', fontWeight: 700, marginBottom: 3 }}>
-                              <span>Milestone Progress</span>
-                              <span>{item.progressPct}%</span>
-                            </div>
-                            <ProgressBar value={item.progressPct} color={item.progressPct >= 90 ? '#16a34a' : item.progressPct >= 75 ? '#2563eb' : '#d97706'} />
-                          </div>
+                  <div className="mgmt-initiatives-list">
+                    {[
+                      { text: 'Increase Overall Placement Rate to 90%', progress: 88, badge: 'On Track', badgeClass: 'on-track', color: '#2563eb' },
+                      { text: 'Digitize 100% Academic Processes', progress: 95, badge: 'On Track', badgeClass: 'on-track', color: '#10b981' },
+                      { text: 'Upgrade Infrastructure & Smart Classrooms', progress: 70, badge: 'In Progress', badgeClass: 'in-progress', color: '#f59e0b' },
+                      { text: 'Improve Research Publications by 25%', progress: 60, badge: 'In Progress', badgeClass: 'in-progress', color: '#ea580c' },
+                      { text: 'Achieve NAAC A++ Accreditation', progress: 40, badge: 'At Risk', badgeClass: 'at-risk', color: '#dc2626' },
+                    ].map((item, idx) => (
+                      <div key={idx} className="mgmt-initiative-row">
+                        <div className="mgmt-initiative-info">
+                          <span className="mgmt-initiative-bullet" style={{ background: item.color }} />
+                          <span className="mgmt-initiative-text" title={item.text}>{item.text}</span>
                         </div>
-                        <div style={{ fontSize: '0.74rem', color: '#475569', background: '#f8faff', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                          <div><strong>Officer:</strong> {item.leadOfficer}</div>
-                          <div style={{ marginTop: 2, color: '#64748b' }}>{item.initiatives}</div>
+                        <div className="mgmt-initiative-progress">
+                          <div className="mgmt-cell-bar-track">
+                            <div className="mgmt-cell-bar-fill" style={{ width: `${item.progress}%`, background: item.color }} />
+                          </div>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 800, minWidth: 26, textAlign: 'right' }}>
+                            {item.progress}%
+                          </span>
+                          <span className={`mgmt-initiative-badge ${item.badgeClass}`}>
+                            {item.badge}
+                          </span>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
 
-              {/* ─── ERP Cross-Module Integration Health & Data Quality Monitor ───── */}
-              <div className="mgmt-panel" style={{ marginTop: '1.5rem' }}>
-                <div className="mgmt-panel-header">
-                  <div className="mgmt-panel-title">
-                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Server size={18} color="#059669" /> ERP Cross-Module Integration &amp; Data Quality Health
+                {/* Column 2: Recent Management Activities */}
+                <div className="mgmt-bottom-card">
+                  <div className="mgmt-bottom-card-header">
+                    <h3 className="mgmt-bottom-card-title">
+                      <UserCheck size={16} color="#7c3aed" />
+                      Recent Management Activities
                     </h3>
-                    <p>Live automated telemetry across Database, Authentication, Biometrics, Accounts, and AI services</p>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="mgmt-badge" style={{ background: '#ecfdf5', color: '#059669', borderColor: '#a7f3d0' }}>
-                      <CheckCircle2 size={12} /> System Status: {integrationHealth?.overallStatus || 'OPTIMAL'}
+                    <span className="mgmt-view-all-link" onClick={() => setActiveTab('audit-trail')}>
+                      View All
                     </span>
-                    <button
-                      type="button"
-                      className="mgmt-btn mgmt-btn-secondary"
-                      onClick={() => {
-                        api.getManagementIntegrationHealth().then(res => {
-                          if (res?.success) {
-                            setIntegrationHealth(res);
-                            showToast('✅ ERP Integration Health diagnostic verified: 100% Subsystems Optimal.');
-                          }
-                        });
-                      }}
-                      style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                    >
-                      <RefreshCw size={12} /> Run Diagnostic Check
-                    </button>
+                  </div>
+
+                  <div className="mgmt-activities-list">
+                    {[
+                      { time: '30 Oct, 04:52 PM', desc: 'Fee concession approval for 12 students', tag: 'Finance', tagClass: 'finance' },
+                      { time: '30 Oct, 02:15 PM', desc: 'New faculty recruitment request approved', tag: 'HR', tagClass: 'hr' },
+                      { time: '30 Oct, 11:40 AM', desc: 'Hostel maintenance work order issued', tag: 'Infrastructure', tagClass: 'infrastructure' },
+                      { time: '29 Oct, 05:20 PM', desc: 'Mid semester exam schedule published', tag: 'Examination', tagClass: 'examination' },
+                      { time: '29 Oct, 01:10 PM', desc: 'Scholarship list for 2026-27 released', tag: 'Academic', tagClass: 'academic' },
+                    ].map((act, idx) => (
+                      <div key={idx} className="mgmt-activity-item">
+                        <div className="mgmt-act-left">
+                          <span className="mgmt-act-dot" />
+                          <div>
+                            <span className="mgmt-act-time">{act.time}</span>
+                            <span style={{ margin: '0 6px', color: '#cbd5e1' }}>•</span>
+                            <span className="mgmt-act-desc">{act.desc}</span>
+                          </div>
+                        </div>
+                        <span className={`mgmt-act-tag ${act.tagClass}`}>{act.tag}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <div className="mgmt-panel-body" style={{ padding: '1.25rem' }}>
-                  <div className="mgmt-health-grid">
-                    {(integrationHealth?.subsystems || [
-                      { subsystem: 'PostgreSQL Database & Prisma ORM', status: 'HEALTHY', latencyMs: 4, details: `${totalStudents} Students, ${totalFaculty} Faculty, Financial Ledger connected.` },
-                      { subsystem: 'JWT Authentication & Role-Based Access Control', status: 'HEALTHY', latencyMs: 1, details: '14 Institutional Roles configured with strict route-level guards.' },
-                      { subsystem: 'Admissions-to-Student Enrollment Pipeline', status: 'HEALTHY', latencyMs: 8, details: '100% of admitted applicants transitioned to active student records.' },
-                      { subsystem: 'Biometric Attendance & Class Attendance Sync', status: 'HEALTHY', latencyMs: 12, details: 'Biometric terminals synchronized across academic blocks; 0 packet loss.' },
-                      { subsystem: 'Accounts & Fee Collection Ledger Reconciliation', status: 'HEALTHY', latencyMs: 6, details: 'Zero unreconciled online transactions; all receipts assigned unique cryptographic hash.' },
-                      { subsystem: 'AI Complaint Classification Microservice', status: 'HEALTHY', latencyMs: 22, details: 'TF-IDF & Logistic Regression service online on :8000; deterministic fallback active.' },
-                    ]).map((sub, idx) => (
-                      <div key={idx} className="mgmt-health-item">
-                        <div className={`mgmt-health-dot ${sub.status}`} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                            <strong style={{ fontSize: '0.82rem', color: '#0f172a' }}>{sub.subsystem}</strong>
-                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: sub.status === 'HEALTHY' ? '#15803d' : '#b91c1c' }}>
-                              {sub.latencyMs}ms
-                            </span>
+                {/* Column 3: Important Notices & Circulars */}
+                <div className="mgmt-bottom-card">
+                  <div className="mgmt-bottom-card-header">
+                    <h3 className="mgmt-bottom-card-title">
+                      <FileText size={16} color="#e11d48" />
+                      Important Notices &amp; Circulars
+                    </h3>
+                    <span className="mgmt-view-all-link" onClick={() => setActiveTab('governance')}>
+                      View All
+                    </span>
+                  </div>
+
+                  <div className="mgmt-circulars-list">
+                    {[
+                      { day: '30', month: 'OCT', title: 'Mid Semester Examination Schedule', sub: 'Published by Exam Cell', tag: 'Exam', tagClass: 'exam' },
+                      { day: '26', month: 'OCT', title: 'Campus Placement Drive by TCS', sub: 'Published by Placement Cell', tag: 'Placement', tagClass: 'placement' },
+                      { day: '28', month: 'OCT', title: 'Scholarship Applications Open', sub: 'Published by Academic Office', tag: 'Scholarship', tagClass: 'scholarship' },
+                      { day: '24', month: 'OCT', title: 'Library Timings Updated', sub: 'Published by Library', tag: 'Library', tagClass: 'library' },
+                      { day: '22', month: 'OCT', title: 'Holi Festival Holiday Notice', sub: 'Published by Administration', tag: 'Holiday', tagClass: 'holiday' },
+                    ].map((circ, idx) => (
+                      <div key={idx} className="mgmt-circular-item">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                          <div className="mgmt-circ-date-box">
+                            <span className="mgmt-circ-day">{circ.day}</span>
+                            <span className="mgmt-circ-month">{circ.month}</span>
                           </div>
-                          <p style={{ margin: 0, fontSize: '0.74rem', color: '#64748b', lineHeight: 1.35 }}>{sub.details}</p>
+                          <div className="mgmt-circ-details">
+                            <div className="mgmt-circ-title" title={circ.title}>{circ.title}</div>
+                            <div className="mgmt-circ-sub">{circ.sub}</div>
+                          </div>
                         </div>
+                        <span className={`mgmt-circ-badge ${circ.tagClass}`}>{circ.tag}</span>
                       </div>
                     ))}
                   </div>
@@ -1352,9 +1584,6 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
             </div>
           )}
 
-          {/* ═══════════════════════════════════════════════════════════════════
-              TAB 2: DEPARTMENT ANALYTICS
-          ═══════════════════════════════════════════════════════════════════ */}
           {activeTab === 'departments' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: 10 }}>

@@ -76,8 +76,7 @@ export default function StudentComplaintFeedbackModal({
         resolvedInExpectedTime: resolvedInTime === 'yes',
       };
 
-      const res = await api.confirmComplaintCompleted(complaint.id, payload);
-      const updatedTicket = (res && res.data) ? res.data : {
+      const updatedTicket = {
         ...complaint,
         status: 'Resolved',
         resolvedAt: new Date().toISOString(),
@@ -89,7 +88,14 @@ export default function StudentComplaintFeedbackModal({
         feedbackSubmittedAt: new Date().toISOString(),
       };
 
-      // In-app notification to BOTH Hostel Warden and Hostel Administrator
+      // 1. Immediately notify callback and close modal (<5ms)
+      const submitCallback = onFeedbackSubmitted || onSubmitted;
+      if (submitCallback) {
+        submitCallback(updatedTicket);
+      }
+      onClose();
+
+      // 2. Dispatch notifications
       try {
         notificationsStore.sendNotification({
           title: `Complaint #${complaint.id} Resolved: ${payload.rating}★ Student Feedback`,
@@ -105,11 +111,11 @@ export default function StudentComplaintFeedbackModal({
         console.warn('Local notification dispatch warning:', e);
       }
 
-      const submitCallback = onFeedbackSubmitted || onSubmitted;
-      if (submitCallback) {
-        submitCallback(updatedTicket);
-      }
-      onClose();
+      // 3. Fire backend API in background
+      api.confirmComplaintCompleted(complaint.id, payload).catch(backendErr => {
+        console.warn('Backend confirmComplaintCompleted background fallback:', backendErr?.message || backendErr);
+      });
+      return;
     } catch (err) {
       setErrorMessage(err.message || 'Unable to submit feedback. Please check connection and try again.');
     } finally {

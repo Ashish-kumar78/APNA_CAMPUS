@@ -28,7 +28,11 @@ import {
   saveHostel,
   deleteHostel
 } from '../../services/hostelAttendanceStore.js';
-import { getAllWardens } from '../../services/wardenManagementStore.js';
+import {
+  getAllWardens,
+  syncWardensFromBackend,
+  getRelatedWardensForHostel
+} from '../../services/wardenManagementStore.js';
 import './HostelModules.css';
 import './StructuredHostelStyles.css';
 
@@ -120,10 +124,35 @@ export default function ManageHostelsSection({ account }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMsg, setToastMsg] = useState(null);
 
-  // Load wardens on mount
+  // Load & synchronize wardens on mount and in real time across the portal
   useEffect(() => {
     setWardens(getAllWardens());
+    syncWardensFromBackend()
+      .then(list => {
+        if (list && list.length > 0) setWardens(list);
+      })
+      .catch(() => {});
+
+    const handleWardensUpdate = () => {
+      setWardens(getAllWardens());
+    };
+    window.addEventListener('bput_wardens_updated', handleWardensUpdate);
+    window.addEventListener('bput_warden_created', handleWardensUpdate);
+    window.addEventListener('bput_warden_status_changed', handleWardensUpdate);
+    window.addEventListener('storage', handleWardensUpdate);
+
+    return () => {
+      window.removeEventListener('bput_wardens_updated', handleWardensUpdate);
+      window.removeEventListener('bput_warden_created', handleWardensUpdate);
+      window.removeEventListener('bput_warden_status_changed', handleWardensUpdate);
+      window.removeEventListener('storage', handleWardensUpdate);
+    };
   }, []);
+
+  // Compute related wardens for currently entered hostel name
+  const relatedWardens = useMemo(() => {
+    return getRelatedWardensForHostel(form.name);
+  }, [form.name, wardens]);
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -584,11 +613,22 @@ export default function ManageHostelsSection({ account }) {
                   required
                 >
                   <option value="">-- Choose Warden from Staff Register --</option>
-                  {wardens.map(w => (
-                    <option key={w.id} value={w.id}>
-                      {w.name} ({w.id}) — {w.designation} [{w.hostelName}]
-                    </option>
-                  ))}
+                  {relatedWardens.length > 0 && (
+                    <optgroup label="⭐ Directly Assigned / Related Wardens">
+                      {relatedWardens.map(w => (
+                        <option key={`rel-${w.id}`} value={w.id}>
+                          {w.name} ({w.id}) — {w.designation} (Assigned to {w.hostelName})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="All Registered Campus Wardens">
+                    {wardens.map(w => (
+                      <option key={w.id} value={w.id}>
+                        {w.name} ({w.id}) — {w.designation} [{w.hostelName || 'General'}]
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
                 {touched.wardenId && validationErrors.wardenId && (
                   <span className="form-field-error">{validationErrors.wardenId}</span>

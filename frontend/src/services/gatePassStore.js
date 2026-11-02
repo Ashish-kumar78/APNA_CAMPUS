@@ -1,7 +1,47 @@
 // Service for managing Student Hostel Gate Passes (Outstation / Home / Leave)
 // Synchronizes between Student Portal, Hostel Warden Portal, and Campus Security
+import { api } from './api.js';
+import { isWardenSuspended } from './wardenManagementStore.js';
 
 const GATE_PASS_STORAGE_KEY = 'bput_hostel_gate_passes_v1';
+
+function dispatchStorageEvent(key, newValue) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (typeof StorageEvent !== 'undefined') {
+      window.dispatchEvent(new StorageEvent('storage', { key, newValue }));
+    } else {
+      window.dispatchEvent(new Event('storage'));
+    }
+  } catch {}
+}
+
+let isSyncingGatePasses = false;
+
+export async function fetchGatePassesFromBackend() {
+  if (typeof window === 'undefined' || isSyncingGatePasses) return;
+  isSyncingGatePasses = true;
+  try {
+    const res = await api.getHostelGatePasses();
+    if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+      try {
+        localStorage.setItem(GATE_PASS_STORAGE_KEY, JSON.stringify(res.data));
+        window.dispatchEvent(new CustomEvent('bput_gate_passes_changed', { detail: res.data }));
+      } catch {}
+      return res.data;
+    }
+  } catch (err) {
+    console.warn('gatePassStore: Backend offline or error, using local passes:', err.message);
+  } finally {
+    isSyncingGatePasses = false;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    fetchGatePassesFromBackend();
+  }, 100);
+}
 
 // Seed initial realistic gate passes
 const initialGatePasses = [
@@ -136,17 +176,40 @@ const initialGatePasses = [
   }
 ];
 
+let inMemoryPasses = null;
+
+function savePassesLocally(updated) {
+  inMemoryPasses = updated;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
+    }
+    if (typeof window !== 'undefined') {
+      dispatchStorageEvent(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
+    }
+  } catch (err) {
+    // ignore
+  }
+}
+
 export function getAllGatePasses() {
   try {
+    if (typeof localStorage === 'undefined') {
+      if (!inMemoryPasses) inMemoryPasses = [...initialGatePasses];
+      return inMemoryPasses;
+    }
     const raw = localStorage.getItem(GATE_PASS_STORAGE_KEY);
     if (!raw) {
       localStorage.setItem(GATE_PASS_STORAGE_KEY, JSON.stringify(initialGatePasses));
+      inMemoryPasses = [...initialGatePasses];
       return initialGatePasses;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    inMemoryPasses = parsed;
+    return parsed;
   } catch (err) {
-    console.error('Error reading gate passes:', err);
-    return initialGatePasses;
+    if (!inMemoryPasses) inMemoryPasses = [...initialGatePasses];
+    return inMemoryPasses;
   }
 }
 
@@ -184,18 +247,23 @@ export function createGatePass(passData) {
   };
 
   const updated = [newPass, ...passes];
+  savePassesLocally(updated);
+  api.createHostelGatePass(newPass).catch(() => {});
   try {
-    localStorage.setItem(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
-    // Dispatch system events
-    window.dispatchEvent(new CustomEvent('bput_gate_passes_changed', { detail: { newPass } }));
-    window.dispatchEvent(new StorageEvent('storage', { key: GATE_PASS_STORAGE_KEY, newValue: JSON.stringify(updated) }));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('bput_gate_passes_changed', { detail: { newPass } }));
+    }
   } catch (err) {
-    console.error('Failed to store gate pass:', err);
+    // ignore
   }
   return newPass;
 }
 
 export function approveGatePass(passId, wardenName = 'Mr. Rajesh Jena (Resident Warden)', remarks = 'Application & mentor verification reviewed. Outstation gate pass granted.') {
+  if (isWardenSuspended(wardenName)) {
+    console.warn(`Gate pass approval blocked: Warden "${wardenName}" is suspended.`);
+    return { error: 'Account Suspended: Warden is not authorized to approve gate passes in read-only mode.' };
+  }
   const passes = getAllGatePasses();
   const now = new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -223,14 +291,31 @@ export function approveGatePass(passId, wardenName = 'Mr. Rajesh Jena (Resident 
   try {
     localStorage.setItem(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent('bput_gate_passes_changed', { detail: { passId, status: 'Approved' } }));
-    window.dispatchEvent(new StorageEvent('storage', { key: GATE_PASS_STORAGE_KEY, newValue: JSON.stringify(updated) }));
+    dispatchStorageEvent(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
   } catch (err) {
     console.error('Failed to approve gate pass:', err);
   }
+  api.actionHostelGatePass(passId, 'APPROVE', remarks).catch(() => {});
+  api.actionHostelGatePass(passId, 'RECORD_RETURN').catch(() => {});
   return updated.find(p => p.id === passId);
 }
 
+export function deleteGatePass(passId) {
+  const passes = getAllGatePasses();
+  const updated = passes.filter(p => p.id !== passId);
+  try {
+    localStorage.setItem(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('bput_gate_passes_changed', { detail: { passId, deleted: true } }));
+  } catch {}
+  api.deleteHostelGatePass(passId).catch(() => {});
+  return updated;
+}
+
 export function rejectGatePass(passId, wardenName = 'Mr. Rajesh Jena (Resident Warden)', remarks = 'Application rejected. Mentor verification missing or parent consent not confirmed.') {
+  if (isWardenSuspended(wardenName)) {
+    console.warn(`Gate pass rejection blocked: Warden "${wardenName}" is suspended.`);
+    return { error: 'Account Suspended: Warden is not authorized to reject gate passes in read-only mode.' };
+  }
   const passes = getAllGatePasses();
   const now = new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -258,10 +343,11 @@ export function rejectGatePass(passId, wardenName = 'Mr. Rajesh Jena (Resident W
   try {
     localStorage.setItem(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent('bput_gate_passes_changed', { detail: { passId, status: 'Rejected' } }));
-    window.dispatchEvent(new StorageEvent('storage', { key: GATE_PASS_STORAGE_KEY, newValue: JSON.stringify(updated) }));
+    dispatchStorageEvent(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
   } catch (err) {
     console.error('Failed to reject gate pass:', err);
   }
+  api.actionHostelGatePass(passId, 'REJECT', remarks).catch(() => {});
   return updated.find(p => p.id === passId);
 }
 
@@ -290,10 +376,11 @@ export function recordGatePassExit(passId) {
   try {
     localStorage.setItem(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent('bput_gate_passes_changed', { detail: { passId, status: 'Exited Campus' } }));
-    window.dispatchEvent(new StorageEvent('storage', { key: GATE_PASS_STORAGE_KEY, newValue: JSON.stringify(updated) }));
+    dispatchStorageEvent(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
   } catch (err) {
     console.error('Failed to record exit:', err);
   }
+  api.actionHostelGatePass(passId, 'RECORD_EXIT').catch(() => {});
   return updated.find(p => p.id === passId);
 }
 
@@ -322,7 +409,7 @@ export function recordGatePassReturn(passId) {
   try {
     localStorage.setItem(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent('bput_gate_passes_changed', { detail: { passId, status: 'Returned to Hostel' } }));
-    window.dispatchEvent(new StorageEvent('storage', { key: GATE_PASS_STORAGE_KEY, newValue: JSON.stringify(updated) }));
+    dispatchStorageEvent(GATE_PASS_STORAGE_KEY, JSON.stringify(updated));
   } catch (err) {
     console.error('Failed to record return:', err);
   }

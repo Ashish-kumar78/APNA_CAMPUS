@@ -33,6 +33,8 @@ import {
 import { saveStudent, getAllStudents, setActiveStudent, addStudentDocument } from '../services/studentStore.js';
 import { canteenStore } from '../services/canteenStore.js';
 import { api } from '../services/api.js';
+import { getAllHostels } from '../services/hostelAttendanceStore.js';
+import { getRoomsForHostelAndFloor, getFloorsForHostel } from '../services/hostelRoomStore.js';
 import './RegisterStudentWizard.css';
 
 // Initial default blank student form state matching Section 1 - 7
@@ -251,6 +253,22 @@ export default function RegisterStudentWizard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedCredential, setSubmittedCredential] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [wizardHostels, setWizardHostels] = useState(() => getAllHostels());
+  const [wizardFloor, setWizardFloor] = useState('1st Floor');
+
+  useEffect(() => {
+    const refreshHostels = () => {
+      setWizardHostels(getAllHostels());
+    };
+    window.addEventListener('bput_hostels_updated', refreshHostels);
+    window.addEventListener('hostel-rooms-updated', refreshHostels);
+    window.addEventListener('bput_hostel_rooms_changed', refreshHostels);
+    return () => {
+      window.removeEventListener('bput_hostels_updated', refreshHostels);
+      window.removeEventListener('hostel-rooms-updated', refreshHostels);
+      window.removeEventListener('bput_hostel_rooms_changed', refreshHostels);
+    };
+  }, []);
 
   // Document upload modal in Step 7
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false);
@@ -1103,33 +1121,75 @@ export default function RegisterStudentWizard({
 
                 {/* Conditional Hostel Block Details */}
                 {formData.hostel === 'Yes' && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-200">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2 border-t border-slate-200">
                     <div className="form-group">
-                      <label className="text-2xs">Assigned Hostel Residence</label>
-                      <input
-                        type="text"
-                        className="reg-input-sm"
+                      <label className="text-2xs font-bold text-slate-700">Assigned Hostel Residence</label>
+                      <select
+                        className="reg-input-sm font-semibold"
                         value={formData.hostelName}
-                        onChange={e => setFormData({ ...formData, hostelName: e.target.value })}
-                      />
+                        onChange={e => {
+                          const newHostel = e.target.value;
+                          const floors = getFloorsForHostel(newHostel);
+                          const fl = floors[0] || '1st Floor';
+                          setWizardFloor(fl);
+                          const rms = getRoomsForHostelAndFloor(newHostel, fl);
+                          const initialRoom = rms[0]?.roomNo || (typeof rms[0] === 'string' ? rms[0].replace(/^room\s*/i, '') : '101');
+                          setFormData(prev => ({ ...prev, hostelName: newHostel, roomNumber: initialRoom }));
+                        }}
+                      >
+                        {wizardHostels.map(h => (
+                          <option key={h.id || h.code || h.name} value={h.name}>{h.name}</option>
+                        ))}
+                      </select>
                     </div>
+
                     <div className="form-group">
-                      <label className="text-2xs">Room Number</label>
-                      <input
-                        type="text"
-                        className="reg-input-sm"
+                      <label className="text-2xs font-bold text-slate-700">Floor (Select)</label>
+                      <select
+                        className="reg-input-sm font-semibold"
+                        value={wizardFloor}
+                        onChange={e => {
+                          const newFl = e.target.value;
+                          setWizardFloor(newFl);
+                          const rms = getRoomsForHostelAndFloor(formData.hostelName, newFl);
+                          const initialRoom = rms[0]?.roomNo || (typeof rms[0] === 'string' ? rms[0].replace(/^room\s*/i, '') : '101');
+                          setFormData(prev => ({ ...prev, roomNumber: initialRoom }));
+                        }}
+                      >
+                        {getFloorsForHostel(formData.hostelName).map(fl => (
+                          <option key={fl} value={fl}>{fl}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="text-2xs font-bold text-slate-700">Room Number</label>
+                      <select
+                        className="reg-input-sm font-semibold"
                         value={formData.roomNumber}
                         onChange={e => setFormData({ ...formData, roomNumber: e.target.value })}
-                      />
+                      >
+                        {getRoomsForHostelAndFloor(formData.hostelName, wizardFloor).map(rm => {
+                          const cleanNo = rm?.roomNo || (typeof rm === 'string' ? rm.replace(/^room\s*/i, '') : String(rm));
+                          return (
+                            <option key={cleanNo} value={cleanNo}>{rm?.label || `Room ${cleanNo}`}</option>
+                          );
+                        })}
+                      </select>
                     </div>
+
                     <div className="form-group">
-                      <label className="text-2xs">Bed Number</label>
-                      <input
-                        type="text"
-                        className="reg-input-sm"
+                      <label className="text-2xs font-bold text-slate-700">Bed Number</label>
+                      <select
+                        className="reg-input-sm font-semibold"
                         value={formData.bedNumber}
                         onChange={e => setFormData({ ...formData, bedNumber: e.target.value })}
-                      />
+                      >
+                        <option value="Bed 01">Bed 01</option>
+                        <option value="Bed 02">Bed 02</option>
+                        <option value="Bed 03">Bed 03</option>
+                        <option value="Bed 04">Bed 04</option>
+                      </select>
                     </div>
                   </div>
                 )}

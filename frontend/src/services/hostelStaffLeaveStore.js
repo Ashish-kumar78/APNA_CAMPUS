@@ -1,6 +1,9 @@
 // Service for Managing Hostel Staff & Warden Leaves
 // Synchronizes Leave Balances, Institutional Instructions & Admin Approvals
 
+import { api } from './api.js';
+import { setWardenDutyStatus } from './wardenManagementStore.js';
+
 const STORAGE_KEY = 'bput_hostel_staff_leaves_v1';
 const SUMMARY_STORAGE_KEY = 'bput_hostel_leave_summary_v1';
 
@@ -154,18 +157,37 @@ export function applyStaffLeave(form) {
   const newApplication = {
     ...form,
     id: newId,
-    status: 'Pending Approval',
-    appliedOn: new Intl.DateTimeFormat('en-IN', {
+    status: form.status || 'Pending Approval',
+    appliedOn: form.appliedOn || new Intl.DateTimeFormat('en-IN', {
       year: 'numeric', month: 'short', day: '2-digit',
       hour: '2-digit', minute: '2-digit'
     }).format(new Date()),
-    approvedBy: null,
-    approvedAt: null,
-    adminRemarks: ''
+    approvedBy: form.approvedBy || (form.status === 'Approved by Hostel Admin' ? 'Hostel Administrator' : null),
+    approvedAt: form.approvedAt || (form.status === 'Approved by Hostel Admin' ? new Date().toISOString() : null),
+    adminRemarks: form.adminRemarks || ''
   };
 
   const updatedLeaves = [newApplication, ...leaves];
   saveStaffLeaves(updatedLeaves);
+
+  // If approved upon creation, set warden duty status to On Leave
+  if (newApplication.status === 'Approved by Hostel Admin' && newApplication.employeeId) {
+    setWardenDutyStatus(newApplication.employeeId, 'On Leave', newApplication.reason);
+  }
+
+  // Broadcast event immediately
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hostel_staff_leave_updated', { detail: { leave: newApplication, leaves: updatedLeaves } }));
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  // Sync to backend in background
+  if (typeof api !== 'undefined' && api.applyStaffLeave) {
+    api.applyStaffLeave(newApplication).catch(err => {
+      console.warn('Backend applyStaffLeave sync fallback:', err?.message || err);
+    });
+  }
+
   return { newApplication, updatedLeaves, summary };
 }
 
@@ -219,12 +241,33 @@ export function approveStaffLeave(id, remarks = '', approverName = 'Hostel Admin
   });
 
   saveStaffLeaves(updatedLeaves);
+
+  // Automatically update warden duty status to On Leave
+  if (target.employeeId) {
+    setWardenDutyStatus(target.employeeId, 'On Leave', remarks || 'Approved staff leave');
+  }
+
+  // Broadcast event immediately
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hostel_staff_leave_updated', { detail: { id, status: 'Approved by Hostel Admin', leaves: updatedLeaves } }));
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  // Sync with backend API
+  if (typeof api !== 'undefined' && api.updateStaffLeaveStatus) {
+    api.updateStaffLeaveStatus(id, 'Approved by Hostel Admin', remarks).catch(err => {
+      console.warn('Backend updateStaffLeaveStatus sync fallback:', err?.message || err);
+    });
+  }
+
   return { updatedLeaves, summary };
 }
 
 export function rejectStaffLeave(id, remarks = '', approverName = 'Hostel Admin') {
   const leaves = getAllStaffLeaves();
   const summary = getLeaveSummary();
+
+  const target = leaves.find(l => l.id === id);
 
   const updatedLeaves = leaves.map(l => {
     if (l.id === id) {
@@ -243,7 +286,60 @@ export function rejectStaffLeave(id, remarks = '', approverName = 'Hostel Admin'
   });
 
   saveStaffLeaves(updatedLeaves);
+
+  // If warden had this leave, check if any other approved leave is active
+  if (target && target.employeeId) {
+    const hasOtherApproved = updatedLeaves.some(
+      l => l.id !== id && l.employeeId === target.employeeId && l.status === 'Approved by Hostel Admin'
+    );
+    if (!hasOtherApproved) {
+      setWardenDutyStatus(target.employeeId, 'On Duty', remarks || 'Staff leave rejected');
+    }
+  }
+
+  // Broadcast event immediately
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hostel_staff_leave_updated', { detail: { id, status: 'Rejected by Hostel Admin', leaves: updatedLeaves } }));
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  // Sync with backend API
+  if (typeof api !== 'undefined' && api.updateStaffLeaveStatus) {
+    api.updateStaffLeaveStatus(id, 'Rejected by Hostel Admin', remarks).catch(err => {
+      console.warn('Backend updateStaffLeaveStatus sync fallback:', err?.message || err);
+    });
+  }
+
   return { updatedLeaves, summary };
+}
+
+export async function syncStaffLeavesFromBackend() {
+  if (typeof api !== 'undefined' && api.getStaffLeaves) {
+    try {
+      const res = await api.getStaffLeaves();
+      const backendLeaves = res?.data || (Array.isArray(res) ? res : []);
+      if (Array.isArray(backendLeaves) && backendLeaves.length > 0) {
+        const localLeaves = getAllStaffLeaves();
+        const map = new Map();
+        localLeaves.forEach(l => { if (l?.id) map.set(l.id, l); });
+        backendLeaves.forEach(bl => {
+          if (!bl?.id) return;
+          const existing = map.get(bl.id) || {};
+          map.set(bl.id, { ...existing, ...bl });
+        });
+        const merged = Array.from(map.values());
+        saveStaffLeaves(merged);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('hostel_staff_leave_updated', { detail: { leaves: merged } }));
+          window.dispatchEvent(new Event('storage'));
+        }
+        return merged;
+      }
+    } catch (err) {
+      console.warn('Backend syncStaffLeavesFromBackend fallback:', err?.message || err);
+    }
+  }
+  return getAllStaffLeaves();
 }
 
 export function resetStaffLeavesToDefaults() {

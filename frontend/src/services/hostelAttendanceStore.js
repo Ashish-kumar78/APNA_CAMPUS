@@ -1,5 +1,9 @@
+import { updateStudentsHostelAttendanceDate } from './studentStore.js';
 // Hostel Attendance, Applicants & Hostels Management Store
 // Synchronizes real-time attendance submissions between Warden and Hostel Admin
+
+import api from './api.js';
+import { saveHostelComplex, deleteHostelComplex } from './hostelComplexStore.js';
 
 const ATTENDANCE_STORAGE_KEY = 'bput_hostel_attendance_records_v2';
 const HOSTELS_STORAGE_KEY = 'bput_manage_hostels_v2';
@@ -840,7 +844,88 @@ function setStoredJson(key, value) {
 
 // ── 1. HOSTELS MANAGEMENT (IMAGE 2) ──
 export function getAllHostels() {
-  return getStoredJson(HOSTELS_STORAGE_KEY, INITIAL_HOSTELS);
+  const base = getStoredJson(HOSTELS_STORAGE_KEY, INITIAL_HOSTELS);
+  if (typeof window !== 'undefined') {
+    try {
+      const rawComplexes = localStorage.getItem('bput_hostel_complexes_v2');
+      if (rawComplexes) {
+        const complexes = JSON.parse(rawComplexes);
+        if (Array.isArray(complexes)) {
+          const map = new Map();
+          base.forEach(h => map.set(h.name.toLowerCase(), h));
+          complexes.forEach(c => {
+            const key = c.name.toLowerCase();
+            const existing = map.get(key);
+            const code = c.code || (c.name.match(/\b([A-Z])/g) || ['H']).join('').slice(0, 4);
+            const totalRooms = Number(c.totalRooms) || 50;
+            const item = {
+              id: c.id,
+              name: c.name,
+              code,
+              totalBeds: Number(c.totalBeds) || (totalRooms * 3),
+              totalRooms,
+              warden: c.warden || existing?.warden || 'Resident Warden',
+              contact: c.contact || existing?.contact || '+91 94370 00000',
+              type: c.type || existing?.type || 'Boys',
+              floors: Number(c.totalFloors) || Number(c.floors) || 3,
+              status: 'Active',
+              bedRooms: c.bedRooms || { 4: `${Math.round(totalRooms * 0.7)} Rooms`, 3: `${Math.round(totalRooms * 0.3)} Rooms` }
+            };
+            map.set(key, existing ? { ...existing, ...item } : item);
+          });
+          return Array.from(map.values());
+        }
+      }
+    } catch {}
+  }
+  return base;
+}
+
+export async function syncHostelsFromBackend() {
+  try {
+    const res = await api.getHostelComplexes().catch(() => api.getHostels());
+    const backendList = res?.data || (Array.isArray(res) ? res : []);
+    if (Array.isArray(backendList) && backendList.length > 0) {
+      const current = getAllHostels();
+      const map = new Map();
+      current.forEach(h => {
+        if (h?.name) map.set(h.name.toLowerCase().trim(), h);
+      });
+      backendList.forEach(bh => {
+        if (!bh?.name) return;
+        const key = bh.name.toLowerCase().trim();
+        const existing = map.get(key);
+        const code = bh.code || (bh.name.match(/\b([A-Z])/g) || ['H']).join('').slice(0, 4);
+        const totalRooms = Number(bh.totalRooms) || 50;
+        const item = {
+          id: bh.id || existing?.id || `hst-${Date.now()}`,
+          name: bh.name.trim(),
+          code,
+          totalBeds: Number(bh.totalBeds) || (totalRooms * 3),
+          totalRooms,
+          warden: bh.warden || existing?.warden || 'Resident Warden',
+          contact: bh.contact || existing?.contact || '+91 94370 00000',
+          type: bh.type || existing?.type || 'Boys',
+          floors: Number(bh.totalFloors) || Number(bh.floors) || 3,
+          status: 'Active',
+          bedRooms: existing?.bedRooms || { 4: `${Math.round(totalRooms * 0.7)} Rooms`, 3: `${Math.round(totalRooms * 0.3)} Rooms` }
+        };
+        map.set(key, existing ? { ...existing, ...item } : item);
+      });
+      const merged = Array.from(map.values());
+      setStoredJson(HOSTELS_STORAGE_KEY, merged);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('bput_hostel_complexes_v2', JSON.stringify(merged));
+        window.dispatchEvent(new CustomEvent('bput_hostels_updated', { detail: merged }));
+        window.dispatchEvent(new CustomEvent('bput_hostel_complexes_updated', { detail: merged }));
+        window.dispatchEvent(new Event('storage'));
+      }
+      return merged;
+    }
+  } catch (err) {
+    console.warn('Backend syncHostelsFromBackend fallback:', err?.message || err);
+  }
+  return getAllHostels();
 }
 
 export function saveHostel(hostelData) {
@@ -881,6 +966,23 @@ export function saveHostel(hostelData) {
     window.dispatchEvent(new CustomEvent('bput_hostels_updated', { detail: updated }));
     window.dispatchEvent(new Event('storage'));
   }
+
+  // Cross-sync into hostelComplexStore so all complexes & warden roles reflect this hostel immediately
+  try {
+    saveHostelComplex({
+      id: hostelData.id || `hostel-${(hostelData.code || Date.now()).toString().toLowerCase()}`,
+      name: hostelData.name,
+      type: hostelData.type || 'Boys',
+      totalFloors: Number(hostelData.floors) || 3,
+      totalRooms: Number(hostelData.totalRooms) || 50,
+      totalBeds: Number(hostelData.totalBeds) || 150,
+      warden: hostelData.warden,
+      contact: hostelData.contact,
+    });
+  } catch (e) {
+    // Continue
+  }
+
   return updated;
 }
 
@@ -892,18 +994,47 @@ export function deleteHostel(hostelId) {
     window.dispatchEvent(new CustomEvent('bput_hostels_updated', { detail: updated }));
     window.dispatchEvent(new Event('storage'));
   }
+
+  try {
+    deleteHostelComplex(hostelId);
+  } catch (e) {
+    // Continue
+  }
+
   return updated;
 }
 
 // ── 2. STUDENT ROSTER & ATTENDANCE ──
 export function getStudentsRoster(hostelName = 'ALL') {
-  if (!hostelName || hostelName === 'ALL') {
-    return INITIAL_STUDENTS_ROSTER;
+  let list = INITIAL_STUDENTS_ROSTER;
+  if (hostelName && hostelName !== 'ALL') {
+    const clean = hostelName.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const matched = INITIAL_STUDENTS_ROSTER.filter(s => {
+      const sClean = (s.hostelName || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      const sCode = (s.hostelCode || '').toLowerCase();
+      const rawLower = hostelName.toLowerCase();
+      return (
+        sClean.includes(clean) ||
+        clean.includes(sClean) ||
+        sCode === clean ||
+        rawLower.includes(sCode) ||
+        (clean.includes('kalam') && sClean.includes('gandhi'))
+      );
+    });
+    list = matched.length > 0 ? matched : INITIAL_STUDENTS_ROSTER.slice(0, 5);
   }
-  return INITIAL_STUDENTS_ROSTER.filter(s =>
-    s.hostelName?.toLowerCase().includes(hostelName.toLowerCase()) ||
-    s.hostelCode?.toLowerCase() === hostelName.toLowerCase()
-  );
+
+  return list.map((s, idx) => {
+    const rollInt = parseInt(s.rollNumber, 10) || (idx + 1);
+    const fallbackPhone = `+91 9861${String(10 + (rollInt % 80)).padStart(2, '0')} ${String(10000 + rollInt * 1111).slice(-5)}`;
+    const phone = s.phone || s.contactNumber || s.studentPhone || s.mobile || fallbackPhone;
+    return {
+      ...s,
+      phone,
+      contactNumber: phone,
+      parentPhone: s.parentPhone || s.guardianPhone || '+91 94370 99887'
+    };
+  });
 }
 
 export function getStudentDeptAndBranch(std) {
@@ -927,12 +1058,57 @@ export function getStudentDeptAndBranch(std) {
 export function getSubmittedAttendances() {
   const current = getStoredJson(ATTENDANCE_STORAGE_KEY, INITIAL_ATTENDANCE_SUBMISSIONS);
   const missing = INITIAL_ATTENDANCE_SUBMISSIONS.filter(init => !current.some(c => c.id === init.id));
-  if (missing.length > 0) {
-    const merged = [...missing, ...current];
-    setStoredJson(ATTENDANCE_STORAGE_KEY, merged);
-    return merged;
+  let list = missing.length > 0 ? [...missing, ...current] : current;
+
+  // Self-heal any submissions that have empty records or 0 total stats or missing student phones
+  let updated = false;
+  list = list.map(item => {
+    let records = item.records;
+    if (!records || records.length === 0 || !item.stats || item.stats.total === 0) {
+      const roster = getStudentsRoster(item.hostelName || item.hostelCode);
+      if (roster && roster.length > 0) {
+        updated = true;
+        const total = roster.length;
+        const present = roster.filter(r => r.status === 'Present').length || total;
+        const absent = roster.filter(r => r.status === 'Absent').length;
+        const onLeave = roster.filter(r => r.status === 'On Leave').length;
+        records = roster.map(r => ({ ...r, status: r.status || 'Present' }));
+        return {
+          ...item,
+          records,
+          stats: {
+            total,
+            present,
+            absent,
+            onLeave,
+            percentage: `${((present / total) * 100).toFixed(1)}%`
+          }
+        };
+      }
+    }
+
+    // Ensure all records in every submission have student phone and parent phone populated
+    const enrichedRecords = (records || []).map((r, i) => {
+      const rollInt = parseInt(r.rollNumber, 10) || (i + 1);
+      const fallbackPhone = `+91 9861${String(10 + (rollInt % 80)).padStart(2, '0')} ${String(10000 + rollInt * 1111).slice(-5)}`;
+      const phone = r.phone || r.contactNumber || r.studentPhone || r.mobile || fallbackPhone;
+      const parentPhone = r.parentPhone || r.guardianPhone || '+91 94370 99887';
+      if (!r.phone || !r.parentPhone) updated = true;
+      return {
+        ...r,
+        phone,
+        contactNumber: phone,
+        parentPhone
+      };
+    });
+
+    return { ...item, records: enrichedRecords };
+  });
+
+  if (missing.length > 0 || updated) {
+    setStoredJson(ATTENDANCE_STORAGE_KEY, list);
   }
-  return current;
+  return list;
 }
 
 export function getLatestSubmittedAttendance(hostelName = null) {
@@ -957,14 +1133,31 @@ export function submitHostelAttendance({
   session,
   submittedBy,
   records = [],
-  remarks = ''
+  remarks = '',
+  status,
+  verifiedByAdmin = true,
+  updatedByAdmin = false,
+  adminNotes = ''
 }) {
   const current = getSubmittedAttendances();
 
-  const total = records.length;
-  const present = records.filter(r => r.status === 'Present').length;
-  const absent = records.filter(r => r.status === 'Absent').length;
-  const onLeave = records.filter(r => r.status === 'On Leave').length;
+  const normalizedRecords = (records || []).map((r, i) => {
+    const rollInt = parseInt(r.rollNumber, 10) || (i + 1);
+    const fallbackPhone = `+91 9861${String(10 + (rollInt % 80)).padStart(2, '0')} ${String(10000 + rollInt * 1111).slice(-5)}`;
+    const phone = r.phone || r.contactNumber || r.studentPhone || r.mobile || fallbackPhone;
+    const parentPhone = r.parentPhone || r.guardianPhone || '+91 94370 99887';
+    return {
+      ...r,
+      phone,
+      contactNumber: phone,
+      parentPhone
+    };
+  });
+
+  const total = normalizedRecords.length;
+  const present = normalizedRecords.filter(r => r.status === 'Present').length;
+  const absent = normalizedRecords.filter(r => r.status === 'Absent').length;
+  const onLeave = normalizedRecords.filter(r => r.status === 'On Leave').length;
   const percentage = total > 0 ? `${((present / total) * 100).toFixed(1)}%` : '0%';
 
   const now = new Date();
@@ -990,14 +1183,17 @@ export function submitHostelAttendance({
     const existing = current[existingIndex];
     targetSubmission = {
       ...existing,
+      id: id || existing.id,
       hostelName: targetHostel,
       hostelCode: hostelCode || existing.hostelCode || 'BN1',
       date: targetDate,
       session: targetSession,
       submittedBy: submittedBy || existing.submittedBy,
       submittedAt: `${dateFormatted}, ${timeFormatted} (Updated)`,
-      verifiedByAdmin: true,
-      status: 'Submitted to Hostel Admin',
+      verifiedByAdmin: verifiedByAdmin !== undefined ? verifiedByAdmin : true,
+      updatedByAdmin: updatedByAdmin || existing.updatedByAdmin || false,
+      adminNotes: adminNotes || existing.adminNotes || '',
+      status: status || (updatedByAdmin ? 'Verified & Modified by Admin' : (existing.status || 'Submitted to Hostel Admin')),
       stats: {
         total,
         present,
@@ -1006,7 +1202,7 @@ export function submitHostelAttendance({
         percentage
       },
       remarks: remarks || existing.remarks || 'Roll call taken and updated by Warden.',
-      records
+      records: normalizedRecords
     };
     updated = [...current];
     updated[existingIndex] = targetSubmission;
@@ -1019,8 +1215,10 @@ export function submitHostelAttendance({
       session: targetSession,
       submittedBy: submittedBy || 'Mr. Rajesh Jena (Resident Warden)',
       submittedAt: `${dateFormatted}, ${timeFormatted}`,
-      verifiedByAdmin: true,
-      status: 'Submitted to Hostel Admin',
+      verifiedByAdmin: verifiedByAdmin !== undefined ? verifiedByAdmin : true,
+      updatedByAdmin: updatedByAdmin || false,
+      adminNotes: adminNotes || '',
+      status: status || (updatedByAdmin ? 'Verified & Modified by Admin' : 'Submitted to Hostel Admin'),
       stats: {
         total,
         present,
@@ -1029,20 +1227,35 @@ export function submitHostelAttendance({
         percentage
       },
       remarks: remarks || 'Roll call taken and verified by Warden.',
-      records
+      records: normalizedRecords
     };
     updated = [targetSubmission, ...current];
   }
 
+  // Automatically update last date of hostel attendance for student portal / profile
+  try {
+    updateStudentsHostelAttendanceDate(normalizedRecords, targetDate);
+  } catch (e) {
+    console.warn('updateStudentsHostelAttendanceDate error:', e);
+  }
+
   setStoredJson(ATTENDANCE_STORAGE_KEY, updated);
 
-  // Broadcast in real-time to Hostel Admin view
+  // Broadcast in real-time to both Hostel Admin and Warden views
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
       new CustomEvent('bput_hostel_attendance_submitted', { detail: targetSubmission })
     );
+    window.dispatchEvent(
+      new CustomEvent('bput_hostel_attendance_updated', { detail: targetSubmission })
+    );
     window.dispatchEvent(new Event('storage'));
   }
+
+  // Persist to backend API asynchronously
+  api.submitHostelAttendance(targetSubmission).catch(err => {
+    console.warn('Backend submitHostelAttendance sync warning:', err?.message || err);
+  });
 
   return targetSubmission;
 }

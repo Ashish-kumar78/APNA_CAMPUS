@@ -1,7 +1,37 @@
 // Shared Store for Hostel Indents & Material Requisitions
 // Synchronizes Warden Indent Requests, Custom Items, and Hostel Admin Approvals
+import { api } from './api.js';
 
 const STORAGE_KEY = 'bput_hostel_indents_v1';
+
+let isSyncingWithBackend = false;
+
+export async function fetchIndentsFromBackend() {
+  if (typeof window === 'undefined' || isSyncingWithBackend) return;
+  isSyncingWithBackend = true;
+  try {
+    const res = await api.getHostelIndents();
+    if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+      const normalized = res.data.map(normalizeIndent);
+      saveIndents(normalized);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('bput_hostel_indents_updated', { detail: normalized }));
+      }
+      return normalized;
+    }
+  } catch (err) {
+    console.warn('hostelIndentStore: Failed to fetch indents from backend, keeping local cache:', err.message);
+  } finally {
+    isSyncingWithBackend = false;
+  }
+}
+
+// Initial sync on startup
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    fetchIndentsFromBackend();
+  }, 100);
+}
 
 export const PRESET_MATERIALS = [
   { name: 'Aluminium door Stay Handle & lock', code: 'H-301', defaultUnit: 'pcs', approxCost: 120.50 },
@@ -303,7 +333,13 @@ export function normalizeIndent(item) {
     attachments: Array.isArray(item.attachments) ? item.attachments : [],
     submittedAt: item.submittedAt || (item.approvedAt ? item.approvedAt : 'Recently submitted'),
     remarks: item.remarks || '',
-    description: item.description || item.remarks || 'Requisition submitted for hostel maintenance and facilities.'
+    additionalRemarks: item.additionalRemarks || item.remarks || '',
+    description: item.description || item.remarks || 'Requisition submitted for hostel maintenance and facilities.',
+    itemCondition: item.itemCondition || (item.isCustom ? 'Damaged / Malfunctioning' : 'Routine Maintenance Requirement'),
+    repairPossible: item.repairPossible || 'Yes - Can be repaired on campus by technician',
+    replacementRequired: item.replacementRequired || (item.isCustom ? 'Yes - Complete item replacement' : 'Routine Refill / Store Issue'),
+    affectedRooms: item.affectedRooms || 1,
+    safetyHazard: Boolean(item.safetyHazard)
   };
 }
 
@@ -393,18 +429,34 @@ export function raiseNewIndent(formData) {
   let updated;
   if (formData.id && currentIndents.some(i => i.id === formData.id)) {
     updated = currentIndents.map(i => i.id === formData.id ? newIndent : i);
+    api.updateHostelIndent(formData.id, newIndent).catch(() => {});
   } else {
     updated = [newIndent, ...currentIndents];
+    api.createHostelIndent(newIndent).catch(() => {});
   }
 
   saveIndents(updated);
   return { newIndent, updated };
 }
 
+export function updateIndent(indentId, updates) {
+  const currentIndents = getAllIndents();
+  const updated = currentIndents.map(item => {
+    if (item.id === indentId || item.indentNo === indentId) {
+      return { ...item, ...updates };
+    }
+    return item;
+  });
+  saveIndents(updated);
+  api.updateHostelIndent(indentId, updates).catch(() => {});
+  return updated;
+}
+
 export function deleteIndent(indentId) {
   const currentIndents = getAllIndents();
   const updated = currentIndents.filter(item => item.id !== indentId && item.indentNo !== indentId);
   saveIndents(updated);
+  api.deleteHostelIndent(indentId).catch(() => {});
   return updated;
 }
 
@@ -427,6 +479,7 @@ export function approveIndentByAdmin(indentId, approverName = 'Mr. Rajesh Jena (
   });
 
   saveIndents(updated);
+  api.actionHostelIndent(indentId, 'APPROVE').catch(() => {});
   return updated;
 }
 
@@ -447,6 +500,7 @@ export function rejectIndentByAdmin(indentId, reason = 'Budget / Stock not appro
   });
 
   saveIndents(updated);
+  api.actionHostelIndent(indentId, 'REJECT', reason).catch(() => {});
   return updated;
 }
 
@@ -465,6 +519,7 @@ export function markIndentIssued(indentId) {
   });
 
   saveIndents(updated);
+  api.actionHostelIndent(indentId, 'ISSUE').catch(() => {});
   return updated;
 }
 

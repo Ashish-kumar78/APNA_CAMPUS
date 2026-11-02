@@ -245,6 +245,52 @@
 }
 
 /* User Menu Popover */
+
+/* Language Dropdown Menu */
+.apna-lang-menu {
+  position: absolute;
+  top: calc(var(--topbar-height) + 6px);
+  right: 0;
+  width: auto;
+  min-width: 160px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  padding: 6px;
+  z-index: 220;
+  animation: apna-fade-in 0.15s ease-out;
+}
+
+.apna-lang-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.apna-lang-menu-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.apna-lang-menu-item.active {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 700;
+}
+
 .apna-user-menu {
   position: absolute;
   top: calc(var(--topbar-height) + 6px);
@@ -982,4 +1028,334 @@ button.apna-breadcrumb-item:hover {
     transform: scale(1);
     opacity: 1;
   }
+}
+/* ─────────────────────────────────────────────────────────────
+   GLOBAL TOPBAR & SIDEBAR MODERN ENHANCEMENTS
+   ───────────────────────────────────────────────────────────── */
+.apna-topbar-center {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .apna-topbar-center {
+    display: none;
+  }
+}
+
+.apna-global-search {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 5px 14px;
+  transition: all 0.2s ease;
+}
+
+.apna-global-search:focus-within {
+  background: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.apna-search-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.apna-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 0.82rem;
+  color: #0f172a;
+  outline: none;
+}
+
+.apna-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.apna-search-kbd {
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 1px 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.apna-notif-dark-pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  white-space: nowrap;
+}
+
+.apna-notif-dark-pill:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 900px) {
+  .apna-notif-dark-pill {
+    display: none;
+  }
+}
+
+.apna-user-avatar-img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid #2563eb;
+}
+
+/* Sidebar Online Status Badge */
+.apna-sidebar-online-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  padding: 4px 6px;
+}
+
+.apna-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.apna-status-dot {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+  animation: pulse-online 2s infinite ease-in-out;
+}
+
+@keyframes pulse-online {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.apna-status-label {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #10b981;
+  letter-spacing: 0.02em;
+}
+
+.apna-version-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.apna-sidebar-sync-time {
+  font-size: 0.68rem;
+  color: #64748b;
+  padding: 0 6px 10px;
+}
+
+
+/* ==========================================================================
+   GLOBAL DARK THEME SUPPORT ACROSS ALL ROLES & MODULES
+   ========================================================================== */
+html[data-theme="dark"],
+html.dark-mode,
+body.dark-theme {
+  --color-background: #0b1120;
+  --color-surface: #1e293b;
+  --color-surface-hover: #334155;
+  --color-border: #334155;
+  --color-border-subtle: #1e293b;
+  --color-border-strong: #475569;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-sidebar: #060d1a;
+  --color-sidebar-gradient: linear-gradient(180deg, #060d1a 0%, #0b1730 100%);
+  background-color: #0b1120;
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] body,
+html.dark-mode body {
+  background-color: #0b1120;
+  color: #f8fafc;
+}
+
+/* Header in dark mode */
+html[data-theme="dark"] .apna-topbar,
+html.dark-mode .apna-topbar {
+  background: #0f172a !important;
+  border-bottom-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .apna-topbar-icon-btn,
+html.dark-mode .apna-topbar-icon-btn {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .apna-topbar-icon-btn:hover,
+html.dark-mode .apna-topbar-icon-btn:hover {
+  background: #334155 !important;
+  color: #f8fafc !important;
+  border-color: #475569 !important;
+}
+
+html[data-theme="dark"] .apna-search-input,
+html.dark-mode .apna-search-input {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .apna-user-pill-btn,
+html.dark-mode .apna-user-pill-btn {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .apna-user-name,
+html.dark-mode .apna-user-name {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .apna-user-menu,
+html[data-theme="dark"] .apna-lang-menu,
+html.dark-mode .apna-user-menu,
+html.dark-mode .apna-lang-menu {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme="dark"] .apna-user-menu-item,
+html[data-theme="dark"] .apna-lang-menu-item,
+html.dark-mode .apna-user-menu-item,
+html.dark-mode .apna-lang-menu-item {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .apna-user-menu-item:hover,
+html[data-theme="dark"] .apna-lang-menu-item:hover,
+html.dark-mode .apna-user-menu-item:hover,
+html.dark-mode .apna-lang-menu-item:hover {
+  background: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .apna-lang-menu-item.active,
+html.dark-mode .apna-lang-menu-item.active {
+  background: rgba(37, 99, 235, 0.25) !important;
+  color: #60a5fa !important;
+}
+
+/* Breadcrumbs in dark mode */
+html[data-theme="dark"] .apna-breadcrumb-bar,
+html.dark-mode .apna-breadcrumb-bar {
+  background: #0f172a !important;
+  border-bottom-color: #1e293b !important;
+}
+
+/* Main workspace & cards */
+html[data-theme="dark"] .apna-main-workspace,
+html[data-theme="dark"] .apna-page-content,
+html[data-theme="dark"] .role-dash-wrapper,
+html[data-theme="dark"] .portal-body,
+html[data-theme="dark"] .fac-portal-wrapper,
+html[data-theme="dark"] .student-portal-container,
+html.dark-mode .apna-main-workspace,
+html.dark-mode .apna-page-content,
+html.dark-mode .role-dash-wrapper,
+html.dark-mode .portal-body,
+html.dark-mode .fac-portal-wrapper,
+html.dark-mode .student-portal-container {
+  background-color: #0b1120 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .dash-card,
+html[data-theme="dark"] .role-hero-banner,
+html[data-theme="dark"] .portal-panel,
+html[data-theme="dark"] .portal-card,
+html[data-theme="dark"] .fac-card,
+html.dark-mode .dash-card,
+html.dark-mode .role-hero-banner,
+html.dark-mode .portal-panel,
+html.dark-mode .portal-card,
+html.dark-mode .fac-card {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .dash-day,
+html.dark-mode .dash-day {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .dash-day:hover,
+html.dark-mode .dash-day:hover {
+  background: #334155;
+  color: #f8fafc;
+}
+
+/* Tables in dark mode */
+html[data-theme="dark"] table,
+html[data-theme="dark"] tr,
+html[data-theme="dark"] td,
+html.dark-mode table,
+html.dark-mode tr,
+html.dark-mode td {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] th,
+html.dark-mode th {
+  background-color: #0f172a !important;
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+
+/* Inputs and Forms in dark mode */
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html.dark-mode input:not([type="checkbox"]):not([type="radio"]),
+html.dark-mode select,
+html.dark-mode textarea {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
 }

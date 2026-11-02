@@ -243,3 +243,299 @@ input:checked + .wm-slider:before {
   transform: translateX(20px);
 }
 
+/* ========================================================
+   DUTY & LEAVE MANAGEMENT DASHBOARD & KPI CARD OVERHAUL
+   ======================================================== */
+
+.wm-duty-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.15rem;
+  margin-bottom: 1.5rem;
+}
+
+.wm-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.35rem 1.4rem;
+  box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.wm-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+  border-color: #cbd5e1;
+}
+
+.wm-kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.wm-kpi-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.wm-kpi-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.wm-kpi-card:hover .wm-kpi-icon {
+  transform: scale(1.05);
+}
+
+.wm-kpi-icon.green {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.wm-kpi-icon.amber {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.wm-kpi-icon.purple {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+.wm-kpi-icon.blue {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.wm-kpi-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #475569;
+  line-height: 1.25;
+}
+
+.wm-kpi-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+}
+
+.wm-kpi-badge.green {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.wm-kpi-badge.amber {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.wm-kpi-badge.purple {
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.wm-kpi-badge.blue {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.wm-kpi-val {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0.35rem 0 0.4rem 0;
+}
+
+.wm-kpi-subtext {
+  font-size: 0.78rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+/* Duty & Leave Table Cards */
+.wm-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px -3px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  margin-bottom: 1.75rem;
+  transition: border-color 0.15s ease;
+}
+
+.wm-table-card-header {
+  padding: 1.15rem 1.45rem;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.wm-table-card-header h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.wm-table-card-header p {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0.2rem 0 0 0;
+}
+
+/* Table Enhancements */
+.wm-avatar-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.wm-avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  border: 2px solid #ffffff;
+}
+
+.wm-avatar-circle.purple {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  box-shadow: 0 2px 6px rgba(109, 40, 217, 0.25);
+}
+
+.wm-avatar-circle.teal {
+  background: linear-gradient(135deg, #14b8a6, #0f766e);
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.25);
+}
+
+.wm-avatar-circle.amber {
+  background: linear-gradient(135deg, #f59e0b, #b45309);
+  box-shadow: 0 2px 6px rgba(180, 83, 9, 0.25);
+}
+
+.wm-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.wm-status-pill.on-duty {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.wm-status-pill.on-leave {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.wm-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.wm-status-pill.on-duty .wm-pulse-dot {
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+}
+
+.wm-status-pill.on-leave .wm-pulse-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+}
+
+.wm-phone-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #0284c7;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  background: #f0f9ff;
+  border: 1px solid #e0f2fe;
+  transition: all 0.15s ease;
+}
+
+.wm-phone-pill:hover {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.wm-handover-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  margin-top: 0.35rem;
+  font-size: 0.76rem;
+  color: #334155;
+}
+
+.wm-action-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+

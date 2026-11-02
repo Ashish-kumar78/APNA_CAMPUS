@@ -1,7 +1,7 @@
 // Anonymous Student Grievance Management API Client
 // Connects to NestJS Backend (/api/complaints/*) with robust local persistence fallback
 
-import { api } from './api';
+import { api } from './api.js';
 
 const COMPLAINTS_STORAGE_KEY = 'apna_campus_anonymous_complaints_v2';
 

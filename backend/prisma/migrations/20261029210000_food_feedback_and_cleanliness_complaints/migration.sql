@@ -66,3 +66,4 @@ CREATE INDEX IF NOT EXISTS "FoodFeedback_status_idx" ON "FoodFeedback"("status")
 
 -- CreateIndex
 CREATE UNIQUE INDEX IF NOT EXISTS "MessMenuSchedule_dayOfWeek_mealType_key" ON "MessMenuSchedule"("dayOfWeek", "mealType");
+

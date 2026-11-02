@@ -82,7 +82,12 @@ export default class ErrorBoundary extends React.Component {
               marginBottom: '24px',
               border: '1px solid #450a0a'
             }}>
-              {this.state.error?.toString()}
+              {this.state.error?.stack || this.state.error?.toString()}
+              {this.state.errorInfo?.componentStack && (
+                <div style={{ marginTop: '8px', color: '#94a3b8', fontSize: '11px' }}>
+                  {this.state.errorInfo.componentStack}
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>

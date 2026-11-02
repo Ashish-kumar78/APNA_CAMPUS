@@ -587,6 +587,109 @@ export function setActiveStudent(studentIdOrRoll) {
 /**
  * Find student by registration number, roll number, email, or name
  */
+/**
+ * Formats any date string (YYYY-MM-DD, ISO, etc.) into DD/MM/YYYY
+ */
+export function formatToDDMMYYYY(dateInput) {
+  if (!dateInput) {
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, '0');
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const y = now.getFullYear();
+    return `${d}/${m}/${y}`;
+  }
+  const str = String(dateInput).trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return str;
+  if (/^\d{2}-\d{2}-\d{4}$/.test(str)) return str.replace(/-/g, '/');
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const parts = str.split('T')[0].split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  try {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  } catch {}
+  return str;
+}
+
+/**
+ * Returns the latest recorded hostel attendance date for a student or globally
+ */
+export function getLatestHostelAttendanceDate(student) {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('bput_latest_hostel_attendance_date');
+    if (saved) return saved;
+  }
+  if (student && student.lastHostelAttendanceDate && student.lastHostelAttendanceDate !== '16/10/2026') {
+    return student.lastHostelAttendanceDate;
+  }
+  return defaultDemoStudent.lastHostelAttendanceDate || '16/10/2026';
+}
+
+/**
+ * Updates the lastHostelAttendanceDate for students in the submitted attendance roster
+ * and persists the change in localStorage and store state.
+ */
+export function updateStudentsHostelAttendanceDate(attendanceRecords = [], dateString) {
+  const formattedDate = formatToDDMMYYYY(dateString);
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('bput_latest_hostel_attendance_date', formattedDate);
+    } catch {}
+  }
+  defaultDemoStudent.lastHostelAttendanceDate = formattedDate;
+  rakeshDasStudent.lastHostelAttendanceDate = formattedDate;
+
+  try {
+    const all = getAllStudents();
+    const targetRolls = new Set();
+    const targetNames = new Set();
+
+    if (Array.isArray(attendanceRecords)) {
+      attendanceRecords.forEach(r => {
+        if (r.rollNumber) targetRolls.add(String(r.rollNumber).toLowerCase());
+        if (r.regNo) targetRolls.add(String(r.regNo).toLowerCase());
+        if (r.studentId) targetRolls.add(String(r.studentId).toLowerCase());
+        if (r.studentName) targetNames.add(String(r.studentName).toLowerCase());
+      });
+    }
+
+    const updated = all.map(s => {
+      const matchRoll = s.rollNumber && targetRolls.has(String(s.rollNumber).toLowerCase());
+      const matchReg = s.registrationNumber && targetRolls.has(String(s.registrationNumber).toLowerCase());
+      const matchId = s.id && targetRolls.has(String(s.id).toLowerCase());
+      const matchName = s.name && targetNames.has(String(s.name).toLowerCase());
+
+      if (matchRoll || matchReg || matchId || matchName || targetRolls.size === 0) {
+        return {
+          ...s,
+          lastHostelAttendanceDate: formattedDate
+        };
+      }
+      return s;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+      window.dispatchEvent(new CustomEvent('cms_students_changed', { detail: { lastHostelAttendanceDate: formattedDate } }));
+      window.dispatchEvent(new CustomEvent('bput_student_hostel_attendance_changed', { detail: { date: formattedDate, records: attendanceRecords } }));
+      window.dispatchEvent(new Event('storage'));
+    }
+    return updated;
+  } catch (e) {
+    console.error('Error updating students hostel attendance date:', e);
+    return [];
+  }
+}
+
 export function findStudentByQuery(query) {
   if (!query) return null;
   const q = String(query).trim().toLowerCase();

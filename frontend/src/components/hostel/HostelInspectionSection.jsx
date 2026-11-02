@@ -13,9 +13,23 @@ import {
   Check
 } from 'lucide-react';
 import { mockInspectionCompliance } from './hostelData.js';
+import { isWardenSuspended } from '../../services/wardenManagementStore.js';
 import './HostelExtraSections.css';
 
-export default function HostelInspectionSection() {
+export default function HostelInspectionSection({ account, isHostelAdmin = false, isSuspended: propIsSuspended }) {
+  const [isSuspended, setIsSuspended] = useState(() => Boolean(propIsSuspended || (!isHostelAdmin && isWardenSuspended(account))));
+
+  React.useEffect(() => {
+    const handleStatusSync = () => {
+      setIsSuspended(Boolean(propIsSuspended || (!isHostelAdmin && isWardenSuspended(account))));
+    };
+    window.addEventListener('bput_warden_status_changed', handleStatusSync);
+    window.addEventListener('storage', handleStatusSync);
+    return () => {
+      window.removeEventListener('bput_warden_status_changed', handleStatusSync);
+      window.removeEventListener('storage', handleStatusSync);
+    };
+  }, [propIsSuspended, isHostelAdmin, account]);
   const [inspections, setInspections] = useState(mockInspectionCompliance);
   const [selectedInspectionModal, setSelectedInspectionModal] = useState(null);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);

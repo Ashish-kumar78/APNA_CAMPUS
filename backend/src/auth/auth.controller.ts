@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Get, Patch, Req, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -24,6 +24,39 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current authenticated user profile' })
   @ApiResponse({ status: 200, description: 'Current user profile returned' })
+  
+  @Get('preferences')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get theme and language preferences for the authenticated user' })
+  async getPreferences(@CurrentUser() user: any, @Req() req: any) {
+    const userId = req?.headers?.['x-user-id'] || user?.id || user?.identifier || user?.email || user?.role || 'default_user';
+    const preferences = await this.authService.getUserPreferences(userId);
+    return {
+      success: true,
+      userId,
+      preferences,
+    };
+  }
+
+  @Patch('preferences')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update theme and language preferences for the authenticated user' })
+  async updatePreferences(
+    @CurrentUser() user: any,
+    @Req() req: any,
+    @Body() body: { theme?: string; language?: string },
+  ) {
+    const userId = req?.headers?.['x-user-id'] || user?.id || user?.identifier || user?.email || user?.role || 'default_user';
+    const preferences = await this.authService.updateUserPreferences(userId, body);
+    return {
+      success: true,
+      userId,
+      preferences,
+    };
+  }
+
   async getProfile(@CurrentUser() user: any) {
     return {
       success: true,

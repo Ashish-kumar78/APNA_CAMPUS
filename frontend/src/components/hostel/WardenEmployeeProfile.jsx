@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { api } from '../../services/api.js';
+import { resolveWardenProfile } from './wardenProfilesData.js';
 import {
   ArrowLeft,
   FileText,
@@ -125,7 +127,7 @@ const DEFAULT_DOCUMENTS = [
   { id: 'doc-5', name: 'Annual Occupational Health Fitness Certificate', meta: 'Fit to Work 24x7 Resident Duty' },
 ];
 
-export default function WardenEmployeeProfile({ account, onBack }) {
+export default function WardenEmployeeProfile({ account, onBack, warden, wardenId }) {
   // Tabs: 'personal', 'guardians', 'address', 'other_info', 'documents', 'health'
   const [activeTab, setActiveTab] = useState('personal');
   const [editingSection, setEditingSection] = useState(null); // 'personal' | 'guardians' | 'address' | 'other_info' | 'health' | 'summary' | 'documents' | null
@@ -139,35 +141,85 @@ export default function WardenEmployeeProfile({ account, onBack }) {
     account?.identity === 'WRD-ADM-01'
   );
 
-  // Initialize Profile Data from LocalStorage if available
+  // Target Warden Identity Resolution
+  const targetWarden = resolveWardenProfile(warden || wardenId || account?.identity || 'WRD-101');
+  const effectiveId = targetWarden.employeeId || 'WRD-101';
+
+  // Initialize Profile Data from LocalStorage if available or default
   const [profileData, setProfileData] = useState(() => {
     try {
-      const saved = localStorage.getItem('hostel_employee_profile_140');
-      const savedAvatar = localStorage.getItem('hostel_officer_avatar');
+      const saved = localStorage.getItem(`hostel_employee_profile_${effectiveId}`);
+      const savedAvatar = localStorage.getItem(`hostel_officer_avatar_${effectiveId}`) || localStorage.getItem('hostel_officer_avatar');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (savedAvatar) parsed.avatar = savedAvatar;
-        return { ...DEFAULT_PROFILE_DATA, ...parsed };
+        return { ...targetWarden, ...parsed };
       }
       if (savedAvatar) {
-        return { ...DEFAULT_PROFILE_DATA, avatar: savedAvatar };
+        return { ...targetWarden, avatar: savedAvatar };
       }
     } catch (e) {
       console.warn('Failed reading saved profile:', e);
     }
-    return { ...DEFAULT_PROFILE_DATA };
+    return { ...targetWarden };
   });
 
   const [documents, setDocuments] = useState(() => {
     try {
-      const saved = localStorage.getItem('hostel_employee_docs_140');
+      const saved = localStorage.getItem(`hostel_employee_docs_${effectiveId}`);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return DEFAULT_DOCUMENTS;
+    return targetWarden.documents || DEFAULT_DOCUMENTS;
   });
 
   // Edit Form Buffer
   const [editForm, setEditForm] = useState({ ...profileData });
+
+  // Sync profile when warden prop changes
+  useEffect(() => {
+    const resolved = resolveWardenProfile(warden || wardenId || account?.identity || 'WRD-101');
+    const id = resolved.employeeId;
+    let localData = { ...resolved };
+    try {
+      const saved = localStorage.getItem(`hostel_employee_profile_${id}`);
+      if (saved) {
+        localData = { ...localData, ...JSON.parse(saved) };
+      }
+    } catch {}
+    setProfileData(localData);
+    setEditForm(localData);
+
+    try {
+      const savedDocs = localStorage.getItem(`hostel_employee_docs_${id}`);
+      if (savedDocs) {
+        setDocuments(JSON.parse(savedDocs));
+      } else if (resolved.documents) {
+        setDocuments(resolved.documents);
+      }
+    } catch {}
+  }, [warden, wardenId]);
+
+  // Connect to backend: Fetch live warden CMS profile from backend API
+  useEffect(() => {
+    let isMounted = true;
+    if (effectiveId) {
+      api.getWardenProfile(effectiveId)
+        .then((res) => {
+          if (isMounted && res && (res.data || res.employeeId)) {
+            const remote = res.data || res;
+            setProfileData((prev) => ({ ...prev, ...remote }));
+            setEditForm((prev) => ({ ...prev, ...remote }));
+            if (remote.documents && remote.documents.length > 0) {
+              setDocuments(remote.documents);
+            }
+          }
+        })
+        .catch((err) => {
+          console.warn('Backend warden profile fetch fallback:', err.message);
+        });
+    }
+    return () => { isMounted = false; };
+  }, [effectiveId]);
   const [newDocForm, setNewDocForm] = useState({ name: '', meta: '' });
 
   // Listen for avatar sync from other tabs/dashboard
@@ -212,7 +264,7 @@ export default function WardenEmployeeProfile({ account, onBack }) {
 
         setProfileData((prev) => {
           const updated = { ...prev, avatar: dataUrl };
-          localStorage.setItem('hostel_employee_profile_140', JSON.stringify(updated));
+          localStorage.setItem(`hostel_employee_profile_${effectiveId}`, JSON.stringify(updated));
           return updated;
         });
         localStorage.setItem('hostel_officer_avatar', dataUrl);
@@ -229,34 +281,55 @@ export default function WardenEmployeeProfile({ account, onBack }) {
     setEditingSection(sectionKey || activeTab);
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     const updated = { ...editForm };
     setProfileData(updated);
+
+    // 1. Local persistence
     try {
-      localStorage.setItem('hostel_employee_profile_140', JSON.stringify(updated));
+      localStorage.setItem(`hostel_employee_profile_${effectiveId}`, JSON.stringify(updated));
       localStorage.setItem('hostel_officer_name', updated.name);
     } catch (err) {
       console.warn('Storage save failed:', err);
     }
+
+    // 2. Backend API synchronization
+    try {
+      await api.updateWardenProfile(effectiveId, updated);
+      showToast(`${getSectionTitle(editingSection)} updated successfully and synced with backend.`);
+    } catch (err) {
+      console.warn('Backend update failed, saved to local store:', err.message);
+      showToast(`${getSectionTitle(editingSection)} updated successfully.`);
+    }
+
     setEditingSection(null);
-    showToast(`${getSectionTitle(editingSection)} updated successfully.`);
   };
 
-  const handleAddDocument = (e) => {
+  const handleAddDocument = async (e) => {
     e.preventDefault();
     if (!newDocForm.name.trim()) return;
     const newDoc = {
       id: `doc-${Date.now()}`,
       name: newDocForm.name.trim(),
-      meta: newDocForm.meta.trim() || 'Verified by Hostel Administration',
+      meta: newDocForm.meta.trim() || `Verified & Uploaded by Administrator on ${new Date().toLocaleDateString('en-GB')}`,
     };
     const updatedDocs = [newDoc, ...documents];
     setDocuments(updatedDocs);
-    localStorage.setItem('hostel_employee_docs_140', JSON.stringify(updatedDocs));
+    try {
+      localStorage.setItem(`hostel_employee_docs_${effectiveId}`, JSON.stringify(updatedDocs));
+    } catch {}
+
+    // Backend synchronization
+    try {
+      await api.addWardenDocument(effectiveId, newDoc);
+    } catch (err) {
+      console.warn('Backend document attachment fallback:', err.message);
+    }
+
     setNewDocForm({ name: '', meta: '' });
     setEditingSection(null);
-    showToast('Document added to employee records.');
+    showToast('Verification document uploaded and attached to warden dossier.');
   };
 
   const handleDeleteDocument = (id) => {
@@ -332,11 +405,11 @@ export default function WardenEmployeeProfile({ account, onBack }) {
           {onBack && (
             <button type="button" className="emp-back-btn" onClick={onBack} title="Return to Dashboard">
               <ArrowLeft size={15} />
-              <span>Dashboard</span>
+              <span>{isHostelAdmin ? "← Warden Directory" : "← Dashboard"}</span>
             </button>
           )}
           <div>
-            <h2 className="emp-profile-heading">Employee Profile</h2>
+            <h2 className="emp-profile-heading">Warden Official CMS Profile: {profileData.name}</h2>
             <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
               <span style={{ fontWeight: 600 }}>Active Role Perspective:</span>
               <span style={{ background: isHostelAdmin ? '#eff6ff' : '#ecfdf5', color: isHostelAdmin ? '#1d4ed8' : '#047857', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>

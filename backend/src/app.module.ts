@@ -25,6 +25,7 @@ import { TimetablesModule } from './timetables/timetables.module';
 import { InternshipModule } from './internship/internship.module';
 import { BonafideModule } from './bonafide/bonafide.module';
 import { DocumentWorkflowModule } from './document-workflow/document-workflow.module';
+import { CalendarNotesModule } from './calendar-notes/calendar-notes.module';
 import { AppController } from './app.controller';
 
 import * as path from 'path';
@@ -65,6 +66,7 @@ import * as path from 'path';
     InternshipModule,
     BonafideModule,
     DocumentWorkflowModule,
+    CalendarNotesModule,
   ],
   controllers: [AppController],
 })

@@ -1100,3 +1100,900 @@
 }
 
 
+
+/* ==============================================================================
+   REDESIGNED MANAGEMENT DASHBOARD (EXACT REFERENCE IMAGE MATCH)
+   ============================================================================== */
+
+.mgmt-dash-v2-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.25rem 0 2rem;
+  font-family: inherit;
+  color: #0f172a;
+}
+
+/* 1. Contextual Header Toolbar (Academic Year, Dept, Semester, Search) */
+.mgmt-context-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 8px 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  flex-wrap: wrap;
+}
+
+.mgmt-context-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.mgmt-context-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mgmt-context-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.mgmt-context-select {
+  padding: 5px 28px 5px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 8px center;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.mgmt-context-select:hover {
+  border-color: #94a3b8;
+  background-color: #ffffff;
+}
+
+.mgmt-context-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mgmt-context-search-wrap {
+  position: relative;
+  width: 280px;
+}
+
+.mgmt-context-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.mgmt-context-search-input {
+  width: 100%;
+  padding: 6px 12px 6px 32px;
+  font-size: 0.78rem;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.mgmt-context-search-input:focus {
+  background: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.mgmt-context-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mgmt-icon-pill-btn {
+  position: relative;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mgmt-icon-pill-btn:hover {
+  background: #f1f5f9;
+  color: #1e40af;
+}
+
+.mgmt-icon-pill-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #ffffff;
+  padding: 0 3px;
+}
+
+.mgmt-user-capsule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 8px;
+  border-left: 1px solid #e2e8f0;
+}
+
+.mgmt-user-avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #1e3a8a;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.78rem;
+  display: grid;
+  place-items: center;
+}
+
+.mgmt-user-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.mgmt-user-title {
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.mgmt-user-role-sub {
+  font-size: 0.68rem;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+/* 2. Welcome Banner */
+.mgmt-hero-banner {
+  background: linear-gradient(135deg, #091326 0%, #0d2146 50%, #1e3a8a 100%);
+  border-radius: 16px;
+  padding: 1.6rem 2.2rem;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.4);
+}
+
+.mgmt-hero-bg-skyline {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  top: 0;
+  width: 50%;
+  pointer-events: none;
+  opacity: 0.22;
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  background-size: cover;
+}
+
+.mgmt-hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 680px;
+}
+
+.mgmt-hero-title {
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin: 0 0 0.4rem 0;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.mgmt-hero-subtitle {
+  font-size: 0.92rem;
+  color: #cbd5e1;
+  margin: 0;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.mgmt-hero-live-card {
+  position: relative;
+  z-index: 2;
+  background: rgba(11, 23, 50, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 175px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.mgmt-live-card-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.mgmt-live-card-line.accent {
+  color: #60a5fa;
+  font-weight: 700;
+}
+
+.mgmt-live-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  color: #34d399;
+  font-weight: 700;
+  margin-top: 3px;
+  width: fit-content;
+}
+
+.mgmt-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: mgmtPulse 2s infinite;
+}
+
+@keyframes mgmtPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+/* 3. 12 KPI Cards Grid */
+.mgmt-kpis-12-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 1400px) {
+  .mgmt-kpis-12-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .mgmt-kpis-12-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .mgmt-kpis-12-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mgmt-card-v2 {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem 1.15rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mgmt-card-v2:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.mgmt-card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.mgmt-card-icon-bubble {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+}
+
+.mgmt-card-icon-bubble.blue { background: #eff6ff; color: #2563eb; }
+.mgmt-card-icon-bubble.purple { background: #f5f3ff; color: #7c3aed; }
+.mgmt-card-icon-bubble.green { background: #ecfdf5; color: #059669; }
+.mgmt-card-icon-bubble.pink { background: #fdf2f8; color: #e11d48; }
+.mgmt-card-icon-bubble.indigo { background: #eef2ff; color: #4f46e5; }
+.mgmt-card-icon-bubble.teal { background: #ecfeff; color: #0d9488; }
+.mgmt-card-icon-bubble.amber { background: #fffbeb; color: #d97706; }
+.mgmt-card-icon-bubble.rose { background: #fff1f2; color: #e11d48; }
+
+.mgmt-trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 750;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.mgmt-trend-badge.green {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.mgmt-card-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.mgmt-card-value {
+  font-size: 1.45rem;
+  font-weight: 850;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.mgmt-card-subtext {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* 4. Analytics Row (3 Columns) */
+.mgmt-analytics-3col-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr 1.05fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 1200px) {
+  .mgmt-analytics-3col-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mgmt-chart-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+.mgmt-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.mgmt-chart-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 750;
+  color: #0f172a;
+  margin: 0;
+}
+
+.mgmt-chart-mini-select {
+  padding: 3px 22px 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 6px center;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.mgmt-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 0.5rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.mgmt-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mgmt-legend-bullet {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.mgmt-donut-content-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 230px;
+}
+
+.mgmt-donut-graphic-wrap {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  flex-shrink: 0;
+}
+
+.mgmt-donut-center-kicker {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.mgmt-donut-center-val {
+  font-size: 1.35rem;
+  font-weight: 850;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.mgmt-donut-center-sub {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.mgmt-donut-legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.mgmt-donut-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #334155;
+  padding: 2px 0;
+}
+
+.mgmt-donut-legend-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+}
+
+.mgmt-donut-legend-stat {
+  font-weight: 750;
+  color: #0f172a;
+}
+
+/* 5. Department Performance Table Card */
+.mgmt-perf-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.mgmt-table-responsive-box {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 0.75rem;
+}
+
+.mgmt-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+  text-align: left;
+}
+
+.mgmt-matrix-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 750;
+  padding: 9px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.mgmt-matrix-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.mgmt-matrix-table tr:hover td {
+  background: #f8faff;
+}
+
+.mgmt-matrix-cgpa {
+  color: #059669;
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+
+.mgmt-cell-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 90px;
+}
+
+.mgmt-cell-bar-track {
+  flex: 1;
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mgmt-cell-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.mgmt-cell-bar-pct {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  min-width: 28px;
+  text-align: right;
+}
+
+.mgmt-view-btn-pill {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mgmt-view-btn-pill:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+/* 6. Bottom Row (3 Columns) */
+.mgmt-bottom-3col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 1200px) {
+  .mgmt-bottom-3col-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mgmt-bottom-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+.mgmt-bottom-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.mgmt-bottom-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 750;
+  color: #0f172a;
+  margin: 0;
+}
+
+.mgmt-view-all-link {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #2563eb;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.mgmt-view-all-link:hover {
+  text-decoration: underline;
+}
+
+.mgmt-initiatives-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mgmt-initiative-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.mgmt-initiative-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mgmt-initiative-bullet {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mgmt-initiative-text {
+  font-size: 0.78rem;
+  color: #1e293b;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mgmt-initiative-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 130px;
+}
+
+.mgmt-initiative-badge {
+  font-size: 0.68rem;
+  font-weight: 750;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.mgmt-initiative-badge.on-track {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.mgmt-initiative-badge.in-progress {
+  background: #fefce8;
+  color: #d97706;
+}
+
+.mgmt-initiative-badge.at-risk {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Activity Items */
+.mgmt-activities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mgmt-activity-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.76rem;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.mgmt-activity-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.mgmt-act-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.mgmt-act-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3b82f6;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.mgmt-act-time {
+  color: #64748b;
+  font-weight: 600;
+  min-width: 95px;
+  font-size: 0.72rem;
+}
+
+.mgmt-act-desc {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.mgmt-act-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.mgmt-act-tag.finance { background: #eff6ff; color: #2563eb; }
+.mgmt-act-tag.hr { background: #fdf2f8; color: #db2777; }
+.mgmt-act-tag.infrastructure { background: #ecfeff; color: #0891b2; }
+.mgmt-act-tag.examination { background: #fefce8; color: #d97706; }
+.mgmt-act-tag.academic { background: #eff6ff; color: #1d4ed8; }
+
+/* Circular Notices */
+.mgmt-circulars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mgmt-circular-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.mgmt-circular-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.mgmt-circ-date-box {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mgmt-circ-day {
+  font-size: 0.92rem;
+  font-weight: 850;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.mgmt-circ-month {
+  font-size: 0.62rem;
+  font-weight: 750;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.mgmt-circ-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.mgmt-circ-title {
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mgmt-circ-sub {
+  font-size: 0.68rem;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.mgmt-circ-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.mgmt-circ-badge.exam { background: #f5f3ff; color: #7c3aed; }
+.mgmt-circ-badge.placement { background: #ecfeff; color: #0891b2; }
+.mgmt-circ-badge.scholarship { background: #eff6ff; color: #2563eb; }
+.mgmt-circ-badge.library { background: #fefce8; color: #d97706; }
+.mgmt-circ-badge.holiday { background: #fdf2f8; color: #e11d48; }

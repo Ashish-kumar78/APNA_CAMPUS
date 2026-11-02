@@ -30,6 +30,8 @@ import {
   createGatePass
 } from '../services/gatePassStore.js';
 import { getActiveStudent } from '../services/studentStore.js';
+import { getAllHostels } from '../services/hostelAttendanceStore.js';
+import { getRoomsForHostelAndFloor, getFloorsForHostel } from '../services/hostelRoomStore.js';
 
 export default function StudentGatePassSection({ student: propStudent }) {
   const currentStudent = propStudent || getActiveStudent();
@@ -41,10 +43,10 @@ export default function StudentGatePassSection({ student: propStudent }) {
   const [toastMessage, setToastMessage] = useState('');
   const fileInputRef = useRef(null);
 
-  // Custom purpose & custom room manual entries
+  // Custom purpose & floor state
   const [customPurpose, setCustomPurpose] = useState('');
-  const [isCustomRoom, setIsCustomRoom] = useState(false);
-  const [customRoomNumber, setCustomRoomNumber] = useState('');
+  const [hostelsList, setHostelsList] = useState(() => getAllHostels());
+  const [gatePassFloor, setGatePassFloor] = useState('1st Floor');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -80,11 +82,20 @@ export default function StudentGatePassSection({ student: propStudent }) {
   useEffect(() => {
     loadPasses();
     const handleSync = () => loadPasses();
+    const refreshHostels = () => {
+      setHostelsList(getAllHostels());
+    };
     window.addEventListener('bput_gate_passes_changed', handleSync);
     window.addEventListener('storage', handleSync);
+    window.addEventListener('bput_hostels_updated', refreshHostels);
+    window.addEventListener('hostel-rooms-updated', refreshHostels);
+    window.addEventListener('bput_hostel_rooms_changed', refreshHostels);
     return () => {
       window.removeEventListener('bput_gate_passes_changed', handleSync);
       window.removeEventListener('storage', handleSync);
+      window.removeEventListener('bput_hostels_updated', refreshHostels);
+      window.removeEventListener('hostel-rooms-updated', refreshHostels);
+      window.removeEventListener('bput_hostel_rooms_changed', refreshHostels);
     };
   }, [currentStudent]);
 
@@ -116,7 +127,7 @@ export default function StudentGatePassSection({ student: propStudent }) {
 
   const handleGenerateTemplate = () => {
     const effectivePurpose = formData.purposeType === 'Other' ? (customPurpose.trim() || 'Other Personal Purpose') : formData.purposeType;
-    const effectiveRoom = isCustomRoom && customRoomNumber.trim() ? customRoomNumber.trim() : formData.roomNumber;
+    const effectiveRoom = formData.roomNumber;
 
     setFormData(prev => ({
       ...prev,
@@ -140,7 +151,7 @@ export default function StudentGatePassSection({ student: propStudent }) {
     }
 
     const effectivePurpose = formData.purposeType === 'Other' ? (customPurpose.trim() || 'Other Personal Purpose') : formData.purposeType;
-    const effectiveRoom = isCustomRoom && customRoomNumber.trim() ? customRoomNumber.trim() : formData.roomNumber;
+    const effectiveRoom = formData.roomNumber;
 
     const newPass = createGatePass({
       studentId: currentStudent?.id || 'std-1',
@@ -279,13 +290,6 @@ export default function StudentGatePassSection({ student: propStudent }) {
               Real-time synchronization with the Hostel Warden's desk and Campus Security Biometric Turnstiles.
             </p>
           </div>
-          <button
-            className="admin-action-btn-primary"
-            style={{ fontSize: '0.82rem', padding: '0.5rem 1rem' }}
-            onClick={() => setIsApplyModalOpen(true)}
-          >
-            <Plus size={15} /> Apply New Pass
-          </button>
         </div>
 
         <div className="gate-pass-table-responsive">
@@ -546,19 +550,50 @@ export default function StudentGatePassSection({ student: propStudent }) {
                   <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Building size={15} /> 1. Resident Hostel Accommodation Details
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '1rem' }}>
                     <div className="admin-form-group">
                       <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e3a8a' }}>Designated Hostel Residence *</label>
                       <select
                         className="admin-form-select"
                         value={formData.hostelName}
-                        onChange={e => setFormData({ ...formData, hostelName: e.target.value })}
+                        onChange={e => {
+                          const newHostel = e.target.value;
+                          const floors = getFloorsForHostel(newHostel);
+                          const fl = floors[0] || '1st Floor';
+                          setGatePassFloor(fl);
+                          const rms = getRoomsForHostelAndFloor(newHostel, fl);
+                          const initialRoomNo = rms[0]?.roomNo || String(rms[0]?.label || rms[0] || '').replace(/^room\s*/i, '').trim() || '101';
+                          const initialRoom = `Room ${initialRoomNo}`;
+                          setFormData(prev => ({ ...prev, hostelName: newHostel, roomNumber: initialRoom }));
+                        }}
                         required
                         style={{ fontWeight: 600 }}
                       >
-                        <option value="Gandhi Boys Residence (Hostel 1)">Gandhi Boys Residence (Hostel 1)</option>
-                        <option value="Kalam Boys Residence (Hostel 2)">Kalam Boys Residence (Hostel 2)</option>
-                        <option value="Sarojini Girls Residence (Hostel 1)">Sarojini Girls Residence (Hostel 1)</option>
+                        {hostelsList.map(h => (
+                          <option key={h.id || h.code || h.name} value={h.name}>{h.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e3a8a' }}>Floor (Select) *</label>
+                      <select
+                        className="admin-form-select"
+                        value={gatePassFloor}
+                        onChange={e => {
+                          const newFloor = e.target.value;
+                          setGatePassFloor(newFloor);
+                          const rms = getRoomsForHostelAndFloor(formData.hostelName, newFloor);
+                          const initialRoomNo = rms[0]?.roomNo || String(rms[0]?.label || rms[0] || '').replace(/^room\s*/i, '').trim() || '101';
+                          const initialRoom = `Room ${initialRoomNo}`;
+                          setFormData(prev => ({ ...prev, roomNumber: initialRoom }));
+                        }}
+                        required
+                        style={{ fontWeight: 600 }}
+                      >
+                        {getFloorsForHostel(formData.hostelName).map(fl => (
+                          <option key={fl} value={fl}>{fl}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -566,66 +601,19 @@ export default function StudentGatePassSection({ student: propStudent }) {
                       <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e3a8a' }}>Room Number (Select) *</label>
                       <select
                         className="admin-form-select"
-                        value={isCustomRoom ? 'OTHER' : formData.roomNumber}
-                        onChange={e => {
-                          if (e.target.value === 'OTHER') {
-                            setIsCustomRoom(true);
-                          } else {
-                            setIsCustomRoom(false);
-                            setFormData({ ...formData, roomNumber: e.target.value });
-                          }
-                        }}
+                        value={formData.roomNumber}
+                        onChange={e => setFormData({ ...formData, roomNumber: e.target.value })}
                         required
                         style={{ fontWeight: 600 }}
                       >
-                        <optgroup label="1st Floor">
-                          <option value="Room 101">Room 101 (1st Floor)</option>
-                          <option value="Room 102">Room 102 (1st Floor)</option>
-                          <option value="Room 103">Room 103 (1st Floor)</option>
-                          <option value="Room 104">Room 104 (1st Floor)</option>
-                          <option value="Room 105">Room 105 (1st Floor)</option>
-                          <option value="Room 106">Room 106 (1st Floor)</option>
-                          <option value="Room 107">Room 107 (1st Floor)</option>
-                          <option value="Room 108">Room 108 (1st Floor)</option>
-                        </optgroup>
-                        <optgroup label="2nd Floor">
-                          <option value="Room 201">Room 201 (2nd Floor)</option>
-                          <option value="Room 202">Room 202 (2nd Floor)</option>
-                          <option value="Room 203">Room 203 (2nd Floor)</option>
-                          <option value="Room 204">Room 204 (2nd Floor)</option>
-                          <option value="Room 205">Room 205 (2nd Floor)</option>
-                          <option value="Room 206">Room 206 (2nd Floor)</option>
-                          <option value="Room 207">Room 207 (2nd Floor)</option>
-                          <option value="Room 208">Room 208 (2nd Floor)</option>
-                        </optgroup>
-                        <optgroup label="3rd Floor">
-                          <option value="Room 301">Room 301 (3rd Floor)</option>
-                          <option value="Room 302">Room 302 (3rd Floor)</option>
-                          <option value="Room 303">Room 303 (3rd Floor)</option>
-                          <option value="Room 304">Room 304 (3rd Floor)</option>
-                          <option value="Room 305">Room 305 (3rd Floor)</option>
-                          <option value="Room 306">Room 306 (3rd Floor)</option>
-                          <option value="Room 307">Room 307 (3rd Floor)</option>
-                          <option value="Room 308">Room 308 (3rd Floor)</option>
-                        </optgroup>
-                        <optgroup label="Custom / Other Room">
-                          <option value="OTHER">Other Room Number (Type Manually)...</option>
-                        </optgroup>
+                        {getRoomsForHostelAndFloor(formData.hostelName, gatePassFloor).map(rm => {
+                          const roomNo = rm?.roomNo || String(rm?.label || rm || '').replace(/^room\s*/i, '').trim();
+                          const formatted = `Room ${roomNo}`;
+                          return (
+                            <option key={roomNo} value={formatted}>{rm?.label || formatted}</option>
+                          );
+                        })}
                       </select>
-                      {isCustomRoom && (
-                        <input
-                          type="text"
-                          className="admin-form-input"
-                          placeholder="e.g. Room 405"
-                          value={customRoomNumber}
-                          onChange={e => {
-                            setCustomRoomNumber(e.target.value);
-                            setFormData({ ...formData, roomNumber: e.target.value });
-                          }}
-                          style={{ marginTop: '5px' }}
-                          required
-                        />
-                      )}
                     </div>
 
                     <div className="admin-form-group">

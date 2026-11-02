@@ -4,9 +4,34 @@
  */
 
 import { mockHostelRulesConfig } from '../components/hostel/hostelData.js';
+import { api } from './api.js';
+import { getWardenPermissions, getWardenIdFromAccount } from './wardenManagementStore.js';
 
 const STORAGE_KEY = 'apna_campus_hostel_rules_matrix_v1';
 export const RULES_UPDATED_EVENT = 'apna_campus_hostel_rules_updated';
+
+let isSyncingRules = false;
+export async function fetchHostelRulesFromBackend() {
+  if (typeof window === 'undefined' || isSyncingRules) return;
+  isSyncingRules = true;
+  try {
+    const res = await api.getHostelRules();
+    if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+      saveAllHostelRules(res.data);
+      return res.data;
+    }
+  } catch (err) {
+    console.warn('Backend hostel rules sync fallback:', err?.message || err);
+  } finally {
+    isSyncingRules = false;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    fetchHostelRulesFromBackend();
+  }, 100);
+}
 
 // Helper: generate stable unique IDs
 const generateRuleId = (prefix = 'rule') => {
@@ -106,6 +131,37 @@ export const saveAllHostelRules = (rules) => {
 };
 
 /**
+ * Validates whether the active or supplied user is authorized to edit hostel rules.
+ * Throws an error if permission is restricted.
+ */
+export function verifyRuleEditPermission(user) {
+  try {
+    const targetUser = user || (typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('collegeflow_user') || 'null') : null);
+    if (!targetUser) return true; // Server-side or generic fallback
+    const role = (targetUser.role || '').toLowerCase();
+    if (role === 'student' || role === 'faculty') {
+      throw new Error('Permission Denied: Students and faculty cannot modify hostel rules or curfew policies.');
+    }
+    if (role === 'admin' || role === 'super_admin' || role === 'hostel_admin') {
+      return true;
+    }
+    if (role === 'warden') {
+      const wardenId = getWardenIdFromAccount(targetUser);
+      const perms = getWardenPermissions(wardenId);
+      if (!perms || perms.editHostelConfiguration === false) {
+        throw new Error('Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      }
+      return true;
+    }
+  } catch (err) {
+    if (err.message && err.message.includes('Permission Denied')) {
+      throw err;
+    }
+  }
+  return true;
+}
+
+/**
  * Add a new Rule or Curfew item
  * @param {Object} param0
  * @param {string} param0.category
@@ -113,8 +169,10 @@ export const saveAllHostelRules = (rules) => {
  * @param {string} param0.value
  * @param {string} param0.description
  * @param {string} [param0.author]
+ * @param {Object} [param0.user]
  */
-export const addHostelRule = ({ category, title, value, description, author = 'Hostel Administrator' }) => {
+export const addHostelRule = ({ category, title, value, description, author = 'Hostel Administrator', user }) => {
+  verifyRuleEditPermission(user);
   if (!category || !title) {
     throw new Error('Category and Rule Title are required.');
   }
@@ -147,6 +205,7 @@ export const addHostelRule = ({ category, title, value, description, author = 'H
   }
 
   saveAllHostelRules(rules);
+  api.addHostelRule({ ...newRuleItem, category: targetCatName }).catch(() => {});
   return newRuleItem;
 };
 
@@ -160,7 +219,8 @@ export const addHostelRule = ({ category, title, value, description, author = 'H
  * @param {string} updates.description
  * @param {string} [updates.author]
  */
-export const updateHostelRule = (ruleId, { category, title, value, description, author = 'Hostel Administrator' }) => {
+export const updateHostelRule = (ruleId, { category, title, value, description, author = 'Hostel Administrator', user }) => {
+  verifyRuleEditPermission(user);
   const rules = getAllHostelRules().map(c => ({
     ...c,
     items: [...c.items]
@@ -214,6 +274,7 @@ export const updateHostelRule = (ruleId, { category, title, value, description, 
   }
 
   saveAllHostelRules(rules);
+  api.updateHostelRule(ruleId, { ...updatedItem, category: newCategoryName }).catch(() => {});
   return updatedItem;
 };
 
@@ -221,7 +282,8 @@ export const updateHostelRule = (ruleId, { category, title, value, description, 
  * Delete a Rule or Curfew item by its ID or title
  * @param {string} ruleId
  */
-export const deleteHostelRule = (ruleId) => {
+export const deleteHostelRule = (ruleId, user) => {
+  verifyRuleEditPermission(user);
   const rules = getAllHostelRules().map(c => ({
     ...c,
     items: [...c.items]
@@ -239,6 +301,7 @@ export const deleteHostelRule = (ruleId) => {
 
   if (removed) {
     saveAllHostelRules(rules);
+    api.deleteHostelRule(ruleId).catch(() => {});
   }
   return removed;
 };
@@ -246,9 +309,11 @@ export const deleteHostelRule = (ruleId) => {
 /**
  * Reset rules to system default seed
  */
-export const resetHostelRulesToDefault = () => {
+export const resetHostelRulesToDefault = (user) => {
+  verifyRuleEditPermission(user);
   const initial = seedDefaultRules();
   saveAllHostelRules(initial);
+  api.resetHostelRules().catch(() => {});
   return initial;
 };
 

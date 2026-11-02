@@ -1,6 +1,6 @@
 // Class Notes Sharing & Missed Lecture Notes API Handler
-import { API_BASE_URL } from './api';
-import { notificationsApi } from './notificationsApi';
+import { API_BASE_URL } from './api.js';
+import { notificationsApi } from './notificationsApi.js';
 
 let mockClassNotes = [
   {

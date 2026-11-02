@@ -1,10 +1,10 @@
 // HOD Department Academic Governance API Client
 // Connects to NestJS Backend (/api/hod/*) with robust local store fallbacks
 
-import { api } from './api';
-import { erpStore } from './erpStore';
-import { initialApprovalQueue, initialFaculty, initialSubjects } from '../data/collegeData';
-import { getAllStudents } from './studentStore';
+import { api } from './api.js';
+import { erpStore } from './erpStore.js';
+import { initialApprovalQueue, initialFaculty, initialSubjects } from '../data/collegeData.js';
+import { getAllStudents } from './studentStore.js';
 
 export const hodApi = {
   // 1. Department Command Centre Dashboard

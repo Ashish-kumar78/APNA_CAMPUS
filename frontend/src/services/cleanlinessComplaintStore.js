@@ -24,7 +24,8 @@ const seedInitialCleanlinessComplaints = () => [
     location: 'Attached Bathroom',
     priority: 'High',
     preferredTime: '10:00 AM - 12:00 PM',
-    attachmentUrl: null,
+    attachmentUrl: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80',
+    supportingDocument: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80',
     assignedWardenId: 'WRD-B01',
     assignedWardenName: 'Mr. Rajesh Jena',
     assignedStaffId: 'STF-HK-01',
@@ -70,7 +71,8 @@ const seedInitialCleanlinessComplaints = () => [
     location: 'Corridor',
     priority: 'Normal',
     preferredTime: 'Anytime today',
-    attachmentUrl: null,
+    attachmentUrl: 'https://images.unsplash.com/photo-1585421514738-01798e348b17?w=600&auto=format&fit=crop&q=80',
+    supportingDocument: 'https://images.unsplash.com/photo-1585421514738-01798e348b17?w=600&auto=format&fit=crop&q=80',
     assignedWardenId: 'WRD-G01',
     assignedWardenName: 'Mrs. Nibedita Das',
     assignedStaffId: 'STF-HK-02',
@@ -139,6 +141,95 @@ const seedInitialCleanlinessComplaints = () => [
     resolutionDeadline: '2026-10-30T10:00:00Z',
     createdAt: '2026-10-29T10:00:00Z',
     updatedAt: '2026-10-29T10:00:00Z'
+  },
+  {
+    id: 'cln-104',
+    complaintCode: 'CLN-2026-1004',
+    studentId: 'demo-std-2305201001',
+    studentName: 'Aman Kumar Sharma',
+    rollNumber: '2305201001',
+    hostel: 'Sarojini Girls Residence (Block A)',
+    block: 'Block A',
+    floor: 'Floor 2',
+    roomNumber: '204',
+    category: 'Dustbin Not Emptied',
+    title: 'Room and corridor dustbins need clearing',
+    description: 'Dry waste and paper baskets outside room 204 require emptying and floor sweeping.',
+    location: 'My Room',
+    priority: 'Normal',
+    preferredTime: 'Morning Shift',
+    attachmentUrl: null,
+    assignedWardenId: 'WRD-G01',
+    assignedWardenName: 'Mrs. Nibedita Das',
+    assignedStaffId: 'STF-HK-01',
+    assignedStaffName: 'Mrs. Laxmi Das (Housekeeping)',
+    status: 'In Progress',
+    statusHistory: [
+      { id: 'h1', status: 'Submitted', timestamp: '2026-10-31T08:30:00Z', note: 'Lodged by resident', actor: 'Aman Kumar Sharma' },
+      { id: 'h2', status: 'Acknowledged', timestamp: '2026-10-31T09:00:00Z', note: 'Acknowledged by Warden', actor: 'Mrs. Nibedita Das' },
+      { id: 'h3', status: 'In Progress', timestamp: '2026-10-31T10:00:00Z', note: 'Housekeeping staff dispatched to 2nd Floor', actor: 'Mrs. Laxmi Das' }
+    ],
+    internalNotes: 'Regular corridor sanitation round scheduled twice daily.',
+    cleaningInstructions: 'Empty room dustbins and damp mop corridor.',
+    workCompletedAt: null,
+    resolvedAt: null,
+    resolvedBy: null,
+    studentVerifiedAt: null,
+    studentVerificationResult: null,
+    reopenedAt: null,
+    reopenReason: null,
+    rejectionReason: null,
+    isEscalated: false,
+    escalatedAt: null,
+    escalationReason: null,
+    resolutionDeadline: '2026-11-03T08:30:00Z',
+    createdAt: '2026-10-31T08:30:00Z',
+    updatedAt: '2026-10-31T10:00:00Z'
+  },
+  {
+    id: 'cln-105',
+    complaintCode: 'CLN-2026-1005',
+    studentId: 'demo-std-2305201001',
+    studentName: 'Aman Kumar Sharma',
+    rollNumber: '2305201001',
+    hostel: 'Sarojini Girls Residence (Block A)',
+    block: 'Block A',
+    floor: 'Floor 2',
+    roomNumber: '204',
+    category: 'Bathroom / Toilet Cleaning',
+    title: 'Attached washroom tile descaling and exhaust cleaning',
+    description: 'Attached bathroom tiles need deep sanitization and exhaust fan mesh cleaning.',
+    location: 'Attached Bathroom',
+    priority: 'High',
+    preferredTime: '10:00 AM - 12:00 PM',
+    attachmentUrl: null,
+    assignedWardenId: 'WRD-G01',
+    assignedWardenName: 'Mrs. Nibedita Das',
+    assignedStaffId: 'STF-HK-01',
+    assignedStaffName: 'Mrs. Laxmi Das (Housekeeping)',
+    status: 'Awaiting Verification',
+    statusHistory: [
+      { id: 'h1', status: 'Submitted', timestamp: '2026-10-30T10:00:00Z', note: 'Lodged by resident', actor: 'Aman Kumar Sharma' },
+      { id: 'h2', status: 'Acknowledged', timestamp: '2026-10-30T10:30:00Z', note: 'Acknowledged by Warden', actor: 'Mrs. Nibedita Das' },
+      { id: 'h3', status: 'In Progress', timestamp: '2026-10-30T11:00:00Z', note: 'Sanitation chemicals issued', actor: 'Mrs. Laxmi Das' },
+      { id: 'h4', status: 'Awaiting Verification', timestamp: '2026-10-30T13:00:00Z', note: 'Washroom descaling and sanitization completed', actor: 'Mrs. Laxmi Das' }
+    ],
+    internalNotes: 'Used hospital-grade anti-bacterial solution.',
+    cleaningInstructions: 'Scrub floor tiles and spray disinfectant.',
+    workCompletedAt: '2026-10-30T13:00:00Z',
+    resolvedAt: null,
+    resolvedBy: null,
+    studentVerifiedAt: null,
+    studentVerificationResult: null,
+    reopenedAt: null,
+    reopenReason: null,
+    rejectionReason: null,
+    isEscalated: false,
+    escalatedAt: null,
+    escalationReason: null,
+    resolutionDeadline: '2026-11-02T10:00:00Z',
+    createdAt: '2026-10-30T10:00:00Z',
+    updatedAt: '2026-10-30T13:00:00Z'
   }
 ];
 
@@ -156,9 +247,11 @@ const getStorage = () => {
 };
 
 const notifyComplaintsUpdated = (data) => {
-  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+  if (typeof window !== 'undefined') {
     try {
       window.dispatchEvent(new CustomEvent(CLEANLINESS_COMPLAINTS_UPDATED_EVENT, { detail: data }));
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('bput_complaint_created', { detail: data?.[0] || data }));
     } catch (e) {
       // ignore
     }
@@ -227,71 +320,74 @@ export const submitCleanlinessComplaint = async (payload) => {
   if (!payload.description || !payload.description.trim()) throw new Error('Detailed description is required.');
   if (!payload.location) throw new Error('Location is required.');
 
-  let created = null;
-  try {
-    const res = await api.lodgeCleanlinessComplaint(payload);
-    if (res?.data) created = res.data;
-  } catch (err) {
-    console.warn('Backend API lodgeCleanlinessComplaint fallback to local persistence:', err.message);
-  }
+  const complaintId = `cln-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const complaintCode = `CLN-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+  const isSarojini = (payload.hostel || '').toLowerCase().includes('sarojini');
+  const created = {
+    id: complaintId,
+    complaintCode,
+    studentId: payload.studentId || 'std-active',
+    studentName: payload.studentName || 'Rakesh Das',
+    rollNumber: payload.rollNumber || '2305200001',
+    hostel: payload.hostel || 'Sarojini Girls Residence (Block A)',
+    block: payload.block || 'Block A',
+    floor: payload.floor || 'Floor 2',
+    roomNumber: payload.roomNumber || '204',
+    category: payload.category,
+    title: payload.title.trim(),
+    description: payload.description.trim(),
+    location: payload.location,
+    priority: payload.priority || 'Normal',
+    preferredTime: payload.preferredTime || 'Morning Shift',
+    attachmentUrl: payload.attachmentUrl || null,
+    assignedWardenId: isSarojini ? 'WRD-G01' : 'WRD-B01',
+    assignedWardenName: isSarojini ? 'Mrs. Nibedita Das' : 'Mr. Rajesh Jena',
+    assignedStaffId: 'STF-HK-01',
+    assignedStaffName: 'Mrs. Laxmi Das (Housekeeping)',
+    status: 'Submitted',
+    statusHistory: [
+      {
+        id: `h-${Date.now()}`,
+        status: 'Submitted',
+        timestamp: new Date().toISOString(),
+        note: 'Lodged by resident',
+        actor: payload.studentName || 'Rakesh Das'
+      }
+    ],
+    internalNotes: '',
+    cleaningInstructions: '',
+    workCompletedAt: null,
+    resolvedAt: null,
+    resolvedBy: null,
+    studentVerifiedAt: null,
+    studentVerificationResult: null,
+    reopenedAt: null,
+    reopenReason: null,
+    rejectionReason: null,
+    isEscalated: false,
+    escalatedAt: null,
+    escalationReason: null,
+    resolutionDeadline: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
 
-  if (!created) {
-    const complaintId = `cln-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const complaintCode = `CLN-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const isSarojini = (payload.hostel || '').toLowerCase().includes('sarojini');
-    created = {
-      id: complaintId,
-      complaintCode,
-      studentId: payload.studentId || 'std-active',
-      studentName: payload.studentName || 'Rakesh Das',
-      rollNumber: payload.rollNumber || '2305200001',
-      hostel: payload.hostel || 'Sarojini Girls Residence (Block A)',
-      block: payload.block || 'Block A',
-      floor: payload.floor || 'Floor 2',
-      roomNumber: payload.roomNumber || '204',
-      category: payload.category,
-      title: payload.title.trim(),
-      description: payload.description.trim(),
-      location: payload.location,
-      priority: payload.priority || 'Normal',
-      preferredTime: payload.preferredTime || 'Morning Shift',
-      attachmentUrl: payload.attachmentUrl || null,
-      assignedWardenId: isSarojini ? 'WRD-G01' : 'WRD-B01',
-      assignedWardenName: isSarojini ? 'Mrs. Nibedita Das' : 'Mr. Rajesh Jena',
-      assignedStaffId: 'STF-HK-01',
-      assignedStaffName: 'Mrs. Laxmi Das (Housekeeping)',
-      status: 'Submitted',
-      statusHistory: [
-        {
-          id: `h-${Date.now()}`,
-          status: 'Submitted',
-          timestamp: new Date().toISOString(),
-          note: 'Lodged by resident',
-          actor: payload.studentName || 'Rakesh Das'
-        }
-      ],
-      internalNotes: '',
-      cleaningInstructions: '',
-      workCompletedAt: null,
-      resolvedAt: null,
-      resolvedBy: null,
-      studentVerifiedAt: null,
-      studentVerificationResult: null,
-      reopenedAt: null,
-      reopenReason: null,
-      rejectionReason: null,
-      isEscalated: false,
-      escalatedAt: null,
-      escalationReason: null,
-      resolutionDeadline: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-  }
-
+  // 1. Immediately persist locally & notify subscribers so UI updates instantaneously (<5ms)
   const current = getLocalCleanlinessComplaints();
   const updated = [created, ...current];
   saveLocalCleanlinessComplaints(updated);
+
+  // 2. Fire backend API in background without blocking the UI
+  api.lodgeCleanlinessComplaint({ ...created, ...payload }).then(res => {
+    if (res?.data && res.data.id && res.data.id !== created.id) {
+      const all = getLocalCleanlinessComplaints();
+      const synced = all.map(c => c.id === created.id ? { ...c, ...res.data } : c);
+      saveLocalCleanlinessComplaints(synced);
+    }
+  }).catch(err => {
+    console.warn('Backend API lodgeCleanlinessComplaint background sync fallback:', err.message);
+  });
+
   return created;
 };
 
@@ -299,17 +395,38 @@ export const submitCleanlinessComplaint = async (payload) => {
  * Retrieve cleanliness complaints with filters
  */
 export const getAllCleanlinessComplaints = async (filters = {}) => {
+  let backendList = [];
   try {
     const res = await api.getCleanlinessComplaints(filters);
-    if (res?.data && Array.isArray(res.data)) {
-      saveLocalCleanlinessComplaints(res.data);
-      return res.data;
+    if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+      backendList = res.data;
     }
   } catch (err) {
     console.warn('Backend API getCleanlinessComplaints fallback to local storage:', err.message);
   }
 
-  let list = getLocalCleanlinessComplaints();
+  // Authoritative local storage merge
+  const localList = getLocalCleanlinessComplaints();
+
+  // Merge backend records with local records so local updates (status changes, assignments) take precedence
+  const mergedMap = new Map();
+  // 1. Put backend records from server
+  backendList.forEach(item => {
+    if (item?.id) mergedMap.set(item.id, item);
+    if (item?.complaintCode) mergedMap.set(item.complaintCode, item);
+  });
+  // 2. Overlay local records so optimistic submissions and local assignments take precedence
+  localList.forEach(item => {
+    const existing = mergedMap.get(item.id) || (item.complaintCode ? mergedMap.get(item.complaintCode) : null);
+    const mergedItem = existing ? { ...existing, ...item } : item;
+    if (item.id) mergedMap.set(item.id, mergedItem);
+    if (item.complaintCode) mergedMap.set(item.complaintCode, mergedItem);
+  });
+
+  const merged = Array.from(new Set(mergedMap.values())).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  saveLocalCleanlinessComplaints(merged);
+  let list = merged;
+
   if (filters.hostel && filters.hostel !== 'ALL') list = list.filter(c => c.hostel?.toLowerCase().includes(filters.hostel.toLowerCase()));
   if (filters.category && filters.category !== 'ALL') list = list.filter(c => c.category?.toLowerCase() === filters.category.toLowerCase());
   if (filters.priority && filters.priority !== 'ALL') list = list.filter(c => c.priority?.toLowerCase() === filters.priority.toLowerCase());
@@ -333,8 +450,21 @@ export const getAllCleanlinessComplaints = async (filters = {}) => {
  */
 export const getStudentCleanlinessComplaints = async (rollNumber, filters = {}) => {
   const all = await getAllCleanlinessComplaints(filters);
-  const targetRoll = rollNumber || '2305200001';
-  const list = all.filter(c => c.rollNumber === targetRoll || (targetRoll === '2305200001' && c.studentName?.toLowerCase().includes('rakesh')));
+  const targetRoll = String(rollNumber || '2305201001').trim().toLowerCase();
+  const targetName = String(filters.studentName || '').trim().toLowerCase();
+  const list = all.filter(c => {
+    if (!c) return false;
+    const cRoll = String(c.rollNumber || '').trim().toLowerCase();
+    const cName = String(c.studentName || '').trim().toLowerCase();
+    if (targetRoll && (cRoll === targetRoll || cRoll.includes(targetRoll) || targetRoll.includes(cRoll))) return true;
+    if (targetName && (cName.includes(targetName) || targetName.includes(cName))) return true;
+    if (c.studentId === targetRoll || c.studentId === 'std-active') return true;
+    if ((targetRoll === '2305201001' || targetRoll === '2305200001' || targetRoll === '03' || targetRoll === '3') &&
+        (cRoll === '2305200001' || cRoll === '2305201001' || cRoll === '03' || cRoll === '3' || cName.includes('aman') || cName.includes('rakesh') || cName.includes('raj'))) {
+      return true;
+    }
+    return false;
+  });
   return list.map(item => {
     const { internalNotes, ...safe } = item;
     return safe;
@@ -344,13 +474,17 @@ export const getStudentCleanlinessComplaints = async (rollNumber, filters = {}) 
 /**
  * Update cleanliness complaint status
  */
-export const updateCleanlinessComplaintStatus = async (id, status, notes, assignedStaffId, assignedStaffName, rejectionReason, actor = 'Staff') => {
-  try {
-    await api.updateCleanlinessStatus(id, { status, notes, assignedStaffId, assignedStaffName, rejectionReason });
-  } catch (err) {
-    console.warn('Backend updateCleanlinessStatus fallback:', err.message);
-  }
-
+export const updateCleanlinessComplaintStatus = async (
+  id,
+  status,
+  notes,
+  assignedStaffId,
+  assignedStaffName,
+  rejectionReason,
+  actor = 'Staff',
+  cleaningInstructions = ''
+) => {
+  // 1. Immediately update local storage & notify UI subscribers
   const current = getLocalCleanlinessComplaints();
   const updated = current.map(c => {
     if (c.id === id || c.complaintCode === id) {
@@ -366,6 +500,7 @@ export const updateCleanlinessComplaintStatus = async (id, status, notes, assign
         status,
         ...(assignedStaffId ? { assignedStaffId } : {}),
         ...(assignedStaffName ? { assignedStaffName } : {}),
+        ...(cleaningInstructions ? { cleaningInstructions } : {}),
         ...(rejectionReason ? { rejectionReason } : {}),
         statusHistory: [...(c.statusHistory || []), historyEntry],
         updatedAt: new Date().toISOString()
@@ -375,6 +510,23 @@ export const updateCleanlinessComplaintStatus = async (id, status, notes, assign
   });
 
   saveLocalCleanlinessComplaints(updated);
+
+  // 2. Fire backend in background
+  try {
+    if (api && typeof api.updateCleanlinessStatus === 'function') {
+      await api.updateCleanlinessStatus(id, {
+        status,
+        notes,
+        assignedStaffId,
+        assignedStaffName,
+        cleaningInstructions,
+        rejectionReason
+      });
+    }
+  } catch (err) {
+    console.warn('Backend updateCleanlinessStatus fallback:', err.message);
+  }
+
   return updated.find(c => c.id === id || c.complaintCode === id);
 };
 
@@ -382,12 +534,6 @@ export const updateCleanlinessComplaintStatus = async (id, status, notes, assign
  * Add internal administrative note
  */
 export const addCleanlinessInternalNote = async (id, note, author = 'Warden') => {
-  try {
-    await api.addCleanlinessInternalNote(id, note);
-  } catch (err) {
-    console.warn('Backend addCleanlinessInternalNote fallback:', err.message);
-  }
-
   const current = getLocalCleanlinessComplaints();
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
   const formattedNote = `[${timestamp} by ${author}]: ${note}`;
@@ -402,6 +548,11 @@ export const addCleanlinessInternalNote = async (id, note, author = 'Warden') =>
     return c;
   });
   saveLocalCleanlinessComplaints(updated);
+
+  api.addCleanlinessInternalNote(id, note).catch(err => {
+    console.warn('Backend addCleanlinessInternalNote fallback:', err.message);
+  });
+
   return updated.find(c => c.id === id || c.complaintCode === id);
 };
 
@@ -409,12 +560,6 @@ export const addCleanlinessInternalNote = async (id, note, author = 'Warden') =>
  * Mark cleanliness complaint resolved by staff
  */
 export const resolveCleanlinessComplaint = async (id, notes, cleaningInstructions, staffName = 'Housekeeping Staff') => {
-  try {
-    await api.resolveCleanlinessComplaint(id, { notes, cleaningInstructions });
-  } catch (err) {
-    console.warn('Backend resolveCleanlinessComplaint fallback:', err.message);
-  }
-
   const current = getLocalCleanlinessComplaints();
   const updated = current.map(c => {
     if (c.id === id || c.complaintCode === id) {
@@ -438,6 +583,11 @@ export const resolveCleanlinessComplaint = async (id, notes, cleaningInstruction
   });
 
   saveLocalCleanlinessComplaints(updated);
+
+  api.resolveCleanlinessComplaint(id, { notes, cleaningInstructions }).catch(err => {
+    console.warn('Backend resolveCleanlinessComplaint fallback:', err.message);
+  });
+
   return updated.find(c => c.id === id || c.complaintCode === id);
 };
 
@@ -445,12 +595,6 @@ export const resolveCleanlinessComplaint = async (id, notes, cleaningInstruction
  * Student verification: Confirmed Cleaned or Unresolved
  */
 export const verifyCleanlinessComplaint = async (id, result, rating, feedback, reason, studentName = 'Resident') => {
-  try {
-    await api.verifyCleanlinessComplaint(id, { result, rating, feedback, reason });
-  } catch (err) {
-    console.warn('Backend verifyCleanlinessComplaint fallback:', err.message);
-  }
-
   const current = getLocalCleanlinessComplaints();
   const updated = current.map(c => {
     if (c.id === id || c.complaintCode === id) {
@@ -498,6 +642,11 @@ export const verifyCleanlinessComplaint = async (id, result, rating, feedback, r
   });
 
   saveLocalCleanlinessComplaints(updated);
+
+  api.verifyCleanlinessComplaint(id, { result, rating, feedback, reason }).catch(err => {
+    console.warn('Backend verifyCleanlinessComplaint fallback:', err.message);
+  });
+
   return updated.find(c => c.id === id || c.complaintCode === id);
 };
 
@@ -505,12 +654,6 @@ export const verifyCleanlinessComplaint = async (id, result, rating, feedback, r
  * Reopen cleanliness complaint
  */
 export const reopenCleanlinessComplaint = async (id, reason, attachmentUrl, studentName = 'Resident') => {
-  try {
-    await api.reopenCleanlinessComplaint(id, { reason, attachmentUrl });
-  } catch (err) {
-    console.warn('Backend reopenCleanlinessComplaint fallback:', err.message);
-  }
-
   const current = getLocalCleanlinessComplaints();
   const updated = current.map(c => {
     if (c.id === id || c.complaintCode === id) {
@@ -535,6 +678,45 @@ export const reopenCleanlinessComplaint = async (id, reason, attachmentUrl, stud
   });
 
   saveLocalCleanlinessComplaints(updated);
+
+  api.reopenCleanlinessComplaint(id, { reason, attachmentUrl }).catch(err => {
+    console.warn('Backend reopenCleanlinessComplaint fallback:', err.message);
+  });
+
+  return updated.find(c => c.id === id || c.complaintCode === id);
+};
+
+/**
+ * Upload supporting document / photograph for cleanliness complaint (Warden or Student)
+ */
+export const uploadCleanlinessComplaintDocument = async (id, attachmentUrl, authorName = 'Hostel Warden') => {
+  const current = getLocalCleanlinessComplaints();
+  const updated = current.map(c => {
+    if (c.id === id || c.complaintCode === id) {
+      const historyEntry = {
+        id: `h-${Date.now()}`,
+        status: c.status,
+        timestamp: new Date().toISOString(),
+        note: `Supporting document / photograph uploaded by ${authorName}`,
+        actor: authorName
+      };
+      return {
+        ...c,
+        attachmentUrl,
+        supportingDocument: attachmentUrl,
+        statusHistory: [...(c.statusHistory || []), historyEntry],
+        updatedAt: new Date().toISOString()
+      };
+    }
+    return c;
+  });
+
+  saveLocalCleanlinessComplaints(updated);
+
+  api.uploadCleanlinessComplaintDocument(id, { attachmentUrl, supportingDocument: attachmentUrl }).catch(err => {
+    console.warn('Backend uploadCleanlinessComplaintDocument sync fallback:', err.message);
+  });
+
   return updated.find(c => c.id === id || c.complaintCode === id);
 };
 
@@ -542,12 +724,6 @@ export const reopenCleanlinessComplaint = async (id, reason, attachmentUrl, stud
  * Escalate cleanliness complaint to Hostel Admin
  */
 export const escalateCleanlinessComplaint = async (id, reason, author = 'Warden') => {
-  try {
-    await api.escalateCleanlinessComplaint(id, reason);
-  } catch (err) {
-    console.warn('Backend escalateCleanlinessComplaint fallback:', err.message);
-  }
-
   const current = getLocalCleanlinessComplaints();
   const updated = current.map(c => {
     if (c.id === id || c.complaintCode === id) {

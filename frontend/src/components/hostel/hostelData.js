@@ -186,7 +186,7 @@ export const mockHostelRulesConfig = [
     items: [
       { title: 'Visiting Hours', value: '04:00 PM - 06:30 PM', description: 'Parents and authorized guardians can meet students only in the designated ground floor Visitor Lounge.' },
       { title: 'Overnight Guests', value: 'Strictly Prohibited', description: 'No non-resident or unauthorized individual may stay overnight under any circumstances.' },
-      { title: 'Opposite Gender Wing Entry', value: 'Zero Tolerance', description: 'Entry of male visitors into girls hostel or female visitors into boys hostel wings is prohibited.' }
+      { title: 'Opposite Gender Wing Policy', value: 'Zero Tolerance', description: 'Entry of male visitors into girls hostel or female visitors into boys hostel wings is prohibited.' }
     ]
   },
   {

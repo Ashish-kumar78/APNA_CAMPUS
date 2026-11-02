@@ -1,4 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  CartesianGrid
+} from 'recharts';
 import { AppLayout } from './Navigation';
 import {
   BookOpen, Users, GraduationCap, Layers, BarChart2, FileText,
@@ -9,7 +21,7 @@ import {
   ArrowUpRight, HelpCircle, Send, Share2, HeartHandshake,
   BookOpenCheck, UserCheck, ClipboardCheck,
   ChevronRight, ChevronLeft, PartyPopper, MapPin, Megaphone,
-  Check, CalendarDays, ShieldAlert
+  Check, CalendarDays, ShieldAlert, TrendingUp, TrendingDown, Settings as SettingsIcon, Bell
 } from 'lucide-react';
 import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
 import './FacultyPortal.css';
@@ -355,6 +367,22 @@ export default function FacultyPortal({ account, onLogout }) {
   }, [facultyAssignments, selectedAssignmentId]);
 
   const [isConsolidatedScope, setIsConsolidatedScope] = useState(false);
+  const [attendancePeriodFilter, setAttendancePeriodFilter] = useState('This Month');
+  const [academicPerfSemesterFilter, setAcademicPerfSemesterFilter] = useState('Current Semester');
+  const [facultyLeaveBalance, setFacultyLeaveBalance] = useState({ cl: 8, el: 15, ml: 10 });
+  const [facultyLeavesList, setFacultyLeavesList] = useState([
+    { id: 'FL-2026-01', type: 'Casual Leave (CL)', from: '12 Oct 2026', to: '13 Oct 2026', days: 2, reason: 'Family Function / Personal', status: 'Approved', approvedBy: 'Dr. P. K. Pattnaik (HOD)' },
+    { id: 'FL-2026-02', type: 'Duty Leave (DL)', from: '02 Sep 2026', to: '04 Sep 2026', days: 3, reason: 'IEEE International Conference Presentation', status: 'Approved', approvedBy: 'Principal' }
+  ]);
+  const [isApplyLeaveModalOpen, setIsApplyLeaveModalOpen] = useState(false);
+  const [applyLeaveForm, setApplyLeaveForm] = useState({
+    type: 'Casual Leave (CL)',
+    fromDate: '',
+    toDate: '',
+    reason: '',
+    substituteFaculty: 'Dr. Debabrata Singh (CSE)'
+  });
+
 
   // Scoped strictly to the faculty's assigned class cohort or consolidated across assigned classes
   const scopedStudents = useMemo(() => {
@@ -768,41 +796,101 @@ export default function FacultyPortal({ account, onLogout }) {
 
   const facultyNavSections = [
     {
-      title: 'TEACHING & CLASSES',
+      title: 'MAIN',
       items: [
         { id: 'dashboard', label: 'Faculty Dashboard', icon: Layers },
-        { id: 'take-attendance', label: 'Take Attendance', icon: ClipboardCheck },
-        { id: 'subjects', label: 'My Subjects', icon: BookOpen },
-        { id: 'timetable', label: 'Teaching Timetable', icon: Calendar },
-        { id: 'students', label: `My Students (${scopedStudents.length})`, icon: GraduationCap },
       ]
     },
     {
-      title: 'EVALUATION & ASSESSMENT',
+      title: 'TEACHING & CLASSES',
       items: [
-        { id: 'digital-evaluation', label: 'Answer Sheet Evaluation', icon: FileText },
+        { id: 'timetable', label: 'My Timetable', icon: Calendar },
+        { id: 'subjects', label: 'My Subjects', icon: BookOpen },
+        { id: 'students', label: `My Students (${scopedStudents.length || 150})`, icon: GraduationCap },
+        { id: 'take-attendance', label: 'Take Attendance', icon: ClipboardCheck },
+      ]
+    },
+    {
+      title: 'ASSESSMENT',
+      items: [
         { id: 'marks', label: 'Marks Management', icon: BarChart2 },
-        { id: 'performance', label: 'Class Performance', icon: Sparkles },
+        { id: 'digital-evaluation', label: 'Answer Sheet Evaluation', icon: FileText },
+        { id: 'assignments', label: 'Assignment Management', icon: FileSpreadsheet, badge: 'CIA' },
         { id: 'quiz', label: 'Quiz Management', icon: ClipboardList },
+        { id: 'performance', label: 'Class Performance', icon: Sparkles },
         { id: 'reports', label: 'Grade Reports', icon: FileText },
         { id: 'report-generation', label: 'Report Generation', icon: FileSpreadsheet },
       ]
     },
     {
-      title: 'CAMPUS CONNECT & RESOURCES',
+      title: 'ACADEMIC RESOURCES',
       items: [
-        { id: 'note-sharing', label: 'Note Sharing', icon: FileText, badge: 'Active' },
-        { id: 'awaiting-verification', label: 'Resources Awaiting Verification', icon: ShieldCheck },
+        { id: 'note-sharing', label: 'Notes & Study Materials', icon: FileText, badge: 'Active' },
+        { id: 'awaiting-verification', label: 'Resources Awaiting Verification', icon: ShieldCheck, badge: atRiskStudents.length > 0 ? atRiskStudents.length : null },
         { id: 'notes-moderation', label: 'Notes Moderation', icon: ShieldCheck },
+      ]
+    },
+    {
+      title: 'COMMUNICATION',
+      items: [
         { id: 'complaints', label: 'Student Grievances', icon: ShieldAlert },
-        { id: 'notifications', label: 'Notifications & Broadcasts', icon: Megaphone },
-        { id: 'documents', label: 'Official Documents', icon: Download, badge: campusDocs.length },
+        { id: 'notifications', label: 'Notifications & Announcements', icon: Megaphone },
+        { id: 'documents', label: 'Official Documents', icon: Download, badge: campusDocs.length || 3 },
+      ]
+    },
+    {
+      title: 'PERSONAL',
+      items: [
+        { id: 'leave-management', label: 'Leave Management', icon: CalendarDays },
+        { id: 'settings', label: 'Settings', icon: SettingsIcon },
+        { id: 'help-support', label: 'Help & Support', icon: HelpCircle },
       ]
     }
   ];
 
   const getFacultyHeading = () => {
     switch (activeTab) {
+      case 'assignments':
+        return {
+          title: 'Assignment Management & Continuous Evaluation',
+          subtitle: 'Track student assignment submissions, download attachments, and award Continuous Internal Evaluation (CIA) marks.',
+          breadcrumbs: [
+            { label: 'Campus Home', tab: 'dashboard' },
+            { label: 'Assessment', tab: 'assignments' },
+            { label: 'Assignment Management', active: true }
+          ]
+        };
+      case 'leave-management':
+        return {
+          title: 'Faculty Leave Management',
+          subtitle: 'Review Casual, Earned, and Medical leave quotas, view past leaves, and submit leave requests to HOD & Dean.',
+          breadcrumbs: [
+            { label: 'Campus Home', tab: 'dashboard' },
+            { label: 'Personal', tab: 'leave-management' },
+            { label: 'Leave Management', active: true }
+          ]
+        };
+      case 'settings':
+        return {
+          title: 'Faculty Academic & Profile Settings',
+          subtitle: 'Configure consultation hours, office location, notifications, and grading preferences.',
+          breadcrumbs: [
+            { label: 'Campus Home', tab: 'dashboard' },
+            { label: 'Personal', tab: 'settings' },
+            { label: 'Settings', active: true }
+          ]
+        };
+      case 'help-support':
+        return {
+          title: 'Faculty ERP Knowledge & IT Support Desk',
+          subtitle: 'Direct support from Autonomous Examination Cell, ERP System Engineers, and Academic Guidelines.',
+          breadcrumbs: [
+            { label: 'Campus Home', tab: 'dashboard' },
+            { label: 'Personal', tab: 'help-support' },
+            { label: 'Help & Support', active: true }
+          ]
+        };
+
       case 'note-sharing':
         return {
           title: 'Faculty Study Material & Note Sharing',
@@ -913,507 +1001,1079 @@ export default function FacultyPortal({ account, onLogout }) {
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
-            <div className="dash">
-              {/* 1. Dynamic Hero Greeting matching Student Dashboard */}
-              <section className={`dash-hero ${timeGreeting.themeClass}`} aria-label="Welcome">
-                <div className="dash-hero-glow" aria-hidden="true" />
-                <div className="dash-hero-main">
-                  <p className="dash-hero-kicker"><Sparkles size={13} /> Faculty workspace · {currentAssignment.deptCode || 'CSE'} Department</p>
-                  <h2 className="dash-hero-title">{timeGreeting.wish}, {getGreetingDisplayName(account?.name || 'Dr. S. Mohanty')}</h2>
-                  <p className="dash-hero-caption">{timeGreeting.caption}</p>
-                  <div className="dash-motd" role="note" aria-label="Message of the day">
-                    <span className="dash-motd-icon"><Megaphone size={14} /></span>
-                    <strong>Academic Notice</strong>
-                    <span>Continuous evaluation &amp; CIA register active for {currentAssignment.subjectName} ({currentAssignment.subjectCode}) · {currentAssignment.semester}</span>
-                  </div>
-                </div>
-                <div className="dash-hero-meta">
-                  <span className="dash-chip">Academic year <strong>2026–27</strong></span>
-                  <time className="dash-date"><CalendarDays size={14} /> {todayLabel}</time>
-                  <span className="dash-chip" style={{ background: 'rgba(0,0,0,0.22)' }}>
-                    <Clock size={11} /> {formattedLiveTime}
-                  </span>
-                </div>
-              </section>
-
-              {/* 2. Top Hero Split: Faculty Profile on LEFT (50%) + 2x2 Stats Grid on RIGHT (50%) */}
-              <div className="dash-hero-split">
-                {/* Faculty Profile Card (Exact Student Dashboard Card Layout & Passport Photo Frame) */}
-                <aside className="dash-card dash-info dash-info-hero" id="faculty-information" aria-label="Faculty account information">
-                  <div className="dash-info-cover">
-                    <div className="dash-passport-photo-frame" title={`${account?.name || 'Faculty'} Official Photograph (35mm x 45mm)`}>
-                      <img src={facultyPhoto} alt={account?.name || 'Faculty'} className="dash-passport-img" />
-                    </div>
-                    <div>
-                      <strong>{account?.name || 'Dr. S. Mohanty'}</strong>
-                      <small>{account?.identity || 'FAC-042'} · Assistant Professor</small>
-                    </div>
-                    <span className="dash-status"><i /> Active</span>
-                  </div>
-                  <dl className="dash-info-list">
-                    <DetailRow label="Employee Code" value={account?.identity || 'FAC-042'} />
-                    <DetailRow label="Name" value={account?.name || 'Dr. S. Mohanty'} />
-                    <DetailRow label="Designation" value="Assistant Professor" />
-                    <DetailRow label="Department" value={account?.department || 'Computer Science & Engineering'} />
-                    <DetailRow label="Assigned Cohort" value={`${currentAssignment.semester} · ${currentAssignment.section}`} />
-                    <DetailRow label="Cabin / Office" value={currentAssignment.room || 'Room 312 · Block B'} />
-                    <DetailRow label="Email ID" value={account?.email || `${(account?.name || 's.mohanty').toLowerCase().replace(/\s+/g, '.').replace('dr.', '')}@apnacampus.edu.in`} />
-                    <DetailRow label="Mobile No." value={account?.phone || '+91 94370 12844'} />
-                  </dl>
-                  <button
-                    className="dash-btn dash-btn-primary dash-info-btn"
-                    type="button"
-                    onClick={() => setActiveTab('subjects')}
-                  >
-                    View Teaching Portfolio <ChevronRight size={15} />
-                  </button>
-                </aside>
-
-                {/* 2x2 Stats Grid on RIGHT - Equivalent to Student Dashboard with Next Class Included */}
-                <section className="dash-stats-2x2" aria-label="Faculty teaching snapshot">
-                  {/* Card 1: Assigned Courses */}
-                  <article className="dash-stat tone-blue">
-                    <div className="dash-stat-head">
-                      <div className="dash-stat-head-left">
-                        <span className="dash-stat-icon"><BookOpen size={18} /></span>
-                        <span className="dash-stat-label">Assigned courses</span>
-                      </div>
-                      <span className="dash-stat-badge tone-blue-badge">{currentAssignment.semester}</span>
-                    </div>
-                    <div className="dash-stat-body">
-                      <strong className="dash-stat-value">{String(facultyAssignments.length).padStart(2, '0')}</strong>
-                      <p className="dash-stat-desc">{currentAssignment.subjectName} ({currentAssignment.subjectCode})</p>
-                    </div>
-                    <div className="dash-stat-foot">
-                      <span className="dash-stat-pill">{currentAssignment.program || 'B.Tech'}</span>
-                      <span className="dash-stat-pill">{currentAssignment.section}</span>
-                      <span className="dash-stat-pill tone-green-pill">Active Teaching</span>
-                    </div>
-                  </article>
-
-                  {/* Card 2: Attendance Eligibility / Cohort Attendance */}
-                  <article className="dash-stat tone-green">
-                    <div className="dash-stat-head">
-                      <div className="dash-stat-head-left">
-                        <span className="dash-stat-icon"><CheckCircle2 size={18} /></span>
-                        <span className="dash-stat-label">Cohort Attendance</span>
-                      </div>
-                      <span className="dash-stat-badge tone-green-badge">Eligible (93.8%)</span>
-                    </div>
-                    <div className="dash-stat-body">
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <strong className="dash-stat-value">93.8%</strong>
-                        <span className="dash-stat-ratio">{scopedStudents.length - atRiskStudents.length} / {scopedStudents.length} Regular</span>
-                      </div>
-                      <div className="dash-progress" aria-hidden="true">
-                        <i style={{ width: '93.8%' }} />
-                      </div>
-                    </div>
-                    <div className="dash-stat-foot">
-                      <small className="dash-stat-sub text-green">
-                        <Check size={13} /> {atRiskStudents.length === 0 ? 'All cohort students above 75% threshold' : `${atRiskStudents.length} student${atRiskStudents.length > 1 ? 's' : ''} require attendance remediation`}
-                      </small>
-                    </div>
-                  </article>
-
-                  {/* Card 3: Next Class (Requirement 3: Included in Top Appearance Box) */}
-                  <article className="dash-stat tone-violet">
-                    <div className="dash-stat-head">
-                      <div className="dash-stat-head-left">
-                        <span className="dash-stat-icon"><Clock size={18} /></span>
-                        <span className="dash-stat-label">Next class</span>
-                      </div>
-                      <span className="dash-stat-badge tone-violet-badge">Starts {nextClass.time}</span>
-                    </div>
-                    <div className="dash-stat-body">
-                      <strong className="dash-stat-value">{nextClass.time} <em>Today</em></strong>
-                      <p className="dash-stat-desc">{nextClass.subjectName}</p>
-                    </div>
-                    <div className="dash-stat-foot">
-                      <span className="dash-stat-sub">
-                        <MapPin size={13} /> {nextClass.room} · {nextClass.section} ({nextClass.semester})
-                      </span>
-                    </div>
-                  </article>
-
-                  {/* Card 4: Next Holiday */}
-                  <article className="dash-stat tone-amber">
-                    <div className="dash-stat-head">
-                      <div className="dash-stat-head-left">
-                        <span className="dash-stat-icon"><PartyPopper size={18} /></span>
-                        <span className="dash-stat-label">Next holiday</span>
-                      </div>
-                      <span className="dash-stat-badge tone-amber-badge">Govt Gazetted</span>
-                    </div>
-                    <div className="dash-stat-body">
-                      <strong className="dash-stat-value">{nextHoliday ? (nextHoliday.daysLeft === 0 ? 'Today' : nextHoliday.daysLeft === 1 ? 'Tomorrow' : `${nextHoliday.daysLeft} days`) : '5 days'}</strong>
-                      <p className="dash-stat-desc">{nextHoliday ? nextHoliday.name : 'Mahalaya'}</p>
-                    </div>
-                    <div className="dash-stat-foot">
-                      <span className="dash-stat-sub">
-                        {nextHoliday?.date ? nextHoliday.date.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : 'Sat, 10 Oct, 2026'} · Campus closed
-                      </span>
-                    </div>
-                  </article>
-                </section>
-              </div>
-
-              {/* 3. Teaching Cohort Selector & Quick Actions Strip */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', background: '#ffffff', border: '1px solid var(--d-line)', borderRadius: '14px', padding: '12px 18px', boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Teaching Cohort:
-                  </span>
-                  <select
-                    className="admin-select"
-                    value={selectedAssignmentId}
-                    onChange={e => setSelectedAssignmentId(e.target.value)}
-                    style={{ fontWeight: 600, background: '#eff6ff', borderColor: '#bfdbfe', color: '#1e40af', padding: '6px 12px', borderRadius: '8px' }}
-                    title="Switch Assigned Teaching Cohort"
-                  >
-                    {facultyAssignments.map(fa => (
-                      <option key={fa.id} value={fa.id}>
-                        {fa.subjectName} ({fa.subjectCode}) · {fa.program} {fa.semester} {fa.section}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <button className="admin-action-btn-primary" onClick={handleOpenAttendanceModal} style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: '8px' }}>
-                    <Calendar size={15} /> Mark Attendance
-                  </button>
-                </div>
-              </div>
-
-              {/* 4. Alert Banners (Preserved from existing Faculty functionality) */}
-              {atRiskStudents.length > 0 && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <AlertCircle size={22} color="#dc2626" style={{ flexShrink: 0 }} />
-                    <div>
-                      <strong style={{ color: '#991b1b', fontSize: '0.92rem' }}>
-                        Statutory Attendance Shortage Alert ({atRiskStudents.length} Students &lt; 75%)
-                      </strong>
-                      <div style={{ color: '#b91c1c', fontSize: '0.82rem' }}>
-                        Autonomous regulation requires mandatory minimum 75% attendance to sit for end-semester examinations.
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    className="admin-action-btn-secondary"
-                    style={{ fontSize: '0.8rem', padding: '6px 12px', color: '#991b1b', borderColor: '#fca5a5', background: '#fff' }}
-                    onClick={() => { setActiveTab('students'); setStudentSearch(''); }}
-                  >
-                    Review At-Risk Students →
-                  </button>
-                </div>
-              )}
-
-              <div className="faculty-rejection-banner">
-                <AlertCircle size={22} color="#e11d48" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div>
-                  <h4 style={{ margin: '0 0 0.25rem 0', color: '#9f1239', fontSize: '0.95rem' }}>
-                    Notice from HOD (Dr. P. K. Pattnaik) — Action Required
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#881337' }}>
-                    "Please verify Quiz 3 and Quiz 4 continuous evaluation entries for Data Structures. Ensure all enrolled students in your assigned class have marks entered before final moderation deadline."
+            <div className="fac-dash-wrapper">
+              {/* 1. Welcome Banner */}
+              <div className="fac-welcome-banner">
+                <div className="fac-banner-content">
+                  <h1 className="fac-banner-title">
+                    Good evening, {account?.name || 'Dr. S. Mohanty'} 👋
+                  </h1>
+                  <p className="fac-banner-tagline">
+                    Keep inspiring, keep teaching! — Together for a better campus.
                   </p>
+                  <div className="fac-banner-notice-badge">
+                    <span className="fac-notice-tag">
+                      <Megaphone size={13} /> Academic Notice:
+                    </span>
+                    <span className="fac-notice-text">
+                      Data Structures exam schedule (CSE301) has been published.
+                    </span>
+                  </div>
+                </div>
+                <div className="fac-banner-datetime-card">
+                  <div className="fac-datetime-line">
+                    <Calendar size={14} className="fac-datetime-icon" />
+                    <span>{todayLabel}</span>
+                  </div>
+                  <div className="fac-datetime-line fac-time-accent">
+                    <Clock size={14} className="fac-datetime-icon" />
+                    <span>{formattedLiveTime}</span>
+                  </div>
                 </div>
               </div>
 
-              {/* 5. Prioritized Faculty Work Queue */}
-              <div className="faculty-work-queue-container" style={{ borderRadius: '16px', border: '1px solid var(--d-line)', boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)' }}>
-                <div className="work-queue-header">
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <CheckCircle2 size={18} color="#2563eb" /> Prioritized Faculty Task Queue
-                    </h3>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                      Automated academic workflow tasks requiring faculty action or moderation.
-                    </p>
+              {/* 2. Faculty Profile + 4 KPI Cards Row */}
+              <div className="fac-profile-kpi-row">
+                {/* Faculty Profile Card */}
+                <div className="fac-profile-card">
+                  <div className="fac-profile-header">
+                    <div className="fac-avatar-wrap">
+                      <img src={facultyPhoto} alt={account?.name || 'Faculty'} className="fac-profile-img" />
+                    </div>
+                    <div className="fac-profile-intro">
+                      <div className="fac-profile-name-row">
+                        <h3 className="fac-profile-name">{account?.name || 'Dr. S. Mohanty'}</h3>
+                        <button
+                          type="button"
+                          className="fac-view-profile-btn"
+                          onClick={() => setActiveTab('subjects')}
+                          title="View full faculty profile and teaching portfolio"
+                        >
+                          View Profile <ArrowRight size={13} />
+                        </button>
+                      </div>
+                      <div className="fac-profile-id-pill">
+                        Faculty ID: {account?.identity || 'FAC037'}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM'].map(f => (
-                      <button
-                        key={f}
-                        type="button"
-                        className={`admin-action-btn-secondary ${workQueueFilter === f ? 'active' : ''}`}
-                        style={{
-                          fontSize: '0.72rem',
-                          padding: '3px 9px',
-                          background: workQueueFilter === f ? '#2563eb' : '#fff',
-                          color: workQueueFilter === f ? '#fff' : '#475569',
-                          borderColor: workQueueFilter === f ? '#2563eb' : '#cbd5e1'
-                        }}
-                        onClick={() => setWorkQueueFilter(f)}
+
+                  <div className="fac-profile-details-grid">
+                    <div className="fac-profile-detail-item">
+                      <span className="fac-detail-label">Designation</span>
+                      <span className="fac-detail-value">Assistant Professor</span>
+                    </div>
+                    <div className="fac-profile-detail-item">
+                      <span className="fac-detail-label">Department</span>
+                      <span className="fac-detail-value">{account?.department || 'Computer Science & Engineering'}</span>
+                    </div>
+                    <div className="fac-profile-detail-item">
+                      <span className="fac-detail-label">Assigned Subjects</span>
+                      <span className="fac-detail-value">{facultyAssignments.length || 4} Subjects</span>
+                    </div>
+                    <div className="fac-profile-detail-item">
+                      <span className="fac-detail-label">Email</span>
+                      <span className="fac-detail-value" title={account?.email || 's.mohanty@apnacampus.edu.in'}>
+                        {account?.email || 's.mohanty@apnacampus.edu.in'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4 Summary KPI Cards Grid */}
+                <div className="fac-kpis-grid">
+                  {/* KPI 1: My Students */}
+                  <div className="fac-kpi-card tone-blue">
+                    <div className="fac-kpi-top">
+                      <div className="fac-kpi-icon-wrap bg-blue">
+                        <Users size={19} />
+                      </div>
+                      <div className="fac-kpi-trend trend-up">
+                        <TrendingUp size={12} /> +5%
+                      </div>
+                    </div>
+                    <div className="fac-kpi-body">
+                      <span className="fac-kpi-label">My Students</span>
+                      <div className="fac-kpi-number">{scopedStudents.length || 150}</div>
+                    </div>
+                    <div className="fac-kpi-sparkline">
+                      <svg viewBox="0 0 120 30" preserveAspectRatio="none" className="spark-svg">
+                        <defs>
+                          <linearGradient id="blueSpark" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M0,24 Q30,22 60,15 T120,6 L120,30 L0,30 Z" fill="url(#blueSpark)" />
+                        <path d="M0,24 Q30,22 60,15 T120,6" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* KPI 2: Classes Today */}
+                  <div className="fac-kpi-card tone-green">
+                    <div className="fac-kpi-top">
+                      <div className="fac-kpi-icon-wrap bg-green">
+                        <Calendar size={19} />
+                      </div>
+                      <div className="fac-kpi-trend trend-up">
+                        <TrendingUp size={12} /> +0%
+                      </div>
+                    </div>
+                    <div className="fac-kpi-body">
+                      <span className="fac-kpi-label">Classes Today</span>
+                      <div className="fac-kpi-number">2</div>
+                    </div>
+                    <div className="fac-kpi-sparkline">
+                      <svg viewBox="0 0 120 30" preserveAspectRatio="none" className="spark-svg">
+                        <defs>
+                          <linearGradient id="greenSpark" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M0,18 Q30,22 60,14 T120,12 L120,30 L0,30 Z" fill="url(#greenSpark)" />
+                        <path d="M0,18 Q30,22 60,14 T120,12" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* KPI 3: Pending Marks */}
+                  <div className="fac-kpi-card tone-orange">
+                    <div className="fac-kpi-top">
+                      <div className="fac-kpi-icon-wrap bg-orange">
+                        <ClipboardList size={19} />
+                      </div>
+                      <div className="fac-kpi-trend trend-down">
+                        <TrendingDown size={12} /> -8%
+                      </div>
+                    </div>
+                    <div className="fac-kpi-body">
+                      <span className="fac-kpi-label">Pending Marks</span>
+                      <div className="fac-kpi-number">45</div>
+                    </div>
+                    <div className="fac-kpi-sparkline">
+                      <svg viewBox="0 0 120 30" preserveAspectRatio="none" className="spark-svg">
+                        <defs>
+                          <linearGradient id="orangeSpark" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M0,8 Q30,12 60,20 T120,26 L120,30 L0,30 Z" fill="url(#orangeSpark)" />
+                        <path d="M0,8 Q30,12 60,20 T120,26" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* KPI 4: Notices */}
+                  <div className="fac-kpi-card tone-purple">
+                    <div className="fac-kpi-top">
+                      <div className="fac-kpi-icon-wrap bg-purple">
+                        <Bell size={19} />
+                      </div>
+                      <div className="fac-kpi-trend trend-up">
+                        <TrendingUp size={12} /> +2%
+                      </div>
+                    </div>
+                    <div className="fac-kpi-body">
+                      <span className="fac-kpi-label">Notices</span>
+                      <div className="fac-kpi-number">12</div>
+                    </div>
+                    <div className="fac-kpi-sparkline">
+                      <svg viewBox="0 0 120 30" preserveAspectRatio="none" className="spark-svg">
+                        <defs>
+                          <linearGradient id="purpleSpark" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M0,24 Q30,22 60,16 T120,8 L120,30 L0,30 Z" fill="url(#purpleSpark)" />
+                        <path d="M0,24 Q30,22 60,16 T120,8" fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Row 4: Analytics Duo (Attendance Overview & Academic Performance - NO QUICK ACTIONS) */}
+              <div className="fac-analytics-duo-row">
+                {/* Card 1: Attendance Overview */}
+                <div className="fac-card fac-attendance-card">
+                  <div className="fac-card-header">
+                    <div className="fac-card-title-wrap">
+                      <BarChart2 size={18} className="fac-card-title-icon text-blue" />
+                      <h3 className="fac-card-title">Attendance Overview</h3>
+                    </div>
+                    <div className="fac-card-controls">
+                      <select
+                        className="fac-card-select"
+                        value={attendancePeriodFilter}
+                        onChange={e => setAttendancePeriodFilter(e.target.value)}
                       >
-                        {f}
-                      </button>
-                    ))}
+                        <option value="This Week">This Week</option>
+                        <option value="This Month">This Month</option>
+                        <option value="This Semester">This Semester</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="fac-donut-container">
+                    <div className="fac-donut-chart-wrap">
+                      <ResponsiveContainer width="100%" height={210}>
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Present', value: 92, fill: '#10b981' },
+                              { name: 'Absent', value: 6, fill: '#f59e0b' },
+                              { name: 'Leave', value: 2, fill: '#3b82f6' }
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={65}
+                            outerRadius={88}
+                            paddingAngle={3}
+                            dataKey="value"
+                            stroke="#ffffff"
+                            strokeWidth={2}
+                          >
+                            <Cell fill="#10b981" />
+                            <Cell fill="#f59e0b" />
+                            <Cell fill="#3b82f6" />
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="fac-donut-center-label">
+                        <span className="donut-big-val">92%</span>
+                        <span className="donut-sub-lbl">Overall</span>
+                      </div>
+                    </div>
+
+                    <div className="fac-donut-legend">
+                      <div className="fac-legend-item">
+                        <span className="fac-legend-dot bg-green" />
+                        <span className="fac-legend-name">Present</span>
+                        <span className="fac-legend-pct">92%</span>
+                      </div>
+                      <div className="fac-legend-item">
+                        <span className="fac-legend-dot bg-yellow" />
+                        <span className="fac-legend-name">Absent</span>
+                        <span className="fac-legend-pct">6%</span>
+                      </div>
+                      <div className="fac-legend-item">
+                        <span className="fac-legend-dot bg-blue" />
+                        <span className="fac-legend-name">Leave</span>
+                        <span className="fac-legend-pct">2%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="fac-card-footer text-green">
+                    <TrendingUp size={14} /> +2% compared to last month
                   </div>
                 </div>
 
-                <div>
-                  {workQueueItems.map(item => (
-                    <div key={item.id} className="work-queue-item">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '280px' }}>
-                        <span className={`priority-pill priority-${item.priority.toLowerCase()}`}>
-                          {item.priority}
-                        </span>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>{item.title}</div>
-                          <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                            Course: <strong>{item.subjectCode}</strong> ({item.subjectName}) · {item.cohort} · Due: <span style={{ color: item.priority === 'CRITICAL' ? '#b91c1c' : '#d97706', fontWeight: 600 }}>{item.deadline}</span>
+                {/* Card 2: Academic Performance */}
+                <div className="fac-card fac-performance-card">
+                  <div className="fac-card-header">
+                    <div className="fac-card-title-wrap">
+                      <Layers size={18} className="fac-card-title-icon text-blue" />
+                      <h3 className="fac-card-title">Academic Performance</h3>
+                    </div>
+                    <div className="fac-card-controls">
+                      <select
+                        className="fac-card-select"
+                        value={academicPerfSemesterFilter}
+                        onChange={e => setAcademicPerfSemesterFilter(e.target.value)}
+                      >
+                        <option value="Current Semester">Current Semester</option>
+                        <option value="All Semesters">All Semesters</option>
+                        <option value="Autumn 2026">Autumn 2026</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="fac-line-chart-wrap" style={{ position: 'relative' }}>
+                    <div className="fac-cgpa-peak-badge">
+                      8.79 CGPA
+                    </div>
+                    <ResponsiveContainer width="100%" height={210}>
+                      <LineChart
+                        data={[
+                          { sem: 'Sem 1', score: 50, cgpa: '7.20' },
+                          { sem: 'Sem 2', score: 62, cgpa: '7.85' },
+                          { sem: 'Sem 3', score: 75, cgpa: '8.40' },
+                          { sem: 'Sem 4', score: 88, cgpa: '8.79' },
+                          { sem: 'Sem 5', score: 89, cgpa: '8.82' }
+                        ]}
+                        margin={{ top: 25, right: 20, left: -15, bottom: 0 }}
+                      >
+                        <CartesianGrid stroke="#f1f5f9" vertical={false} />
+                        <XAxis dataKey="sem" stroke="#94a3b8" fontSize={12} tickLine={false} />
+                        <YAxis stroke="#94a3b8" fontSize={11} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickLine={false} />
+                        <RechartsTooltip
+                          formatter={(value, name, item) => [`${item.payload.cgpa} CGPA (${value}% Avg)`, 'Performance']}
+                          contentStyle={{ background: '#0f172a', color: '#fff', borderRadius: '8px', border: 'none', fontSize: '0.8rem' }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="score"
+                          stroke="#2563eb"
+                          strokeWidth={3}
+                          dot={{ r: 4.5, fill: '#2563eb', stroke: '#ffffff', strokeWidth: 2 }}
+                          activeDot={{ r: 6.5, fill: '#1d4ed8', stroke: '#ffffff', strokeWidth: 2 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Row 5: Upcoming Events, Recent Activities, My Courses (3 Columns) */}
+              <div className="fac-trio-row">
+                {/* Col 1: Upcoming Events & Deadlines */}
+                <div className="fac-card">
+                  <div className="fac-card-header">
+                    <div className="fac-card-title-wrap">
+                      <CalendarDays size={18} className="fac-card-title-icon text-blue" />
+                      <h3 className="fac-card-title">Upcoming Events &amp; Deadlines</h3>
+                    </div>
+                    <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('timetable')}>
+                      View All →
+                    </button>
+                  </div>
+                  <div className="fac-timeline-list">
+                    <div className="fac-timeline-item">
+                      <div className="fac-timeline-date">
+                        <strong className="tl-day">28</strong>
+                        <span className="tl-mo">Oct</span>
+                      </div>
+                      <div className="fac-timeline-content">
+                        <div className="tl-title">Internal Test - Data Structures</div>
+                        <div className="tl-sub">10:00 AM - 12:00 PM</div>
+                      </div>
+                      <span className="fac-tag-badge tag-exam">Exam</span>
+                    </div>
+
+                    <div className="fac-timeline-item">
+                      <div className="fac-timeline-date">
+                        <strong className="tl-day">30</strong>
+                        <span className="tl-mo">Oct</span>
+                      </div>
+                      <div className="fac-timeline-content">
+                        <div className="tl-title">Assignment Submission (AI/ML)</div>
+                        <div className="tl-sub">11:59 PM</div>
+                      </div>
+                      <span className="fac-tag-badge tag-assignment">Assignment</span>
+                    </div>
+
+                    <div className="fac-timeline-item">
+                      <div className="fac-timeline-date">
+                        <strong className="tl-day">02</strong>
+                        <span className="tl-mo">Nov</span>
+                      </div>
+                      <div className="fac-timeline-content">
+                        <div className="tl-title">Department Seminar</div>
+                        <div className="tl-sub">10:00 AM</div>
+                      </div>
+                      <span className="fac-tag-badge tag-event">Event</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Col 2: Recent Activities */}
+                <div className="fac-card">
+                  <div className="fac-card-header">
+                    <div className="fac-card-title-wrap">
+                      <Clock size={18} className="fac-card-title-icon text-blue" />
+                      <h3 className="fac-card-title">Recent Activities</h3>
+                    </div>
+                    <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('notifications')}>
+                      View All →
+                    </button>
+                  </div>
+                  <div className="fac-activity-list">
+                    <div className="fac-activity-item">
+                      <div className="fac-act-icon-wrap bg-amber-soft">
+                        🏆
+                      </div>
+                      <div className="fac-act-info">
+                        <div className="fac-act-desc">Marks uploaded for CSE-3B</div>
+                      </div>
+                      <span className="fac-act-time">2 hours ago</span>
+                    </div>
+
+                    <div className="fac-activity-item">
+                      <div className="fac-act-icon-wrap bg-green-soft">
+                        <CheckCircle2 size={16} className="text-green" />
+                      </div>
+                      <div className="fac-act-info">
+                        <div className="fac-act-desc">Attendance marked for CSE-3A</div>
+                      </div>
+                      <span className="fac-act-time">3 hours ago</span>
+                    </div>
+
+                    <div className="fac-activity-item">
+                      <div className="fac-act-icon-wrap bg-red-soft">
+                        <Megaphone size={16} className="text-red" />
+                      </div>
+                      <div className="fac-act-info">
+                        <div className="fac-act-desc">New notice: College Fest 2025</div>
+                      </div>
+                      <span className="fac-act-time">4 hours ago</span>
+                    </div>
+
+                    <div className="fac-activity-item">
+                      <div className="fac-act-icon-wrap bg-green-soft">
+                        ₹
+                      </div>
+                      <div className="fac-act-info">
+                        <div className="fac-act-desc">Fee payment received (₹12,000)</div>
+                      </div>
+                      <span className="fac-act-time">5 hours ago</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Col 3: My Courses */}
+                <div className="fac-card">
+                  <div className="fac-card-header">
+                    <div className="fac-card-title-wrap">
+                      <BookOpen size={18} className="fac-card-title-icon text-blue" />
+                      <h3 className="fac-card-title">My Courses</h3>
+                    </div>
+                    <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('subjects')}>
+                      View All →
+                    </button>
+                  </div>
+                  <div className="fac-courses-grid">
+                    <div className="fac-course-pill-card">
+                      <div className="course-icon-badge text-blue bg-blue-soft">&lt; / &gt;</div>
+                      <div className="course-name-row">Data Structures</div>
+                      <div className="course-code-row">(CSE-301)</div>
+                      <div className="course-progress-bar">
+                        <div className="course-progress-fill bg-blue" style={{ width: '80%' }} />
+                      </div>
+                      <div className="course-pct-label">80%</div>
+                    </div>
+
+                    <div className="fac-course-pill-card">
+                      <div className="course-icon-badge text-purple bg-purple-soft">🧠</div>
+                      <div className="course-name-row">Machine Learning</div>
+                      <div className="course-code-row">(CSE-302)</div>
+                      <div className="course-progress-bar">
+                        <div className="course-progress-fill bg-purple" style={{ width: '68%' }} />
+                      </div>
+                      <div className="course-pct-label">68%</div>
+                    </div>
+
+                    <div className="fac-course-pill-card">
+                      <div className="course-icon-badge text-cyan bg-cyan-soft">🌐</div>
+                      <div className="course-name-row">Web Technologies</div>
+                      <div className="course-code-row">(CSE-303)</div>
+                      <div className="course-progress-bar">
+                        <div className="course-progress-fill bg-blue" style={{ width: '75%' }} />
+                      </div>
+                      <div className="course-pct-label">75%</div>
+                    </div>
+
+                    <div className="fac-course-pill-card">
+                      <div className="course-icon-badge text-indigo bg-indigo-soft">⚙️</div>
+                      <div className="course-name-row">Operating Systems</div>
+                      <div className="course-code-row">(CSE-304)</div>
+                      <div className="course-progress-bar">
+                        <div className="course-progress-fill bg-blue" style={{ width: '70%' }} />
+                      </div>
+                      <div className="course-pct-label">70%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Row 6: Schedule Table, Calendar, Holidays (3 Columns) */}
+              <div className="fac-bottom-trio-row">
+                {/* Col 1: Today's Teaching & Assessment Schedule (Table) */}
+                <div className="fac-card fac-schedule-table-card">
+                  <div className="fac-card-header">
+                    <div className="fac-card-title-wrap">
+                      <ClipboardCheck size={18} className="fac-card-title-icon text-blue" />
+                      <h3 className="fac-card-title">Today's Teaching &amp; Assessment Schedule</h3>
+                    </div>
+                    <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('timetable')}>
+                      View All →
+                    </button>
+                  </div>
+                  <div className="fac-table-responsive">
+                    <table className="fac-mini-schedule-table">
+                      <thead>
+                        <tr>
+                          <th>Time</th>
+                          <th>Subject</th>
+                          <th>Semester</th>
+                          <th>Section</th>
+                          <th>Room</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="time-cell">09:00 - 10:00</td>
+                          <td className="sub-cell">Data Structures</td>
+                          <td>3</td>
+                          <td>A</td>
+                          <td className="room-cell">Block A - 301</td>
+                          <td>
+                            <span className="fac-status-pill pill-completed">Completed</span>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="fac-action-outline-btn"
+                              onClick={() => { setSelectedSubject('Data Structures'); setActiveTab('subjects'); }}
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="time-cell highlight-cell">11:15 - 12:15</td>
+                          <td className="sub-cell">Operating Systems</td>
+                          <td>5</td>
+                          <td>B</td>
+                          <td className="room-cell">Block B - 204</td>
+                          <td>
+                            <span className="fac-status-pill pill-ongoing">Ongoing</span>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="fac-action-solid-btn"
+                              onClick={handleOpenAttendanceModal}
+                            >
+                              Take
+                            </button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="time-cell">02:00 - 03:00</td>
+                          <td className="sub-cell">Web Technologies</td>
+                          <td>3</td>
+                          <td>C</td>
+                          <td className="room-cell">Block A - 302</td>
+                          <td>
+                            <span className="fac-status-pill pill-upcoming">Upcoming</span>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="fac-action-outline-btn"
+                              onClick={() => { setSelectedSubject('Web Technologies'); setActiveTab('subjects'); }}
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Col 2: Academic Calendar */}
+                <div className="fac-card fac-calendar-card">
+                  <div className="fac-card-header">
+                    <div className="fac-card-title-wrap">
+                      <Calendar size={18} className="fac-card-title-icon text-blue" />
+                      <h3 className="fac-card-title">Academic Calendar</h3>
+                    </div>
+                    <div className="fac-cal-nav-buttons">
+                      <button type="button" onClick={() => updateMonth(-1)} aria-label="Previous month" className="cal-btn-arrow">
+                        <ChevronLeft size={14} />
+                      </button>
+                      <span className="cal-cur-month">{monthLabel}</span>
+                      <button type="button" onClick={() => updateMonth(1)} aria-label="Next month" className="cal-btn-arrow">
+                        <ChevronRight size={14} />
+                      </button>
+                      <button type="button" onClick={() => setCurrentDate(new Date())} className="cal-btn-today">
+                        Today
+                      </button>
+                    </div>
+                  </div>
+                  <div className="fac-calendar-widget">
+                    <div className="fac-cal-weekdays">
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                        <span key={d} className="cal-weekday-hdr">{d}</span>
+                      ))}
+                    </div>
+                    <div className="fac-cal-days-grid">
+                      {calendarDays.map(({ key, day, inMonth, isToday, isSunday }) => {
+                        const holidayName = holidayMap[key];
+                        const isExam = day === 10 && inMonth;
+                        const isSpecialEvent = day === 21 && inMonth;
+                        const isDeadline = day === 14 && inMonth;
+                        const isAccentDay = day === 7 && inMonth;
+                        const isPurpleDay = day === 26 && inMonth;
+
+                        let dayClass = 'fac-cal-day';
+                        if (!inMonth) dayClass += ' is-other-month';
+                        if (isToday || isAccentDay) dayClass += ' is-today-highlight';
+                        if (isExam) dayClass += ' is-exam-day';
+                        if (isDeadline) dayClass += ' is-deadline-day';
+                        if (isSpecialEvent) dayClass += ' is-event-day';
+                        if (isPurpleDay) dayClass += ' is-purple-day';
+
+                        return (
+                          <div key={key} className={dayClass} title={holidayName || undefined}>
+                            <span className="day-number">{day}</span>
                           </div>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <span className="admin-badge pending" style={{ fontSize: '0.7rem' }}>{item.status}</span>
-                          <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '2px' }}>{item.nextAction}</div>
-                        </div>
-                        <button
-                          type="button"
-                          className="admin-action-btn-primary"
-                          style={{ padding: '5px 10px', fontSize: '0.75rem' }}
-                          onClick={() => setActiveTab(item.linkTab)}
-                        >
-                          Execute Action →
-                        </button>
-                      </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                  {workQueueItems.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '0.85rem' }}>
-                      No tasks pending under the selected filter.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 6. Today's Detailed Teaching Schedule */}
-              <div className="admin-card" style={{ borderRadius: '16px', border: '1px solid var(--d-line)', boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)' }}>
-                <div className="admin-card-header">
-                  <div>
-                    <h3 className="admin-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Calendar size={17} color="#2563eb" /> Today's Teaching &amp; Assessment Schedule
-                    </h3>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                      Official timetable sessions for {account?.name || 'Dr. S. Mohanty'} (Autumn Semester 2026-27).
-                    </p>
                   </div>
-                  <span className="admin-badge approved">3 Scheduled Sessions</span>
                 </div>
 
-                <div className="today-schedule-grid">
-                  <div className="schedule-slot-card completed">
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>Period 1 (09:00 - 10:00 AM)</strong>
-                        <span className="admin-badge approved" style={{ fontSize: '0.68rem' }}>✓ Attendance Logged</span>
-                      </div>
-                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1e40af', marginTop: '4px' }}>
-                        CS501 · Data Structures (Theory)
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
-                        Room: Block B - 302 · Section A (30/32 Present · 93.8%)
-                      </div>
+                {/* Col 3: Holiday & Recess List */}
+                <div className="fac-card fac-holiday-card">
+                  <div className="fac-card-header">
+                    <div className="fac-card-title-wrap">
+                      <PartyPopper size={18} className="fac-card-title-icon text-blue" />
+                      <h3 className="fac-card-title">Holiday &amp; Recess List</h3>
                     </div>
-                    <div style={{ paddingTop: '8px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <small style={{ color: '#059669', fontWeight: 600 }}>Lecture Completed</small>
-                      <button className="admin-action-btn-secondary" style={{ padding: '3px 8px', fontSize: '0.72rem' }} onClick={handleOpenAttendanceModal}>
-                        Edit Session
-                      </button>
-                    </div>
+                    <button type="button" className="fac-view-all-link" onClick={() => setHolidayView(v => v === 'all' ? 'upcoming' : 'all')}>
+                      View All →
+                    </button>
                   </div>
+                  <div className="fac-holiday-list">
+                    <div className="fac-holiday-item">
+                      <div className="fac-hol-date">14 Oct 2025</div>
+                      <div className="fac-hol-info">
+                        <div className="hol-name">Makar Sankranti / Pongal</div>
+                        <div className="hol-sub">Holiday - All Departments</div>
+                      </div>
+                      <span className="fac-tag-badge tag-holiday">Holiday</span>
+                    </div>
 
-                  <div className="schedule-slot-card upcoming">
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>Period 3 (11:15 - 12:15 PM)</strong>
-                        <span className="admin-badge pending" style={{ fontSize: '0.68rem' }}>Next Session</span>
+                    <div className="fac-holiday-item">
+                      <div className="fac-hol-date">23 Dec 2025</div>
+                      <div className="fac-hol-info">
+                        <div className="hol-name">Winter Break</div>
+                        <div className="hol-sub">College Closed</div>
                       </div>
-                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1e40af', marginTop: '4px' }}>
-                        CS502 · Operating Systems (Theory)
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
-                        Room: Block B - 304 · Section A · Topic: Virtual Memory &amp; Inverted Page Tables
-                      </div>
+                      <span className="fac-tag-badge tag-recess">Recess</span>
                     </div>
-                    <div style={{ paddingTop: '8px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <small style={{ color: '#2563eb', fontWeight: 600 }}>Commencing at 11:15 AM</small>
-                      <button className="admin-action-btn-primary" style={{ padding: '3px 8px', fontSize: '0.72rem' }} onClick={handleOpenAttendanceModal}>
-                        <Calendar size={12} /> Mark Attendance
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="schedule-slot-card upcoming">
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>Period 5 &amp; 6 (02:00 - 04:00 PM)</strong>
-                        <span className="admin-badge pending" style={{ fontSize: '0.68rem' }}>Lab Practical</span>
+                    <div className="fac-holiday-item">
+                      <div className="fac-hol-date">26 Jan 2026</div>
+                      <div className="fac-hol-info">
+                        <div className="hol-name">Republic Day</div>
+                        <div className="hol-sub">National Holiday</div>
                       </div>
-                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1e40af', marginTop: '4px' }}>
-                        CS501 · Data Structures Lab (Practical)
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
-                        Venue: Computing Lab 3 · Section A (Batch A1: 16 Students) · Lab Work Assessment 4
-                      </div>
+                      <span className="fac-tag-badge tag-holiday">Holiday</span>
                     </div>
-                    <div style={{ paddingTop: '8px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <small style={{ color: '#475569' }}>Afternoon Practical Session</small>
-                      <button className="admin-action-btn-secondary" style={{ padding: '3px 8px', fontSize: '0.72rem' }} onClick={handleOpenAttendanceModal}>
-                        <Calendar size={12} /> Mark Attendance
-                      </button>
+
+                    <div className="fac-holiday-item">
+                      <div className="fac-hol-date">14 Mar 2026</div>
+                      <div className="fac-hol-info">
+                        <div className="hol-name">Holi</div>
+                        <div className="hol-sub">Festival Holiday</div>
+                      </div>
+                      <span className="fac-tag-badge tag-holiday">Holiday</span>
                     </div>
                   </div>
                 </div>
               </div>
-
-              {/* 7. My Assigned Subjects Section */}
-              <div className="admin-card" style={{ borderRadius: '16px', border: '1px solid var(--d-line)', boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)' }}>
-                <div className="admin-card-header">
-                  <div>
-                    <h3 className="admin-card-title">My Assigned Teaching Subjects</h3>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                      Official academic teaching assignments certified by Head of Department.
-                    </p>
-                  </div>
-                  <span className="admin-badge active">{currentAssignment.semester} - {currentAssignment.section}</span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
-                  {assignedSubjects.map(sub => (
-                    <div key={sub.code} className="faculty-subject-card">
-                      <div className="faculty-subject-card-header">
-                        <div>
-                          <span className="admin-badge active" style={{ marginBottom: '0.4rem' }}>{sub.code}</span>
-                          <h4 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>{sub.name}</h4>
-                          <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem' }}>{sub.cohort} · 4 Credits</div>
-                        </div>
-                        <span className={`admin-badge ${sub.completion === 100 ? 'approved' : 'pending'}`}>
-                          {sub.completion}% Entered
-                        </span>
-                      </div>
-
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.35rem' }}>
-                          <span>Cohort: 32 Enrolled (91 Course Total)</span>
-                          <span>{sub.pendingAssessments === 0 ? 'All Completed' : `${sub.pendingAssessments} Pending`}</span>
-                        </div>
-                        <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
-                          <div style={{ width: `${sub.completion}%`, height: '100%', background: sub.completion === 100 ? '#059669' : '#2563eb', borderRadius: '9999px' }} />
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9', flexWrap: 'wrap', gap: '8px' }}>
-                        <button
-                          type="button"
-                          className="admin-action-btn-secondary"
-                          style={{ padding: '0.4rem 0.75rem', fontSize: '0.78rem' }}
-                          onClick={() => setSelectedSubjectModal({ ...sub, activeTab: 'overview' })}
-                        >
-                          <BookOpen size={13} /> Course Details
-                        </button>
-                        <button
-                          className="admin-action-btn-primary"
-                          style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem' }}
-                          onClick={() => {
-                            setSelectedSubject(sub.name);
-                            setActiveTab('marks');
-                          }}
-                        >
-                          Manage Marks <ArrowRight size={13} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 8. Bottom Grid: Calendar & Holiday List Side-by-Side (Identical to Student Dashboard) */}
-              <div className="dash-grid-duo">
-                <section className="dash-card dash-calendar" id="calendar">
-                  <header className="dash-card-head">
-                    <h3><span className="dash-head-icon"><CalendarDays size={15} /></span>Academic Calendar</h3>
-                    <div className="dash-cal-controls">
-                      <button type="button" onClick={() => updateMonth(-1)} aria-label="Previous month"><ChevronLeft size={15} /></button>
-                      <strong>{monthLabel}</strong>
-                      <button type="button" onClick={() => updateMonth(1)} aria-label="Next month"><ChevronRight size={15} /></button>
-                    </div>
-                  </header>
-                  <div className="dash-cal-weekdays">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}</div>
-                  <div className="dash-cal-days">
-                    {calendarDays.map(({ key, day, inMonth, isToday, isSunday }) => {
-                      const holidayName = holidayMap[key];
-                      return (
-                        <span
-                          className={['dash-day', inMonth ? '' : 'is-outside', isToday ? 'is-today' : '', holidayName ? 'is-holiday' : '', isSunday ? 'is-sunday' : ''].join(' ')}
-                          title={holidayName || undefined}
-                          key={key}
-                        >{day}</span>
-                      );
-                    })}
-                  </div>
-                  <div className="dash-legend">
-                    <span><i className="lg-holiday" />Holiday</span>
-                    <span><i className="lg-sunday" />Sunday</span>
-                    <span><i className="lg-today" />Today</span>
-                  </div>
-                </section>
-
-                <section className="dash-card dash-holidays" id="holidays">
-                  <header className="dash-card-head">
-                    <h3><span className="dash-head-icon tone-amber"><PartyPopper size={15} /></span>Holiday &amp; Recess List</h3>
-                    <div className="dash-holiday-controls">
-                      <div className="dash-holiday-filter-pills">
-                        <button
-                          type="button"
-                          className={`dash-filter-pill ${holidayView === 'all' ? 'active' : ''}`}
-                          onClick={() => setHolidayView('all')}
-                        >
-                          All 2026 ({holidayItems.length})
-                        </button>
-                        <button
-                          type="button"
-                          className={`dash-filter-pill ${holidayView === 'upcoming' ? 'active' : ''}`}
-                          onClick={() => setHolidayView('upcoming')}
-                        >
-                          Upcoming ({holidayItems.filter((h) => h.daysLeft >= 0).length})
-                        </button>
-                      </div>
-                    </div>
-                  </header>
-                  <ul className="dash-holiday-list dash-holiday-scroll" aria-label="Government holidays 2026">
-                    {displayedHolidays.map((h) => (
-                      <li className={`dash-holiday ${h.daysLeft < 0 ? 'is-past' : ''} ${nextHoliday && nextHoliday.raw === h.raw ? 'is-next' : ''}`} key={h.raw}>
-                        <span className="dash-holiday-date">
-                          <strong>{h.date.getDate()}</strong>
-                          <small>{h.date.toLocaleString('en-IN', { month: 'short' })}</small>
-                        </span>
-                        <span className="dash-holiday-info">
-                          <strong>{h.name}</strong>
-                          <small>{h.date.toLocaleString('en-IN', { weekday: 'long' })} · {h.raw}</small>
-                        </span>
-                        <span className="dash-holiday-badge">
-                          {h.daysLeft < 0 ? 'Passed' : h.daysLeft === 0 ? 'Today' : h.daysLeft === 1 ? 'Tomorrow' : `in ${h.daysLeft}d`}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              </div>
-
-              {/* 9. Dashboard Footer */}
-              <footer className="dash-footer">
-                Apna Campus <span>·</span> Faculty academic management portal <span>·</span> {today.getFullYear()}
-              </footer>
             </div>
           )}
 
-          {/* TAB 2: MY SUBJECTS */}
+          {/* TAB: ASSIGNMENTS (ASSESSMENT GROUP) */}
+          {activeTab === 'assignments' && (
+            <div>
+              <div className="admin-view-header">
+                <div>
+                  <h2>Assignment Management &amp; Continuous Internal Evaluation (CIA)</h2>
+                  <p>Curricular coursework assignments, digital submissions, and CIA weightage grading for assigned cohorts.</p>
+                </div>
+                <button className="admin-action-btn-primary" onClick={() => triggerToast('✓ New coursework assignment drafted.')}>
+                  <Plus size={15} /> Post New Coursework Assignment
+                </button>
+              </div>
+
+              <div className="admin-card" style={{ borderRadius: '16px', border: '1px solid #e2e8f0', padding: '1.25rem', marginBottom: '1.5rem', background: '#ffffff' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                  <div style={{ padding: '1rem', background: '#eff6ff', borderRadius: '12px', border: '1px solid #bfdbfe' }}>
+                    <div style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: 700 }}>CS501 · Data Structures</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e3a8a', marginTop: '4px' }}>Assignment 1: Trees &amp; Graphs</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>Deadline: 20 Oct 2026 · Weight: 10 Marks</div>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <span className="admin-badge approved">30/32 Submitted</span>
+                      <span className="admin-badge active">28 Evaluated</span>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '1rem', background: '#f5f3ff', borderRadius: '12px', border: '1px solid #ddd6fe' }}>
+                    <div style={{ fontSize: '0.78rem', color: '#6d28d9', fontWeight: 700 }}>CS502 · Operating Systems</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#4c1d95', marginTop: '4px' }}>Assignment 2: Semaphore Synchronization</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>Deadline: 30 Oct 2026 · Weight: 10 Marks</div>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <span className="admin-badge pending">24/32 Submitted</span>
+                      <span className="admin-badge pending">Awaiting Grading</span>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '1rem', background: '#ecfdf5', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
+                    <div style={{ fontSize: '0.78rem', color: '#047857', fontWeight: 700 }}>CS503 · Machine Learning</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#064e3b', marginTop: '4px' }}>Assignment 1: Linear Regression &amp; Scikit</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>Deadline: 05 Nov 2026 · Weight: 10 Marks</div>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <span className="admin-badge active">Active Submission Window</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="admin-table-container">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Roll No.</th>
+                        <th>Student Name</th>
+                        <th>Course</th>
+                        <th>Assignment</th>
+                        <th>Submitted At</th>
+                        <th>Attachment</th>
+                        <th>Score (Max 10)</th>
+                        <th>Status</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scopedStudents.slice(0, 8).map((st, i) => (
+                        <tr key={st.rollNumber}>
+                          <td><strong>{st.rollNumber}</strong></td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{st.name}</div>
+                            <small style={{ color: '#64748b' }}>{st.department}</small>
+                          </td>
+                          <td>CS501</td>
+                          <td>Assignment 1 (Graph Algorithms)</td>
+                          <td>{i % 2 === 0 ? '19 Oct 2026, 04:30 PM' : '20 Oct 2026, 11:15 AM'}</td>
+                          <td>
+                            <span style={{ color: '#2563eb', fontSize: '0.76rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Download size={13} /> graph_sol_{st.rollNumber}.pdf
+                            </span>
+                          </td>
+                          <td><strong>{i % 3 === 0 ? '9.5' : i % 3 === 1 ? '8.0' : '9.0'} / 10</strong></td>
+                          <td>
+                            <span className="admin-badge approved">Evaluated</span>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              className="admin-action-btn-secondary"
+                              style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                              onClick={() => triggerToast(`Grading score confirmed for ${st.name}.`)}
+                            >
+                              Edit Score
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: LEAVE MANAGEMENT (PERSONAL GROUP) */}
+          {activeTab === 'leave-management' && (
+            <div>
+              <div className="admin-view-header">
+                <div>
+                  <h2>Faculty Academic &amp; Institutional Leave Management</h2>
+                  <p>Track leave quotas, view past applications, and submit official leave requests to Head of Department &amp; Dean.</p>
+                </div>
+                <button className="admin-action-btn-primary" onClick={() => setIsApplyLeaveModalOpen(true)}>
+                  <Plus size={15} /> Apply for Faculty Leave
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                <div className="admin-stat-card">
+                  <div className="admin-stat-icon" style={{ background: '#eff6ff', color: '#2563eb' }}>
+                    <CalendarDays size={24} />
+                  </div>
+                  <div>
+                    <div className="admin-stat-value">{facultyLeaveBalance.cl} / 12</div>
+                    <div className="admin-stat-label">Casual Leaves (CL) Available</div>
+                  </div>
+                </div>
+
+                <div className="admin-stat-card">
+                  <div className="admin-stat-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
+                    <ShieldCheck size={24} />
+                  </div>
+                  <div>
+                    <div className="admin-stat-value">{facultyLeaveBalance.el} / 20</div>
+                    <div className="admin-stat-label">Earned Leaves (EL) Available</div>
+                  </div>
+                </div>
+
+                <div className="admin-stat-card">
+                  <div className="admin-stat-icon" style={{ background: '#fef3c7', color: '#d97706' }}>
+                    <HeartHandshake size={24} />
+                  </div>
+                  <div>
+                    <div className="admin-stat-value">{facultyLeaveBalance.ml} / 10</div>
+                    <div className="admin-stat-label">Medical Leaves (ML) Available</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-card" style={{ borderRadius: '16px', border: '1px solid #e2e8f0', padding: '1.25rem', background: '#ffffff' }}>
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: '#0f172a' }}>My Recent Leave Applications</h3>
+                <div className="admin-table-container">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Application Ref</th>
+                        <th>Leave Type</th>
+                        <th>Dates</th>
+                        <th>Duration</th>
+                        <th>Reason</th>
+                        <th>Sanction Status</th>
+                        <th>Approving Authority</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {facultyLeavesList.map(fl => (
+                        <tr key={fl.id}>
+                          <td><strong>{fl.id}</strong></td>
+                          <td><span className="admin-badge active">{fl.type}</span></td>
+                          <td>{fl.from} — {fl.to}</td>
+                          <td><strong>{fl.days} Day(s)</strong></td>
+                          <td>{fl.reason}</td>
+                          <td><span className="admin-badge approved">{fl.status}</span></td>
+                          <td>{fl.approvedBy}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Apply Leave Modal */}
+              {isApplyLeaveModalOpen && (
+                <div className="admin-modal-backdrop" onClick={() => setIsApplyLeaveModalOpen(false)}>
+                  <div className="admin-modal-card" onClick={e => e.stopPropagation()}>
+                    <div className="admin-modal-header">
+                      <h3>Submit Faculty Leave Application</h3>
+                      <button className="admin-table-action-btn" onClick={() => setIsApplyLeaveModalOpen(false)}>
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <form onSubmit={e => {
+                      e.preventDefault();
+                      setFacultyLeavesList(prev => [
+                        {
+                          id: `FL-2026-${String(prev.length + 1).padStart(2, '0')}`,
+                          type: applyLeaveForm.type,
+                          from: applyLeaveForm.fromDate || 'Tomorrow',
+                          to: applyLeaveForm.toDate || 'Day after Tomorrow',
+                          days: 2,
+                          reason: applyLeaveForm.reason,
+                          status: 'Pending HOD Approval',
+                          approvedBy: 'Dr. P. K. Pattnaik (Pending)'
+                        },
+                        ...prev
+                      ]);
+                      setIsApplyLeaveModalOpen(false);
+                      triggerToast('✓ Leave application submitted successfully to HOD!');
+                    }}>
+                      <div className="admin-modal-body">
+                        <div className="admin-form-group">
+                          <label>Leave Category *</label>
+                          <select
+                            className="admin-form-select"
+                            value={applyLeaveForm.type}
+                            onChange={e => setApplyLeaveForm({ ...applyLeaveForm, type: e.target.value })}
+                            required
+                          >
+                            <option value="Casual Leave (CL)">Casual Leave (CL) — {facultyLeaveBalance.cl} Left</option>
+                            <option value="Earned Leave (EL)">Earned Leave (EL) — {facultyLeaveBalance.el} Left</option>
+                            <option value="Medical Leave (ML)">Medical Leave (ML) — {facultyLeaveBalance.ml} Left</option>
+                            <option value="Duty Leave (DL)">Duty Leave (DL) / Conference</option>
+                          </select>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                          <div className="admin-form-group">
+                            <label>From Date *</label>
+                            <input
+                              type="date"
+                              className="admin-form-input"
+                              value={applyLeaveForm.fromDate}
+                              onChange={e => setApplyLeaveForm({ ...applyLeaveForm, fromDate: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div className="admin-form-group">
+                            <label>To Date *</label>
+                            <input
+                              type="date"
+                              className="admin-form-input"
+                              value={applyLeaveForm.toDate}
+                              onChange={e => setApplyLeaveForm({ ...applyLeaveForm, toDate: e.target.value })}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="admin-form-group">
+                          <label>Class Substitution / Lecture Arrangement *</label>
+                          <input
+                            type="text"
+                            className="admin-form-input"
+                            value={applyLeaveForm.substituteFaculty}
+                            onChange={e => setApplyLeaveForm({ ...applyLeaveForm, substituteFaculty: e.target.value })}
+                            placeholder="Name of faculty colleague taking charge of your lectures"
+                            required
+                          />
+                        </div>
+
+                        <div className="admin-form-group">
+                          <label>Reason for Leave *</label>
+                          <textarea
+                            className="admin-form-input"
+                            rows={3}
+                            value={applyLeaveForm.reason}
+                            onChange={e => setApplyLeaveForm({ ...applyLeaveForm, reason: e.target.value })}
+                            placeholder="State reason for absence and academic contingency plan..."
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="admin-modal-footer">
+                        <button type="button" className="admin-action-btn-secondary" onClick={() => setIsApplyLeaveModalOpen(false)}>
+                          Cancel
+                        </button>
+                        <button type="submit" className="admin-action-btn-primary">
+                          Submit Application
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: SETTINGS (PERSONAL GROUP) */}
+          {activeTab === 'settings' && (
+            <div>
+              <div className="admin-view-header">
+                <div>
+                  <h2>Faculty Academic &amp; Profile Settings</h2>
+                  <p>Manage office location, consultation hours, syllabus pacing reminders, and communication channels.</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                <div className="admin-card" style={{ borderRadius: '16px', border: '1px solid #e2e8f0', padding: '1.5rem', background: '#ffffff' }}>
+                  <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: '#0f172a' }}>Office &amp; Consultation Hours</h3>
+                  <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                    <label>Faculty Cabin Location</label>
+                    <input type="text" className="admin-form-input" defaultValue="Block B · Room 312 (School of Computing)" />
+                  </div>
+                  <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                    <label>Weekly Student Consultation Hours</label>
+                    <input type="text" className="admin-form-input" defaultValue="Mon &amp; Thu: 03:00 PM - 05:00 PM" />
+                  </div>
+                  <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                    <label>Institutional Contact Number</label>
+                    <input type="text" className="admin-form-input" defaultValue="+91 94370 12844" />
+                  </div>
+                  <button className="admin-action-btn-primary" onClick={() => triggerToast('✓ Office details updated.')}>
+                    Save Office Details
+                  </button>
+                </div>
+
+                <div className="admin-card" style={{ borderRadius: '16px', border: '1px solid #e2e8f0', padding: '1.5rem', background: '#ffffff' }}>
+                  <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: '#0f172a' }}>Academic Notification Preferences</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                      <input type="checkbox" defaultChecked />
+                      <span>Send SMS / Email alerts when student attendance falls below 75%</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                      <input type="checkbox" defaultChecked />
+                      <span>Notify when autonomous exam datesheets or moderation notices are issued</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                      <input type="checkbox" defaultChecked />
+                      <span>Instant alerts for new student grievances routed to School of Computing</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                      <input type="checkbox" defaultChecked />
+                      <span>Enable dark mode theme synchronization across classroom projector devices</span>
+                    </label>
+                  </div>
+                  <button className="admin-action-btn-primary" style={{ marginTop: '1.25rem' }} onClick={() => triggerToast('✓ Notification preferences saved.')}>
+                    Update Preferences
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: HELP & SUPPORT (PERSONAL GROUP) */}
+          {activeTab === 'help-support' && (
+            <div>
+              <div className="admin-view-header">
+                <div>
+                  <h2>Faculty ERP Knowledge &amp; IT Helpdesk</h2>
+                  <p>Autonomous College Management System assistance, exam cell guidelines, and technical support.</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
+                <div className="admin-card" style={{ borderRadius: '16px', border: '1px solid #e2e8f0', padding: '1.25rem', background: '#ffffff' }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BookOpen size={18} color="#2563eb" /> Autonomous Exam Guidelines
+                  </h3>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5 }}>
+                    Download official university evaluation blueprints, CIA scaling criteria, and question paper submission protocol.
+                  </p>
+                  <button className="admin-action-btn-secondary" style={{ marginTop: '0.75rem' }} onClick={() => alert('Downloading Autonomous Faculty Manual PDF...')}>
+                    <Download size={14} /> Download Faculty Manual PDF
+                  </button>
+                </div>
+
+                <div className="admin-card" style={{ borderRadius: '16px', border: '1px solid #e2e8f0', padding: '1.25rem', background: '#ffffff' }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ShieldCheck size={18} color="#059669" /> Autonomous Examination Cell
+                  </h3>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5 }}>
+                    For marks moderation, gazette errors, and re-totaling queries, contact Controller of Examinations (COE).
+                  </p>
+                  <div style={{ fontSize: '0.8rem', color: '#0f172a', fontWeight: 600, marginTop: '0.5rem' }}>
+                    📞 Extension: 204 · Email: coe@apnacampus.edu.in
+                  </div>
+                </div>
+
+                <div className="admin-card" style={{ borderRadius: '16px', border: '1px solid #e2e8f0', padding: '1.25rem', background: '#ffffff' }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <HelpCircle size={18} color="#7c3aed" /> Campus IT Helpdesk
+                  </h3>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5 }}>
+                    Smart classroom projector issues, faculty WiFi authentication, or LMS access tickets.
+                  </p>
+                  <div style={{ fontSize: '0.8rem', color: '#0f172a', fontWeight: 600, marginTop: '0.5rem' }}>
+                    📞 Support Desk: +91 94370 00112 · it.support@apnacampus.edu.in
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'subjects' && (
             <div>
               <div className="admin-view-header">
@@ -3517,4 +4177,3 @@ export default function FacultyPortal({ account, onLogout }) {
   </>
   );
 }
-

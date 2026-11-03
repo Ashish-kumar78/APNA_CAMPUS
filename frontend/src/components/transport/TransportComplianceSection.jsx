@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   FileCheck2, ShieldAlert, ShieldCheck, AlertTriangle, Search, 
   Upload, Eye, Calendar, FileText, Check, X, RefreshCw 
 } from 'lucide-react';
-import { mockVehicleCompliance } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockVehicleCompliance } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportComplianceSection() {
-  const [data, setData] = useState(mockVehicleCompliance);
+  const [data, setData] = useState(() => transportStore.getCompliance() || mockVehicleCompliance);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [uploadModal, setUploadModal] = useState(false);

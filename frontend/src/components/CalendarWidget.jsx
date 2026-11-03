@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import {
+  getTodayIST,
   getCalendarNotes,
   createCalendarNote,
   updateCalendarNote,
@@ -22,20 +23,149 @@ import {
 
 // Official 2026 Holidays preserved exactly from existing calendar design
 const OFFICIAL_HOLIDAYS_2026 = [
-  ['26-01-2026', 'Republic Day'],
-  ['04-03-2026', 'Maha Shivratri'],
-  ['25-03-2026', 'Holi (Dolyatra)'],
-  ['14-04-2026', 'Maha Vishuba Sankranti / Odia New Year'],
-  ['15-08-2026', 'Independence Day'],
-  ['04-09-2026', 'Janmashtami'],
-  ['16-10-2026', 'Durga Puja (Maha Navami)'],
-  ['17-10-2026', 'Vijaya Dashami (Dussehra)'],
-  ['20-10-2026', 'Diwali / Kali Puja'],
-  ['24-11-2026', 'Guru Nanak Jayanti / Rahas Purnima'],
-  ['25-12-2026', 'Christmas Day'],
+  [
+    '14-01-2026',
+    'Makar Sankranti'
+  ],
+  [
+    '23-01-2026',
+    'Netaji Subas Bose Jayanti/ Saraswati Puja'
+  ],
+  [
+    '26-01-2026',
+    'Republic Day'
+  ],
+  [
+    '03-03-2026',
+    'Dola Purnami'
+  ],
+  [
+    '04-03-2026',
+    'Holi'
+  ],
+  [
+    '21-03-2026',
+    'Eid-Ul Fitar'
+  ],
+  [
+    '27-03-2026',
+    'Ram Navami'
+  ],
+  [
+    '01-04-2026',
+    'Utkal Divas'
+  ],
+  [
+    '03-04-2026',
+    'Good Friday'
+  ],
+  [
+    '14-04-2026',
+    'Maha Vishubha Sankranti'
+  ],
+  [
+    '16-05-2026',
+    'Sabitri Amavasya'
+  ],
+  [
+    '28-05-2026',
+    'Eid-Ul Zuha'
+  ],
+  [
+    '15-06-2026',
+    'Raja Sankrati'
+  ],
+  [
+    '26-06-2026',
+    'Muharram'
+  ],
+  [
+    '16-07-2026',
+    'Ratha Yatra'
+  ],
+  [
+    '15-08-2026',
+    'Independence Day'
+  ],
+  [
+    '26-08-2026',
+    'Prophet Muhammad Birthday'
+  ],
+  [
+    '27-08-2026',
+    'Jhulana Purnami'
+  ],
+  [
+    '04-09-2026',
+    'Janmastami'
+  ],
+  [
+    '14-09-2026',
+    'Ganesh Puja'
+  ],
+  [
+    '15-09-2026',
+    'Nuakhai'
+  ],
+  [
+    '16-09-2026',
+    'Day Following Nuakhai'
+  ],
+  [
+    '02-10-2026',
+    'Gandhi Jayanti'
+  ],
+  [
+    '10-10-2026',
+    'Mahalaya'
+  ],
+  [
+    '17-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '18-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '19-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '20-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '21-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '22-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '23-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '24-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '09-11-2026',
+    'Prathamastami'
+  ],
+  [
+    '24-11-2026',
+    'Rahasa Purnima'
+  ],
+  [
+    '25-12-2026',
+    'Christmas'
+  ]
 ];
 
-function createCalendarDays(month, today) {
+function createCalendarDays(month, todayDateStr) {
   const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
   const gridStart = new Date(firstDay);
   gridStart.setDate(firstDay.getDate() - firstDay.getDay());
@@ -48,24 +178,35 @@ function createCalendarDays(month, today) {
     const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
     const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
+    const isToday = dateStr === todayDateStr;
+    const isPast = dateStr < todayDateStr;
+    const isFuture = dateStr > todayDateStr;
+
     return {
       key,
       dateStr,
       dateObj: date,
       day: date.getDate(),
       inMonth: date.getMonth() === month.getMonth(),
-      isToday: date.toDateString() === today.toDateString(),
+      isToday,
+      isPast,
+      isFuture,
       isSunday: date.getDay() === 0,
     };
   });
 }
 
 export default function CalendarWidget({ account, className = '' }) {
-  // Calendar month state
-  const [currentMonth, setCurrentMonth] = useState(() => new Date(2026, 10, 1)); // Default November 2026 as per CMS reference
-  const [today] = useState(() => new Date(2026, 10, 2)); // Reference date Nov 2, 2026
+  // Current date in Indian Standard Time (Asia/Kolkata)
+  const [todayIST, setTodayIST] = useState(() => getTodayIST());
 
-  // User notes
+  // Dynamic calendar month (defaults to current IST month)
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const ist = getTodayIST();
+    return new Date(ist.year, ist.monthIndex, 1);
+  });
+
+  // User notes state
   const [userNotes, setUserNotes] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null); // When user clicks a date to view/add notes
   const [showAddModal, setShowAddModal] = useState(false);
@@ -77,6 +218,20 @@ export default function CalendarWidget({ account, className = '' }) {
   const [formDate, setFormDate] = useState('');
   const [formError, setFormError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Dynamic midnight update: checks every 30 seconds for IST midnight transition
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const nowIST = getTodayIST();
+      setTodayIST((prev) => {
+        if (prev.dateStr !== nowIST.dateStr) {
+          return nowIST;
+        }
+        return prev;
+      });
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Load user notes
   const loadNotes = useCallback(async () => {
@@ -129,8 +284,8 @@ export default function CalendarWidget({ account, className = '' }) {
   }, [userNotes]);
 
   const calendarDays = useMemo(
-    () => createCalendarDays(currentMonth, today),
-    [currentMonth, today]
+    () => createCalendarDays(currentMonth, todayIST.dateStr),
+    [currentMonth, todayIST.dateStr]
   );
 
   // Handle clicking a day cell
@@ -140,10 +295,15 @@ export default function CalendarWidget({ account, className = '' }) {
 
   // Open Add Note Modal
   const handleOpenAddNote = (dateStr) => {
+    const targetDate = dateStr || (selectedDay ? selectedDay.dateStr : todayIST.dateStr);
+    if (targetDate < todayIST.dateStr) {
+      alert('Note creation is disabled for past dates.');
+      return;
+    }
     setEditingNote(null);
     setFormTitle('');
     setFormDescription('');
-    setFormDate(dateStr || (selectedDay ? selectedDay.dateStr : ''));
+    setFormDate(targetDate);
     setFormError('');
     setShowAddModal(true);
   };
@@ -158,43 +318,60 @@ export default function CalendarWidget({ account, className = '' }) {
     setShowAddModal(true);
   };
 
-  // Save Note (Create or Edit)
+  /**
+   * Save Note (Create or Edit)
+   * Instant 0ms perceived latency:
+   * 1. Validates inputs & past date restriction
+   * 2. Optimistically updates cache & closes modal immediately
+   * 3. Syncs with backend in background
+   */
   const handleSaveNote = async (e) => {
     e.preventDefault();
-    if (!formTitle.trim()) {
+    const titleTrimmed = formTitle.trim();
+    const dateTrimmed = formDate.trim();
+
+    if (!titleTrimmed) {
       setFormError('Title is required');
       return;
     }
-    if (!formDate.trim()) {
+    if (!dateTrimmed) {
       setFormError('Scheduled date is required');
       return;
     }
+    if (dateTrimmed < todayIST.dateStr) {
+      setFormError(`Cannot schedule notes for past dates (Selected: ${dateTrimmed}, Today: ${todayIST.dateStr})`);
+      return;
+    }
 
+    // Capture editing info before closing modal
+    const editing = editingNote;
+    const descTrimmed = formDescription.trim();
+
+    // 0ms INSTANT MODAL CLOSE: Do not block user on network latency
+    setShowAddModal(false);
+    setFormTitle('');
+    setFormDescription('');
+    setFormError('');
+    setEditingNote(null);
+
+    // Save and sync in background
     try {
-      setIsSaving(true);
-      setFormError('');
-
-      if (editingNote) {
-        await updateCalendarNote(account, editingNote.id, {
-          title: formTitle,
-          description: formDescription,
-          scheduledDate: formDate,
+      if (editing) {
+        await updateCalendarNote(account, editing.id, {
+          title: titleTrimmed,
+          description: descTrimmed,
+          scheduledDate: dateTrimmed,
         });
       } else {
         await createCalendarNote(account, {
-          title: formTitle,
-          description: formDescription,
-          scheduledDate: formDate,
+          title: titleTrimmed,
+          description: descTrimmed,
+          scheduledDate: dateTrimmed,
         });
       }
-
       await loadNotes();
-      setShowAddModal(false);
-      setEditingNote(null);
     } catch (err) {
-      setFormError(err?.message || 'Failed to save note');
-    } finally {
-      setIsSaving(false);
+      console.warn('Calendar note save sync error:', err);
     }
   };
 
@@ -257,10 +434,12 @@ export default function CalendarWidget({ account, className = '' }) {
 
         <div className="dash-cal-days">
           {calendarDays.map((item) => {
-            const { key, dateStr, day, inMonth, isToday, isSunday } = item;
+            const { key, dateStr, day, inMonth, isToday, isPast, isSunday } = item;
             const holidayName = holidayMap[key];
             const dayNotes = notesByDate[dateStr] || [];
             const hasNotes = dayNotes.length > 0;
+            const hasPending = dayNotes.some((n) => n.status === 'PENDING');
+            const allCompleted = hasNotes && !hasPending;
             const isSelected = selectedDay && selectedDay.dateStr === dateStr;
 
             return (
@@ -277,6 +456,11 @@ export default function CalendarWidget({ account, className = '' }) {
                 style={{
                   cursor: 'pointer',
                   position: 'relative',
+                  ...(isPast && !isToday
+                    ? {
+                        opacity: inMonth ? 0.6 : 0.35,
+                      }
+                    : undefined),
                   ...(isToday
                     ? {
                         background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
@@ -296,13 +480,16 @@ export default function CalendarWidget({ account, className = '' }) {
                   holidayName
                     ? `${holidayName}${hasNotes ? ` • ${dayNotes.length} Note(s)` : ''}`
                     : hasNotes
-                    ? `${dayNotes.length} Note(s)`
+                    ? `${dayNotes.length} Note(s) (${hasPending ? 'Pending' : 'Completed'})`
                     : undefined
                 }
               >
                 {day}
 
-                {/* Subtle Visual Indicator for saved notes: Preserves all styling */}
+                {/* Status Indicator Dot:
+                    - Blue dot (#2563eb) for dates with one or more pending notes
+                    - Green dot (#16a34a) for dates where ALL notes are completed
+                    - White dot (#ffffff) when today is selected for optimal contrast */}
                 {hasNotes && (
                   <span
                     style={{
@@ -313,7 +500,11 @@ export default function CalendarWidget({ account, className = '' }) {
                       width: '5px',
                       height: '5px',
                       borderRadius: '50%',
-                      backgroundColor: isToday ? '#ffffff' : '#2563eb',
+                      backgroundColor: isToday
+                        ? '#ffffff'
+                        : hasPending
+                        ? '#2563eb'
+                        : '#16a34a',
                       boxShadow: isToday ? '0 1px 3px rgba(0,0,0,0.4)' : 'none',
                     }}
                   />
@@ -323,35 +514,58 @@ export default function CalendarWidget({ account, className = '' }) {
           })}
         </div>
 
-        {/* Preserved Legend with added Notes Indicator reference */}
+        {/* Preserved Legend with added Notes Status Indicators */}
         <div className="dash-legend" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '16px' }}>
+          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
             <span><i className="lg-holiday" style={{ backgroundColor: '#fdba74' }} />Holiday</span>
             <span><i className="lg-sunday" style={{ backgroundColor: '#fda4af' }} />Sunday</span>
             <span><i className="lg-today" style={{ backgroundColor: '#2563eb' }} />Today</span>
           </div>
 
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '11px',
-              color: '#475569',
-              fontWeight: 600,
-            }}
-          >
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <span
               style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                backgroundColor: '#2563eb',
-                display: 'inline-block',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '11px',
+                color: '#475569',
+                fontWeight: 600,
               }}
-            />
-            Has Notes
-          </span>
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: '#2563eb',
+                  display: 'inline-block',
+                }}
+              />
+              Pending
+            </span>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '11px',
+                color: '#475569',
+                fontWeight: 600,
+              }}
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: '#16a34a',
+                  display: 'inline-block',
+                }}
+              />
+              Completed
+            </span>
+          </div>
         </div>
       </section>
 
@@ -466,7 +680,9 @@ export default function CalendarWidget({ account, className = '' }) {
                     No notes scheduled for this date.
                   </p>
                   <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#94a3b8' }}>
-                    Click "+ Add Note" below to schedule your task or reminder.
+                    {selectedDay.isPast
+                      ? 'Past date: Note creation is disabled.'
+                      : 'Click "+ Add Note" below to schedule your task or reminder.'}
                   </p>
                 </div>
               ) : (
@@ -555,7 +771,7 @@ export default function CalendarWidget({ account, className = '' }) {
               )}
             </div>
 
-            {/* Modal Footer: "+ Add Note" Action */}
+            {/* Modal Footer: Close + Add Note (disabled for past dates) */}
             <div
               style={{
                 padding: '14px 22px',
@@ -583,39 +799,55 @@ export default function CalendarWidget({ account, className = '' }) {
                 Close
               </button>
 
-              <button
-                type="button"
-                onClick={() => handleOpenAddNote(selectedDay.dateStr)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 18px',
-                  backgroundColor: '#2563eb',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
-                }}
-              >
-                <Plus size={15} />
-                Add Note
-              </button>
+              {selectedDay.isPast ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    color: '#94a3b8',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  <Clock size={13} />
+                  <span>Past date: Note creation disabled</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleOpenAddNote(selectedDay.dateStr)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 18px',
+                    backgroundColor: '#2563eb',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
+                  }}
+                >
+                  <Plus size={15} />
+                  Add Note
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
 
       {/* ==========================================================
-          ADD / EDIT NOTE MODAL
+          ADD / EDIT NOTE MODAL (Exact design from Image 3)
           Strict Form Requirements:
           1. Title – Required input field
           2. Description – Text area
-          3. Selected Date – Auto-populated from clicked date
-          4. Submit / Save button
+          3. Selected Date – Auto-populated, min = todayIST
+          4. Instant 0ms Save
           ========================================================== */}
       {showAddModal && (
         <div
@@ -753,7 +985,7 @@ export default function CalendarWidget({ account, className = '' }) {
                 />
               </div>
 
-              {/* 3. Selected Date (Pre-populated) */}
+              {/* 3. Selected Date (Pre-populated, restricts past dates) */}
               <div style={{ marginBottom: '20px' }}>
                 <label
                   style={{
@@ -769,6 +1001,7 @@ export default function CalendarWidget({ account, className = '' }) {
                 <input
                   type="date"
                   required
+                  min={todayIST.dateStr}
                   value={formDate}
                   onChange={(e) => setFormDate(e.target.value)}
                   style={{
@@ -783,7 +1016,7 @@ export default function CalendarWidget({ account, className = '' }) {
                 />
               </div>
 
-              {/* 4. Save Button */}
+              {/* 4. Instant Save Actions */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button
                   type="button"
@@ -803,7 +1036,6 @@ export default function CalendarWidget({ account, className = '' }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSaving}
                   style={{
                     padding: '9px 20px',
                     backgroundColor: '#2563eb',
@@ -814,9 +1046,10 @@ export default function CalendarWidget({ account, className = '' }) {
                     fontWeight: 600,
                     cursor: 'pointer',
                     boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
+                    transition: 'all 0.15s',
                   }}
                 >
-                  {isSaving ? 'Saving...' : editingNote ? 'Update Note' : 'Save Note'}
+                  {editingNote ? 'Update Note' : 'Save Note'}
                 </button>
               </div>
             </form>
@@ -826,4 +1059,3 @@ export default function CalendarWidget({ account, className = '' }) {
     </>
   );
 }
-

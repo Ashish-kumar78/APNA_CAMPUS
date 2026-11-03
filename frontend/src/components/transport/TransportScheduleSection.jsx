@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   CalendarDays, Clock, Bus, MapPin, Users, Plus, 
   Search, Filter, CheckCircle2, Calendar, FileText, X 
 } from 'lucide-react';
-import { mockScheduleCalendar } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockScheduleCalendar } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportScheduleSection() {
-  const [data, setData] = useState(mockScheduleCalendar);
+  const [data, setData] = useState(() => transportStore.getSchedules() || mockScheduleCalendar);
   const [search, setSearch] = useState('');
   const [viewTab, setViewTab] = useState('all'); // 'all' | 'regular' | 'special'
   const [newEventModal, setNewEventModal] = useState(false);
@@ -34,7 +35,7 @@ export default function TransportScheduleSection() {
     });
   }, [data, search, viewTab]);
 
-  const handleAddSchedule = (e) => {
+  const handleAddSchedule = async (e) => {
     e.preventDefault();
     const newEntry = {
       id: `SCH-0${data.length + 1}`,

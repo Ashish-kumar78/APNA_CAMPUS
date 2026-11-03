@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   AlertOctagon, ShieldAlert, CheckCircle2, Clock, Search, 
   Filter, FileText, Plus, Eye, X, Lock, PhoneCall 
 } from 'lucide-react';
-import { mockAccidentIncidents } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockAccidentIncidents } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportAccidentsSection() {
-  const [data, setData] = useState(mockAccidentIncidents);
+  const [data, setData] = useState(() => transportStore.getAccidents() || mockAccidentIncidents);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedIncident, setSelectedIncident] = useState(null);
@@ -42,7 +43,7 @@ export default function TransportAccidentsSection() {
   const closedCount = data.filter(d => d.investigationStatus === 'Closed').length;
   const underInvestigationCount = data.filter(d => d.investigationStatus !== 'Closed').length;
 
-  const handleCreateIncident = (e) => {
+  const handleCreateIncident = async (e) => {
     e.preventDefault();
     const newEntry = {
       id: `INC-TRN-${Date.now().toString().slice(-3)}`,

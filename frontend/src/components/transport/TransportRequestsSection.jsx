@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   GitPullRequest, CheckCircle2, XCircle, Clock, Search, 
   Filter, FileText, Check, X, User, AlertCircle 
 } from 'lucide-react';
-import { mockTransportRequests } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockTransportRequests } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportRequestsSection() {
-  const [data, setData] = useState(mockTransportRequests);
+  const [data, setData] = useState(() => transportStore.getRequests() || mockTransportRequests);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');

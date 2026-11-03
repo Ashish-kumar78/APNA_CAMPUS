@@ -1100,6 +1100,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  updateTransportVehicle: (id, payload) =>
+    request(`/transport/fleet/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportVehicle: (id) =>
+    request(`/transport/fleet/${id}`, {
+      method: 'DELETE',
+    }),
   updateVehicleStatus: (id, status, notes) =>
     request(`/transport/fleet/${id}/status`, {
       method: 'PATCH',
@@ -1116,11 +1125,29 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  updateTransportDriver: (id, payload) =>
+    request(`/transport/drivers/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportDriver: (id) =>
+    request(`/transport/drivers/${id}`, {
+      method: 'DELETE',
+    }),
   getTransportRoutes: () => request('/transport/routes'),
   createTransportRoute: (payload) =>
     request('/transport/routes', {
       method: 'POST',
       body: JSON.stringify(payload),
+    }),
+  updateTransportRoute: (id, payload) =>
+    request(`/transport/routes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportRoute: (id) =>
+    request(`/transport/routes/${id}`, {
+      method: 'DELETE',
     }),
   updateRouteDisruption: (id, disruptionNotice) =>
     request(`/transport/routes/${id}/disruption`, {
@@ -1138,13 +1165,219 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ action, notes }),
     }),
+  deleteTransportPass: (id) =>
+    request(`/transport/passes/${id}`, {
+      method: 'DELETE',
+    }),
   getTransportTrips: () => request('/transport/trips'),
+  createTransportTrip: (payload) =>
+    request('/transport/trips', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   actionTransportTrip: (id, action, payload = {}) =>
     request(`/transport/trips/${id}/action`, {
       method: 'POST',
       body: JSON.stringify({ action, ...payload }),
     }),
   getTransportTelemetry: () => request('/transport/telemetry'),
+  updateTransportTelemetry: (vehicleNumber, payload) =>
+    request(`/transport/telemetry/${vehicleNumber}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  // Advanced Operations & Sections
+  getTransportBoarding: (date) =>
+    request(`/transport/boarding${date ? '?date=' + date : ''}`),
+  recordTransportBoarding: (payload) =>
+    request('/transport/boarding', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getTransportMaintenance: () => request('/transport/maintenance'),
+  createTransportMaintenance: (payload) =>
+    request('/transport/maintenance', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateTransportMaintenance: (id, payload) =>
+    request(`/transport/maintenance/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportMaintenance: (id) =>
+    request(`/transport/maintenance/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getTransportFuelLogs: () => request('/transport/fuel'),
+  createTransportFuelLog: (payload) =>
+    request('/transport/fuel', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateTransportFuelLog: (id, payload) =>
+    request(`/transport/fuel/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportFuelLog: (id) =>
+    request(`/transport/fuel/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getTransportFees: () => request('/transport/fees'),
+  createTransportFeeRecord: (payload) =>
+    request('/transport/fees', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateTransportFeeRecord: (id, payload) =>
+    request(`/transport/fees/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportFeeRecord: (id) =>
+    request(`/transport/fees/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getTransportCompliance: () => request('/transport/compliance'),
+  updateTransportCompliance: (busNumber, payload) =>
+    request(`/transport/compliance/${busNumber}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  getTransportComplaints: () => request('/transport/complaints'),
+  createTransportComplaint: (payload) =>
+    request('/transport/complaints', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateTransportComplaint: (id, payload) =>
+    request(`/transport/complaints/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportComplaint: (id) =>
+    request(`/transport/complaints/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getTransportAccidents: () => request('/transport/accidents'),
+  createTransportAccident: (payload) =>
+    request('/transport/accidents', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateTransportAccident: (id, payload) =>
+    request(`/transport/accidents/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportAccident: (id) =>
+    request(`/transport/accidents/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getTransportParking: () => request('/transport/parking'),
+  createTransportParking: (payload) =>
+    request('/transport/parking', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateTransportParking: (id, payload) =>
+    request(`/transport/parking/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportParking: (id) =>
+    request(`/transport/parking/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getTransportStaffAttendance: (date) =>
+    request(`/transport/staff-attendance${date ? '?date=' + date : ''}`),
+  recordTransportStaffAttendance: (payload) =>
+    request('/transport/staff-attendance', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getTransportNotifications: () => request('/transport/notifications'),
+  createTransportNotification: (payload) =>
+    request('/transport/notifications', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportNotification: (id) =>
+    request(`/transport/notifications/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getTransportRequests: () => request('/transport/requests'),
+  createTransportRequest: (payload) =>
+    request('/transport/requests', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  decideTransportRequest: (id, payload) =>
+    request(`/transport/requests/${id}/decision`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportRequest: (id) =>
+    request(`/transport/requests/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getTransportSafetyInspections: () => request('/transport/safety-inspections'),
+  createTransportSafetyInspection: (payload) =>
+    request('/transport/safety-inspections', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getTransportSchedules: () => request('/transport/schedules'),
+  createTransportSchedule: (payload) =>
+    request('/transport/schedules', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getTransportInventory: () => request('/transport/inventory'),
+  createTransportInventory: (payload) =>
+    request('/transport/inventory', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateTransportInventory: (id, payload) =>
+    request(`/transport/inventory/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteTransportInventory: (id) =>
+    request(`/transport/inventory/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getTransportPolicies: () => request('/transport/policies'),
+  updateTransportPolicies: (payload) =>
+    request('/transport/policies', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getTransportPermissions: (role) =>
+    request(`/transport/permissions${role ? '?role=' + role : ''}`),
+  updateTransportPermission: (payload) =>
+    request('/transport/permissions', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
 
   // 19. Training & Placement Cell Operations
   getPlacementDashboardStats: () => request('/placement/dashboard-stats'),

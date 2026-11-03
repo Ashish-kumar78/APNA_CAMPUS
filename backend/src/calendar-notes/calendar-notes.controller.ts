@@ -17,7 +17,7 @@ import { CalendarNotesService } from './calendar-notes.service';
 import { CreateCalendarNoteDto, UpdateCalendarNoteDto } from './calendar-notes.dto';
 
 @ApiTags('Calendar Notes & Mandatory Reminders')
-@Controller('calendar-notes')
+@Controller(['calendar-notes', 'calendar/notes', 'calendar'])
 export class CalendarNotesController {
   constructor(private readonly calendarNotesService: CalendarNotesService) {}
 
@@ -58,7 +58,8 @@ export class CalendarNotesController {
   /**
    * 2. Get pending mandatory reminders for CMS login / dashboard open
    */
-  @Get('pending-reminders')
+
+    @Get(['pending-reminders', 'reminders/pending'])
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get pending reminders for today and overdue dates' })
@@ -71,6 +72,20 @@ export class CalendarNotesController {
     const user = this.extractUser(currentUser, req);
     const reminders = await this.calendarNotesService.getPendingReminders(user, currentDate);
     return { success: true, reminders };
+  }
+
+@Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get calendar note by ID' })
+  async getNoteById(
+    @CurrentUser() currentUser: any,
+    @Req() req: any,
+    @Param('id') id: string,
+  ) {
+    const user = this.extractUser(currentUser, req);
+    const note = await this.calendarNotesService.getNoteById(user, id);
+    return { success: true, note };
   }
 
   /**
@@ -111,7 +126,7 @@ export class CalendarNotesController {
   /**
    * 5. Submit note (mark as Completed, permanently clearing from pending reminders)
    */
-  @Patch(':id/submit')
+  @Patch([':id/submit', ':id/complete'])
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Submit a reminder as completed' })

@@ -72,35 +72,146 @@ import { getGreetingDisplayName } from '../utils/timeGreeting.js';
 
 // Official Institutional Gazetted Holidays 2026 (Matching Student & Role Dashboards)
 const OFFICIAL_HOLIDAYS_2026 = [
-  ['14-01-2026', 'Makar Sankranti / Pongal'],
-  ['23-01-2026', 'Netaji Jayanti / Veer Surendra Sai Jayanti'],
-  ['26-01-2026', 'Republic Day'],
-  ['15-02-2026', 'Maha Shivratri'],
-  ['04-03-2026', 'Dola Purnima / Holi Eve'],
-  ['05-03-2026', 'Holi Festival'],
-  ['20-03-2026', 'Id-ul-Fitr (Ramzan Id)'],
-  ['27-03-2026', 'Sri Ram Navami'],
-  ['01-04-2026', 'Utkal Divas (Odisha Day)'],
-  ['03-04-2026', 'Good Friday'],
-  ['14-04-2026', 'Dr. B.R. Ambedkar Jayanti / Maha Vishuba Sankranti'],
-  ['01-05-2026', 'May Day (International Workers\' Day)'],
-  ['27-05-2026', 'Bakrid / Eid-ul-Adha'],
-  ['16-07-2026', 'Rath Yatra (Car Festival)'],
-  ['24-07-2026', 'Bahuda Yatra'],
-  ['26-07-2026', 'Muharram'],
-  ['15-08-2026', 'Independence Day'],
-  ['04-09-2026', 'Sri Krishna Janmashtami'],
-  ['14-09-2026', 'Ganesh Chaturthi / Vinayaka Puja'],
-  ['16-09-2026', 'Nuakhai (Western Odisha Festival)'],
-  ['02-10-2026', 'Mahatma Gandhi Jayanti'],
-  ['10-10-2026', 'Mahalaya'],
-  ['14-10-2026', 'Durga Puja (Maha Saptami)'],
-  ['15-10-2026', 'Durga Puja (Maha Ashtami)'],
-  ['16-10-2026', 'Durga Puja (Maha Navami)'],
-  ['17-10-2026', 'Vijaya Dashami (Dussehra)'],
-  ['20-10-2026', 'Diwali / Kali Puja'],
-  ['24-11-2026', 'Guru Nanak Jayanti / Rahas Purnima'],
-  ['25-12-2026', 'Christmas Day'],
+  [
+    '14-01-2026',
+    'Makar Sankranti'
+  ],
+  [
+    '23-01-2026',
+    'Netaji Subas Bose Jayanti/ Saraswati Puja'
+  ],
+  [
+    '26-01-2026',
+    'Republic Day'
+  ],
+  [
+    '03-03-2026',
+    'Dola Purnami'
+  ],
+  [
+    '04-03-2026',
+    'Holi'
+  ],
+  [
+    '21-03-2026',
+    'Eid-Ul Fitar'
+  ],
+  [
+    '27-03-2026',
+    'Ram Navami'
+  ],
+  [
+    '01-04-2026',
+    'Utkal Divas'
+  ],
+  [
+    '03-04-2026',
+    'Good Friday'
+  ],
+  [
+    '14-04-2026',
+    'Maha Vishubha Sankranti'
+  ],
+  [
+    '16-05-2026',
+    'Sabitri Amavasya'
+  ],
+  [
+    '28-05-2026',
+    'Eid-Ul Zuha'
+  ],
+  [
+    '15-06-2026',
+    'Raja Sankrati'
+  ],
+  [
+    '26-06-2026',
+    'Muharram'
+  ],
+  [
+    '16-07-2026',
+    'Ratha Yatra'
+  ],
+  [
+    '15-08-2026',
+    'Independence Day'
+  ],
+  [
+    '26-08-2026',
+    'Prophet Muhammad Birthday'
+  ],
+  [
+    '27-08-2026',
+    'Jhulana Purnami'
+  ],
+  [
+    '04-09-2026',
+    'Janmastami'
+  ],
+  [
+    '14-09-2026',
+    'Ganesh Puja'
+  ],
+  [
+    '15-09-2026',
+    'Nuakhai'
+  ],
+  [
+    '16-09-2026',
+    'Day Following Nuakhai'
+  ],
+  [
+    '02-10-2026',
+    'Gandhi Jayanti'
+  ],
+  [
+    '10-10-2026',
+    'Mahalaya'
+  ],
+  [
+    '17-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '18-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '19-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '20-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '21-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '22-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '23-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '24-10-2026',
+    'Durga Puja Holidays'
+  ],
+  [
+    '09-11-2026',
+    'Prathamastami'
+  ],
+  [
+    '24-11-2026',
+    'Rahasa Purnima'
+  ],
+  [
+    '25-12-2026',
+    'Christmas'
+  ]
 ];
 
 function createCalendarDays(month, today) {

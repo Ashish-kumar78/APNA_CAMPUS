@@ -4,6 +4,7 @@ import { AppLayout } from './Navigation';
 import {
   ShieldAlert,
   Users,
+  Bus,
   Settings,
   History,
   Database,
@@ -53,6 +54,7 @@ import {
 import { api } from '../services/api.js';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
+import TransportManagementModule from './transport/TransportManagementModule.jsx';
 import './SuperAdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
@@ -873,6 +875,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
       items: [
         { label: 'User Management', icon: Users, id: 'users' },
         { label: 'RBAC & Permissions', icon: KeyRound, id: 'rbac' },
+        { label: 'Transport Management', icon: Bus, id: 'transport-management' },
         { label: 'Audit Trail', icon: History, id: 'audit' },
         { label: 'Pending Approvals', icon: FileCheck, id: 'approvals' },
       ]
@@ -898,6 +901,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
       sessions: { title: 'Active Sessions', subtitle: 'Live session monitoring and termination control' },
       users: { title: 'User Management', subtitle: 'Account provisioning, roles, and access control' },
       rbac: { title: 'RBAC & Permissions', subtitle: 'Role-based access control and policy management' },
+      'transport-management': { title: 'Transport Management System', subtitle: 'Universal fleet logistics, compliance certificates, and RBAC policy governance' },
       audit: { title: 'Audit Trail', subtitle: 'Comprehensive enterprise audit and compliance log' },
       approvals: { title: 'Pending Approvals', subtitle: 'Cross-portal escalated approval queue' },
       integrations: { title: 'Integrations', subtitle: 'Third-party API and service connectivity management' },

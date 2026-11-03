@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Fuel, DollarSign, Calendar, Search, Filter, Plus, 
   Receipt, CheckCircle, Clock, FileText, X, AlertCircle 
 } from 'lucide-react';
-import { mockFuelExpenses } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockFuelExpenses } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportFuelSection() {
-  const [data, setData] = useState(mockFuelExpenses);
+  const [data, setData] = useState(() => transportStore.getFuelLogs() || mockFuelExpenses);
   const [search, setSearch] = useState('');
   const [busFilter, setBusFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -43,7 +44,7 @@ export default function TransportFuelSection() {
   const approvedCount = data.filter(d => d.status === 'Approved').length;
   const pendingCount = data.filter(d => d.status === 'Pending Audit').length;
 
-  const handleAddFuel = (e) => {
+  const handleAddFuel = async (e) => {
     e.preventDefault();
     const qty = parseFloat(formQty) || 0;
     const rate = parseFloat(formRate) || 0;

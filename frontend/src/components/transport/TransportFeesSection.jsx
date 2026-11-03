@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   CreditCard, DollarSign, CheckCircle2, Clock, AlertTriangle, 
   Search, Filter, Receipt, FileText, X, Check, ArrowUpRight 
 } from 'lucide-react';
-import { mockTransportFees } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockTransportFees } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportFeesSection() {
-  const [data, setData] = useState(mockTransportFees);
+  const [data, setData] = useState(() => transportStore.getFees() || mockTransportFees);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedReceipt, setSelectedReceipt] = useState(null);

@@ -1,5 +1,6 @@
 import { hydrateUserPreferences } from './services/userPreferencesStore.js';
-import CalendarReminderModal from './components/CalendarReminderModal.jsx';
+import CalendarReminderModal, { clearSessionDismissal } from './components/CalendarReminderModal.jsx';
+import { resolveUserId } from './services/calendarNotesStore.js';
 import { useState, useEffect } from 'react'
 import {
   ArrowRight,
@@ -554,7 +555,8 @@ function App() {
     try {
       const res = await api.login(identifier, password)
       if (res && res.success && res.user) {
-        setAccount(res.user)
+        clearSessionDismissal(resolveUserId(res.user));
+        setAccount(res.user);
         return
       } else {
         setError(res?.message || 'We could not verify those sign-in details. Please check your College ID and password.')
@@ -575,7 +577,8 @@ function App() {
       if (fallbackAcc) {
         if (password === 'gift123' || !password || import.meta.env.DEV || apiErr?.message?.includes('database') || apiErr?.message?.includes('findFirst')) {
           console.warn('Logging in via resilient demo account:', fallbackAcc.identity || fallbackAcc.name)
-          setAccount(fallbackAcc)
+          clearSessionDismissal(resolveUserId(fallbackAcc));
+          setAccount(fallbackAcc);
           try {
             localStorage.setItem('collegeflow_user', JSON.stringify(fallbackAcc))
             localStorage.setItem('collegeflow_token', 'demo-resilient-token-' + Date.now())
@@ -647,7 +650,8 @@ function App() {
       )
 
     if (acc) {
-      setAccount(acc)
+      clearSessionDismissal(resolveUserId(acc));
+      setAccount(acc);
       try {
         localStorage.setItem('collegeflow_user', JSON.stringify(acc))
         localStorage.setItem('collegeflow_token', 'demo-resilient-token-' + Date.now())
@@ -659,7 +663,8 @@ function App() {
   }
 
   function handleLogout() {
-    api.logout()
+    if (account) clearSessionDismissal(resolveUserId(account));
+    api.logout();
     clearUrlHash()
     try {
       localStorage.removeItem('apna_sidebar_open')

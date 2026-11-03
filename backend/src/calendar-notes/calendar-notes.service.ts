@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCalendarNoteDto, UpdateCalendarNoteDto } from './calendar-notes.dto';
 import * as fs from 'fs';
@@ -26,7 +26,8 @@ export class CalendarNotesService {
   private dataFilePath: string;
 
   constructor(private readonly prisma: PrismaService) {
-    this.dataFilePath = path.resolve(process.cwd(), 'backend', 'data', 'calendar_notes_store.json');
+    const rootDir = process.cwd().endsWith('backend') ? process.cwd() : path.join(process.cwd(), 'backend');
+    this.dataFilePath = path.resolve(rootDir, 'data', 'calendar_notes_store.json');
     this.loadFallbackStore();
   }
 
@@ -64,6 +65,16 @@ export class CalendarNotesService {
   /**
    * Resolves standard user identifier from User object or headers
    */
+  getTodayIST(): string {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    return formatter.format(new Date());
+  }
+
   resolveUserId(user: any): string {
     if (!user) return 'anonymous-user';
     return String(user.id || user.identifier || user.email || user.role || 'user').trim().toLowerCase();
@@ -72,7 +83,37 @@ export class CalendarNotesService {
   /**
    * 1. Get notes for authenticated user, with optional date or month filtering
    */
-  async getNotes(user: any, filterDate?: string, filterMonth?: string): Promise<CalendarNoteRecord[]> {
+  /**
+   * Get single calendar note by ID with ownership verification
+   */
+  async getNoteById(user: any, id: string): Promise<CalendarNoteRecord> {
+    const userId = this.resolveUserId(user);
+    try {
+      const row = await (this.prisma as any).calendarNote.findUnique({ where: { id } });
+      if (row) {
+        if (row.userId !== userId && user?.role !== 'SUPER_ADMIN' && user?.role !== 'super_admin') {
+          throw new ForbiddenException('Access to this private calendar note is denied.');
+        }
+        return {
+          ...row,
+          completedAt: row.completedAt ? row.completedAt.toISOString() : null,
+          createdAt: row.createdAt ? row.createdAt.toISOString() : new Date().toISOString(),
+          updatedAt: row.updatedAt ? row.updatedAt.toISOString() : new Date().toISOString(),
+        };
+      }
+    } catch (e) {
+      if (e instanceof ForbiddenException) throw e;
+    }
+
+    const mem = this.memoryStore.get(id);
+    if (!mem) throw new NotFoundException(`Calendar note ${id} not found.`);
+    if (mem.userId !== userId && user?.role !== 'SUPER_ADMIN' && user?.role !== 'super_admin') {
+      throw new ForbiddenException('Access to this private calendar note is denied.');
+    }
+    return mem;
+  }
+
+    async getNotes(user: any, filterDate?: string, filterMonth?: string): Promise<CalendarNoteRecord[]> {
     const userId = this.resolveUserId(user);
 
     try {
@@ -126,7 +167,7 @@ export class CalendarNotesService {
    */
   async getPendingReminders(user: any, currentDateStr?: string): Promise<CalendarNoteRecord[]> {
     const userId = this.resolveUserId(user);
-    const todayStr = currentDateStr || new Date().toISOString().split('T')[0];
+    const todayStr = currentDateStr || this.getTodayIST();
 
     try {
       const rows = await (this.prisma as any).calendarNote.findMany({
@@ -162,6 +203,10 @@ export class CalendarNotesService {
    */
   async createNote(user: any, dto: CreateCalendarNoteDto): Promise<CalendarNoteRecord> {
     const userId = this.resolveUserId(user);
+    const todayIST = this.getTodayIST();
+    if (dto.scheduledDate < todayIST) {
+      throw new BadRequestException(`Cannot create notes for past dates (Scheduled: , Current IST: )`);
+    }
     const id = `cn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const nowIso = new Date().toISOString();
 
@@ -227,6 +272,13 @@ export class CalendarNotesService {
     // STRICT OWNERSHIP CHECK: Users can only edit their own notes
     if (existing.userId !== userId) {
       throw new ForbiddenException('Access denied: You cannot edit notes belonging to another user');
+    }
+
+    if (dto.scheduledDate) {
+      const todayIST = this.getTodayIST();
+      if (dto.scheduledDate < todayIST) {
+        throw new BadRequestException(`Cannot update note to a past date (Scheduled: , Current IST: )`);
+      }
     }
 
     const updatedData: Partial<CalendarNoteRecord> = {

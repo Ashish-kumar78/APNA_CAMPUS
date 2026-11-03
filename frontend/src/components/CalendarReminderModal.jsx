@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   BellRing,
   Calendar,
@@ -11,26 +11,78 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import {
+  getTodayIST,
   getPendingCalendarReminders,
   submitCalendarNote,
   subscribeToCalendarNotes,
+  resolveUserId,
 } from '../services/calendarNotesStore.js';
+
+// In-memory fallback set for session dismissal tracking
+const memorySessionDismissed = new Set();
+
+function getSessionDismissKey(userId) {
+  return `apna_calendar_dismissed_${userId}`;
+}
+
+export function isSessionDismissed(userId) {
+  if (!userId) return false;
+  if (memorySessionDismissed.has(userId)) return true;
+  if (typeof sessionStorage !== 'undefined') {
+    try {
+      return sessionStorage.getItem(getSessionDismissKey(userId)) === 'true';
+    } catch (e) {
+      return false;
+    }
+  }
+  return false;
+}
+
+export function setSessionDismissed(userId) {
+  if (!userId) return;
+  memorySessionDismissed.add(userId);
+  if (typeof sessionStorage !== 'undefined') {
+    try {
+      sessionStorage.setItem(getSessionDismissKey(userId), 'true');
+    } catch (e) {}
+  }
+}
+
+export function clearSessionDismissal(userId) {
+  if (!userId) return;
+  memorySessionDismissed.delete(userId);
+  if (typeof sessionStorage !== 'undefined') {
+    try {
+      sessionStorage.removeItem(getSessionDismissKey(userId));
+    } catch (e) {}
+  }
+}
 
 export default function CalendarReminderModal({ account }) {
   const [pendingReminders, setPendingReminders] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [submittingId, setSubmittingId] = useState(null);
-  const [isDismissedForSession, setIsDismissedForSession] = useState(false);
 
-  // Today's date string YYYY-MM-DD
-  const getTodayStr = () => {
-    const d = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  };
+  const prevUserIdRef = useRef(null);
+
+  // Today's date string YYYY-MM-DD in Asia/Kolkata (IST) timezone
+  const getTodayStr = () => getTodayIST().dateStr;
 
   const loadReminders = useCallback(async () => {
-    if (!account || isDismissedForSession) return;
+    if (!account) {
+      setIsOpen(false);
+      setPendingReminders([]);
+      return;
+    }
+
+    const userId = resolveUserId(account);
+
+    // If already dismissed for this login session, do NOT show
+    if (isSessionDismissed(userId)) {
+      setIsOpen(false);
+      return;
+    }
+
     try {
       const todayStr = getTodayStr();
       const list = await getPendingCalendarReminders(account, todayStr);
@@ -44,15 +96,35 @@ export default function CalendarReminderModal({ account }) {
     } catch (e) {
       console.warn('Failed to load pending reminders:', e);
     }
-  }, [account, isDismissedForSession]);
+  }, [account]);
 
+  // Handle fresh login / account changes
   useEffect(() => {
-    // When account changes (e.g. login or role switch), reset session dismissal and load
-    setIsDismissedForSession(false);
-    loadReminders();
+    if (!account) {
+      prevUserIdRef.current = null;
+      setIsOpen(false);
+      return;
+    }
 
+    const currentUserId = resolveUserId(account);
+
+    // If new login (different user or transition from null -> user), reset dismissal for this session
+    if (prevUserIdRef.current !== currentUserId) {
+      clearSessionDismissal(currentUserId);
+      prevUserIdRef.current = currentUserId;
+    }
+
+    loadReminders();
+  }, [account?.id, account?.email, account?.role, loadReminders]);
+
+  // Subscribe to calendar updates; reload only if not dismissed for this session
+  useEffect(() => {
     const unsubscribe = subscribeToCalendarNotes(() => {
-      loadReminders();
+      if (!account) return;
+      const userId = resolveUserId(account);
+      if (!isSessionDismissed(userId)) {
+        loadReminders();
+      }
     });
     return () => unsubscribe();
   }, [account, loadReminders]);
@@ -80,13 +152,20 @@ export default function CalendarReminderModal({ account }) {
 
   const todayStr = getTodayStr();
 
-  // Option 1: CLOSE (Dismisses reminder temporarily for this session, retains PENDING status for next login)
+  // Option 1: CLOSE (Review Later)
+  // Dismisses modal for the CURRENT logged-in session.
+  // Will NOT show again immediately or while navigating.
+  // Reappears upon next login if tasks are still uncompleted.
   const handleClose = () => {
-    setIsDismissedForSession(true);
+    if (account) {
+      const userId = resolveUserId(account);
+      setSessionDismissed(userId);
+    }
     setIsOpen(false);
   };
 
-  // Option 2: SUBMIT (Marks this specific note as COMPLETED, clears it permanently from login popup)
+  // Option 2: SUBMIT (Marks this specific task as COMPLETED)
+  // Permanently dismisses this task; will never appear again on future logins.
   const handleSubmitNote = async (noteId) => {
     try {
       setSubmittingId(noteId);
@@ -149,7 +228,7 @@ export default function CalendarReminderModal({ account }) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Header - Matches image design */}
         <div
           style={{
             padding: '20px 24px',
@@ -234,7 +313,7 @@ export default function CalendarReminderModal({ account }) {
             gap: '14px',
           }}
         >
-          {pendingReminders.map((note, index) => {
+          {pendingReminders.map((note) => {
             const isOverdue = note.scheduledDate < todayStr;
             const isToday = note.scheduledDate === todayStr;
 
@@ -269,7 +348,7 @@ export default function CalendarReminderModal({ account }) {
                           border: isOverdue ? '1px solid #fca5a5' : '1px solid #93c5fd',
                         }}
                       >
-                        {isOverdue ? 'Overdue (Pending)' : isToday ? "Today's Task" : 'Pending'}
+                        {isOverdue ? 'OVERDUE (PENDING)' : isToday ? 'DUE TODAY (PENDING)' : 'PENDING'}
                       </span>
 
                       <span
@@ -328,7 +407,7 @@ export default function CalendarReminderModal({ account }) {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      padding: '9px 16px',
+                      padding: '9px 18px',
                       backgroundColor: '#10b981',
                       color: '#ffffff',
                       border: 'none',
@@ -365,7 +444,7 @@ export default function CalendarReminderModal({ account }) {
           }}
         >
           <span style={{ fontSize: '12px', color: '#64748b' }}>
-            User: <strong>{account?.name || account?.displayName || account?.role || 'Authenticated'}</strong> (Private Notes)
+            User: <strong>{account?.name || account?.displayName || account?.role || 'Authenticated User'}</strong> (Private Notes)
           </span>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -405,4 +484,3 @@ export default function CalendarReminderModal({ account }) {
     </div>
   );
 }
-

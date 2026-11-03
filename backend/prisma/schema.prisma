@@ -940,19 +940,22 @@ model PlacementApplication {
 }
 
 model TransportRoute {
-  id             String   @id @default(cuid())
-  routeNumber    String   @unique
-  routeName      String
-  busNumber      String
-  driverName     String
-  driverContact  String
-  totalCapacity  Int      @default(45)
-  allocatedCount Int      @default(0)
-  departureTime  String   @default("07:15 AM")
-  stops          String[]
-  status         String   @default("Active")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(cuid())
+  routeNumber     String   @unique
+  routeName       String
+  busNumber       String
+  driverName      String
+  driverContact   String
+  totalCapacity   Int      @default(45)
+  allocatedCount  Int      @default(0)
+  departureTime   String   @default("07:15 AM")
+  eveningArrival  String?  @default("05:30 PM")
+  stops           String[]
+  farePerSemester Float    @default(15000)
+  status          String   @default("Active")
+  disruptionNote  String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model LabEquipment {
@@ -2083,4 +2086,407 @@ model UserPreference {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("user_preferences")
+}
+
+
+// ============================================================================
+// TRANSPORT MANAGEMENT ENTERPRISE MODELS
+// ============================================================================
+
+model TransportVehicle {
+  id              String   @id @default(cuid())
+  busNumber       String   @unique @map("bus_number")
+  fleetCode       String   @map("fleet_code")
+  type            String   @default("52-Seater Coach")
+  capacity        Int      @default(52)
+  driver          String?
+  driverPhone     String?  @map("driver_phone")
+  routeName       String?  @map("route_name")
+  depot           String   @default("Campus Central Bus Bay")
+  fuelType        String   @default("Diesel (BS-VI)") @map("fuel_type")
+  fitnessExpiry   String?  @map("fitness_expiry")
+  insuranceExpiry String?  @map("insurance_expiry")
+  status          String   @default("Active")
+  odometerKm      Int      @default(0) @map("odometer_km")
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_vehicles")
+}
+
+model TransportDriver {
+  id               String   @id @default(cuid())
+  name             String
+  phone            String
+  emergencyContact String?  @map("emergency_contact")
+  licenseNumber    String   @unique @map("license_number")
+  licenseCategory  String   @default("HMV") @map("license_category")
+  licenseExpiry    String?  @map("license_expiry")
+  experienceYears  Int      @default(5) @map("experience_years")
+  assignedBus      String?  @map("assigned_bus")
+  shift            String   @default("Morning & Evening (06:30 AM - 06:30 PM)")
+  status           String   @default("Active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_drivers")
+}
+
+model TransportPass {
+  id          String   @id @default(cuid())
+  studentName String   @map("student_name")
+  regNo       String   @map("reg_no")
+  rollNumber  String   @map("roll_number")
+  department  String?
+  semester    String?
+  routeName   String   @map("route_name")
+  stopName    String   @map("stop_name")
+  fareAmount  Float    @default(15000) @map("fare_amount")
+  feePaid     Boolean  @default(true) @map("fee_paid")
+  status      String   @default("Active")
+  validUntil  String?  @map("valid_until")
+  qrCode      String?  @map("qr_code")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([rollNumber])
+  @@map("transport_passes")
+}
+
+model TransportTrip {
+  id               String   @id @default(cuid())
+  tripName         String   @map("trip_name")
+  routeNumber      String?  @map("route_number")
+  routeName        String   @map("route_name")
+  busNumber        String   @map("bus_number")
+  driverName       String   @map("driver_name")
+  shift            String?
+  departureTime    String   @map("departure_time")
+  estimatedArrival String?  @map("estimated_arrival")
+  actualArrival    String?  @map("actual_arrival")
+  status           String   @default("Scheduled")
+  delayMinutes     Int      @default(0) @map("delay_minutes")
+  delayReason      String?  @map("delay_reason") @db.Text
+  passengersCount  Int      @default(0) @map("passengers_count")
+  date             String
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_trips")
+}
+
+model TransportTelemetry {
+  id               String   @id @default(cuid())
+  vehicleNumber    String   @unique @map("vehicle_number")
+  fleetCode        String   @map("fleet_code")
+  currentSpeed     Int      @default(0) @map("current_speed")
+  speedLimit       Int      @default(60) @map("speed_limit")
+  fuelLevelPercent Int      @default(80) @map("fuel_level_percent")
+  engineTemp       Int      @default(85) @map("engine_temp")
+  latitude         Float    @default(20.2961)
+  longitude        Float    @default(85.8245)
+  locationName     String?  @map("location_name")
+  telemetryStatus  String   @default("Live") @map("telemetry_status")
+  lastPingTime     String?  @map("last_ping_time")
+  ignitionOn       Boolean  @default(true) @map("ignition_on")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_telemetry")
+}
+
+model TransportBoarding {
+  id             String   @id @default(cuid())
+  studentName    String   @map("student_name")
+  rollNumber     String   @map("roll_number")
+  routeName      String   @map("route_name")
+  vehicleNumber  String   @map("vehicle_number")
+  stopName       String   @map("stop_name")
+  boardingStatus String   @default("Boarded") @map("boarding_status")
+  boardingTime   String   @default("--:--") @map("boarding_time")
+  date           String
+  qrVerified     Boolean  @default(true) @map("qr_verified")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([rollNumber])
+  @@index([date])
+  @@map("transport_boarding")
+}
+
+model TransportMaintenance {
+  id              String   @id @default(cuid())
+  busNumber       String   @map("bus_number")
+  fleetCode       String   @map("fleet_code")
+  lastServiceDate String?  @map("last_service_date")
+  nextServiceDue  String?  @map("next_service_due")
+  odometerKm      Int      @default(0) @map("odometer_km")
+  category        String
+  description     String   @db.Text
+  serviceProvider String?  @map("service_provider")
+  cost            Float    @default(0)
+  status          String   @default("Scheduled")
+  isOverdue       Boolean  @default(false) @map("is_overdue")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_maintenance")
+}
+
+model TransportFuelLog {
+  id             String   @id @default(cuid())
+  date           String
+  busNumber      String   @map("bus_number")
+  fleetCode      String   @map("fleet_code")
+  driverName     String   @map("driver_name")
+  fuelType       String   @default("Diesel (BS-VI)") @map("fuel_type")
+  quantityLitres Float    @map("quantity_litres")
+  pricePerLitre  Float    @map("price_per_litre")
+  totalCost      Float    @map("total_cost")
+  odometerKm     Int      @default(0) @map("odometer_km")
+  bunkName       String?  @map("bunk_name")
+  receiptNo      String?  @map("receipt_no")
+  status         String   @default("Approved")
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_fuel_logs")
+}
+
+model TransportFeeRecord {
+  id          String   @id @default(cuid())
+  studentName String   @map("student_name")
+  rollNumber  String   @map("roll_number")
+  routeName   String   @map("route_name")
+  semester    String
+  feeAmount   Float    @map("fee_amount")
+  paidAmount  Float    @default(0) @map("paid_amount")
+  dues        Float    @default(0)
+  dueDate     String   @map("due_date")
+  status      String   @default("Pending")
+  receiptNo   String?  @map("receipt_no")
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([rollNumber])
+  @@map("transport_fee_records")
+}
+
+model TransportCompliance {
+  id               String   @id @default(cuid())
+  busNumber        String   @unique @map("bus_number")
+  fleetCode        String   @map("fleet_code")
+  registrationDate String?  @map("registration_date")
+  fitnessExpiry    String?  @map("fitness_expiry")
+  insurancePolicy  String?  @map("insurance_policy")
+  insuranceExpiry  String?  @map("insurance_expiry")
+  pucNumber        String?  @map("puc_number")
+  pucExpiry        String?  @map("puc_expiry")
+  permitNumber     String?  @map("permit_number")
+  permitExpiry     String?  @map("permit_expiry")
+  roadTaxStatus    String   @default("Paid (Annual)") @map("road_tax_status")
+  status           String   @default("Compliant")
+  daysRemaining    Int      @default(90) @map("days_remaining")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_compliance")
+}
+
+model TransportComplaint {
+  id              String    @id @default(cuid())
+  studentName     String    @map("student_name")
+  rollNumber      String    @map("roll_number")
+  routeName       String    @map("route_name")
+  busNumber       String?   @map("bus_number")
+  category        String
+  priority        String    @default("Medium")
+  title           String
+  description     String    @db.Text
+  submittedDate   String    @map("submitted_date")
+  status          String    @default("In Review")
+  assignedStaff   String?   @map("assigned_staff")
+  resolutionNotes String?   @map("resolution_notes") @db.Text
+  resolvedAt      DateTime? @map("resolved_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("transport_complaints")
+}
+
+model TransportAccident {
+  id                  String   @id @default(cuid())
+  referenceNo         String   @unique @map("reference_no")
+  busNumber           String   @map("bus_number")
+  routeName           String?  @map("route_name")
+  driverName          String?  @map("driver_name")
+  date                String
+  time                String
+  location            String
+  category            String
+  severity            String   @default("Low")
+  description         String   @db.Text
+  immediateResponse   String?  @map("immediate_response") @db.Text
+  emergencyAssistance String?  @map("emergency_assistance")
+  responsibleOfficial String?  @map("responsible_official")
+  investigationStatus String   @default("Under Investigation") @map("investigation_status")
+  followUpAction      String?  @map("follow_up_action") @db.Text
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_accidents")
+}
+
+model TransportParking {
+  id              String   @id @default(cuid())
+  bayNumber       String   @unique @map("bay_number")
+  busNumber       String?  @map("bus_number")
+  fleetCode       String?  @map("fleet_code")
+  type            String   @default("52-Seater Coach")
+  status          String   @default("Available")
+  assignedDriver  String?  @map("assigned_driver")
+  assignedDate    String?  @map("assigned_date")
+  plugInCharging  Boolean  @default(false) @map("plug_in_charging")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_parking")
+}
+
+model TransportStaffAttendance {
+  id              String   @id @default(cuid())
+  staffName       String   @map("staff_name")
+  designation     String
+  licenseCategory String?  @map("license_category")
+  assignedBus     String?  @map("assigned_bus")
+  shift           String
+  status          String   @default("Present On Duty")
+  checkInTime     String?  @map("check_in_time")
+  checkOutTime    String?  @map("check_out_time")
+  availability    String   @default("On Route")
+  date            String
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@map("transport_staff_attendance")
+}
+
+model TransportNotification {
+  id          String   @id @default(cuid())
+  title       String
+  targetGroup String   @map("target_group")
+  category    String
+  publishDate String   @map("publish_date")
+  expiryDate  String?  @map("expiry_date")
+  priority    String   @default("General")
+  status      String   @default("Published")
+  content     String   @db.Text
+  author      String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_notifications")
+}
+
+model TransportRequest {
+  id             String    @id @default(cuid())
+  type           String
+  studentName    String    @map("student_name")
+  rollNumber     String    @map("roll_number")
+  currentRoute   String?   @map("current_route")
+  requestedRoute String?   @map("requested_route")
+  requestedStop  String?   @map("requested_stop")
+  reason         String    @db.Text
+  requestDate    String    @map("request_date")
+  status         String    @default("Pending Review")
+  reviewNotes    String?   @map("review_notes") @db.Text
+  reviewedBy     String?   @map("reviewed_by")
+  reviewedAt     DateTime? @map("reviewed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([rollNumber])
+  @@map("transport_requests")
+}
+
+model TransportSafetyInspection {
+  id             String   @id @default(cuid())
+  busNumber      String   @map("bus_number")
+  fleetCode      String   @map("fleet_code")
+  inspectionDate String   @map("inspection_date")
+  inspector      String
+  score          String   @default("95%")
+  status         String   @default("Compliant")
+  findings       String?  @db.Text
+  followUpDate   String?  @map("follow_up_date")
+  checklist      Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_safety_inspections")
+}
+
+model TransportSchedule {
+  id                  String   @id @default(cuid())
+  title               String
+  category            String
+  time                String
+  routesActive        String   @map("routes_active")
+  busesDeployed       Int      @default(5) @map("buses_deployed")
+  studentsTransported Int      @default(0) @map("students_transported")
+  frequency           String
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_schedules")
+}
+
+model TransportInventory {
+  id            String   @id @default(cuid())
+  name          String
+  category      String
+  inStock       Int      @default(0) @map("in_stock")
+  minStock      Int      @default(2) @map("min_stock")
+  condition     String   @default("New")
+  location      String?
+  unitCost      Float    @default(0) @map("unit_cost")
+  supplier      String?
+  alertLowStock Boolean  @default(false) @map("alert_low_stock")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_inventory")
+}
+
+model TransportPolicy {
+  id          String   @id @default(cuid())
+  category    String
+  title       String
+  description String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("transport_policies")
+}
+
+model TransportPermission {
+  id                String   @id @default(cuid())
+  role              String
+  section           String
+  canView           Boolean  @default(true) @map("can_view")
+  canCreate         Boolean  @default(false) @map("can_create")
+  canEdit           Boolean  @default(false) @map("can_edit")
+  canUpdate         Boolean  @default(false) @map("can_update")
+  canDelete         Boolean  @default(false) @map("can_delete")
+  canExport         Boolean  @default(true) @map("can_export")
+  canManageSettings Boolean  @default(false) @map("can_manage_settings")
+  updatedBy         String?  @map("updated_by")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@unique([role, section])
+  @@map("transport_permissions")
 }

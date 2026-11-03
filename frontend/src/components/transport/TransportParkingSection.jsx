@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   SquareParking, Bus, CheckCircle2, AlertCircle, Search, 
   MapPin, User, Calendar, Edit3, X, Check 
 } from 'lucide-react';
-import { mockParkingAssignments } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockParkingAssignments } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportParkingSection() {
-  const [data, setData] = useState(mockParkingAssignments);
+  const [data, setData] = useState(() => transportStore.getParking() || mockParkingAssignments);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedSlot, setSelectedSlot] = useState(null);

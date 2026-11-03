@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Boxes, AlertTriangle, CheckCircle2, Clock, Search, 
   Filter, Plus, PackageCheck, DollarSign, ArrowDownRight, X, Check 
 } from 'lucide-react';
-import { mockInventorySpareParts } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockInventorySpareParts } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportInventorySection() {
-  const [data, setData] = useState(mockInventorySpareParts);
+  const [data, setData] = useState(() => transportStore.getInventory() || mockInventorySpareParts);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [issueModal, setIssueModal] = useState(false);

@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   UserCheck, Users, CheckCircle2, AlertCircle, Clock, 
   Search, Filter, Calendar, Bus, Check, X, Shield 
 } from 'lucide-react';
-import { mockStaffAttendance } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockStaffAttendance } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportStaffAttendanceSection() {
-  const [data, setData] = useState(mockStaffAttendance);
+  const [data, setData] = useState(() => transportStore.getStaffAttendance() || mockStaffAttendance);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedDate, setSelectedDate] = useState('2026-10-19');

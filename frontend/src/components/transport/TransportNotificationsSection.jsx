@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Bell, Megaphone, AlertTriangle, Calendar, Plus, 
   Search, Filter, Send, X, Check, Eye, Clock, Users 
 } from 'lucide-react';
-import { mockTransportNotifications } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockTransportNotifications } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportNotificationsSection() {
-  const [data, setData] = useState(mockTransportNotifications);
+  const [data, setData] = useState(() => transportStore.getNotifications() || mockTransportNotifications);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [newNoticeModal, setNewNoticeModal] = useState(false);
@@ -32,7 +33,7 @@ export default function TransportNotificationsSection() {
     });
   }, [data, search, categoryFilter]);
 
-  const handlePublish = (e) => {
+  const handlePublish = async (e) => {
     e.preventDefault();
     const newNotice = {
       id: `NOTIF-TRN-0${data.length + 1}`,

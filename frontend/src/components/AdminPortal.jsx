@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { AppLayout } from './Navigation';
 import {
   Users,
+  Bus,
   GraduationCap,
   Building2,
   BookOpen,
@@ -108,6 +109,7 @@ import { getAllStudents, saveStudent, setActiveStudent, getAllDocuments, saveDoc
 import { useTimeGreeting, getTimeWish } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
+import TransportManagementModule from './transport/TransportManagementModule.jsx';
 import RegisterStudentWizard from './RegisterStudentWizard.jsx';
 
 const defaultStudentFormState = {
@@ -1447,6 +1449,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       title: 'FINANCE & SERVICES',
       items: [
         { id: 'accounts-fees', label: 'Accounts & Fees', icon: CreditCard },
+        { id: 'transport-management', label: 'Transport Management', icon: Bus },
         { id: 'documents', label: 'Student Documents', icon: FileText },
         { id: 'placements', label: 'Training & Placement', icon: TrendingUp },
         { id: 'ai-complaints', label: 'Grievance Intelligence', icon: AlertCircle },
@@ -1466,6 +1469,11 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const getAdminHeading = () => {
     switch (activeTab) {
+      case 'transport-management':
+        return {
+          title: 'Campus Transport Management',
+          subtitle: 'Fleet routing, passenger allocations, and student transit administration.'
+        };
       case 'dashboard':
         return {
           title: 'Institutional Administration & Executive Command',

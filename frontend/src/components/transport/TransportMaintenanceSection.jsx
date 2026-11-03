@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Wrench, AlertTriangle, CheckCircle, Clock, Search, Filter, 
   Calendar, Plus, DollarSign, FileText, X, Check, ArrowUpRight, ShieldCheck 
 } from 'lucide-react';
-import { mockVehicleMaintenance } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockVehicleMaintenance } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportMaintenanceSection() {
-  const [data, setData] = useState(mockVehicleMaintenance);
+  const [data, setData] = useState(() => transportStore.getMaintenance() || mockVehicleMaintenance);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [overdueOnly, setOverdueOnly] = useState(false);

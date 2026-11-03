@@ -1433,49 +1433,49 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
               15 NEW TRANSPORT MANAGEMENT SUBMODULES
               ========================================================================= */}
           {/* TAB 8: STUDENT BOARDING & ATTENDANCE */}
-          {activeTab === 'boarding' && <TransportBoardingSection />}
+          {activeTab === 'boarding' && <TransportBoardingSection userRole="TRANSPORT" />}
 
           {/* TAB 9: VEHICLE MAINTENANCE & SERVICE */}
-          {activeTab === 'maintenance' && <TransportMaintenanceSection />}
+          {activeTab === 'maintenance' && <TransportMaintenanceSection userRole="TRANSPORT" />}
 
           {/* TAB 10: FUEL & EXPENSE MANAGEMENT */}
-          {activeTab === 'fuel-expenses' && <TransportFuelSection />}
+          {activeTab === 'fuel-expenses' && <TransportFuelSection userRole="TRANSPORT" />}
 
           {/* TAB 11: TRANSPORT FEES & DUES */}
-          {activeTab === 'fees-dues' && <TransportFeesSection />}
+          {activeTab === 'fees-dues' && <TransportFeesSection userRole="TRANSPORT" />}
 
           {/* TAB 12: VEHICLE DOCUMENTS & COMPLIANCE */}
-          {activeTab === 'compliance' && <TransportComplianceSection />}
+          {activeTab === 'compliance' && <TransportComplianceSection userRole="TRANSPORT" />}
 
           {/* TAB 13: TRANSPORT COMPLAINTS & FEEDBACK */}
-          {activeTab === 'complaints' && <TransportComplaintsSection />}
+          {activeTab === 'complaints' && <TransportComplaintsSection userRole="TRANSPORT" />}
 
           {/* TAB 14: ACCIDENT & INCIDENT MANAGEMENT */}
-          {activeTab === 'accidents' && <TransportAccidentsSection />}
+          {activeTab === 'accidents' && <TransportAccidentsSection userRole="TRANSPORT" />}
 
           {/* TAB 15: PARKING & VEHICLE ASSIGNMENT */}
-          {activeTab === 'parking' && <TransportParkingSection />}
+          {activeTab === 'parking' && <TransportParkingSection userRole="TRANSPORT" />}
 
           {/* TAB 16: TRANSPORT STAFF ATTENDANCE */}
-          {activeTab === 'staff-attendance' && <TransportStaffAttendanceSection />}
+          {activeTab === 'staff-attendance' && <TransportStaffAttendanceSection userRole="TRANSPORT" />}
 
           {/* TAB 17: TRANSPORT NOTIFICATIONS & ANNOUNCEMENTS */}
-          {activeTab === 'notifications' && <TransportNotificationsSection />}
+          {activeTab === 'notifications' && <TransportNotificationsSection userRole="TRANSPORT" />}
 
           {/* TAB 18: TRANSPORT REQUESTS & APPROVALS */}
-          {activeTab === 'requests' && <TransportRequestsSection />}
+          {activeTab === 'requests' && <TransportRequestsSection userRole="TRANSPORT" />}
 
           {/* TAB 19: TRANSPORT SAFETY & INSPECTIONS */}
-          {activeTab === 'safety-inspections' && <TransportSafetySection />}
+          {activeTab === 'safety-inspections' && <TransportSafetySection userRole="TRANSPORT" />}
 
           {/* TAB 20: TRANSPORT SCHEDULE & CALENDAR */}
-          {activeTab === 'schedule-calendar' && <TransportScheduleSection />}
+          {activeTab === 'schedule-calendar' && <TransportScheduleSection userRole="TRANSPORT" />}
 
           {/* TAB 21: TRANSPORT INVENTORY & SPARE PARTS */}
-          {activeTab === 'inventory' && <TransportInventorySection />}
+          {activeTab === 'inventory' && <TransportInventorySection userRole="TRANSPORT" />}
 
           {/* TAB 22: TRANSPORT SETTINGS & POLICIES */}
-          {activeTab === 'settings-policies' && <TransportSettingsSection />}
+          {activeTab === 'settings-policies' && <TransportSettingsSection userRole="TRANSPORT" />}
         </div>
           </>
         )}

@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, CheckCircle2, Clock, AlertCircle, Search, Filter, 
   QrCode, RefreshCw, Bus, MapPin, Calendar, Check, X, ShieldAlert 
 } from 'lucide-react';
-import { mockBoardingAttendance } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockBoardingAttendance } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportBoardingSection() {
-  const [data, setData] = useState(mockBoardingAttendance);
+  const [data, setData] = useState(() => transportStore.getBoarding() || mockBoardingAttendance);
   const [search, setSearch] = useState('');
   const [routeFilter, setRouteFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');

@@ -54,3 +54,6 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+# Local Data & Runtime Stores
+backend/backend/
+**/data/*.json

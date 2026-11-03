@@ -2,11 +2,37 @@
  * Calendar Notes & Mandatory Reminder Store
  * Provides strict user-level privacy, persistent storage, and real-time syncing
  * with the NestJS backend and local storage.
+ * Enforces IST (Asia/Kolkata) timezone and optimistic, instantaneous UI updates.
  */
 
 import { api } from './api.js';
 
 const EVENT_NAME = 'bput_calendar_notes_updated';
+
+/**
+ * Returns today's date formatted as YYYY-MM-DD in Asia/Kolkata (IST) timezone,
+ * along with numeric breakdown and Date object.
+ */
+export function getTodayIST() {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const dateStr = formatter.format(new Date());
+  const [yearStr, monthStr, dayStr] = dateStr.split('-');
+  const year = parseInt(yearStr, 10);
+  const monthIndex = parseInt(monthStr, 10) - 1;
+  const day = parseInt(dayStr, 10);
+  return {
+    dateStr,
+    year,
+    monthIndex,
+    day,
+    dateObj: new Date(year, monthIndex, day),
+  };
+}
 
 export function resolveUserId(account) {
   if (!account) return 'guest_user';
@@ -95,12 +121,12 @@ export async function getCalendarNotes(account, filterDate = null) {
 /**
  * 2. Get pending mandatory reminders for today and previous overdue dates
  * Logic:
- * - scheduledDate <= currentDate
+ * - scheduledDate <= currentDate (in IST)
  * - status === 'PENDING'
  * - Ordered by scheduledDate ascending (oldest first)
  */
 export async function getPendingCalendarReminders(account, currentDate = null) {
-  const todayStr = currentDate || new Date().toISOString().split('T')[0];
+  const todayStr = currentDate || getTodayIST().dateStr;
   const localNotes = getLocalNotesForUser(account);
   const localPending = localNotes.filter(n => n.status === 'PENDING' && n.scheduledDate <= todayStr)
     .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
@@ -118,11 +144,17 @@ export async function getPendingCalendarReminders(account, currentDate = null) {
 }
 
 /**
- * 3. Create a new personal calendar note
+ * 3. Create a new personal calendar note (Instant Optimistic Save)
+ * Rejects past dates in IST.
  */
 export async function createCalendarNote(account, { title, description = '', scheduledDate }) {
   if (!title || !scheduledDate) {
     throw new Error('Title and Scheduled Date are required');
+  }
+
+  const todayStr = getTodayIST().dateStr;
+  if (scheduledDate < todayStr) {
+    throw new Error(`Cannot schedule notes for past dates (Selected: ${scheduledDate}, Today: ${todayStr})`);
   }
 
   const userId = resolveUserId(account);
@@ -141,29 +173,28 @@ export async function createCalendarNote(account, { title, description = '', sch
     updatedAt: new Date().toISOString(),
   };
 
+  // Instant local save & broadcast for 0ms UI latency
   const notes = getLocalNotesForUser(account);
   notes.push(newNote);
   saveLocalNotesForUser(account, notes);
 
-  // Sync to backend
-  try {
-    const res = await api.createCalendarNote({
-      title: newNote.title,
-      description: newNote.description,
-      scheduledDate: newNote.scheduledDate,
-    });
+  // Background sync to backend (non-blocking)
+  api.createCalendarNote({
+    title: newNote.title,
+    description: newNote.description,
+    scheduledDate: newNote.scheduledDate,
+  }).then((res) => {
     if (res?.success && res.note) {
-      // Update with server assigned values if any
-      const idx = notes.findIndex(n => n.id === newNote.id);
+      const currentList = getLocalNotesForUser(account);
+      const idx = currentList.findIndex(n => n.id === newNote.id);
       if (idx !== -1) {
-        notes[idx] = { ...notes[idx], ...res.note };
-        saveLocalNotesForUser(account, notes);
+        currentList[idx] = { ...currentList[idx], ...res.note };
+        saveLocalNotesForUser(account, currentList);
       }
-      return res.note;
     }
-  } catch (err) {
+  }).catch((err) => {
     console.debug('Background backend sync for createCalendarNote fallback:', err?.message);
-  }
+  });
 
   return newNote;
 }
@@ -179,6 +210,13 @@ export async function updateCalendarNote(account, noteId, updates) {
     throw new Error('Calendar note not found');
   }
 
+  if (updates.scheduledDate) {
+    const todayStr = getTodayIST().dateStr;
+    if (updates.scheduledDate < todayStr) {
+      throw new Error(`Cannot reschedule notes to past dates (Selected: ${updates.scheduledDate}, Today: ${todayStr})`);
+    }
+  }
+
   const updatedNote = {
     ...notes[idx],
     ...(updates.title !== undefined && { title: String(updates.title).trim() }),
@@ -190,16 +228,14 @@ export async function updateCalendarNote(account, noteId, updates) {
   notes[idx] = updatedNote;
   saveLocalNotesForUser(account, notes);
 
-  // Sync to backend
-  try {
-    await api.updateCalendarNote(noteId, {
-      title: updatedNote.title,
-      description: updatedNote.description,
-      scheduledDate: updatedNote.scheduledDate,
-    });
-  } catch (err) {
+  // Background sync to backend
+  api.updateCalendarNote(noteId, {
+    title: updatedNote.title,
+    description: updatedNote.description,
+    scheduledDate: updatedNote.scheduledDate,
+  }).catch((err) => {
     console.debug('Background backend sync for updateCalendarNote fallback:', err?.message);
-  }
+  });
 
   return updatedNote;
 }
@@ -228,12 +264,10 @@ export async function submitCalendarNote(account, noteId) {
   notes[idx] = completedNote;
   saveLocalNotesForUser(account, notes);
 
-  // Sync to backend
-  try {
-    await api.submitCalendarNote(noteId);
-  } catch (err) {
+  // Background sync to backend
+  api.submitCalendarNote(noteId).catch((err) => {
     console.debug('Background backend sync for submitCalendarNote fallback:', err?.message);
-  }
+  });
 
   return completedNote;
 }
@@ -246,12 +280,10 @@ export async function deleteCalendarNote(account, noteId) {
   const filtered = notes.filter(n => n.id !== noteId);
   saveLocalNotesForUser(account, filtered);
 
-  // Sync to backend
-  try {
-    await api.deleteCalendarNote(noteId);
-  } catch (err) {
+  // Background sync to backend
+  api.deleteCalendarNote(noteId).catch((err) => {
     console.debug('Background backend sync for deleteCalendarNote fallback:', err?.message);
-  }
+  });
 
   return { success: true, id: noteId };
 }
@@ -267,3 +299,42 @@ export function subscribeToCalendarNotes(callback) {
   return () => {};
 }
 
+// In-memory fallback set for session dismissal tracking across tab navigation
+const memorySessionDismissed = new Set();
+
+function getSessionDismissKey(userId) {
+  return `apna_calendar_dismissed_${userId}`;
+}
+
+export function isSessionDismissed(userId) {
+  if (!userId) return false;
+  if (memorySessionDismissed.has(userId)) return true;
+  if (typeof sessionStorage !== 'undefined') {
+    try {
+      return sessionStorage.getItem(getSessionDismissKey(userId)) === 'true';
+    } catch (e) {
+      return false;
+    }
+  }
+  return false;
+}
+
+export function setSessionDismissed(userId) {
+  if (!userId) return;
+  memorySessionDismissed.add(userId);
+  if (typeof sessionStorage !== 'undefined') {
+    try {
+      sessionStorage.setItem(getSessionDismissKey(userId), 'true');
+    } catch (e) {}
+  }
+}
+
+export function clearSessionDismissal(userId) {
+  if (!userId) return;
+  memorySessionDismissed.delete(userId);
+  if (typeof sessionStorage !== 'undefined') {
+    try {
+      sessionStorage.removeItem(getSessionDismissKey(userId));
+    } catch (e) {}
+  }
+}

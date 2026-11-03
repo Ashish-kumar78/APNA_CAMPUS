@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Settings, Shield, Sliders, Bell, CheckCircle2, 
   Lock, Save, RefreshCw, Key, ShieldCheck, FileText 
 } from 'lucide-react';
-import { mockTransportPolicies } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockTransportPolicies } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportSettingsSection() {
-  const [policies, setPolicies] = useState(mockTransportPolicies);
+  const [policies, setPolicies] = useState(() => transportStore.getPolicies() || mockTransportPolicies);
   const [activeTab, setActiveTab] = useState('policies'); // 'policies' | 'parameters' | 'permissions'
   const [saveToast, setSaveToast] = useState('');
 

@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ShieldCheck, AlertTriangle, CheckCircle2, Clock, Search, 
   Filter, FileText, Check, X, ShieldAlert, Award, Calendar 
 } from 'lucide-react';
-import { mockSafetyInspections } from './transportData';
+import { transportStore } from '../../services/transportStore';
+import { mockSafetyInspections } from './transportData.js';
 import './TransportExtraSections.css';
 
 export default function TransportSafetySection() {
-  const [data, setData] = useState(mockSafetyInspections);
+  const [data, setData] = useState(() => transportStore.getSafetyInspections() || mockSafetyInspections);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedAudit, setSelectedAudit] = useState(null);
@@ -40,7 +41,7 @@ export default function TransportSafetySection() {
   const certifiedCount = data.filter(d => d.status.includes('Compliant')).length;
   const actionRequiredCount = data.filter(d => d.status.includes('Action')).length;
 
-  const handleSaveAudit = (e) => {
+  const handleSaveAudit = async (e) => {
     e.preventDefault();
     const newEntry = {
       id: `INSP-SAF-0${data.length + 1}`,

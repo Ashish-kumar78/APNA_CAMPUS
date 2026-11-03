@@ -1,5 +1,5 @@
 import CalendarWidget from './components/CalendarWidget.jsx';
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { AppLayout } from './components/Navigation'
 import {
   Building2,
@@ -45,6 +45,7 @@ import {
 } from 'lucide-react'
 import './StudentPortal.css'
 import './DashboardHome.css'
+import { CountUpNumber } from './utils/motion.jsx'
 import { getGreetingDisplayName } from './utils/timeGreeting.js'
 import StudentProfile from './StudentProfile.jsx'
 import AcademicsPage from './pages/AcademicsPage.jsx'
@@ -76,6 +77,8 @@ import { campusConnectStore } from './services/campusConnectStore.js'
 import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, getAllStudents, findStudentByQuery } from './services/studentStore.js'
 import { notificationsApi } from './services/notificationsApi.js'
+import { notificationsStore } from './services/notificationsStore.js'
+import { erpStore } from './services/erpStore.js'
 
 const profilePageTabMap = {
   attendance: 'Attendance Dashboard',
@@ -171,46 +174,6 @@ const archivedNotices = [
   { tag: 'ACADEMIC', title: 'Course feedback window', detail: 'The course feedback form for the previous term is now closed.', date: '02 Sep 2026' },
   { tag: 'CAMPUS', title: 'Library hours during break', detail: 'The central library will operate on revised hours during the term break.', date: '28 Aug 2026' },
 ]
-
-const initialStudentNotifications = [
-  {
-    id: 'notif-1',
-    tag: 'SCHOLARSHIP',
-    tagClass: 'notif-tag-scholarship',
-    title: 'PRERANA Post-Matric Scholarship Sanctioned',
-    message: 'Disbursement sanctioned by SSD Department. Verification complete and approved.',
-    time: '10 mins ago',
-    unread: true,
-  },
-  {
-    id: 'notif-2',
-    tag: 'EXAMINATION',
-    tagClass: 'notif-tag-exam',
-    title: 'Internal Assessment Timetable Released',
-    message: 'Internal examination schedule commences from Oct 14, 2026. Review timetable page.',
-    time: '2 hours ago',
-    unread: true,
-  },
-  {
-    id: 'notif-3',
-    tag: 'LIBRARY',
-    tagClass: 'notif-tag-library',
-    title: 'Book Return Reminder',
-    message: '"Introduction to Algorithms (CLRS)" due in 3 days. Return to central desk to avoid fine.',
-    time: 'Yesterday',
-    unread: false,
-  },
-  {
-    id: 'notif-4',
-    tag: 'ACCOUNTS',
-    tagClass: 'notif-tag-accounts',
-    title: 'Semester VII Tuition Fee Receipt Generated',
-    message: 'Official payment receipt #RCP-2026-8821 verified and available in Fees & Accounts.',
-    time: '3 days ago',
-    unread: false,
-  },
-]
-
 
 const holidays = [
   [
@@ -358,6 +321,42 @@ const holidays = [
 function StudentPortal({ account, onLogout }) {
   const [profileTab, setProfileTab] = useState('')
   const [profileQuickView, setProfileQuickView] = useState('')
+  const [studentProfile, setStudentProfile] = useState(null)
+  const [profileError, setProfileError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    api.getProfile()
+      .then((response) => {
+        if (!response?.success || !response.data) return
+        if (active && response.data) {
+          setStudentProfile(response.data)
+          setProfileError('')
+        }
+      })
+      .catch((error) => {
+        console.warn('Student profile live sync note:', error?.message)
+        // Silently preserve existing account props; do not display abort/transient error banners
+        if (active && error?.name !== 'AbortError' && !error?.message?.includes('abort') && !account?.name) {
+          setProfileError(error.message || 'Could not load your student profile.')
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [account?.name])
+
+  const studentAccount = useMemo(() => {
+    if (!studentProfile) return account
+    return {
+      ...account,
+      ...studentProfile,
+      registrationNumber: studentProfile.rollNumber || studentProfile.studentId || account?.registrationNumber,
+      identity: studentProfile.rollNumber || studentProfile.studentId || account?.identity,
+      program: studentProfile.programme?.name || account?.program,
+      branch: studentProfile.department || account?.branch,
+    }
+  }, [account, studentProfile])
 
   const getInitial = () => {
     const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '';
@@ -507,16 +506,42 @@ function StudentPortal({ account, onLogout }) {
   })
   const [holidayView, setHolidayView] = useState('all')
   const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState(initialStudentNotifications)
+  const [notifications, setNotifications] = useState([])
   const [selectedBroadcastModal, setSelectedBroadcastModal] = useState(null)
   const unreadNotifCount = notifications.filter((n) => n.unread).length
 
   useEffect(() => {
     let isMounted = true;
     const loadNotifications = async () => {
+      // 1. Gather instant local/offline exam notices and stored broadcasts
+      const examCircs = (erpStore.getExamCirculars() || []).map((c) => ({
+        id: c.id,
+        tag: 'EXAMINATION NOTICE',
+        tagClass: 'notif-tag-exam',
+        title: c.title,
+        message: c.content,
+        facultyInfo: 'Controller of Examinations (CoE)',
+        time: c.date || 'Today',
+        unread: true,
+        isExamNotice: true,
+        raw: c,
+      }));
+
+      const storeNotifs = (notificationsStore.getNotifications(studentAccount) || []).map((n) => ({
+        id: n.id,
+        tag: n.priority === 'URGENT' || n.priority === 'HIGH' ? 'URGENT' : (n.category ? n.category.replace(/_/g, ' ') : 'CAMPUS NOTICE'),
+        tagClass: n.priority === 'URGENT' || n.priority === 'HIGH' ? 'notif-tag-urgent' : n.category === 'EXAMINATION' ? 'notif-tag-exam' : 'notif-tag-faculty',
+        title: n.title,
+        message: n.message,
+        facultyInfo: `${n.senderName || 'Campus'}${n.senderDept ? ` · ${n.senderDept}` : ''}`,
+        time: 'Recently',
+        unread: !n.isRead && n.unread !== false,
+        isFacultyNotice: true,
+        raw: n,
+      }));
+
       try {
-        const roll = account?.rollNumber || account?.registrationNumber || '01';
-        const facultyList = await notificationsApi.getStudentNotifications(roll);
+        const facultyList = await notificationsApi.getStudentNotifications();
         if (!isMounted) return;
 
         const formattedFaculty = (facultyList || []).map((f) => {
@@ -538,41 +563,60 @@ function StudentPortal({ account, onLogout }) {
             time: timeAgo,
             unread: !f.isRead,
             isFacultyNotice: true,
-            raw: f
+            raw: f,
           };
         });
 
-        setNotifications([...formattedFaculty, ...initialStudentNotifications]);
+        // Deduplicate all notices
+        const existingMap = new Map();
+        for (const item of [...examCircs, ...formattedFaculty, ...storeNotifs]) {
+          if (!existingMap.has(item.id)) {
+            existingMap.set(item.id, item);
+          }
+        }
+        setNotifications(Array.from(existingMap.values()));
       } catch (err) {
-        console.warn('Failed to load student notifications:', err);
+        console.warn('Backend student notification fetch fallback to store:', err?.message);
+        if (isMounted) {
+          const fallbackMap = new Map();
+          for (const item of [...examCircs, ...storeNotifs]) {
+            if (!fallbackMap.has(item.id)) {
+              fallbackMap.set(item.id, item);
+            }
+          }
+          setNotifications(Array.from(fallbackMap.values()));
+        }
       }
     };
 
     loadNotifications();
     window.addEventListener('apna_campus_notifications_updated', loadNotifications);
+    window.addEventListener('apna_campus_notification_dispatched', loadNotifications);
     return () => {
       isMounted = false;
       window.removeEventListener('apna_campus_notifications_updated', loadNotifications);
+      window.removeEventListener('apna_campus_notification_dispatched', loadNotifications);
     };
-  }, [account]);
+  }, [studentAccount]);
 
   const handleMarkAllRead = async () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-    const roll = account?.rollNumber || '01';
-    notifications.forEach((n) => {
-      if (n.isFacultyNotice && n.unread) {
-        notificationsApi.markAsRead(n.id, roll).catch(() => { });
-      }
-    });
+    try {
+      await notificationsApi.markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    } catch (error) {
+      console.error('Failed to mark notifications as read:', error);
+    }
   };
 
   const handleToggleNotif = async (notif) => {
-    const id = notif.id;
-    const newUnread = !notif.unread;
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: newUnread } : n)));
-    if (notif.isFacultyNotice && !newUnread) {
-      const roll = account?.rollNumber || '01';
-      notificationsApi.markAsRead(id, roll).catch(() => { });
+    if (!notif.unread) return;
+    try {
+      await notificationsApi.markAsRead(notif.id);
+      setNotifications((prev) => prev.map((n) => (
+        n.id === notif.id ? { ...n, unread: false } : n
+      )));
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
     }
   };
 
@@ -584,9 +628,41 @@ function StudentPortal({ account, onLogout }) {
   };
 
   const studentPhoto = useMemo(() => {
-    if (account?.photo && !account.photo.includes('female')) return account.photo
-    return '/passport_photo_male.svg'
-  }, [account])
+    // 1. Explicit photo / photoUrl / avatar
+    if (studentAccount?.photo && typeof studentAccount.photo === 'string' && !studentAccount.photo.includes('passport_photo_')) {
+      return studentAccount.photo
+    }
+    if (studentAccount?.photoUrl && typeof studentAccount.photoUrl === 'string' && !studentAccount.photoUrl.includes('passport_photo_')) {
+      return studentAccount.photoUrl
+    }
+    if (studentAccount?.avatar && typeof studentAccount.avatar === 'string' && !studentAccount.avatar.includes('passport_photo_')) {
+      return studentAccount.avatar
+    }
+
+    // 2. Uploaded Passport Photo from admission documents
+    if (Array.isArray(studentAccount?.documents)) {
+      const pDoc = studentAccount.documents.find(
+        (d) =>
+          (d.id === 'photo' || d.category === 'photo' || /photo|passport/i.test(d.name || d.fileName || d.category || '')) &&
+          (d.fileUrl || d.dataUrl)
+      )
+      if (pDoc) return pDoc.fileUrl || pDoc.dataUrl
+    }
+
+    // 3. Local session photo cache (stored during admission registration)
+    try {
+      const regId = studentAccount?.studentId || studentAccount?.rollNumber || studentAccount?.identifier || studentAccount?.registrationNumber
+      if (regId) {
+        const cached = localStorage.getItem(`apna_student_photo_${regId}`)
+        if (cached) return cached
+      }
+    } catch (_) {}
+
+    if (studentAccount?.photo && !studentAccount.photo.includes('female')) return studentAccount.photo
+    return String(studentAccount?.gender || '').toLowerCase().includes('female')
+      ? '/passport_photo_female.svg'
+      : '/passport_photo_male.svg'
+  }, [studentAccount])
 
   const [today] = useState(() => new Date())
   const [currentTime, setCurrentTime] = useState(() => new Date())
@@ -661,7 +737,7 @@ function StudentPortal({ account, onLogout }) {
     return !query || `${notice.title} ${notice.detail} ${notice.tag}`.toLowerCase().includes(query)
   }), [noticeList, noticeQuery])
   const calendarDays = createCalendarDays(currentMonth, today)
-  const studentDisplayName = account?.name || 'Student'
+  const studentDisplayName = studentAccount?.name || 'Student'
   const initials = studentDisplayName.split(' ').filter(Boolean).map((part) => part[0]).slice(0, 2).join('') || 'ST'
   const holidayItems = useMemo(() => {
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
@@ -697,11 +773,12 @@ function StudentPortal({ account, onLogout }) {
 
   // Compute page heading for AppLayout
   const studentHeading = useMemo(() => {
-    if (activePage === 'dashboard') return { title: 'Dashboard', subtitle: `Welcome back, ${account?.name?.split(' ')[0] || 'Student'}` };
+    if (activePage === 'dashboard') return { title: 'Dashboard', subtitle: `Welcome back, ${studentAccount?.name?.split(' ')[0] || 'Student'}` };
     if (activePage === 'profile') return { title: 'Student Profile', subtitle: 'Personal & academic details' };
+    if (activePage === 'my-admission') return { title: 'My Admission Dossier', subtitle: 'Provisional Offer, Verification Status & Enrollment Letter' };
     const match = navigation.find(n => n.page === activePage);
     return { title: match?.label || activeLink || 'Student Portal', subtitle: '' };
-  }, [activePage, activeLink, account]);
+  }, [activePage, activeLink, studentAccount]);
 
   return (
     <div className="campus-os-shell">
@@ -745,7 +822,7 @@ function StudentPortal({ account, onLogout }) {
             </div>
             <div className="whatsapp-drawer-body">
               <CampusConnect
-                account={account}
+                account={studentAccount}
                 isDrawerMode={true}
                 initialConversationId={initialConvId}
                 initialView={campusSubView}
@@ -763,9 +840,9 @@ function StudentPortal({ account, onLogout }) {
 
       {/* Standard Universal AppLayout */}
       <AppLayout
-        account={account}
+        account={studentAccount}
         portalName="Student Portal"
-        portalSubtitle={`${account?.branch || account?.deptCode || 'B.Tech'} · ${account?.registrationNumber || 'Student'}`}
+        portalSubtitle={`${studentAccount?.branch || studentAccount?.deptCode || 'B.Tech'} · ${studentAccount?.registrationNumber || 'Student'}`}
         portalHomeTab="dashboard"
         navSections={studentNavSections}
         activeTab={activePage}
@@ -775,6 +852,11 @@ function StudentPortal({ account, onLogout }) {
         pageSubtitle={studentHeading.subtitle}
       >
         <div className="campus-os-body">
+          {profileError && (
+            <p role="alert" style={{ margin: '0 0 12px', padding: 10, borderRadius: 8, background: '#fff1f2', color: '#b91c1c' }}>
+              {profileError}
+            </p>
+          )}
           {activePage !== 'dashboard' && activePage !== 'profile' ? (
             <div className="portal-feature-page" id={activePage}>
               <div className="portal-breadcrumb">
@@ -817,7 +899,7 @@ function StudentPortal({ account, onLogout }) {
                 activePage === 'leadership' ||
                 activePage === 'anonymous-complaints') && (
                   <CampusConnect
-                    account={account}
+                    account={studentAccount}
                     initialConversationId={initialConvId}
                     initialCategory={activePage === 'class-groups' ? 'Classes' : 'All'}
                     initialView={campusSubView}
@@ -833,16 +915,16 @@ function StudentPortal({ account, onLogout }) {
                     }}
                   />
                 )}
-              {activePage === 'class-notes' && <ClassNotesPage account={account} />}
-              {activePage === 'marks' && <MarksPage initialRole="student" />}
-              {activePage === 'hostel' && <StudentHostelPage defaultTab="gate-pass" account={account} />}
-              {activePage === 'gate-pass' && <StudentHostelPage defaultTab="gate-pass" account={account} />}
-              {activePage === 'food-feedback' && <StudentHostelPage defaultTab="food-feedback" account={account} />}
-              {activePage === 'cleanliness-complaints' && <StudentHostelPage defaultTab="cleanliness" account={account} />}
-              {activePage === 'fees' && <FeesPage />}
-              {activePage === 'canteen' && <CanteenPage account={account} />}
+              {activePage === 'class-notes' && <ClassNotesPage account={studentAccount || account} />}
+              {activePage === 'marks' && <MarksPage initialRole="student" account={studentAccount || account} />}
+              {activePage === 'hostel' && <StudentHostelPage defaultTab="gate-pass" account={studentAccount || account} />}
+              {activePage === 'gate-pass' && <StudentHostelPage defaultTab="gate-pass" account={studentAccount || account} />}
+              {activePage === 'food-feedback' && <StudentHostelPage defaultTab="food-feedback" account={studentAccount || account} />}
+              {activePage === 'cleanliness-complaints' && <StudentHostelPage defaultTab="cleanliness" account={studentAccount || account} />}
+              {activePage === 'fees' && <FeesPage account={studentAccount || account} />}
+              {activePage === 'canteen' && <CanteenPage account={studentAccount || account} />}
               {activePage === 'attendance' && <AttendancePage />}
-              {activePage === 'academics' && <AcademicsPage account={account} />}
+              {activePage === 'academics' && <AcademicsPage account={studentAccount} />}
               {activePage === 'timetable' && (
                 <TimetablePage
                   onClose={() => {
@@ -855,17 +937,17 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'notices' && <NoticesPage />}
               {activePage === 'idcard' && <IDCardPage />}
               {activePage === 'library' && <LibraryPage />}
-              {activePage === 'scholarship' && <ScholarshipPage account={account} />}
-              {activePage === 'internship' && <InternshipPage account={account} />}
-              {activePage === 'online-exam' && <OnlineExamPage />}
-              {activePage === 'apply-scholarship' && <ScholarshipPage account={account} />}
+              {activePage === 'scholarship' && <ScholarshipPage account={studentAccount} />}
+              {activePage === 'internship' && <InternshipPage account={studentAccount} />}
+              {activePage === 'online-exam' && <OnlineExamPage account={studentAccount} />}
+              {activePage === 'apply-scholarship' && <ScholarshipPage account={studentAccount} />}
               {(activePage === 'bonafide' || activePage === 'apply-bonafide') && (
-                <BonafidePage account={account} />
+                <BonafidePage account={studentAccount} />
               )}
               {activePage === 'placement' && <PlacementPage />}
               {activePage === 'feedback' && (
                 <FeedbackPage
-                  account={account}
+                  account={studentAccount}
                   onBack={() => {
                     setActivePage('dashboard')
                     setActiveLink('Dashboard')
@@ -876,7 +958,7 @@ function StudentPortal({ account, onLogout }) {
             </div>
           ) : activePage === 'profile' ? (
             <StudentProfile
-              account={account}
+              account={studentAccount}
               initialTab={profileTab || 'Personal'}
               initialQuickView={profileQuickView || ''}
               onBack={() => {
@@ -897,7 +979,7 @@ function StudentPortal({ account, onLogout }) {
                 <div className="dash-hero-glow" aria-hidden="true" />
                 <div className="dash-hero-main">
                   <p className="dash-hero-kicker"><Sparkles size={13} /> Student workspace · Semester 5</p>
-                  <h2 className="dash-hero-title">{timeGreeting.wish}, {getGreetingDisplayName(account?.name || 'Student')}</h2>
+                  <h2 className="dash-hero-title">{timeGreeting.wish}, {getGreetingDisplayName(studentAccount?.name || 'Student')}</h2>
                   <p className="dash-hero-caption">{timeGreeting.caption}</p>
                   <div className="dash-motd" role="note" aria-label="Message of the day">
                     <span className="dash-motd-icon"><Megaphone size={14} /></span>
@@ -920,30 +1002,30 @@ function StudentPortal({ account, onLogout }) {
                 {/* 1st Image: Student Profile Card placed on LEFT SIDE with strict Passport Size Photo */}
                 <aside className="dash-card dash-info dash-info-hero" id="student-information" aria-label="Student account information">
                   <div className="dash-info-cover">
-                    <div className="dash-passport-photo-frame" title={`${account?.name || 'Student'} Passport Photograph (Official 35mm x 45mm)`}>
-                      <img src={studentPhoto} alt={account?.name || 'Student'} className="dash-passport-img" />
+                    <div className="dash-passport-photo-frame" title={`${studentAccount?.name || 'Student'} Passport Photograph (Official 35mm x 45mm)`}>
+                      <img src={studentPhoto} alt={studentAccount?.name || 'Student'} className="dash-passport-img" />
                     </div>
                     <div>
-                      <strong>{account?.name || 'Student'}</strong>
-                      <small>{account?.registrationNumber || '—'}</small>
+                      <strong>{studentAccount?.name || 'Student'}</strong>
+                      <small>{studentAccount?.registrationNumber || '—'}</small>
                     </div>
                     <span className="dash-status"><i /> Active</span>
                   </div>
                   <dl className="dash-info-list">
-                    <DetailRow label="Registration No." value={account?.registrationNumber || account?.rollNumber || '—'} />
-                    <DetailRow label="Name" value={account?.name || 'Student'} />
-                    <DetailRow label="Program" value={account?.program || account?.course || 'B.Tech'} />
-                    <DetailRow label="Batch" value={account?.batch || '2023–2027'} />
-                    <DetailRow label="Department" value={account?.department || 'Computer Science & Engineering'} />
+                    <DetailRow label="Registration No." value={studentAccount?.registrationNumber || studentAccount?.rollNumber || '—'} />
+                    <DetailRow label="Name" value={studentAccount?.name || 'Student'} />
+                    <DetailRow label="Program" value={studentAccount?.program || studentAccount?.course || 'B.Tech'} />
+                    <DetailRow label="Batch" value={studentAccount?.batch || studentAccount?.academicYear || '2023–2027'} />
+                    <DetailRow label="Department" value={studentAccount?.department || 'Computer Science & Engineering'} />
                     <DetailRow
                       label="Section"
                       value={(() => {
-                        const sec = account?.section || account?.sectionName || 'A';
+                        const sec = studentAccount?.section || studentAccount?.sectionName || 'A';
                         return String(sec).startsWith('Section') ? sec : `Section ${sec}`;
                       })()}
                     />
-                    <DetailRow label="Email ID" value={account?.email || `${(account?.name || 'student').toLowerCase().replace(/\s+/g, '.')}@student.apnacampus.edu.in`} />
-                    <DetailRow label="Mobile No." value={account?.phone || '+91 98610 23010'} />
+                    <DetailRow label="Email ID" value={studentAccount?.email || '—'} />
+                    <DetailRow label="Mobile No." value={studentAccount?.phone || '—'} />
                   </dl>
                   <button className="dash-btn dash-btn-primary dash-info-btn" type="button" onClick={() => {
                     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -969,7 +1051,7 @@ function StudentPortal({ account, onLogout }) {
                     title="Open Academics & Enrolled Courses"
                   >
                     {(() => {
-                      const sem = account?.currentSemester || account?.semester || 5;
+                      const sem = studentAccount?.currentSemester || studentAccount?.semester || 5;
                       const semLabel = String(sem).startsWith('Semester') ? sem : `Semester ${sem}`;
                       return (
                         <>
@@ -981,7 +1063,7 @@ function StudentPortal({ account, onLogout }) {
                             <span className="dash-stat-badge tone-blue-badge">{semLabel}</span>
                           </div>
                           <div className="dash-stat-body">
-                            <strong className="dash-stat-value">{account?.enrolledSubjects ? String(account.enrolledSubjects.length).padStart(2, '0') : '06'}</strong>
+                            <strong className="dash-stat-value"><CountUpNumber value={studentAccount?.enrolledSubjects ? String(studentAccount.enrolledSubjects.length).padStart(2, '0') : '06'} /></strong>
                             <p className="dash-stat-desc">{semLabel} · 22 total credits</p>
                           </div>
                         </>
@@ -1012,7 +1094,7 @@ function StudentPortal({ account, onLogout }) {
                     </div>
                     <div className="dash-stat-body">
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <strong className="dash-stat-value">92%</strong>
+                        <strong className="dash-stat-value"><CountUpNumber value="92%" /></strong>
                         <span className="dash-stat-ratio">138 / 150 Lectures</span>
                       </div>
                       <div className="dash-progress" aria-hidden="true">

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockTransportNotifications } from './transportData.js';
+import { notificationsStore } from '../../services/notificationsStore';
 import './TransportExtraSections.css';
 
 export default function TransportNotificationsSection() {
@@ -48,6 +49,21 @@ export default function TransportNotificationsSection() {
       author: 'Office of Transport Administrator'
     };
     setData([newNotice, ...data]);
+
+    // Cross-portal dispatch into global notificationsStore
+    try {
+      notificationsStore.sendNotification({
+        title: `[Transport Circular] ${title}`,
+        message: `${content} (Target: ${targetGroup})`,
+        category: 'System',
+        priority: priority === 'Urgent' ? 'Urgent' : 'Important',
+        senderRole: 'TRANSPORT',
+        targetRoles: targetGroup === 'Bus Drivers Only' ? ['TRANSPORT'] : ['ALL', 'STUDENT', 'FACULTY', 'TRANSPORT']
+      });
+    } catch (err) {
+      console.warn('Could not sync to global notification mesh:', err);
+    }
+
     setNewNoticeModal(false);
     setTitle('');
     setContent('');
@@ -229,13 +245,13 @@ export default function TransportNotificationsSection() {
             <form onSubmit={handlePublish}>
               <div className="trans-modal-body">
                 <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Notice Title</label>
-                  <input type="text" className="trans-select" style={{ width: '100%' }} placeholder="e.g. Route 3 Morning Stoppage Relocation" value={title} onChange={e => setTitle(e.target.value)} required />
+                  <label className="trans-label">Notice Title</label>
+                  <input type="text" className="trans-input" style={{ width: '100%' }} placeholder="e.g. Route 3 Morning Stoppage Relocation" value={title} onChange={e => setTitle(e.target.value)} required />
                 </div>
 
                 <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Notice Category</label>
+                    <label className="trans-label">Notice Category</label>
                     <select className="trans-select" style={{ width: '100%' }} value={category} onChange={e => setCategory(e.target.value)}>
                       <option value="Safety Alert">Safety Alert / Weather</option>
                       <option value="Route Change">Route Change & Diversion</option>
@@ -244,7 +260,7 @@ export default function TransportNotificationsSection() {
                     </select>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Target Group</label>
+                    <label className="trans-label">Target Group</label>
                     <select className="trans-select" style={{ width: '100%' }} value={targetGroup} onChange={e => setTargetGroup(e.target.value)}>
                       <option value="All Commuters & Drivers">All Commuters & Drivers</option>
                       <option value="Route 1 Pass Holders">Route 1 Pass Holders</option>
@@ -257,7 +273,7 @@ export default function TransportNotificationsSection() {
 
                 <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Priority</label>
+                    <label className="trans-label">Priority</label>
                     <select className="trans-select" style={{ width: '100%' }} value={priority} onChange={e => setPriority(e.target.value)}>
                       <option value="Important">Important</option>
                       <option value="Urgent">Urgent (Flash Banner)</option>
@@ -265,14 +281,14 @@ export default function TransportNotificationsSection() {
                     </select>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Expiry Date</label>
-                    <input type="date" className="trans-select" style={{ width: '100%' }} value={expiryDate} onChange={e => setExpiryDate(e.target.value)} required />
+                    <label className="trans-label">Expiry Date</label>
+                    <input type="date" className="trans-input" style={{ width: '100%' }} value={expiryDate} onChange={e => setExpiryDate(e.target.value)} required />
                   </div>
                 </div>
 
                 <div style={{ marginTop: '1rem' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Circular Text / Instructions</label>
-                  <textarea rows={4} className="trans-select" style={{ width: '100%', resize: 'none' }} placeholder="Provide detailed commuter instructions..." value={content} onChange={e => setContent(e.target.value)} required />
+                  <label className="trans-label">Circular Text / Instructions</label>
+                  <textarea rows={4} className="trans-textarea" style={{ width: '100%', resize: 'none' }} placeholder="Provide detailed commuter instructions..." value={content} onChange={e => setContent(e.target.value)} required />
                 </div>
               </div>
               <div className="trans-modal-footer">

@@ -199,8 +199,12 @@ export default function AcademicsPage({ account }) {
   }
 
   const loadClassNotes = async () => {
-    const list = await notesApi.getClassNotes({ subject: 'ALL' })
-    if (list) setClassNotes(list)
+    try {
+      const list = await notesApi.getApprovedPeerNotes({ subject: 'ALL' })
+      setClassNotes(list)
+    } catch (error) {
+      showToast(error.message || 'Could not load approved class notes.')
+    }
   }
 
   const showToast = (msg) => {
@@ -211,14 +215,15 @@ export default function AcademicsPage({ account }) {
   const handleFileChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    setSelectedFile(file)
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader()
-      reader.onload = (evt) => setFilePreview(evt.target.result)
-      reader.readAsDataURL(file)
-    } else {
-      setFilePreview('PDF')
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('File size exceeds the 10MB limit.')
+      return
     }
+    setSelectedFile(file)
+    const reader = new FileReader()
+    reader.onload = (evt) => setFilePreview(evt.target.result)
+    reader.onerror = () => showToast('Could not read the selected file.')
+    reader.readAsDataURL(file)
   }
 
   const handleUploadSubmit = async (e) => {
@@ -244,14 +249,17 @@ export default function AcademicsPage({ account }) {
       rollNumber: '2305201001'
     }
 
-    const res = await notesApi.uploadClassNotes(payload)
-    if (res && res.success) {
-      showToast('Class notes uploaded successfully!')
+    try {
+      const res = await notesApi.submitPeerNote(payload)
+      if (!res?.success) throw new Error(res?.message || 'Notes were not submitted.')
+      showToast('Notes submitted to faculty for verification.')
       setShowUploadModal(false)
       setSelectedFile(null)
       setFilePreview('')
       setUploadForm({ topic: '', description: '', date: new Date().toISOString().split('T')[0] })
       await loadClassNotes()
+    } catch (error) {
+      showToast(error.message || 'Could not submit class notes.')
     }
   }
 

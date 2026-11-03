@@ -45,6 +45,7 @@ import {
   Send,
   HelpCircle,
   FileCheck,
+  Home
 } from 'lucide-react';
 import './PlacementPortal.css';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
@@ -100,9 +101,14 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
   // ── Navigation Structure Matching Exact User Specification ──
   const placementNavSections = [
     {
+      title: 'OVERVIEW',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: Home },
+      ],
+    },
+    {
       title: 'RECRUITMENT & DRIVES',
       items: [
-        { id: 'dashboard', label: 'T&P Dashboard', icon: Briefcase },
         { id: 'drives', label: 'Placement Drives', icon: CalendarDays },
         { id: 'companies', label: 'Corporate Partners', icon: Building2 },
       ],
@@ -780,7 +786,7 @@ export default function PlacementPortal({ account, onLogout, onSwitchRole }) {
         activeTab={activeTab === 'applicants' ? 'candidates' : activeTab}
         onTabChange={(tab) => {
           setActiveTab(tab);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          window.scrollTo({ top: 0, behavior: 'auto' });
         }}
         onLogout={onLogout}
         pageTitle={pageHeading.title}

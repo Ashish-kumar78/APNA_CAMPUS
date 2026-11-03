@@ -59,6 +59,7 @@ import {
 import '../DashboardHome.css';
 import './RoleDashboardLanding.css';
 import { getGreetingDisplayName } from '../utils/timeGreeting.js';
+import { CountUpNumber } from '../utils/motion.jsx';
 import WardenEmployeeProfile from './hostel/WardenEmployeeProfile.jsx';
 import { api } from '../services/api.js';
 
@@ -1633,7 +1634,7 @@ export default function RoleDashboardLanding({
                 <span className="dash-stat-badge tone-blue-badge">{c1.badge}</span>
               </div>
               <div className="dash-stat-body">
-                <strong className="dash-stat-value">{c1.val}</strong>
+                <strong className="dash-stat-value"><CountUpNumber value={c1.val} /></strong>
                 <p className="dash-stat-desc">{c1.desc}</p>
               </div>
               <div className="dash-stat-foot">
@@ -1658,7 +1659,7 @@ export default function RoleDashboardLanding({
               </div>
               <div className="dash-stat-body">
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <strong className="dash-stat-value">{c2.val}</strong>
+                  <strong className="dash-stat-value"><CountUpNumber value={c2.val} /></strong>
                   {c2.ratio && <span className="dash-stat-ratio">{c2.ratio}</span>}
                 </div>
                 {c2.pct && (
@@ -1686,7 +1687,7 @@ export default function RoleDashboardLanding({
                 <span className="dash-stat-badge tone-violet-badge">{c3.badge}</span>
               </div>
               <div className="dash-stat-body">
-                <strong className="dash-stat-value">{c3.val}</strong>
+                <strong className="dash-stat-value"><CountUpNumber value={c3.val} /></strong>
                 <p className="dash-stat-desc">{c3.desc}</p>
               </div>
               <div className="dash-stat-foot">
@@ -1708,7 +1709,7 @@ export default function RoleDashboardLanding({
                 <span className="dash-stat-badge tone-amber-badge">{c4.badge}</span>
               </div>
               <div className="dash-stat-body">
-                <strong className="dash-stat-value">{c4.val}</strong>
+                <strong className="dash-stat-value"><CountUpNumber value={c4.val} /></strong>
                 <p className="dash-stat-desc">{c4.desc}</p>
               </div>
               <div className="dash-stat-foot">

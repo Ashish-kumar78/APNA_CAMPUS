@@ -855,7 +855,8 @@
 }
 
 /* ─── Modal Dialogs ───────────────────────────────── */
-.mgmt-modal-backdrop {
+.mgmt-modal-backdrop,
+.mgmt-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.55);
@@ -866,6 +867,27 @@
   justify-content: center;
   padding: 20px;
   animation: fade-in 0.15s ease;
+}
+
+.mgmt-btn-icon,
+.mgmt-modal-close {
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.mgmt-btn-icon:hover,
+.mgmt-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .mgmt-modal {

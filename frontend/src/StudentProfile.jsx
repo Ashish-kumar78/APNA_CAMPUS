@@ -76,18 +76,64 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
     }
   }, [account?.registrationNumber, account?.name])
 
-  // Dynamic student record with live sync on hostel attendance submissions
-  const [liveStudent, setLiveStudent] = useState(() => {
+  // Merge account prop with complete student store record if available
+  const baseStudent = useMemo(() => {
+    const isExplicitDemo =
+      account?.studentId === '2401432265' ||
+      account?.rollNumber === '2401432265' ||
+      account?.name === 'BISHNU PRASAD SAHOO'
     const matched = findStudentByQuery(account?.registrationNumber || account?.rollNumber || account?.name)
-    return { ...defaultDemoStudent, ...account, ...(matched || {}) }
-  })
+
+    const rawName = (account?.name || '').trim()
+    const nameParts = rawName ? rawName.split(/\s+/).filter(Boolean) : []
+    const derivedFirst = nameParts[0] || ''
+    const derivedLast = nameParts.length > 1 ? nameParts[nameParts.length - 1] : ''
+    const derivedMiddle = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : ''
+
+    if (!isExplicitDemo && (account?.role === 'student' || account?.role === 'STUDENT') && rawName) {
+      return {
+        ...defaultDemoStudent,
+        ...account,
+        name: rawName,
+        firstName: account.firstName || derivedFirst,
+        lastName: account.lastName || derivedLast,
+        middleName: account.middleName || derivedMiddle,
+        rollNumber: account.rollNumber || account.studentId || account.identifier || account.registrationNumber,
+        studentId: account.studentId || account.rollNumber || account.identifier || account.registrationNumber,
+        registrationNumber: account.registrationNumber || account.rollNumber || account.studentId,
+        department: account.department || account.branch || 'Engineering',
+        course: account.course || account.program || 'Bachelor of Technology',
+        program: account.program || account.course || 'B.Tech',
+        batch: account.batch || account.academicYear || '2026-27',
+        gender: account.gender || 'Not Specified',
+        dob: account.dob || '-',
+        dobFormatted: account.dob || '-',
+        personalEmail: account.personalEmail || account.email,
+        email: account.email,
+        phone: account.phone || '-',
+        category: account.category || 'General',
+        caste: account.category || 'General',
+        guardians: Array.isArray(account.guardians) ? account.guardians : [],
+        addresses: Array.isArray(account.addresses) ? account.addresses : [],
+        isDemo: false,
+      }
+    }
+
+    return { ...defaultDemoStudent, ...account, ...(matched || {}), isDemo: true }
+  }, [account])
+
+  // Dynamic student record with live sync on hostel attendance submissions
+  const [liveStudent, setLiveStudent] = useState(baseStudent)
+
+  useEffect(() => {
+    setLiveStudent(baseStudent)
+  }, [baseStudent])
 
   useEffect(() => {
     const refreshStudent = () => {
       const matched = findStudentByQuery(account?.registrationNumber || account?.rollNumber || account?.name)
-      setLiveStudent({ ...defaultDemoStudent, ...account, ...(matched || {}) })
+      setLiveStudent((prev) => ({ ...prev, ...(matched || {}) }))
     }
-    refreshStudent()
     window.addEventListener('cms_students_changed', refreshStudent)
     window.addEventListener('bput_hostel_attendance_submitted', refreshStudent)
     window.addEventListener('bput_hostel_attendance_updated', refreshStudent)
@@ -200,11 +246,13 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
     setTimeout(() => setMessage(''), 4500)
   }
 
-  const firstName = student.firstName || 'BISHNU'
-  const lastName = student.lastName || 'SAHOO'
-  const middleName = student.middleName || 'PRASAD'
-  const fullName = student.name || `${firstName} ${middleName} ${lastName}`.trim()
-  const regNumber = student.registrationNumber || account?.registrationNumber || '2401432265'
+  const rawStudentName = (student.name || '').trim()
+  const studentNameParts = rawStudentName ? rawStudentName.split(/\s+/).filter(Boolean) : []
+  const firstName = student.firstName || studentNameParts[0] || (student.isDemo ? 'BISHNU' : 'STUDENT')
+  const lastName = student.lastName || (studentNameParts.length > 1 ? studentNameParts[studentNameParts.length - 1] : (student.isDemo ? 'SAHOO' : ''))
+  const middleName = student.middleName || (studentNameParts.length > 2 ? studentNameParts.slice(1, -1).join(' ') : (student.isDemo ? 'PRASAD' : ''))
+  const fullName = student.name || [firstName, middleName, lastName].filter(Boolean).join(' ')
+  const regNumber = student.registrationNumber || student.rollNumber || student.studentId || account?.registrationNumber || '-'
   const emailName = fullName.toLowerCase().replaceAll(' ', '.')
   const summaryRows = [
     ['Last Date of Class Attendance', student.lastClassAttendanceDate || '14/10/2026'],
@@ -272,8 +320,40 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
   }
 
   const studentPhoto = useMemo(() => {
+    // 1. Explicit photo / photoUrl / avatar
+    if (account?.photo && typeof account.photo === 'string' && !account.photo.includes('passport_photo_')) {
+      return account.photo
+    }
+    if (account?.photoUrl && typeof account.photoUrl === 'string' && !account.photoUrl.includes('passport_photo_')) {
+      return account.photoUrl
+    }
+    if (account?.avatar && typeof account.avatar === 'string' && !account.avatar.includes('passport_photo_')) {
+      return account.avatar
+    }
+
+    // 2. Uploaded Passport Photo from admission documents
+    if (Array.isArray(account?.documents)) {
+      const pDoc = account.documents.find(
+        (d) =>
+          (d.id === 'photo' || d.category === 'photo' || /photo|passport/i.test(d.name || d.fileName || d.category || '')) &&
+          (d.fileUrl || d.dataUrl)
+      )
+      if (pDoc) return pDoc.fileUrl || pDoc.dataUrl
+    }
+
+    // 3. Local session photo cache (stored during admission registration)
+    try {
+      const regId = account?.studentId || account?.rollNumber || account?.identifier || account?.registrationNumber
+      if (regId) {
+        const cached = localStorage.getItem(`apna_student_photo_${regId}`)
+        if (cached) return cached
+      }
+    } catch (_) {}
+
     if (account?.photo && !account.photo.includes('female')) return account.photo
-    return '/passport_photo_male.svg'
+    return String(account?.gender || '').toLowerCase().includes('female')
+      ? '/passport_photo_female.svg'
+      : '/passport_photo_male.svg'
   }, [account])
 
   return (
@@ -451,7 +531,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
                           <ArrowLeft size={13} /> Back to profile
                         </button>
                       </div>
-                      <MarksPage initialRole="student" />
+                      <MarksPage initialRole="student" student={student} account={account} />
                     </div>
                   ) : activeQuickView === 'University Marks' ? (
                     <UniversityMarksView onBack={() => setActiveQuickView('')} account={account} />
@@ -464,7 +544,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
             {activeTab === 'Attendance Dashboard' || activeTab === 'Attendance' ? (
               <AttendancePage />
             ) : activeTab === 'Internal Marks' ? (
-              <MarksPage initialRole="student" />
+              <MarksPage initialRole="student" student={student} account={account} />
             ) : activeTab === 'Examination' ? (
               <ExaminationPage />
             ) : activeTab === 'Fee Details' || activeTab === 'Fees' ? (
@@ -1011,13 +1091,13 @@ function PersonalDetails({ student }) {
             </tr>
             <tr>
               <td className="erp-th-cell">First Name</td>
-              <td className="erp-td-cell">{s.firstName || 'BISHNU'}</td>
+              <td className="erp-td-cell">{s.firstName || (s.name ? s.name.split(' ')[0] : (s.isDemo ? 'BISHNU' : '—'))}</td>
               <td className="erp-th-cell">Last Name</td>
-              <td className="erp-td-cell">{s.lastName || 'SAHOO'}</td>
+              <td className="erp-td-cell">{s.lastName || (s.name && s.name.split(' ').length > 1 ? s.name.split(' ').slice(-1)[0] : (s.isDemo ? 'SAHOO' : '—'))}</td>
             </tr>
             <tr>
               <td className="erp-th-cell">Middle Name</td>
-              <td className="erp-td-cell">{s.middleName || 'PRASAD'}</td>
+              <td className="erp-td-cell">{s.middleName || (s.name && s.name.split(' ').length > 2 ? s.name.split(' ').slice(1, -1).join(' ') : (s.isDemo ? 'PRASAD' : '—'))}</td>
               <td className="erp-th-cell">Gender</td>
               <td className="erp-td-cell">{s.gender || 'MALE'}</td>
             </tr>
@@ -1279,34 +1359,63 @@ function GuardiansDetails({ student }) {
 
   const guardiansList = Array.isArray(s.guardians) && s.guardians.length > 0
     ? s.guardians
-    : [
-        {
-          name: s.fatherName || 'AJAY KUMAR SAHOO',
-          relationship: s.fatherRelationship || 'Father',
-          isEmergency: s.fatherIsEmergency || 'No',
-          occupation: s.fatherOccupation || 'FARMER',
-          phone: s.fatherPhone || '7749844291',
-          landline: s.fatherLandline || '',
-          income: s.fatherIncome || '1LAK',
-          email: s.fatherEmail || '',
-          qualification: s.fatherQualification || '',
-          homeAddress: s.fatherHomeAddress || '',
-          officeAddress: s.fatherOfficeAddress || ''
-        },
-        {
-          name: s.motherName || 'SANJUBALA SAHOO',
-          relationship: s.motherRelationship || 'Mother',
-          isEmergency: s.motherIsEmergency || 'No',
-          occupation: s.motherOccupation || '',
-          phone: s.motherPhone || '',
-          landline: s.motherLandline || '',
-          income: s.motherIncome || '0',
-          email: s.motherEmail || '',
-          qualification: s.motherQualification || '',
-          homeAddress: s.motherHomeAddress || '',
-          officeAddress: s.motherOfficeAddress || ''
-        }
-      ]
+    : (s.isDemo
+        ? [
+            {
+              name: s.fatherName || 'AJAY KUMAR SAHOO',
+              relationship: s.fatherRelationship || 'Father',
+              isEmergency: s.fatherIsEmergency || 'No',
+              occupation: s.fatherOccupation || 'FARMER',
+              phone: s.fatherPhone || '7749844291',
+              landline: s.fatherLandline || '',
+              income: s.fatherIncome || '1LAK',
+              email: s.fatherEmail || '',
+              qualification: s.fatherQualification || '',
+              homeAddress: s.fatherHomeAddress || '',
+              officeAddress: s.fatherOfficeAddress || ''
+            },
+            {
+              name: s.motherName || 'SANJUBALA SAHOO',
+              relationship: s.motherRelationship || 'Mother',
+              isEmergency: s.motherIsEmergency || 'No',
+              occupation: s.motherOccupation || '',
+              phone: s.motherPhone || '',
+              landline: s.motherLandline || '',
+              income: s.motherIncome || '0',
+              email: s.motherEmail || '',
+              qualification: s.motherQualification || '',
+              homeAddress: s.motherHomeAddress || '',
+              officeAddress: s.motherOfficeAddress || ''
+            }
+          ]
+        : [
+            {
+              name: s.fatherName || '—',
+              relationship: 'Father',
+              isEmergency: 'No',
+              occupation: '—',
+              phone: '—',
+              landline: '',
+              income: '—',
+              email: '',
+              qualification: '—',
+              homeAddress: '',
+              officeAddress: ''
+            },
+            {
+              name: s.motherName || '—',
+              relationship: 'Mother',
+              isEmergency: 'No',
+              occupation: '—',
+              phone: '—',
+              landline: '',
+              income: '—',
+              email: '',
+              qualification: '—',
+              homeAddress: '',
+              officeAddress: ''
+            }
+          ])
 
   return (
     <div className="erp-tab-content">

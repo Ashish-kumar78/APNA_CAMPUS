@@ -47,7 +47,8 @@ import {
   Phone,
   Award,
   FileCheck,
-  Radio
+  Radio,
+  Home
 } from 'lucide-react';
 import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
 import { AppLayout } from './Navigation';
@@ -892,7 +893,7 @@ export default function HodPortal({ account, onLogout }) {
     {
       title: 'OVERVIEW',
       items: [
-        { id: 'dashboard', label: 'Department Dashboard', icon: Layers },
+        { id: 'dashboard', label: 'Dashboard', icon: Home },
       ]
     },
     {

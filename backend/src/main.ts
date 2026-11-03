@@ -100,19 +100,19 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   // 4. CORS Configuration
-  const defaultAllowedOrigins = [
+  const allowedOrigins = new Set([
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:4000',
-  ];
+  ]);
 
   if (process.env.CLIENT_URL) {
-    const urls = process.env.CLIENT_URL.split(',').map((u) => u.trim());
-    for (const u of urls) {
-      if (u && !defaultAllowedOrigins.includes(u)) {
-        defaultAllowedOrigins.push(u);
+    for (const configuredOrigin of process.env.CLIENT_URL.split(',')) {
+      const origin = configuredOrigin.trim().replace(/\/+$/, '');
+      if (origin) {
+        allowedOrigins.add(origin);
       }
     }
   }
@@ -122,23 +122,15 @@ async function bootstrap() {
       // Allow requests with no origin (like mobile apps, curl, or server-to-server)
       if (!origin) return callback(null, true);
 
-      // Check explicit allowed origins
-      if (defaultAllowedOrigins.includes(origin)) {
+      if (
+        allowedOrigins.has(origin) ||
+        origin.startsWith('http://localhost:') ||
+        origin.startsWith('http://127.0.0.1:')
+      ) {
         return callback(null, true);
       }
 
-      // Automatically allow Vercel preview and production domains
-      try {
-        const hostname = new URL(origin).hostname;
-        if (hostname.endsWith('.vercel.app') || hostname === 'localhost') {
-          return callback(null, true);
-        }
-      } catch {
-        // invalid URL format
-      }
-
-      // Permissive fallback so frontend deployments are never blocked by unexpected origins
-      return callback(null, true);
+      return callback(null, false);
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,

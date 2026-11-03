@@ -74,7 +74,7 @@ export class InternshipController {
       page,
       limit,
     });
-    return { success: true, ...result };
+    return { success: true, data: result, ...result };
   }
 
   /**
@@ -122,7 +122,7 @@ export class InternshipController {
     if (role === 'student') {
       const reg = user.student?.rollNumber || user.student?.studentId || user.identifier;
       const result = await this.internshipService.getIdCards({ search: reg, limit: 10 });
-      return { success: true, ...result };
+      return { success: true, data: result, ...result };
     }
 
     const result = await this.internshipService.getIdCards({
@@ -134,7 +134,7 @@ export class InternshipController {
       page,
       limit,
     });
-    return { success: true, ...result };
+    return { success: true, data: result, ...result };
   }
 
   /**

@@ -1,6 +1,6 @@
 # CollegeFlow — API Contract Specification
 
-This document defines the RESTful API endpoints for the **Digital Fee Payment Proof & Verification** module and **Class Notes Sharing / Missed Class** module.
+This document defines the RESTful API endpoints for the **Digital Fee Payment Proof & Verification**, **Class Notes Sharing**, and **Student Quiz & Marks** modules.
 
 ---
 
@@ -179,7 +179,7 @@ Reject a student payment proof with a mandatory rejection reason.
 ## Module 2: Class Notes Sharing & Missed Classes
 
 ### 1. GET `/api/class-notes`
-Fetch uploaded class notes with filtering by date, subject, semester, section, and search query.
+Fetch faculty-approved student notes with filtering by date, subject, and search query. Notes remain private until a faculty member verifies them.
 
 - **Method**: `GET`
 - **Authentication**: `Bearer Token`
@@ -216,7 +216,7 @@ Fetch uploaded class notes with filtering by date, subject, semester, section, a
 ---
 
 ### 2. POST `/api/class-notes`
-Upload student-generated class notes for a missed lecture.
+Submit student-generated class notes for faculty review. The authenticated student's profile supplies the uploader and class information; clients cannot choose another student's identity.
 
 - **Method**: `POST`
 - **Authentication**: `Bearer Token`
@@ -228,7 +228,7 @@ Upload student-generated class notes for a missed lecture.
   "date": "2026-10-05",
   "topic": "Process Scheduling",
   "description": "Class notes & board photos from today's lecture.",
-  "file": "data:image/jpeg;base64,...",
+  "previewUrl": "data:image/jpeg;base64,...",
   "fileName": "lecture_notes.jpg",
   "fileType": "image/jpeg"
 }
@@ -237,10 +237,10 @@ Upload student-generated class notes for a missed lecture.
 ```json
 {
   "success": true,
-  "message": "Class notes uploaded successfully.",
+  "message": "Class notes submitted for faculty verification.",
   "data": {
     "id": "NOTE-502",
-    "status": "VISIBLE",
+    "status": "PENDING",
     "isFacultyVerified": false
   }
 }
@@ -309,8 +309,15 @@ Fetch missed classes for the logged-in student along with available notes indica
 
 ---
 
-### 5. POST `/api/faculty/class-notes/:id/verify`
-Faculty mark student-uploaded notes as official `✓ Faculty Verified`.
+### 5. GET `/api/faculty/class-notes/pending`
+List student notes awaiting review, scoped to the faculty member's department.
+
+- **Method**: `GET`
+- **Authentication**: `Bearer JWT`
+- **Role Permissions**: `Faculty`, `HOD`, `Admin`
+
+### 6. POST `/api/faculty/class-notes/:id/verify`
+Approve a pending student note and publish it to students.
 
 - **Method**: `POST`
 - **Authentication**: `Bearer Token`
@@ -320,6 +327,97 @@ Faculty mark student-uploaded notes as official `✓ Faculty Verified`.
 ```json
 {
   "success": true,
-  "message": "Notes verified by faculty."
+  "message": "Class note verified and published to students."
 }
 ```
+
+### 7. POST `/api/faculty/class-notes/:id/reject`
+Reject a student note so it is not shown in the approved class notes list.
+
+- **Method**: `POST`
+- **Authentication**: `Bearer JWT`
+- **Role Permissions**: `Faculty`, `HOD`, `Admin`
+- **Request Body**: `{ "remarks": "Please upload a clearer scan." }`
+
+---
+
+## Module 3: Student Quizzes & Marks
+
+### 1. GET `/api/exams/student/quizzes`
+List live quizzes assigned to the authenticated student's semester and section. Correct answers are not returned.
+
+- **Method**: `GET`
+- **Authentication**: `Bearer JWT`
+- **Role Permissions**: `Student`
+
+### 2. POST `/api/exams/student/quizzes/:id/submit`
+Submit the student's answer map. The backend grades answers, enforces one attempt, stores the submission, and updates the matching quiz slot in `AssessmentMark` in one transaction.
+
+- **Method**: `POST`
+- **Authentication**: `Bearer JWT`
+- **Role Permissions**: `Student`
+- **Request Body**:
+```json
+{
+  "answers": {
+    "1": 2,
+    "2": 0
+  }
+}
+```
+
+### 3. GET `/api/marks/student`
+Return the authenticated student's persisted assessment marks. Student access is always scoped to the current account.
+
+## Module 4: Institutional Notifications & Notices
+
+Notification endpoints require a valid bearer token unless noted otherwise. Recipient records and read state are scoped to the authenticated user; clients must not supply a roll number to select another recipient.
+
+### 1. GET `/api/notifications`
+List notifications for the current user. Supports `page`, `limit`, `category`, `priority`, `unreadOnly`, and `search` query parameters. The response includes recipient-specific unread state and pagination metadata.
+
+### 2. GET `/api/notifications/summary`
+Return the current user's total, unread, and urgent notification counts.
+
+### 3. POST `/api/notifications/:id/read`
+Mark one notification as read for the authenticated recipient.
+
+### 4. POST `/api/notifications/mark-all-read`
+Mark eligible notifications as read for the authenticated recipient.
+
+### 5. GET `/api/notifications/faculty`
+List notices created by the authenticated faculty/HOD account, including recipient and read counts.
+
+### 6. POST `/api/notifications/faculty/preview-recipients`
+Preview eligible students for the supplied department/semester/section criteria. Faculty are limited to their department and assigned classes.
+
+### 7. POST `/api/notifications/faculty`
+Create and broadcast a notice to an authorized class cohort. The backend derives the sender identity from the authenticated account and validates department and faculty assignment scope.
+
+### 8. DELETE `/api/notifications/faculty/:id`
+Cancel an unread notice created by the authenticated sender.
+
+### 9. GET `/api/cms/notices`
+List persisted campus notices. Optional `search` and `tag` query parameters filter the results. This endpoint is public.
+
+### 10. POST `/api/cms/notices`
+Create a persisted campus notice. Requires authentication and an authorized administration or leadership role.
+
+### 11. GET `/api/notifications/stream`
+Subscribe to server-sent notification events. Authenticate with a bearer token or the `token` query parameter required by browser `EventSource` clients.
+
+## Module 5: Admissions & Student Provisioning
+
+The following endpoints require an authenticated bearer token. Applicant registry and review operations are restricted to authorized admissions and administrative roles.
+
+### 1. GET `/api/admission/applicants`
+List applicants. Supports `search`, `status`, `programmeId`, and `academicYear` filters.
+
+### 2. POST `/api/admission/applicants`
+Register an applicant using an active `programmeId`. The backend allocates the application number transactionally and validates email, phone, marks, and entrance rank.
+
+### 3. PATCH `/api/admission/applicants/:id/verify`
+Mark an application verified after review.
+
+### 4. POST `/api/admission/applicants/:id/approve`
+Provision a student, semester-one enrollment, and an inactive student account in one database transaction. Generates a unique `AC-<academic-year>-<sequence>` student ID and an institutional email using `STUDENT_EMAIL_DOMAIN`. The response contains a one-time activation link, valid for 24 hours; successful activation sets the password and consumes the link.

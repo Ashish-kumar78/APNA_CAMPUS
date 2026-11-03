@@ -244,6 +244,13 @@
   color: #94a3b8;
 }
 
+.terminal-meal-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
 .meal-btn-group {
   display: flex;
   gap: 0.35rem;

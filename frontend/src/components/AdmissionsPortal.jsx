@@ -30,7 +30,9 @@ import {
 import { api } from '../services/api.js';
 import AccountActivationModal from './AccountActivationModal.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
-import RegisterStudentWizard from './RegisterStudentWizard.jsx';
+import ComprehensiveAdmissionApplicationModal from './AdmissionsModules/ComprehensiveAdmissionApplicationModal.jsx';
+import AdmissionLetterModal from './AdmissionsModules/AdmissionLetterModal.jsx';
+import UpdateStudentAdmissionModal from './AdmissionsModules/UpdateStudentAdmissionModal.jsx';
 import './AdmissionsModules/AdmissionsModules.css';
 
 // Admissions Directorate Modules
@@ -52,6 +54,80 @@ import StaffTaskManagementTab from './AdmissionsModules/StaffTaskManagementTab.j
 import ReportsAnalyticsTab from './AdmissionsModules/ReportsAnalyticsTab.jsx';
 import AdmissionCalendarTab from './AdmissionsModules/AdmissionCalendarTab.jsx';
 
+const APPLICANT_STATUS_LABELS = {
+  APPLIED: 'Applied',
+  VERIFIED: 'Verified',
+  APPROVED: 'Selected',
+  REJECTED: 'Rejected',
+  ENROLLED: 'Enrolled',
+};
+
+function formatAcademicYear(academicYear) {
+  const match = String(academicYear || '').match(/^(\d{4})-(\d{2}|\d{4})$/);
+  if (!match) return academicYear || 'Not specified';
+  const endYear = match[2].length === 2 ? `${match[1].slice(0, 2)}${match[2]}` : match[2];
+  return `${match[1]}-${endYear}`;
+}
+
+function mapApplicantFromApi(applicant, index) {
+  const documents = Array.isArray(applicant.documents) ? applicant.documents : [];
+  const status = String(applicant.status || '').toUpperCase();
+  const documentsVerified = documents.length > 0 && documents.every(
+    (document) => String(document.status || '').toLowerCase() === 'verified',
+  );
+  const date = applicant.createdAt ? new Date(applicant.createdAt) : null;
+
+  return {
+    id: applicant.id,
+    serialNo: index + 1,
+    applicationNo: applicant.applicationNo,
+    name: applicant.name,
+    email: applicant.email,
+    phone: applicant.phone,
+    gender: applicant.gender || '',
+    dob: applicant.dob || '',
+    category: applicant.category || '',
+    programmeId: applicant.programmeId || applicant.programme?.id || '',
+    appliedCourse: applicant.programme?.name || applicant.programmeName || 'Not specified',
+    courseCode: applicant.programme?.code || '',
+    academicSession: formatAcademicYear(applicant.academicYear),
+    submissionDate: date && !Number.isNaN(date.getTime())
+      ? date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      : 'Not available',
+    tenthMarks: applicant.tenthMarks ?? '',
+    twelfthMarks: applicant.twelfthMarks ?? '',
+    entranceExam: applicant.entranceExam || '',
+    entranceRank: applicant.entranceRank ?? '',
+    admissionStatus: APPLICANT_STATUS_LABELS[status] || status || 'Unknown',
+    docVerificationStatus: ['VERIFIED', 'APPROVED', 'ENROLLED'].includes(status) || documentsVerified
+      ? 'Verified'
+      : 'Pending',
+    eligibilityStatus: 'Not assessed',
+    assignedStaff: applicant.verifiedBy || applicant.approvedBy || 'Unassigned',
+    admissionRound: '',
+    documents: documents.map((document, documentIndex) => ({
+      id: document.id || `${applicant.id}-document-${documentIndex}`,
+      category: document.category || document.name || `Document ${documentIndex + 1}`,
+      filename: document.filename || document.fileName || document.name || 'Not provided',
+      uploadDate: document.uploadDate || document.createdAt || 'Not available',
+      status: document.status || 'Pending',
+      verifier: document.verifier || document.verifiedBy || 'Not reviewed',
+      remarks: document.remarks || '',
+    })),
+    coursePreferences: [],
+    staffReviewNotes: [],
+    statusHistory: [],
+    rejectionReason: applicant.rejectionReason || '',
+  };
+}
+
+function getApiData(response, operation) {
+  if (response?.success !== true) {
+    throw new Error(response?.message || `${operation} did not complete successfully.`);
+  }
+  return response.data;
+}
+
 export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
   const [activeView, setActiveView] = useState('dashboard');
 
@@ -60,64 +136,88 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
 
   // Modal states preserved from existing portal
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [letterApplicant, setLetterApplicant] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
   const [enrolledStudentInfo, setEnrolledStudentInfo] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [activationTokenToSimulate, setActivationTokenToSimulate] = useState('');
+  const [editingStudentApplicant, setEditingStudentApplicant] = useState(null);
+  const [registryApplicants, setRegistryApplicants] = useState([]);
+  const [registryProgrammes, setRegistryProgrammes] = useState([]);
+  const [registryLoading, setRegistryLoading] = useState(true);
+  const [registryError, setRegistryError] = useState('');
+  const [registryNotice, setRegistryNotice] = useState('');
+  const [registryActionId, setRegistryActionId] = useState(null);
+  const [registrySubmitting, setRegistrySubmitting] = useState(false);
+  const [registryFormError, setRegistryFormError] = useState('');
 
   // Register New Applicant form state
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    gender: 'Female',
-    dob: '2005-08-15',
+    gender: '',
+    dob: '',
     category: 'General',
-    appliedCourse: 'B.Tech Computer Science & Engineering',
-    courseCode: 'BTECH-CSE',
-    tenthMarks: '88.5',
-    twelfthMarks: '86.0',
-    entranceExam: 'JEE Main 2026',
-    entranceRank: '32500',
+    programmeId: '',
+    academicYear: '2026-27',
+    tenthMarks: '',
+    twelfthMarks: '',
+    entranceExam: '',
+    entranceRank: '',
   });
+
+  const loadApplicantRegistry = async ({ showLoading = true } = {}) => {
+    if (showLoading) setRegistryLoading(true);
+    setRegistryError('');
+    try {
+      const [applicantsResult, programmesResult] = await Promise.allSettled([
+        api.getApplicants(),
+        api.getProgrammes(),
+      ]);
+
+      if (applicantsResult.status === 'fulfilled' && applicantsResult.value?.success) {
+        const applicantsData = applicantsResult.value?.data || [];
+        if (Array.isArray(applicantsData) && applicantsData.length > 0) {
+          setRegistryApplicants(applicantsData.map(mapApplicantFromApi));
+        } else {
+          setRegistryApplicants(admissionsStore.getApplicants());
+        }
+      } else {
+        console.warn('Backend applicant registry notice:', applicantsResult.reason?.message || applicantsResult.value?.message);
+        setRegistryApplicants(admissionsStore.getApplicants());
+      }
+
+      if (programmesResult.status === 'fulfilled' && programmesResult.value?.success) {
+        const programmesData = programmesResult.value?.data || [];
+        if (Array.isArray(programmesData) && programmesData.length > 0) {
+          setRegistryProgrammes(programmesData);
+        }
+      }
+    } catch (err) {
+      console.warn('Admissions loading fallback:', err);
+      setRegistryApplicants(admissionsStore.getApplicants());
+    } finally {
+      if (showLoading) setRegistryLoading(false);
+    }
+  };
 
   // Subscribe to admissionsStore changes
   useEffect(() => {
     const unsubscribe = admissionsStore.subscribe(() => {
       setStoreTick((prev) => prev + 1);
     });
+    loadApplicantRegistry();
     return () => unsubscribe();
-  }, []);
-
-  // Sync API data if backend is available, else admissionsStore is used seamlessly
-  useEffect(() => {
-    async function tryLoadApiData() {
-      try {
-        const [applicantsRes, progRes] = await Promise.allSettled([
-          api.getApplicants(),
-          api.getProgrammes(),
-        ]);
-        if (applicantsRes.status === 'fulfilled' && applicantsRes.value?.data && applicantsRes.value.data.length > 0) {
-          // Merge API applicants into store if available
-          applicantsRes.value.data.forEach((app) => {
-            if (!admissionsStore.getApplicantById(app.id)) {
-              admissionsStore.addApplicant({
-                ...app,
-                appliedCourse: app.programme?.name || app.programmeName || 'B.Tech Computer Science & Engineering',
-                courseCode: app.programme?.code || 'BTECH-CSE',
-              });
-            }
-          });
-        }
-      } catch (e) {
-        // Fallback to store
-      }
-    }
-    tryLoadApiData();
   }, []);
 
   const courses = admissionsStore.getCourses();
   const applicants = admissionsStore.getApplicants();
+  const registryCourses = registryProgrammes.map((programme) => ({
+    id: programme.id,
+    name: programme.name,
+    code: programme.code || programme.name,
+  }));
   const rules = admissionsStore.getRules();
   const meritLists = admissionsStore.getMeritLists();
   const counsellingSchedules = admissionsStore.getCounsellingSchedules();
@@ -132,54 +232,141 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
     setTimeout(() => setToastMessage(''), 4500);
   }
 
+  const resetApplicantForm = () => setFormData({
+    name: '',
+    email: '',
+    phone: '',
+    gender: '',
+    dob: '',
+    category: 'General',
+    programmeId: '',
+    academicYear: '2026-27',
+    tenthMarks: '',
+    twelfthMarks: '',
+    entranceExam: '',
+    entranceRank: '',
+  });
+
   // Handle new applicant registration
-  const handleRegisterApplicant = (e) => {
+  const handleRegisterApplicant = async (e) => {
     e.preventDefault();
-    const newRecord = admissionsStore.addApplicant(formData);
-    showToast(`Applicant ${formData.name} registered successfully with ID: ${newRecord.applicationNo}!`);
-    setIsRegisterModalOpen(false);
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      gender: 'Female',
-      dob: '2005-08-15',
-      category: 'General',
-      appliedCourse: 'B.Tech Computer Science & Engineering',
-      courseCode: 'BTECH-CSE',
-      tenthMarks: '88.5',
-      twelfthMarks: '86.0',
-      entranceExam: 'JEE Main 2026',
-      entranceRank: '32500',
-    });
+    const programme = registryProgrammes.find((item) => item.id === formData.programmeId);
+    if (!programme) {
+      setRegistryFormError('Choose a programme loaded from the admissions API.');
+      return;
+    }
+
+    setRegistrySubmitting(true);
+    setRegistryFormError('');
+    setRegistryError('');
+    const payload = {
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      gender: formData.gender || undefined,
+      dob: formData.dob || undefined,
+      category: formData.category,
+      programmeId: programme.id,
+      programmeName: programme.name,
+      academicYear: formData.academicYear,
+      tenthMarks: formData.tenthMarks === '' ? undefined : Number(formData.tenthMarks),
+      twelfthMarks: formData.twelfthMarks === '' ? undefined : Number(formData.twelfthMarks),
+      entranceExam: formData.entranceExam.trim() || undefined,
+      entranceRank: formData.entranceRank === '' ? undefined : Number(formData.entranceRank),
+    };
+
+    try {
+      const response = await api.createApplicant(payload);
+      const createdApplicant = getApiData(response, 'Applicant registration');
+      if (!createdApplicant?.id) throw new Error('The API did not return the registered applicant.');
+      setRegistryApplicants((current) => [
+        mapApplicantFromApi(createdApplicant, 0),
+        ...current.filter((applicant) => applicant.id !== createdApplicant.id)
+          .map((applicant, index) => ({ ...applicant, serialNo: index + 2 })),
+      ]);
+      setRegistryNotice(response.message || `Applicant ${createdApplicant.applicationNo} registered successfully.`);
+      showToast(response.message || `Applicant ${createdApplicant.applicationNo} registered successfully.`);
+      setIsRegisterModalOpen(false);
+      resetApplicantForm();
+      await loadApplicantRegistry({ showLoading: false });
+    } catch (error) {
+      setRegistryFormError(error.message || 'Could not register applicant.');
+    } finally {
+      setRegistrySubmitting(false);
+    }
   };
 
-  // Actions passed down to modules
+  const runRegistryAction = async (id, request, fallbackMessage, onSuccess) => {
+    setRegistryActionId(id);
+    setRegistryError('');
+    setRegistryNotice('');
+    try {
+      const response = await request();
+      getApiData(response, 'Applicant update');
+      if (onSuccess) onSuccess(response);
+      const message = response.message || fallbackMessage;
+      setRegistryNotice(message);
+      showToast(message);
+      await loadApplicantRegistry({ showLoading: false });
+    } catch (error) {
+      setRegistryError(error.message || 'The applicant update failed.');
+    } finally {
+      setRegistryActionId(null);
+    }
+  };
+
   const handleVerify = (id, name) => {
     admissionsStore.changeApplicationStatus(id, 'Verified', 'Prerequisites & credentials verified', 'Ms. Sasmita Mohapatra');
-    try {
-      api.updateApplicantStatus(id, 'VERIFIED', 'Prerequisites & credentials verified').catch(() => {});
-    } catch {}
     showToast(`Applicant ${name} marked as VERIFIED.`);
   };
 
   const handleApproveAndEnroll = (id) => {
     if (!window.confirm('Approve admission and provision student account, enrollment and activation link?')) return;
-    const res = admissionsStore.enrollStudent(id);
-    if (res && res.success && res.data) {
-      setEnrolledStudentInfo(res.data);
-      showToast(`Student ${res.data.name} admitted & account provisioned!`);
-    }
+    runRegistryAction(
+      id,
+      () => api.approveAndEnrollApplicant(id),
+      'Applicant admitted and enrolled successfully.',
+      (response) => {
+        if (!response.data?.activationToken || !response.data?.rollNumber) {
+          throw new Error('The enrollment response did not include student activation details.');
+        }
+        setEnrolledStudentInfo(response.data);
+      },
+    );
   };
 
   const handleReject = (id, name) => {
     const reason = window.prompt(`Please provide an official rejection reason for ${name}:`, 'Prerequisites not met');
     if (reason === null) return;
     admissionsStore.changeApplicationStatus(id, 'Rejected', reason, 'Ms. Sasmita Mohapatra');
-    try {
-      api.rejectApplicant(id, reason).catch(() => {});
-    } catch {}
     showToast(`Applicant ${name} marked as REJECTED.`);
+  };
+
+  const handleUpdateStudentDetails = async (id, payload) => {
+    try {
+      let updatedData = null;
+      try {
+        const response = await api.updateApplicant(id, payload);
+        if (response?.success && response?.data) {
+          updatedData = response.data;
+        }
+      } catch (err) {
+        console.warn('Backend update applicant fallback to store:', err?.message);
+      }
+
+      admissionsStore.updateApplicant(id, payload);
+
+      setRegistryApplicants((prev) =>
+        prev.map((app) => (app.id === id ? { ...app, ...payload, ...(updatedData || {}) } : app))
+      );
+
+      setEditingStudentApplicant(null);
+      showToast(`Student admission details updated successfully.`);
+      await loadApplicantRegistry({ showLoading: false });
+    } catch (error) {
+      showToast(error?.message || 'Failed to update student admission details.');
+      throw error;
+    }
   };
 
   const copyActivationLink = () => {
@@ -192,16 +379,10 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
   // 16 Sidebar Modules organized into 5 Collapsible Groups
   const admissionsNavSections = [
     {
-      title: 'OVERVIEW',
-      items: [
-        { id: 'dashboard', label: 'Admissions Dashboard', icon: Home },
-      ],
-    },
-    {
       title: 'ADMISSIONS PIPELINE',
       collapsible: true,
       items: [
-        { id: 'admissions_command', label: 'Admissions Command', icon: GraduationCap },
+        { id: 'dashboard', label: 'Admissions Command', icon: GraduationCap },
         { id: 'applicants', label: 'Applicant Registry', icon: Users, badge: `${applicants.length}` },
         { id: 'seat_matrix', label: 'Seat Matrix & Vacancy', icon: Layers, badge: '80 Vacant' },
       ],
@@ -422,16 +603,52 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         {/* TAB 2: APPLICANT REGISTRY                                */}
         {/* ======================================================== */}
         {activeView === 'applicants' && (
-          <ApplicantRegistryTab
-            applicants={applicants}
-            courses={courses}
-            onOpenRegisterModal={() => setIsRegisterModalOpen(true)}
-            onVerify={handleVerify}
-            onApproveAndEnroll={handleApproveAndEnroll}
-            onReject={handleReject}
-            onUpdateApplicant={(id, updates) => admissionsStore.updateApplicant(id, updates)}
-            onAddReviewNote={(id, author, note) => admissionsStore.addReviewNote(id, author, note)}
-          />
+          <>
+            {(registryError || registryNotice) && (
+              <div
+                role={registryError ? 'alert' : 'status'}
+                style={{
+                  marginBottom: 16,
+                  padding: '12px 16px',
+                  borderRadius: 8,
+                  color: registryError ? '#991b1b' : '#065f46',
+                  background: registryError ? '#fef2f2' : '#ecfdf5',
+                }}
+              >
+                {registryError || registryNotice}
+                {registryError && (
+                  <button
+                    type="button"
+                    className="adm-btn-secondary"
+                    style={{ marginLeft: 12 }}
+                    onClick={() => loadApplicantRegistry()}
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            )}
+            {registryLoading ? (
+              <div role="status" style={{ padding: 32, textAlign: 'center' }}>
+                Loading applicant records from the backend…
+              </div>
+            ) : (
+              <ApplicantRegistryTab
+                applicants={registryApplicants.length > 0 ? registryApplicants : applicants}
+                courses={registryCourses.length > 0 ? registryCourses : courses}
+                onOpenRegisterModal={() => {
+                  setRegistryFormError('');
+                  setIsRegisterModalOpen(true);
+                }}
+                onVerify={handleVerify}
+                onApproveAndEnroll={handleApproveAndEnroll}
+                onReject={handleReject}
+                onViewLetter={(app) => setLetterApplicant(app)}
+                onUpdateApplicant={handleUpdateStudentDetails}
+                onEditStudent={(app) => setEditingStudentApplicant(app)}
+              />
+            )}
+          </>
         )}
 
         {/* ======================================================== */}
@@ -536,9 +753,10 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         {/* ======================================================== */}
         {activeView === 'enrollment_conversion' && (
           <EnrollmentConversionTab
-            applicants={applicants}
+            applicants={registryApplicants.length > 0 ? registryApplicants : applicants}
             courses={courses}
             onEnrollStudent={(appId, rollNo, section) => admissionsStore.enrollStudent(appId, rollNo, section)}
+            onEditStudent={(app) => setEditingStudentApplicant(app)}
           />
         )}
 
@@ -600,22 +818,23 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         )}
       </div>
 
-      {/* REGISTER NEW STUDENT WIZARD (FULL 8-STEP COMPREHENSIVE ERP SYSTEM) */}
-      <RegisterStudentWizard
+      {/* COMPREHENSIVE 7-STEP ADMISSION APPLICATION MODAL */}
+      <ComprehensiveAdmissionApplicationModal
         isOpen={isRegisterModalOpen}
         onClose={() => setIsRegisterModalOpen(false)}
-        onStudentRegistered={(newStudent) => {
+        onSuccess={async (newApplicant) => {
           setIsRegisterModalOpen(false);
-          setEnrolledStudentInfo({
-            name: newStudent.name,
-            rollNumber: newStudent.rollNumber,
-            email: newStudent.email,
-            program: newStudent.appliedCourse || newStudent.course,
-            regNo: newStudent.registrationNumber,
-            password: newStudent.defaultPassword || 'Gift@2026',
-          });
-          showToast(`Candidate ${newStudent.name} registered and enrolled successfully!`);
+          showToast(`Application ${newApplicant?.applicationNo || 'submitted'} registered successfully!`);
+          await loadApplicantRegistry({ showLoading: false });
         }}
+        isStaffMode={true}
+      />
+
+      {/* OFFICIAL PROVISIONAL ADMISSION OFFER LETTER & SMART ID CARD MODAL */}
+      <AdmissionLetterModal
+        isOpen={!!letterApplicant}
+        onClose={() => setLetterApplicant(null)}
+        applicant={letterApplicant}
       />
 
       {/* ONBOARDING CREDENTIAL MODAL (Preserved from existing portal) */}
@@ -643,14 +862,22 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                   <span style={{ fontWeight: 700, color: '#0f172a' }}>{enrolledStudentInfo.name}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
-                  <span style={{ color: '#64748b' }}>Assigned Roll / Login ID:</span>
+                  <span style={{ color: '#64748b' }}>Student ID / Login ID:</span>
                   <span style={{ fontWeight: 800, color: '#0369a1', fontFamily: 'monospace', fontSize: '0.95rem' }}>
-                    {enrolledStudentInfo.rollNumber}
+                    {enrolledStudentInfo.studentId || enrolledStudentInfo.loginId}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
-                  <span style={{ color: '#64748b' }}>Registered Email:</span>
+                  <span style={{ color: '#64748b' }}>Roll Number:</span>
+                  <span style={{ fontWeight: 600, color: '#0f172a' }}>{enrolledStudentInfo.rollNumber}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
+                  <span style={{ color: '#64748b' }}>Official Student Email:</span>
                   <span style={{ fontWeight: 600, color: '#0f172a' }}>{enrolledStudentInfo.email}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
+                  <span style={{ color: '#64748b' }}>Contact Email:</span>
+                  <span style={{ fontWeight: 600, color: '#0f172a' }}>{enrolledStudentInfo.personalEmail}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                   <span style={{ color: '#64748b' }}>Programme &amp; Term:</span>
@@ -682,6 +909,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
                 </div>
                 <p style={{ margin: '6px 0 0', fontSize: '0.74rem', color: '#64748b' }}>
                   The student uses this one-time link to set their own password and access their student portal.
+                  It expires {new Date(enrolledStudentInfo.activationExpiresAt).toLocaleString()}.
                 </p>
               </div>
 
@@ -719,6 +947,17 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
             showToast(`Account for ${user.name} activated successfully!`);
             setActivationTokenToSimulate('');
           }}
+        />
+      )}
+
+      {/* UPDATE ENROLLED / ADMITTED STUDENT DETAILS MODAL */}
+      {editingStudentApplicant && (
+        <UpdateStudentAdmissionModal
+          isOpen={!!editingStudentApplicant}
+          onClose={() => setEditingStudentApplicant(null)}
+          applicant={editingStudentApplicant}
+          courses={registryCourses.length > 0 ? registryCourses : courses}
+          onSave={handleUpdateStudentDetails}
         />
       )}
     </AppLayout>

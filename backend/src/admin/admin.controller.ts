@@ -12,9 +12,12 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { normalizeRole } from '../rbac/rbac';
 import { AdminService } from './admin.service';
 import {
   CreateAdminUserDto,
@@ -565,5 +568,527 @@ export class AdminController {
     const actor = this.getActor(req);
     const updated = await this.adminService.updateMarkingScheme(id, body, actor);
     return { success: true, message: `Marking scheme ${updated.assessmentType} updated.`, data: updated };
+  }
+
+  @Post('users/:id/role')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Assign or reassign institutional user role' })
+  async updateUserRole(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { role: string; department?: string },
+  ) {
+    const role = normalizeRole(user.role);
+    if (role !== 'super_admin' && role !== 'admin') {
+      throw new ForbiddenException('Access denied. Role assignment requires administrative clearance.');
+    }
+
+    const updated = await this.adminService.updateUserRole(id, body.role, body.department, user);
+    return { success: true, message: `Role updated to ${updated.role} successfully.`, data: updated };
+  }
+
+  // =========================================================================
+  // GOVERNANCE & INSTITUTIONAL WORKFLOWS ENDPOINTS
+  // =========================================================================
+
+  @Get('governance/meetings')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get institutional statutory and council meeting records' })
+  async getGovernanceMeetings(@CurrentUser() user: any, @Query('academicYear') academicYear?: string) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to institutional governance council records.');
+    }
+
+    const data = await this.adminService.getGovernanceMeetings(academicYear);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('governance/meetings')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Register or record statutory governance meeting and minutes' })
+  async createGovernanceMeeting(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Registering meetings requires executive clearance.');
+    }
+
+    const meeting = await this.adminService.createGovernanceMeeting(body, user);
+    return { success: true, message: `Meeting ${meeting.title} registered successfully.`, data: meeting };
+  }
+
+  @Get('governance/resolutions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get statutory resolutions and policy decisions' })
+  async getGovernanceResolutions(
+    @CurrentUser() user: any,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'hod'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to statutory resolutions.');
+    }
+
+    const data = await this.adminService.getGovernanceResolutions(status, search);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('governance/resolutions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Enact or draft institutional statutory resolution' })
+  async createGovernanceResolution(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Enacting resolutions requires executive authority.');
+    }
+
+    const res = await this.adminService.createGovernanceResolution(body, user);
+    return { success: true, message: `Resolution ${res.resolutionCode} recorded successfully.`, data: res };
+  }
+
+  @Get('governance/circulars')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get official administrative circulars and office orders' })
+  async getGovernanceCirculars(
+    @CurrentUser() user: any,
+    @Query('targetAudience') targetAudience?: string,
+    @Query('search') search?: string,
+  ) {
+    const data = await this.adminService.getGovernanceCirculars(targetAudience, search);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('governance/circulars')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Publish administrative circular and broadcast across portals' })
+  async publishGovernanceCircular(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'principal', 'admin', 'management'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Publishing administrative circulars requires administrative authority.');
+    }
+
+    const circular = await this.adminService.publishGovernanceCircular(body, user);
+    return { success: true, message: `Circular ${circular.circularNo} published and dispatched.`, data: circular };
+  }
+
+  @Get('governance/action-items')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get strategic institutional action items and implementation tracking' })
+  async getGovernanceActionItems(@CurrentUser() user: any, @Query('status') status?: string) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'hod'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to strategic action items.');
+    }
+
+    const data = await this.adminService.getGovernanceActionItems(status);
+    return { success: true, count: data.length, data };
+  }
+
+  @Patch('governance/action-items/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update progress and status of strategic action item' })
+  async updateActionItemStatus(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { status: string; progress: number },
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'hod'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to update strategic action items.');
+    }
+
+    const updated = await this.adminService.updateActionItemStatus(id, body.status, body.progress, user);
+    return { success: true, message: `Action item ${id} updated to ${body.status}.`, data: updated };
+  }
+
+  // =========================================================================
+  // 1. HUMAN RESOURCES & WORKFORCE (HR ERP)
+  // =========================================================================
+
+  @Get('hr/employees')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get unified employee directory (Faculty & Staff)' })
+  async getEmployees(
+    @CurrentUser() user: any,
+    @Query('department') department?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'hod', 'staff'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to institutional employee directory.');
+    }
+
+    const data = await this.adminService.getEmployees(department, status, search);
+    return { success: true, count: data.length, data };
+  }
+
+  @Get('hr/leaves')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get employee leave applications and approval queue' })
+  async getLeaveRequests(@CurrentUser() user: any, @Query('status') status?: string) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'hod'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to staff leave queue.');
+    }
+
+    const data = await this.adminService.getLeaveRequests(status);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('hr/leaves/:id/decide')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Approve or reject staff leave application' })
+  async decideLeaveRequest(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { decision: 'APPROVED' | 'REJECTED'; reason: string },
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'hod'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Deciding leaves requires administrative clearance.');
+    }
+
+    const result = await this.adminService.decideLeaveRequest(id, body.decision, body.reason || '', user);
+    return { success: true, message: `Leave application ${id} ${body.decision.toLowerCase()}.`, data: result };
+  }
+
+  @Get('hr/recruitments')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get institutional recruitment openings' })
+  async getRecruitmentOpenings(@CurrentUser() user: any) {
+    const data = await this.adminService.getRecruitmentOpenings();
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('hr/recruitments')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Post new institutional recruitment vacancy' })
+  async createRecruitmentOpening(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to post recruitment vacancies.');
+    }
+
+    const result = await this.adminService.createRecruitmentOpening(body, user);
+    return { success: true, message: `Vacancy for ${result.position} published.`, data: result };
+  }
+
+  // =========================================================================
+  // 2. FINANCE & ADMINISTRATIVE EXPENDITURE (PROCUREMENT ERP)
+  // =========================================================================
+
+  @Get('finance/budgets')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get administrative and departmental budget allocations and utilization' })
+  async getBudgetAllocations(@CurrentUser() user: any, @Query('academicYear') academicYear?: string) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'hod', 'accounts'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to institutional budget records.');
+    }
+
+    const data = await this.adminService.getBudgetAllocations(academicYear);
+    return { success: true, data };
+  }
+
+  @Get('finance/purchase-requisitions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get purchase requisitions and procurement approval queue' })
+  async getPurchaseRequisitions(
+    @CurrentUser() user: any,
+    @Query('status') status?: string,
+    @Query('department') department?: string,
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'hod', 'accounts'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to purchase requisitions.');
+    }
+
+    const data = await this.adminService.getPurchaseRequisitions(status, department);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('finance/purchase-requisitions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create purchase requisition' })
+  async createPurchaseRequisition(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'hod', 'accounts'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to create purchase requisitions.');
+    }
+
+    const result = await this.adminService.createPurchaseRequisition(body, user);
+    return { success: true, message: `Requisition ${result.prNumber} submitted.`, data: result };
+  }
+
+  @Post('finance/purchase-requisitions/:id/decide')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Approve or reject purchase requisition' })
+  async decidePurchaseRequisition(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { decision: 'APPROVED' | 'REJECTED'; remarks: string },
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'accounts'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Approving purchase requisitions requires finance clearance.');
+    }
+
+    const result = await this.adminService.decidePurchaseRequisition(id, body.decision, body.remarks || '', user);
+    return { success: true, message: `Requisition ${id} ${body.decision.toLowerCase()}.`, data: result };
+  }
+
+  @Get('finance/vendors')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get institutional vendor and contractor directory' })
+  async getVendorDirectory(
+    @CurrentUser() user: any,
+    @Query('search') search?: string,
+    @Query('category') category?: string,
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'accounts'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to vendor directory.');
+    }
+
+    const data = await this.adminService.getVendorDirectory(search, category);
+    return { success: true, count: data.length, data };
+  }
+
+  @Get('finance/invoices')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get vendor invoices and 3-way matching status' })
+  async getVendorInvoices(@CurrentUser() user: any, @Query('status') status?: string) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'accounts'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to vendor invoices.');
+    }
+
+    const data = await this.adminService.getVendorInvoices(status);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('finance/invoices/:id/verify')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verify vendor invoice for payment release' })
+  async verifyVendorInvoice(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { status: string; notes?: string },
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'principal', 'admin', 'accounts'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to verify invoices.');
+    }
+
+    const result = await this.adminService.verifyVendorInvoice(id, body.status, body.notes || '', user);
+    return { success: true, message: `Invoice ${id} verified.`, data: result };
+  }
+
+  // =========================================================================
+  // 3. CAMPUS FACILITIES & OPERATIONS
+  // =========================================================================
+
+  @Get('facilities/inventory')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get campus infrastructure, buildings, blocks and facilities' })
+  async getFacilitiesInventory(@CurrentUser() user: any) {
+    const data = await this.adminService.getFacilitiesInventory();
+    return { success: true, data };
+  }
+
+  @Get('facilities/work-orders')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get campus maintenance work orders' })
+  async getWorkOrders(
+    @CurrentUser() user: any,
+    @Query('status') status?: string,
+    @Query('priority') priority?: string,
+  ) {
+    const data = await this.adminService.getWorkOrders(status, priority);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('facilities/work-orders')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create maintenance work order' })
+  async createWorkOrder(@CurrentUser() user: any, @Body() body: any) {
+    const result = await this.adminService.createWorkOrder(body, user);
+    return { success: true, message: `Work order ${result.id} created.`, data: result };
+  }
+
+  @Patch('facilities/work-orders/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update work order status and technician notes' })
+  async updateWorkOrderStatus(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { status: string; notes?: string },
+  ) {
+    const result = await this.adminService.updateWorkOrderStatus(id, body.status, body.notes || '', user);
+    return { success: true, message: `Work order ${id} updated to ${body.status}.`, data: result };
+  }
+
+  @Get('facilities/preventive-maintenance')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get preventive maintenance schedules' })
+  async getPreventiveMaintenanceSchedules(@CurrentUser() user: any) {
+    const data = await this.adminService.getPreventiveMaintenanceSchedules();
+    return { success: true, count: data.length, data };
+  }
+
+  @Get('facilities/safety-inspections')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get safety inspections and statutory NOCs' })
+  async getSafetyInspections(@CurrentUser() user: any) {
+    const data = await this.adminService.getSafetyInspections();
+    return { success: true, count: data.length, data };
+  }
+
+  // =========================================================================
+  // 4. STATUTORY COMPLIANCE, QUALITY & RISK MANAGEMENT (CAPA)
+  // =========================================================================
+
+  @Get('compliance/register')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get institutional compliance register (AICTE, NAAC, UGC)' })
+  async getComplianceRegister(@CurrentUser() user: any, @Query('status') status?: string) {
+    const data = await this.adminService.getComplianceRegister(status);
+    return { success: true, count: data.length, data };
+  }
+
+  @Patch('compliance/register/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update compliance status and evidence' })
+  async updateComplianceItem(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { status: string; evidenceRef?: string },
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'hod'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to update compliance items.');
+    }
+
+    const result = await this.adminService.updateComplianceItem(id, body.status, body.evidenceRef, user);
+    return { success: true, message: `Compliance item ${id} updated to ${body.status}.`, data: result };
+  }
+
+  @Get('compliance/risks')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get institutional risk register' })
+  async getRiskRegister(@CurrentUser() user: any, @Query('severity') severity?: string) {
+    const data = await this.adminService.getRiskRegister(severity);
+    return { success: true, count: data.length, data };
+  }
+
+  @Get('compliance/corrective-actions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get Corrective and Preventive Actions (CAPA)' })
+  async getCorrectiveActions(@CurrentUser() user: any, @Query('status') status?: string) {
+    const data = await this.adminService.getCorrectiveActions(status);
+    return { success: true, count: data.length, data };
+  }
+
+  @Patch('compliance/corrective-actions/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Resolve or update CAPA plan' })
+  async updateCorrectiveAction(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { status: string; resolutionNotes?: string },
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin', 'hod'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to update CAPA actions.');
+    }
+
+    const result = await this.adminService.updateCorrectiveAction(id, body.status, body.resolutionNotes || '', user);
+    return { success: true, message: `CAPA item ${id} updated to ${body.status}.`, data: result };
+  }
+
+  // =========================================================================
+  // 5. OFFICIAL RECORDS & DOCUMENT MANAGEMENT
+  // =========================================================================
+
+  @Get('documents/vault')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get official administrative documents and policies' })
+  async getOfficialDocuments(
+    @CurrentUser() user: any,
+    @Query('category') category?: string,
+    @Query('search') search?: string,
+  ) {
+    const data = await this.adminService.getOfficialDocuments(category, search);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('documents/vault')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Register and archive official administrative document' })
+  async registerOfficialDocument(@CurrentUser() user: any, @Body() body: any) {
+    const role = normalizeRole(user.role);
+    const authorized = ['super_admin', 'management', 'principal', 'admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied to archive official records.');
+    }
+
+    const result = await this.adminService.registerOfficialDocument(body, user);
+    return { success: true, message: `Document ${result.documentNo} archived in vault.`, data: result };
   }
 }

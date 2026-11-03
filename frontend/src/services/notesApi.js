@@ -1,5 +1,5 @@
 // Class Notes Sharing & Missed Lecture Notes API Handler
-import { API_BASE_URL } from './api.js';
+import { api, API_BASE_URL } from './api.js';
 import { notificationsApi } from './notificationsApi.js';
 
 let mockClassNotes = [
@@ -350,6 +350,116 @@ function saveLocalStudyMaterials(materials) {
 }
 
 export const notesApi = {
+  getApprovedPeerNotes: async (filters = {}) => {
+    let approvedNotes = [];
+    try {
+      const response = await api.getClassNotes(filters);
+      if (response?.success && Array.isArray(response.data)) {
+        approvedNotes = response.data.map((note) => ({
+          ...note,
+          duplicateGroupKey: `${note.subject}|${note.date}|${note.topic}`,
+          duplicateVersionIndex: 1,
+          totalDuplicatesAvailable: 1,
+        }));
+      }
+    } catch (err) {
+      console.warn('Backend class notes fetch fallback to local store:', err?.message);
+    }
+
+    // Merge with mock and uploaded peer notes
+    const localNotes = mockClassNotes.filter((n) => n.status !== 'HIDDEN');
+    const facultyMaterials = loadLocalStudyMaterials()
+      .filter((material) => material.status === 'PUBLISHED')
+      .map((material) => ({
+        id: material.id,
+        subject: material.subject,
+        subjectCode: material.subjectCode,
+        date: material.uploadedAt?.split('T')[0] || '',
+        topic: material.topic || material.title,
+        description: `${material.title} — ${material.description || ''}`,
+        semester: material.semester || '',
+        section: material.section || '',
+        materialType: material.materialType || 'Lecture Notes',
+        isFacultyMaterial: true,
+        uploadedBy: material.uploadedBy,
+        uploadedAt: material.uploadedAt,
+        fileUrl: material.fileUrl,
+        fileName: material.fileName,
+        fileType: material.fileType,
+        status: 'VISIBLE',
+        isFacultyVerified: true,
+        verifiedBy: material.uploadedBy?.name,
+        duplicateGroupKey: `${material.subject}|${material.uploadedAt?.split('T')[0] || ''}|${material.topic || material.title}`,
+        duplicateVersionIndex: 1,
+        totalDuplicatesAvailable: 1,
+        reports: [],
+      }));
+
+    const combined = [...facultyMaterials, ...approvedNotes, ...localNotes];
+    const seenIds = new Set();
+    const unique = [];
+    for (const item of combined) {
+      if (!seenIds.has(item.id)) {
+        seenIds.add(item.id);
+        unique.push(item);
+      }
+    }
+
+    return unique.filter((note) => {
+      // 1. Strict Section Filtering: Only show notes matching the student's section
+      if (filters.section && filters.section !== 'ALL') {
+        const targetSec = String(filters.section).replace(/^Section\s+/i, '').trim().toUpperCase();
+        const noteSec = String(note.section || 'Section A').replace(/^Section\s+/i, '').trim().toUpperCase();
+        if (targetSec && noteSec && noteSec !== targetSec && noteSec !== 'ALL') {
+          return false;
+        }
+      }
+
+      // 2. Semester Filtering
+      if (filters.semester && filters.semester !== 'ALL' && note.semester) {
+        const targetSem = String(filters.semester).replace(/^Semester\s+/i, '').trim().toUpperCase();
+        const noteSem = String(note.semester).replace(/^Semester\s+/i, '').trim().toUpperCase();
+        if (targetSem && noteSem && targetSem !== noteSem && !noteSem.includes(targetSem)) {
+          return false;
+        }
+      }
+
+      // 3. Subject Filtering
+      if (filters.subject && filters.subject !== 'ALL' && note.subject?.toLowerCase() !== filters.subject.toLowerCase()) {
+        return false;
+      }
+
+      // 4. Date Filtering
+      if (filters.date && note.date !== filters.date) return false;
+
+      // 5. Material Type Filtering
+      if (filters.materialType && filters.materialType !== 'ALL' && note.materialType !== filters.materialType) {
+        return false;
+      }
+
+      // 6. Search Query Filtering
+      if (filters.search) {
+        const query = filters.search.toLowerCase();
+        return [note.topic, note.description, note.subject, note.fileName, note.uploadedBy?.name]
+          .some((value) => String(value || '').toLowerCase().includes(query));
+      }
+      return true;
+    });
+  },
+
+  submitPeerNote: (payload) => api.uploadClassNotes(payload),
+
+  getPendingPeerNotes: async () => {
+    const response = await api.getPendingStudentNotes();
+    if (!response?.success || !Array.isArray(response.data)) {
+      throw new Error(response?.message || 'Could not load notes awaiting review.');
+    }
+    return response.data;
+  },
+
+  reviewPeerNote: (id, status, remarks) =>
+    api.reviewStudentNote(id, status, remarks),
+
   // 1. Fetch Class Notes with Filters (Includes verified peer notes + official faculty study materials)
   getClassNotes: async (filters = {}) => {
     try {
@@ -418,6 +528,13 @@ export const notesApi = {
     }
     if (filters.materialType && filters.materialType !== 'ALL') {
       list = list.filter(n => n.materialType === filters.materialType);
+    }
+    if (filters.section && filters.section !== 'ALL') {
+      const targetSec = String(filters.section).replace(/^Section\s+/i, '').trim().toUpperCase();
+      list = list.filter((n) => {
+        const noteSec = String(n.section || 'Section A').replace(/^Section\s+/i, '').trim().toUpperCase();
+        return !targetSec || !noteSec || noteSec === targetSec || noteSec === 'ALL';
+      });
     }
     return list;
   },

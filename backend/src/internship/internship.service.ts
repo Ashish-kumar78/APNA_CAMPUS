@@ -146,6 +146,7 @@ export class InternshipService {
         id: s.id,
         studentId: s.studentId,
         rollNumber: s.rollNumber,
+        registrationNo: s.rollNumber || s.studentId,
         name: s.name,
         email: s.email,
         phone: s.phone || '7735994528',

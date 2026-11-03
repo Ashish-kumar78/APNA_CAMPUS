@@ -32,7 +32,8 @@ import {
   Filter,
   Check,
   X,
-  Printer
+  Printer,
+  Home
 } from 'lucide-react';
 import './AccountsPortal.css';
 import './AccountsModules/AccountsPortalUtilities.css';
@@ -372,13 +373,13 @@ export default function AccountsPortal({ account, onLogout }) {
   // ──────────────────────────────────────────────────────────────────────────
   const accountsNavSections = useMemo(() => [
     {
-      title: 'A. FINANCE DASHBOARD',
+      title: 'OVERVIEW',
       items: [
-        { id: 'dashboard', label: 'Finance Dashboard', icon: Layers }
+        { id: 'dashboard', label: 'Dashboard', icon: Home },
       ]
     },
     {
-      title: 'B. STUDENT FEES & RECEIPTS',
+      title: 'STUDENT FEES & RECEIPTS',
       items: [
         { id: 'fee_management', label: 'Student Fee Demand & Cohorts', icon: GraduationCap },
         { id: 'fee_structure', label: 'Fee Structure & Head Master', icon: Building2 },

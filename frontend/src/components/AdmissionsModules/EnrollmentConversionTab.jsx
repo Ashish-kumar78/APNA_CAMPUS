@@ -16,12 +16,14 @@ import {
   ExternalLink,
   ShieldCheck,
   ChevronRight,
+  Edit3,
 } from 'lucide-react';
 
 export default function EnrollmentConversionTab({
   applicants = [],
   courses = [],
   onEnrollStudent,
+  onEditStudent,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [courseFilter, setCourseFilter] = useState('All');
@@ -311,9 +313,20 @@ export default function EnrollmentConversionTab({
                           <Sparkles size={13} /> Complete Enrollment
                         </button>
                       ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#0f766e', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <CheckCircle2 size={14} /> Enrolled
-                        </span>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#0f766e', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <CheckCircle2 size={14} /> Enrolled
+                          </span>
+                          <button
+                            type="button"
+                            className="adm-btn-secondary"
+                            onClick={() => onEditStudent && onEditStudent(app)}
+                            style={{ padding: '4px 10px', fontSize: '0.74rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            title="Update Enrolled Student Details"
+                          >
+                            <Edit3 size={13} /> Update Details
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

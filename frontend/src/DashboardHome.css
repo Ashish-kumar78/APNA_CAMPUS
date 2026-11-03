@@ -130,6 +130,16 @@
   border: 1px solid rgba(255, 255, 255, 0.22);
   backdrop-filter: blur(8px);
   font-size: 12.5px;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s ease,
+              border-color 0.2s ease;
+  will-change: transform;
+}
+
+.dash-motd:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.38);
 }
 
 .dash-motd-icon {
@@ -140,6 +150,11 @@
   border-radius: 50%;
   background: #fff;
   color: var(--d-blue);
+  transition: transform 0.2s ease;
+}
+
+.dash-motd:hover .dash-motd-icon {
+  transform: rotate(12deg) scale(1.08);
 }
 
 .dash-motd strong {
@@ -171,6 +186,14 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #e0e7ff;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s ease;
+  will-change: transform;
+}
+
+.dash-chip:hover {
+  transform: translateY(-1px) scale(1.03);
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .dash-chip strong {
@@ -210,6 +233,14 @@
   height: 100%;
 }
 
+@media (max-width: 680px) {
+  .dash-stats-2x2 {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 12px;
+  }
+}
+
 .dash-stats-2x2 .dash-stat {
   display: flex;
   flex-direction: column;
@@ -221,13 +252,28 @@
   border: 1px solid var(--d-line);
   border-radius: 18px;
   box-shadow: 0 4px 18px -6px rgba(15, 23, 42, 0.08);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease;
+  user-select: none;
+  touch-action: manipulation;
+  will-change: transform;
 }
+
+.dash-stats-2x2 .dash-stat:nth-child(1) { animation: campusSlideUpFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.04s both; }
+.dash-stats-2x2 .dash-stat:nth-child(2) { animation: campusSlideUpFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both; }
+.dash-stats-2x2 .dash-stat:nth-child(3) { animation: campusSlideUpFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both; }
+.dash-stats-2x2 .dash-stat:nth-child(4) { animation: campusSlideUpFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both; }
 
 .dash-stats-2x2 .dash-stat:hover {
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--tone) 35%, transparent);
   box-shadow: 0 14px 30px -10px color-mix(in srgb, var(--tone) 25%, transparent);
+}
+
+.dash-stats-2x2 .dash-stat:active {
+  transform: scale(0.98) translateY(1px);
+  transition-duration: 0.05s !important;
 }
 
 .dash-stat-head {
@@ -433,13 +479,23 @@
   border: 1px solid var(--d-line);
   border-radius: var(--d-radius);
   box-shadow: var(--d-shadow);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 0.15s ease,
+              border-color 0.15s ease;
+  user-select: none;
+  touch-action: manipulation;
+  will-change: transform;
 }
 
 .dash-stat:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2.5px);
   border-color: color-mix(in srgb, var(--tone) 30%, transparent);
   box-shadow: 0 14px 30px -12px color-mix(in srgb, var(--tone) 35%, transparent);
+}
+
+.dash-stat:active {
+  transform: scale(0.98) translateY(1px);
+  transition-duration: 0.05s !important;
 }
 
 .dash-stat>div {

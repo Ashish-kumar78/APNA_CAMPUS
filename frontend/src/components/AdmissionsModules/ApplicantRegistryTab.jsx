@@ -33,7 +33,9 @@ export default function ApplicantRegistryTab({
   onApproveAndEnroll,
   onReject,
   onUpdateApplicant,
+  onEditStudent,
   onAddReviewNote,
+  onViewLetter,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionFilter, setSessionFilter] = useState('All');
@@ -392,7 +394,10 @@ export default function ApplicantRegistryTab({
                           <button
                             type="button"
                             className="adm-btn-secondary"
-                            onClick={() => setEditingApplicant(app)}
+                            onClick={() => {
+                              if (onEditStudent) onEditStudent(app);
+                              else setEditingApplicant(app);
+                            }}
                             title="Edit Applicant Details"
                             style={{ padding: '4px 8px', fontSize: '0.74rem' }}
                           >
@@ -422,6 +427,18 @@ export default function ApplicantRegistryTab({
                               Enroll
                             </button>
                           )}
+
+                          {/* Official Admission Letter Button */}
+                          <button
+                            type="button"
+                            className="adm-btn-secondary"
+                            onClick={() => onViewLetter && onViewLetter(app)}
+                            style={{ padding: '4px 8px', fontSize: '0.74rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                            title="View / Print Official Provisional Admission Letter & ID Card"
+                          >
+                            <FileText size={12} />
+                            Letter
+                          </button>
 
                           {/* Reject Button */}
                           {app.admissionStatus !== 'Enrolled' && app.admissionStatus !== 'Rejected' && (
@@ -468,13 +485,28 @@ export default function ApplicantRegistryTab({
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedApplicant(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
-              >
-                <X size={20} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="adm-btn-secondary"
+                  onClick={() => {
+                    const target = selectedApplicant;
+                    setSelectedApplicant(null);
+                    if (onEditStudent) onEditStudent(target);
+                    else setEditingApplicant(target);
+                  }}
+                  style={{ padding: '5px 12px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                >
+                  <Edit size={13} /> Update Details
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedApplicant(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Tab navigation inside flyout */}
@@ -821,7 +853,16 @@ export default function ApplicantRegistryTab({
             </div>
 
             {/* Footer */}
-            <div className="adm-modal-footer">
+            <div className="adm-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="adm-btn-primary"
+                onClick={() => onViewLetter && onViewLetter(selectedApplicant)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <FileText size={15} />
+                Generate Official Admission Letter &amp; ID
+              </button>
               <button
                 type="button"
                 className="adm-btn-secondary"

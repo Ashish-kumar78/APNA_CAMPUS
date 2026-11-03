@@ -47,12 +47,14 @@ import {
   FileCheck2,
   BookOpen,
   Activity,
-  Bell
+  Bell,
+  Home
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import PrincipalDashboardView from './PrincipalDashboardView.jsx';
 import PrincipalDepartmentModule from './PrincipalModules/PrincipalDepartmentModule.jsx';
 import PrincipalExamOversightModule from './PrincipalModules/PrincipalExamOversightModule.jsx';
 import PrincipalFinanceModule from './PrincipalModules/PrincipalFinanceModule.jsx';
@@ -68,6 +70,7 @@ import '../DashboardHome.css';
 import './PrincipalPortal.css';
 import './SuperAdminPortal.css';
 import { api } from '../services/api.js';
+import { notificationsStore } from '../services/notificationsStore.js';
 import { getGreetingDisplayName } from '../utils/timeGreeting.js';
 
 // Official Institutional Gazetted Holidays 2026 (Matching Student & Role Dashboards)
@@ -640,6 +643,31 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole, initi
         expiryDate: '',
         content: '',
       });
+
+      // Broadcast to Connected Campus Network & Notification Center
+      try {
+        const targetRoles = newNotice.scope === 'Faculty' ? ['faculty']
+          : newNotice.scope === 'Students' ? ['student']
+          : ['ALL'];
+        
+        notificationsStore.sendNotification({
+          title: newNotice.title,
+          message: newNotice.content || newNotice.title,
+          category: (newNotice.category || 'GOVERNANCE').toUpperCase(),
+          priority: (newNotice.priority || 'IMPORTANT').toUpperCase(),
+          senderName: 'Office of the Principal / Director',
+          senderRole: 'Principal & Executive Directorate',
+          senderDept: 'Executive Administration',
+          connectedPerson: 'Office of the Principal / Director',
+          targetAudience: newNotice.scope || 'College-wide (All Connected Roles)',
+          targetRoles,
+          actionTab: 'circulars',
+          actionLabel: 'View Circular Directive'
+        }, targetRoles);
+      } catch (e) {
+        console.warn('Principal broadcast sync notice:', e);
+      }
+
       triggerToast('Official circular broadcasted across Apna Campus!');
     } catch (err) {
       console.error('Error issuing circular:', err);
@@ -734,9 +762,14 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole, initi
 
   const principalNavSections = [
     {
+      title: 'OVERVIEW',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: Home },
+      ]
+    },
+    {
       title: 'EXECUTIVE GOVERNANCE',
       items: [
-        { id: 'dashboard', label: 'Executive Dashboard', icon: Layers },
         { id: 'academic_health', label: 'Academic Performance', icon: Award },
         { id: 'timetable', label: 'Timetables & Approval', icon: CalendarDays },
       ]
@@ -915,17 +948,13 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole, initi
           <div className="erp-content-body">
 
   {/* ======================================================== */ }
-  {/* TAB 0: EXECUTIVE PRINCIPAL DASHBOARD (STUDENT & ADMIN ALIGNED) */ }
+  {/* TAB 0: EXECUTIVE PRINCIPAL DASHBOARD (HIGH FIDELITY) */ }
   {/* ======================================================== */ }
   {
     activeTab === 'dashboard' && (
-      <RoleDashboardLanding
+      <PrincipalDashboardView
         account={account}
-        roleKey="principal"
-        onLogout={onLogout}
-        onSwitchRole={onSwitchRole}
-        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        onNavigateTab={(tabId) => {
+        onNavigate={(tabId) => {
           if (tabId === 'academic' || tabId === 'departments') setActiveTab('departments');
           else if (tabId === 'approvals' || tabId === 'leaves') setActiveTab('leaves');
           else if (tabId === 'reports') setActiveTab('report-generation');
@@ -934,6 +963,10 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole, initi
           else if (tabId === 'accreditation') setActiveTab('accreditation');
           else if (tabId === 'finance') setActiveTab('finance');
           else if (tabId === 'examinations') setActiveTab('examinations');
+          else if (tabId === 'calendar_events') setActiveTab('calendar_events');
+          else if (tabId === 'faculty_staff') setActiveTab('faculty_staff');
+          else if (tabId === 'infrastructure') setActiveTab('infrastructure');
+          else if (tabId === 'academic_health') setActiveTab('academic_health');
           else if (tabId === 'governance') setActiveTab('dashboard');
           else setActiveTab(tabId);
         }}

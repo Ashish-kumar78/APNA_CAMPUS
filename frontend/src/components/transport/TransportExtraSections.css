@@ -155,17 +155,54 @@
   background: #f8fafc;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  padding: 0.45rem 0.75rem;
+  padding: 0.55rem 0.85rem;
   font-size: 0.84rem;
   font-weight: 600;
   color: #1e293b;
   outline: none;
   cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
 .trans-select:focus {
   border-color: #0284c7;
   background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.trans-input,
+.trans-textarea,
+input.trans-select,
+textarea.trans-select {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.trans-input:focus,
+.trans-textarea:focus,
+input.trans-select:focus,
+textarea.trans-select:focus {
+  border-color: #0284c7;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.trans-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  display: block;
+  margin-bottom: 0.35rem;
 }
 
 /* Modern Tab Pill Switcher */
@@ -257,30 +294,38 @@
 }
 
 /* Badges */
+.trans-badge,
 .t-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   padding: 0.25rem 0.65rem;
   border-radius: 9999px;
-  font-size: 0.73rem;
+  font-size: 0.74rem;
   font-weight: 700;
   white-space: nowrap;
+  line-height: 1.2;
 }
 
-.t-badge-boarded { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
-.t-badge-notboarded { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+.trans-badge.info,
 .t-badge-active { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+.trans-badge.success,
+.t-badge-boarded,
+.t-badge-approved,
+.t-badge-paid { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.trans-badge.warning,
 .t-badge-pending { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
-.t-badge-approved { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.t-badge-rejected { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.trans-badge.danger,
+.t-badge-notboarded,
+.t-badge-rejected,
+.t-badge-overdue { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.trans-badge.purple { background: #faf5ff; color: #7c3aed; border: 1px solid #e9d5ff; }
 .t-badge-urgent { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-weight: 800; }
 .t-badge-critical { background: #7f1d1d; color: #ffffff; border: 1px solid #991b1b; font-weight: 800; }
 .t-badge-high { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
 .t-badge-medium { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .t-badge-low { background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
-.t-badge-paid { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-.t-badge-overdue { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
 
 /* Grid Cards for Assets, Staff, Incidents */
 .trans-cards-grid {
@@ -308,57 +353,211 @@
 }
 
 /* Button variants */
+.trans-btn,
 .t-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.95rem;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
   border-radius: 8px;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
-  border: none;
+  border: 1px solid transparent;
+  text-decoration: none;
+  line-height: 1.3;
+  user-select: none;
 }
 
+.trans-btn:active,
+.t-btn:active {
+  transform: translateY(1px);
+}
+
+.trans-btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  border-radius: 6px;
+}
+
+.trans-btn-primary,
 .t-btn-primary {
   background: #0284c7;
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
+  border-color: #0284c7;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.28);
 }
 
+.trans-btn-primary:hover,
 .t-btn-primary:hover {
   background: #0369a1;
+  border-color: #0369a1;
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35);
 }
 
+.trans-btn-outline,
 .t-btn-secondary {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.trans-btn-outline:hover,
+.t-btn-secondary:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.trans-btn-secondary {
   background: #f8fafc;
   color: #334155;
   border: 1px solid #cbd5e1;
 }
 
-.t-btn-secondary:hover {
+.trans-btn-secondary:hover {
   background: #f1f5f9;
   color: #0f172a;
 }
 
+.trans-btn-success,
 .t-btn-success {
   background: #059669;
   color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
 }
 
+.trans-btn-success:hover,
 .t-btn-success:hover {
   background: #047857;
+  border-color: #047857;
 }
 
+.trans-btn-danger,
 .t-btn-danger {
   background: #dc2626;
   color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
 }
 
+.trans-btn-danger:hover,
 .t-btn-danger:hover {
   background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+/* ============================================================================
+   MODAL DIALOG & OVERLAY SYSTEM
+   Fixed viewport overlay with smooth backdrop blur and modern dialog card
+   ============================================================================ */
+.trans-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  overflow-y: auto;
+  animation: transFadeIn 0.18s ease-out;
+}
+
+@keyframes transFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes transModalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.trans-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  animation: transModalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: auto;
+}
+
+.trans-modal.trans-modal-lg {
+  max-width: 780px;
+}
+
+.trans-modal-header {
+  padding: 1.15rem 1.5rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trans-modal-header h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.trans-modal-close {
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.trans-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.trans-modal-body {
+  padding: 1.35rem 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.trans-modal-footer {
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 /* Rule Accordion Card */

@@ -15,13 +15,6 @@ export class MarksService {
       },
     });
 
-    if (marks.length === 0) {
-      // Default to roll 01
-      return this.prisma.assessmentMark.findMany({
-        where: { rollNumber: '01' },
-      });
-    }
-
     return marks;
   }
 

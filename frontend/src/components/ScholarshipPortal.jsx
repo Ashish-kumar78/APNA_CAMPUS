@@ -29,7 +29,8 @@ import {
   HelpCircle,
   BarChart3,
   BookmarkCheck,
-  ClipboardList
+  ClipboardList,
+  Home
 } from 'lucide-react';
 import './ScholarshipPortal.css';
 import './AccountsModules/AccountsPortalUtilities.css';
@@ -204,15 +205,23 @@ export default function ScholarshipPortal({ account, onLogout, onSwitchRole }) {
   // Main Navigation Sections (10 Functional Groups per Section 4 of Master Prompt)
   const navSections = [
     {
-      title: 'A. Dashboard',
-      collapsible: false,
+      title: 'OVERVIEW',
+      collapsible: true,
+      defaultCollapsed: false,
       items: [
-        { id: 'dashboard', label: 'Scholarship Dashboard', icon: LayoutDashboard },
+        { id: 'dashboard', label: 'Dashboard', icon: Home }
+      ]
+    },
+    {
+      title: 'SCHOLARSHIPS & AID (STUDENT VIEW)',
+      collapsible: true,
+      defaultCollapsed: false,
+      items: [
         { id: 'public_portal', label: 'Scholarships & Aid (Student View)', icon: Eye }
       ]
     },
     {
-      title: 'B. Scheme Management',
+      title: 'Scheme Management',
       collapsible: true,
       defaultCollapsed: false,
       items: [

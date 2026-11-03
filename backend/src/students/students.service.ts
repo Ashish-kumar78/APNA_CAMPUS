@@ -43,6 +43,7 @@ export class StudentsService {
     const student = await this.prisma.student.findFirst({
       where: {
         OR: [
+          { id: userIdOrRoll },
           { userId: userIdOrRoll },
           { rollNumber: userIdOrRoll },
           { studentId: userIdOrRoll },
@@ -60,19 +61,7 @@ export class StudentsService {
     });
 
     if (!student) {
-      // Fallback: return primary student (Roll 01)
-      return this.prisma.student.findFirst({
-        where: { rollNumber: '01' },
-        include: {
-          guardians: true,
-          addresses: true,
-          documents: true,
-          programme: true,
-          enrollments: {
-            orderBy: { enrolledAt: 'asc' },
-          },
-        },
-      });
+      throw new NotFoundException('Student profile not found.');
     }
 
     return student;

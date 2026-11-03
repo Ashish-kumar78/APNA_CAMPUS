@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CountUpNumber } from '../../utils/motion.jsx';
 import {
   IndianRupee,
   CreditCard,
@@ -174,7 +175,7 @@ export default function AccountsDashboardTab({
               <Layers size={18} />
             </div>
           </div>
-          <div className="accounts-kpi-val">₹{(totalAssessed / 100000).toFixed(2)} L</div>
+          <div className="accounts-kpi-val"><CountUpNumber value={`₹${(totalAssessed / 100000).toFixed(2)} L`} /></div>
           <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>Tuition, Hostel &amp; Bus</span>
             <span className="text-blue-600 font-semibold flex items-center">Tariffs <ChevronRight size={13} /></span>
@@ -192,7 +193,7 @@ export default function AccountsDashboardTab({
               <CheckCircle2 size={18} />
             </div>
           </div>
-          <div className="text-2xl font-black text-emerald-200">₹{(totalCollected / 100000).toFixed(2)} L</div>
+          <div className="text-2xl font-black text-emerald-200"><CountUpNumber value={`₹${(totalCollected / 100000).toFixed(2)} L`} /></div>
           <div className="accounts-dashboard__kpi-note accounts-dashboard__kpi-note--income text-xs text-emerald-400 mt-1">
             Reconciled bank &amp; counter credits
           </div>
@@ -209,7 +210,7 @@ export default function AccountsDashboardTab({
               <AlertTriangle size={18} />
             </div>
           </div>
-          <div className="accounts-kpi-val text-rose-600">₹{(totalOutstanding / 100000).toFixed(2)} L</div>
+          <div className="accounts-kpi-val text-rose-600"><CountUpNumber value={`₹${(totalOutstanding / 100000).toFixed(2)} L`} /></div>
           <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>Autumn Term Arrears</span>
             <span className="text-rose-600 font-semibold flex items-center">Defaulters <ChevronRight size={13} /></span>
@@ -224,7 +225,7 @@ export default function AccountsDashboardTab({
               <TrendingUp size={18} />
             </div>
           </div>
-          <div className="accounts-kpi-val text-sky-700">{collectionRate}%</div>
+          <div className="accounts-kpi-val text-sky-700"><CountUpNumber value={`${collectionRate}%`} /></div>
           <div className="accounts-dashboard__kpi-note text-xs text-slate-500 mt-1">
             Exceeding 85% fiscal milestone
           </div>
@@ -241,7 +242,7 @@ export default function AccountsDashboardTab({
               <Users size={18} />
             </div>
           </div>
-          <div className="accounts-kpi-val text-purple-700">₹{(totalMonthlyPayroll / 100000).toFixed(2)} L</div>
+          <div className="accounts-kpi-val text-purple-700"><CountUpNumber value={`₹${(totalMonthlyPayroll / 100000).toFixed(2)} L`} /></div>
           <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>222 Faculty &amp; Staff</span>
             <span className="text-purple-600 font-semibold flex items-center">Salary <ChevronRight size={13} /></span>
@@ -259,7 +260,7 @@ export default function AccountsDashboardTab({
               <DollarSign size={18} />
             </div>
           </div>
-          <div className="accounts-kpi-val text-amber-600">₹{(totalOperatingExpenses / 100000).toFixed(2)} L</div>
+          <div className="accounts-kpi-val text-amber-600"><CountUpNumber value={`₹${(totalOperatingExpenses / 100000).toFixed(2)} L`} /></div>
           <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>Power, Labs, Leased Lines</span>
             <span className="text-amber-600 font-semibold flex items-center">Bills <ChevronRight size={13} /></span>
@@ -277,7 +278,7 @@ export default function AccountsDashboardTab({
               <Clock size={18} />
             </div>
           </div>
-          <div className="accounts-kpi-val text-indigo-700">{pendingApprovalsCount} Items</div>
+          <div className="accounts-kpi-val text-indigo-700"><CountUpNumber value={`${pendingApprovalsCount} Items`} /></div>
           <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>Bursar clearance queue</span>
             <span className="text-indigo-600 font-semibold flex items-center">Queue <ChevronRight size={13} /></span>
@@ -292,7 +293,7 @@ export default function AccountsDashboardTab({
               <IndianRupee size={18} />
             </div>
           </div>
-          <div className="text-2xl font-black text-amber-300">₹{(availableBankBalance / 100000).toFixed(2)} L</div>
+          <div className="text-2xl font-black text-amber-300"><CountUpNumber value={`₹${(availableBankBalance / 100000).toFixed(2)} L`} /></div>
           <div className="accounts-dashboard__kpi-note accounts-dashboard__kpi-note--liquidity text-xs text-slate-400 mt-1">
             SBI Treasury + HDFC Collection
           </div>
@@ -309,7 +310,7 @@ export default function AccountsDashboardTab({
               <CreditCard size={18} />
             </div>
           </div>
-          <div className="accounts-kpi-val text-orange-700">₹{(overdueVendorPayments / 100000).toFixed(2)} L</div>
+          <div className="accounts-kpi-val text-orange-700"><CountUpNumber value={`₹${(overdueVendorPayments / 100000).toFixed(2)} L`} /></div>
           <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>Suppliers &amp; Hardware AMCs</span>
             <span className="text-orange-600 font-semibold flex items-center">Payables <ChevronRight size={13} /></span>
@@ -327,7 +328,7 @@ export default function AccountsDashboardTab({
               <ShieldCheck size={18} />
             </div>
           </div>
-          <div className="accounts-kpi-val text-teal-700">₹{(totalConcessions / 100000).toFixed(2)} L</div>
+          <div className="accounts-kpi-val text-teal-700"><CountUpNumber value={`₹${(totalConcessions / 100000).toFixed(2)} L`} /></div>
           <div className="accounts-dashboard__kpi-footer text-xs text-slate-500 flex items-center justify-between mt-1">
             <span>State DBT &amp; Chairman Trust</span>
             <span className="text-teal-600 font-semibold flex items-center">Grants <ChevronRight size={13} /></span>
@@ -387,8 +388,8 @@ export default function AccountsDashboardTab({
                     formatter={(val) => [`₹${val.toLocaleString('en-IN')}`, '']}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Area type="monotone" dataKey="collected" name="Fee Realized Inflow" stroke="#10b981" fillOpacity={1} fill="url(#colorCollected)" />
-                  <Area type="monotone" dataKey="expenses" name="Operational Outflows" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpenses)" />
+                  <Area type="monotone" dataKey="collected" name="Fee Realized Inflow" stroke="#10b981" fillOpacity={1} fill="url(#colorCollected)" animationDuration={700} animationEasing="ease-out" />
+                  <Area type="monotone" dataKey="expenses" name="Operational Outflows" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpenses)" animationDuration={700} animationEasing="ease-out" />
                 </AreaChart>
               ) : (
                 <BarChart data={deptDuesChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
@@ -399,7 +400,7 @@ export default function AccountsDashboardTab({
                     contentStyle={{ backgroundColor: '#0f172a', borderRadius: 8, color: '#fff', fontSize: 12 }}
                     formatter={(val) => [`₹${val.toLocaleString('en-IN')}`, 'Outstanding Dues']}
                   />
-                  <Bar dataKey="dues" name="Outstanding Dues (₹)" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="dues" name="Outstanding Dues (₹)" fill="#f43f5e" radius={[4, 4, 0, 0]} animationDuration={700} animationEasing="ease-out" />
                 </BarChart>
               )}
             </ResponsiveContainer>
@@ -427,6 +428,8 @@ export default function AccountsDashboardTab({
                   outerRadius={75}
                   paddingAngle={3}
                   dataKey="value"
+                  animationDuration={700}
+                  animationEasing="ease-out"
                 >
                   {feeHeadDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />

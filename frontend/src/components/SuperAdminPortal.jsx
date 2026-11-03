@@ -58,6 +58,7 @@ import TransportManagementModule from './transport/TransportManagementModule.jsx
 import './SuperAdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import SuperAdminDashboardView from './SuperAdminDashboardView.jsx';
 import { erpStore, permissionDefinitions, initialRolesList } from '../services/erpStore.js';
 
 export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
@@ -273,10 +274,14 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
   const [settingsActiveSubTab, setSettingsActiveSubTab] = useState('institutional');
   const [settingsWarningModalOpen, setSettingsWarningModalOpen] = useState(false);
 
-  // 11. User Directory Modals (Create User & View Details)
+  // 11. User Directory Modals (Create User, Assign Role & View Details)
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
-  const [newUserData, setNewUserData] = useState({ name: '', email: '', identifier: '', role: 'faculty', department: 'Computer Science & Engineering', password: 'password123' });
+  const [newUserData, setNewUserData] = useState({ name: '', email: '', identifier: '', role: 'FACULTY', department: 'Computer Science & Engineering', password: 'password123' });
   const [selectedUserDetailsModal, setSelectedUserDetailsModal] = useState(null);
+  const [assignRoleModalUser, setAssignRoleModalUser] = useState(null);
+  const [assignedRoleValue, setAssignedRoleValue] = useState('STUDENT');
+  const [assignedDepartmentValue, setAssignedDepartmentValue] = useState('Computer Science & Engineering');
+  const [assignRoleLoading, setAssignRoleLoading] = useState(false);
 
   // 12. Audit Trail Advanced Filters
   const [auditDateRangeFilter, setAuditDateRangeFilter] = useState('ALL');
@@ -555,21 +560,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
         setUsersList(prev => [res.data, ...prev]);
         triggerToast(`Account provisioned successfully for ${newUserData.name} (${newUserData.role.toUpperCase()})`);
       } else {
-        const newUserObj = {
-          id: `usr_${Date.now()}`,
-          name: newUserData.name,
-          email: newUserData.email,
-          identifier: newUserData.identifier,
-          role: newUserData.role,
-          department: newUserData.department,
-          isActive: true,
-          isMfaEnabled: false,
-          lastLogin: 'Never',
-          failedLogins: 0,
-          joinedAt: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-        };
-        setUsersList(prev => [newUserObj, ...prev]);
-        triggerToast(`Account provisioned successfully for ${newUserData.name} (${newUserData.role.toUpperCase()})`);
+        throw new Error(res?.message || 'Failed to create account.');
       }
       erpStore.logAuditEvent(
         'Super Administrator',
@@ -580,9 +571,47 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
         newUserData.role
       );
       setCreateUserModalOpen(false);
-      setNewUserData({ name: '', email: '', identifier: '', role: 'faculty', department: 'Computer Science & Engineering', password: 'password123' });
-    } catch {
-      triggerToast('Error creating user account. Please check inputs.');
+      setNewUserData({ name: '', email: '', identifier: '', role: 'FACULTY', department: 'Computer Science & Engineering', password: 'password123' });
+    } catch (err) {
+      triggerToast(err?.message || 'Error creating user account. Please check inputs.');
+    }
+  };
+
+  // User Role Reassignment Handler
+  const handleAssignRoleSubmit = async (e) => {
+    e.preventDefault();
+    if (!assignRoleModalUser) return;
+    setAssignRoleLoading(true);
+    try {
+      const res = await api.updateAdminUserRole(
+        assignRoleModalUser.id,
+        assignedRoleValue,
+        assignedDepartmentValue
+      );
+      if (res?.success && res?.data) {
+        setUsersList((prev) =>
+          prev.map((u) =>
+            u.id === assignRoleModalUser.id
+              ? { ...u, role: res.data.role, department: res.data.department }
+              : u
+          )
+        );
+        if (selectedUserDetailsModal && selectedUserDetailsModal.id === assignRoleModalUser.id) {
+          setSelectedUserDetailsModal({
+            ...selectedUserDetailsModal,
+            role: res.data.role,
+            department: res.data.department,
+          });
+        }
+        triggerToast(`Role updated to ${res.data.role} for ${assignRoleModalUser.name}`);
+        setAssignRoleModalUser(null);
+      } else {
+        triggerToast(res?.message || 'Failed to update user role');
+      }
+    } catch (err) {
+      triggerToast(err?.message || 'Error updating user role. Please try again.');
+    } finally {
+      setAssignRoleLoading(false);
     }
   };
 
@@ -951,19 +980,20 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
       >
         <div className="superadmin-portal-content-wrap">
         {activeTab === 'overview' ? (
-          <RoleDashboardLanding
+          <SuperAdminDashboardView
             account={account}
-            roleKey="super_admin"
-            onLogout={onLogout}
-            onSwitchRole={onSwitchRole}
-            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            metrics={metrics}
             onNavigateTab={(tabId) => {
               if (tabId === 'users') setActiveTab('users');
               else if (tabId === 'approvals') setActiveTab('approvals');
               else if (tabId === 'activity' || tabId === 'audit') setActiveTab('audit');
               else if (tabId === 'campus-connect') setActiveTab('campus-connect');
-              else if (tabId === 'system' || tabId === 'diagnostics') setActiveTab('health');
+              else if (tabId === 'system' || tabId === 'diagnostics' || tabId === 'health') setActiveTab('health');
+              else if (tabId === 'timetable') setActiveTab('timetable');
+              else setActiveTab(tabId);
             }}
+            onOpenProvisionModal={() => setCreateUserModalOpen(true)}
+            onRunDiagnostics={handleRunDiagnostics}
           />
         ) : (
           <>
@@ -1933,12 +1963,21 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                     <option value="ALL">All Roles</option>
                     <option value="SUPER_ADMIN">Super Admin</option>
                     <option value="PRINCIPAL">Principal</option>
+                    <option value="MANAGEMENT">Management</option>
+                    <option value="ADMIN">Admin Ops</option>
                     <option value="HOD">HOD</option>
                     <option value="FACULTY">Faculty</option>
                     <option value="STUDENT">Student</option>
                     <option value="EXAM_CELL">Exam Cell</option>
                     <option value="ACCOUNTS">Accounts</option>
                     <option value="LIBRARY">Library</option>
+                    <option value="PLACEMENT">Placement (TPO)</option>
+                    <option value="ADMISSIONS">Admissions</option>
+                    <option value="TRANSPORT">Transport</option>
+                    <option value="HOSTEL">Hostel</option>
+                    <option value="WARDEN">Warden</option>
+                    <option value="STAFF">Staff / Lab</option>
+                    <option value="CANTEEN">Canteen</option>
                   </select>
 
                   <select
@@ -2082,6 +2121,19 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                                 title={`Launch authorized portal for role ${u.role}`}
                               >
                                 <ExternalLink size={12} style={{ marginRight: '4px' }} /> Launch
+                              </button>
+                              <button
+                                type="button"
+                                className="erp-btn erp-btn-secondary"
+                                style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', background: '#eef2ff', color: '#4f46e5', borderColor: '#c7d2fe', fontWeight: 600 }}
+                                onClick={() => {
+                                  setAssignRoleModalUser(u);
+                                  setAssignedRoleValue(u.role ? u.role.toUpperCase() : 'STUDENT');
+                                  setAssignedDepartmentValue(u.department || 'Computer Science & Engineering');
+                                }}
+                                title={`Assign or reassign institutional role for ${u.name}`}
+                              >
+                                <ShieldCheck size={12} style={{ marginRight: '4px' }} /> Assign Role
                               </button>
                               <button
                                 type="button"
@@ -3626,16 +3678,29 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                       onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
                       style={{ width: '100%', padding: '0.65rem 0.85rem', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.88rem' }}
                     >
-                      <option value="faculty">Faculty Member</option>
-                      <option value="student">Student</option>
-                      <option value="hod">Head of Department (HOD)</option>
-                      <option value="principal">Principal / Director</option>
-                      <option value="management">Management / Trustee</option>
-                      <option value="admin">Admin Operations</option>
-                      <option value="accounts">Accounts &amp; Finance</option>
-                      <option value="exam_cell">Examination Cell</option>
-                      <option value="library">Library Staff</option>
-                      <option value="staff">Non-Teaching Staff</option>
+                      <optgroup label="Academics">
+                        <option value="FACULTY">Faculty Member</option>
+                        <option value="HOD">Head of Department (HOD)</option>
+                        <option value="STUDENT">Student</option>
+                        <option value="EXAM_CELL">Examination Cell</option>
+                        <option value="LIBRARY">Central Library Staff</option>
+                        <option value="PLACEMENT">Training &amp; Placement (TPO)</option>
+                        <option value="ADMISSIONS">Admissions Office</option>
+                      </optgroup>
+                      <optgroup label="Administration">
+                        <option value="SUPER_ADMIN">Super Administrator</option>
+                        <option value="PRINCIPAL">Principal / Director</option>
+                        <option value="MANAGEMENT">Management / Trustee</option>
+                        <option value="ADMIN">Admin Operations</option>
+                      </optgroup>
+                      <optgroup label="Campus Services &amp; Logistics">
+                        <option value="ACCOUNTS">Accounts &amp; Finance</option>
+                        <option value="TRANSPORT">Campus Transport</option>
+                        <option value="HOSTEL">Hostel Administration</option>
+                        <option value="WARDEN">Resident Warden</option>
+                        <option value="STAFF">Lab &amp; Technical Staff</option>
+                        <option value="CANTEEN">Smart Canteen</option>
+                      </optgroup>
                     </select>
                   </div>
                   <div>
@@ -3689,6 +3754,128 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
         </div>
       )}
 
+      {/* MODAL: Assign / Change Institutional Role */}
+      {assignRoleModalUser && (
+        <div className="erp-diagnostics-overlay" role="dialog" aria-modal="true">
+          <div className="erp-diagnostics-modal" style={{ maxWidth: '520px' }}>
+            <div className="erp-diag-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShieldCheck size={20} color="#4f46e5" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0 }}>Assign Institutional Role</h3>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
+                    Reassign access level and privileges for {assignRoleModalUser.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAssignRoleModalUser(null)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignRoleSubmit}>
+              <div className="erp-diag-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.92rem' }}>{assignRoleModalUser.name}</div>
+                    <div style={{ fontSize: '0.76rem', color: '#64748b', fontFamily: 'monospace' }}>ID: {assignRoleModalUser.identifier || assignRoleModalUser.id} · {assignRoleModalUser.email}</div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', textAlign: 'right', marginBottom: '2px' }}>Current Role</span>
+                    <span style={{ background: 'rgba(99, 102, 241, 0.12)', color: '#4f46e5', padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                      {assignRoleModalUser.role}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', color: '#334155', fontWeight: 600, marginBottom: '6px' }}>
+                    New Designated Institutional Role
+                  </label>
+                  <select
+                    value={assignedRoleValue}
+                    onChange={(e) => setAssignedRoleValue(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem 0.85rem', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.88rem' }}
+                  >
+                    <optgroup label="Academics">
+                      <option value="STUDENT">Student</option>
+                      <option value="FACULTY">Faculty Member</option>
+                      <option value="HOD">Head of Department (HOD)</option>
+                      <option value="EXAM_CELL">Examination Cell</option>
+                      <option value="LIBRARY">Central Library Staff</option>
+                      <option value="PLACEMENT">Training &amp; Placement (TPO)</option>
+                      <option value="ADMISSIONS">Admissions Office</option>
+                    </optgroup>
+                    <optgroup label="Administration">
+                      <option value="PRINCIPAL">Principal / Director</option>
+                      <option value="MANAGEMENT">Management / Trustee</option>
+                      <option value="ADMIN">Admin Operations</option>
+                      <option value="SUPER_ADMIN">Super Administrator</option>
+                    </optgroup>
+                    <optgroup label="Campus Services &amp; Logistics">
+                      <option value="ACCOUNTS">Accounts &amp; Finance</option>
+                      <option value="TRANSPORT">Campus Transport Fleet</option>
+                      <option value="HOSTEL">Hostel Administration</option>
+                      <option value="WARDEN">Resident Warden</option>
+                      <option value="STAFF">Lab &amp; Technical Staff</option>
+                      <option value="CANTEEN">Smart Canteen</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', color: '#334155', fontWeight: 600, marginBottom: '6px' }}>
+                    Department / Division
+                  </label>
+                  <select
+                    value={assignedDepartmentValue}
+                    onChange={(e) => setAssignedDepartmentValue(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem 0.85rem', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.88rem' }}
+                  >
+                    <option value="Computer Science & Engineering">Computer Science &amp; Engineering</option>
+                    <option value="Electronics & Communication">Electronics &amp; Communication</option>
+                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                    <option value="Civil Engineering">Civil Engineering</option>
+                    <option value="Management Studies">Management Studies</option>
+                    <option value="Central Administration">Central Administration</option>
+                    <option value="Campus Facilities & Services">Campus Facilities &amp; Services</option>
+                  </select>
+                </div>
+
+                <div style={{ background: '#f0fdf4', padding: '0.75rem', borderRadius: '6px', border: '1px solid #bbf7d0', fontSize: '0.76rem', color: '#166534' }}>
+                  ✓ Assigning this role immediately updates access control permissions and generates an audit log entry.
+                </div>
+              </div>
+
+              <div className="erp-diag-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="erp-btn erp-btn-secondary"
+                  onClick={() => setAssignRoleModalUser(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="erp-btn erp-btn-primary"
+                  disabled={assignRoleLoading}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {assignRoleLoading ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                  Confirm &amp; Assign Role
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODAL 7: User Details Security Inspector */}
       {selectedUserDetailsModal && (
         <div className="erp-diagnostics-overlay" role="dialog" aria-modal="true">
@@ -3724,7 +3911,21 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                 </div>
                 <div>
                   <span style={{ color: '#64748b' }}>Assigned Institutional Role:</span>
-                  <div style={{ fontWeight: 700, color: '#4f46e5' }}>{selectedUserDetailsModal.role}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                    <span style={{ fontWeight: 700, color: '#4f46e5', fontSize: '0.94rem' }}>{selectedUserDetailsModal.role}</span>
+                    <button
+                      type="button"
+                      className="erp-btn"
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
+                      onClick={() => {
+                        setAssignRoleModalUser(selectedUserDetailsModal);
+                        setAssignedRoleValue(selectedUserDetailsModal.role ? selectedUserDetailsModal.role.toUpperCase() : 'STUDENT');
+                        setAssignedDepartmentValue(selectedUserDetailsModal.department || 'Computer Science & Engineering');
+                      }}
+                    >
+                      Change Role
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <span style={{ color: '#64748b' }}>Department:</span>

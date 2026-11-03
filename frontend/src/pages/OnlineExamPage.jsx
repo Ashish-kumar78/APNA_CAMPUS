@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   AlertCircle,
   BookOpen,
@@ -13,94 +13,59 @@ import {
   X,
 } from 'lucide-react'
 import './OnlineExamPage.css'
-
-const availableTests = [
-  {
-    id: 'quiz-ai-1',
-    subject: 'Artificial Intelligence',
-    code: 'CS501',
-    title: 'Unit Test 1 – Foundations of AI',
-    questions: 20,
-    duration: 30,
-    maxMarks: 20,
-    deadline: '20 Oct 2026',
-    attempts: 1,
-    status: 'available',
-  },
-  {
-    id: 'quiz-ml-1',
-    subject: 'Machine Learning',
-    code: 'CS502',
-    title: 'Unit Quiz – Supervised Learning',
-    questions: 15,
-    duration: 20,
-    maxMarks: 15,
-    deadline: '18 Oct 2026',
-    attempts: 1,
-    status: 'available',
-  },
-  {
-    id: 'quiz-cc-1',
-    subject: 'Cloud Computing',
-    code: 'CS503',
-    title: 'Module 1 Quiz – Cloud Fundamentals',
-    questions: 10,
-    duration: 15,
-    maxMarks: 10,
-    deadline: '15 Oct 2026',
-    attempts: 2,
-    status: 'completed',
-    score: 9,
-    maxScore: 10,
-  },
-]
-
-const sampleQuestions = [
-  {
-    id: 1,
-    question: 'Which of the following is a type of Artificial Intelligence?',
-    options: ['Narrow AI', 'General AI', 'Super AI', 'All of the above'],
-    correct: 3,
-  },
-  {
-    id: 2,
-    question: 'The Turing Test was proposed by:',
-    options: ['John McCarthy', 'Alan Turing', 'Marvin Minsky', 'Claude Shannon'],
-    correct: 1,
-  },
-  {
-    id: 3,
-    question: 'Which search algorithm explores all nodes at the present depth before moving to deeper nodes?',
-    options: ['Depth First Search', 'Breadth First Search', 'A* Search', 'Hill Climbing'],
-    correct: 1,
-  },
-  {
-    id: 4,
-    question: 'In a knowledge-based agent, the knowledge base is a set of:',
-    options: ['Actions', 'Sentences', 'Goals', 'Percepts'],
-    correct: 1,
-  },
-  {
-    id: 5,
-    question: 'Which of the following is NOT a component of an intelligent agent?',
-    options: ['Sensors', 'Actuators', 'Compiler', 'Knowledge Base'],
-    correct: 2,
-  },
-]
+import { api } from '../services/api.js'
 
 export default function OnlineExamPage() {
+  const [availableTests, setAvailableTests] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [view, setView] = useState('list') // list | instructions | exam | result
   const [selectedTest, setSelectedTest] = useState(null)
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState({})
   const [timeLeft, setTimeLeft] = useState(30 * 60) // 30 min in seconds
-  const [examSubmitted, setExamSubmitted] = useState(false)
   const [score, setScore] = useState(null)
+  const [answerReview, setAnswerReview] = useState([])
+  const [submitError, setSubmitError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    api.getStudentQuizzes()
+      .then((response) => {
+        if (!response?.success || !Array.isArray(response.data)) {
+          throw new Error(response?.message || 'The assigned quiz list was invalid.')
+        }
+        if (active) {
+          setAvailableTests(response.data)
+          setLoadError('')
+        }
+      })
+      .catch((error) => {
+        if (active) setLoadError(error.message || 'Could not load assigned quizzes.')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (view !== 'exam' || timeLeft <= 0) return undefined
+    const timerId = window.setTimeout(() => {
+      setTimeLeft((remaining) => Math.max(0, remaining - 1))
+    }, 1000)
+    return () => window.clearTimeout(timerId)
+  }, [view, timeLeft])
 
   function startExam(test) {
     setSelectedTest(test)
     setCurrentQuestion(0)
     setAnswers({})
+    setTimeLeft(test.duration * 60)
+    setSubmitError('')
     setView('instructions')
   }
 
@@ -112,15 +77,33 @@ export default function OnlineExamPage() {
     setAnswers((prev) => ({ ...prev, [qId]: optionIndex }))
   }
 
-  function submitExam() {
-    let correct = 0
-    sampleQuestions.forEach((q) => {
-      if (answers[q.id] === q.correct) correct++
-    })
-    setScore(correct)
-    setExamSubmitted(true)
-    setView('result')
+  async function submitExam() {
+    if (!selectedTest || submitting || view !== 'exam') return
+    setSubmitting(true)
+    setSubmitError('')
+    try {
+      const response = await api.submitStudentQuiz(selectedTest.id, answers)
+      if (!response?.success || !response.data) {
+        throw new Error(response?.message || 'The quiz submission was not recorded.')
+      }
+      setScore(response.data.score)
+      setAnswerReview(response.data.answerReview || [])
+      setAvailableTests((tests) => tests.map((test) => (
+        test.id === selectedTest.id
+          ? { ...test, status: 'completed', score: response.data.score, maxScore: response.data.maxMarks }
+          : test
+      )))
+      setView('result')
+    } catch (error) {
+      setSubmitError(error.message || 'Could not submit the quiz. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
+
+  useEffect(() => {
+    if (view === 'exam' && timeLeft === 0) submitExam()
+  }, [view, timeLeft])
 
   function formatTime(seconds) {
     const m = Math.floor(seconds / 60)
@@ -139,13 +122,13 @@ export default function OnlineExamPage() {
           </div>
           <div className="instructions-meta-grid">
             <div><Clock size={14} /><span>Duration</span><strong>{selectedTest.duration} minutes</strong></div>
-            <div><BookOpen size={14} /><span>Questions</span><strong>{selectedTest.questions}</strong></div>
+            <div><BookOpen size={14} /><span>Questions</span><strong>{selectedTest.questions.length}</strong></div>
             <div><Star size={14} /><span>Max Marks</span><strong>{selectedTest.maxMarks}</strong></div>
             <div><AlertCircle size={14} /><span>Attempts</span><strong>{selectedTest.attempts}</strong></div>
           </div>
           <ul className="instructions-list">
             <li><Check size={12} />Read each question carefully before answering.</li>
-            <li><Check size={12} />All questions are compulsory. Each carries 1 mark.</li>
+            <li><Check size={12} />All questions are compulsory. Each carries an equal share of the total marks.</li>
             <li><Check size={12} />Once started, the timer cannot be paused.</li>
             <li><Check size={12} />Do not refresh or close the browser tab during the exam.</li>
             <li><Check size={12} />You can review and change answers before final submission.</li>
@@ -165,9 +148,10 @@ export default function OnlineExamPage() {
   }
 
   if (view === 'exam' && selectedTest) {
-    const q = sampleQuestions[currentQuestion]
+    const questions = selectedTest.questions
+    const q = questions[currentQuestion]
     const answered = Object.keys(answers).length
-    const progress = (answered / sampleQuestions.length) * 100
+    const progress = (answered / questions.length) * 100
 
     return (
       <div className="online-exam-page exam-active">
@@ -180,15 +164,18 @@ export default function OnlineExamPage() {
             <Clock size={14} />
             <strong>{formatTime(timeLeft)}</strong>
           </div>
-          <button className="exam-submit-btn" onClick={submitExam}>Submit Exam</button>
+          <button className="exam-submit-btn" onClick={submitExam} disabled={submitting}>
+            {submitting ? 'Submitting…' : 'Submit Exam'}
+          </button>
         </div>
 
         <div className="exam-body">
           <div className="exam-question-area">
             <div className="exam-question-meta">
-              <span>Question {currentQuestion + 1} of {sampleQuestions.length}</span>
+              <span>Question {currentQuestion + 1} of {questions.length}</span>
               <span>{answered} answered</span>
             </div>
+            {submitError && <p role="alert" style={{ color: '#b91c1c' }}>{submitError}</p>}
             <div className="exam-progress-bar">
               <div className="exam-progress-fill" style={{ width: `${progress}%` }} />
             </div>
@@ -225,7 +212,7 @@ export default function OnlineExamPage() {
                 <ChevronLeft size={14} />Previous
               </button>
               <button
-                disabled={currentQuestion === sampleQuestions.length - 1}
+                disabled={currentQuestion === questions.length - 1}
                 onClick={() => setCurrentQuestion((c) => c + 1)}
               >
                 Next<ChevronRight size={14} />
@@ -236,7 +223,7 @@ export default function OnlineExamPage() {
           <div className="exam-palette">
             <p>Question Palette</p>
             <div className="palette-grid">
-              {sampleQuestions.map((question, i) => (
+              {questions.map((question, i) => (
                 <button
                   key={i}
                   className={`palette-btn ${i === currentQuestion ? 'current' : ''} ${answers[question.id] !== undefined ? 'answered' : ''}`}
@@ -258,29 +245,34 @@ export default function OnlineExamPage() {
   }
 
   if (view === 'result') {
-    const percentage = ((score / sampleQuestions.length) * 100).toFixed(0)
+    const percentage = ((score / selectedTest.maxMarks) * 100).toFixed(0)
+    const reviewByQuestion = new Map(answerReview.map((answer) => [answer.questionId, answer]))
+    const resultTone = percentage >= 85 ? 'excellent' : percentage >= 60 ? 'good' : 'average'
     return (
       <div className="online-exam-page">
         <div className="exam-result-card">
-          <div className={`result-icon ${score >= 14 ? 'excellent' : score >= 10 ? 'good' : 'average'}`}>
+          <div className={`result-icon ${resultTone}`}>
             <Trophy size={34} />
           </div>
           <h2>Exam Submitted!</h2>
           <p>Your response has been recorded for <strong>{selectedTest?.title}</strong></p>
           <div className="result-score-display">
             <strong>{score}</strong>
-            <span>/ {sampleQuestions.length}</span>
+            <span>/ {selectedTest.maxMarks}</span>
           </div>
           <div className="result-percentage">{percentage}%</div>
           <div className="result-review">
-            {sampleQuestions.map((q, i) => (
-              <div key={i} className={`result-q-row ${answers[q.id] === q.correct ? 'correct' : 'incorrect'}`}>
+            {selectedTest.questions.map((q, i) => {
+              const review = reviewByQuestion.get(String(q.id))
+              return (
+              <div key={q.id} className={`result-q-row ${review?.correct ? 'correct' : 'incorrect'}`}>
                 <span className="result-q-icon">
-                  {answers[q.id] === q.correct ? <Check size={12} /> : <X size={12} />}
+                  {review?.correct ? <Check size={12} /> : <X size={12} />}
                 </span>
                 <span className="result-q-text">Q{i + 1}. {q.question}</span>
               </div>
-            ))}
+              )
+            })}
           </div>
           <button className="instructions-start" onClick={() => setView('list')}>
             Back to Tests
@@ -299,10 +291,15 @@ export default function OnlineExamPage() {
           <p className="online-exam-caption">Attempt unit tests, quizzes and practice assessments assigned by faculty.</p>
         </div>
       </div>
+      {loadError && <p role="alert" style={{ color: '#b91c1c' }}>{loadError}</p>}
+      {!loading && !loadError && availableTests.length === 0 && (
+        <p style={{ color: '#64748b' }}>There are no published quizzes assigned to your section yet.</p>
+      )}
+      {loading && <p style={{ color: '#64748b' }}>Loading your assigned quizzes…</p>}
 
       <div className="online-exam-list">
         {availableTests.map((test) => (
-          <div key={test.id} className={`online-exam-card ${test.status}`}>
+          <div key={test.id} className={`online-exam-card ${test.status === 'completed' ? 'completed' : 'available'}`}>
             <div className="oec-subject">
               <span className="oec-code">{test.code}</span>
               <span className="oec-subject-name">{test.subject}</span>
@@ -310,10 +307,10 @@ export default function OnlineExamPage() {
             <div className="oec-body">
               <h3>{test.title}</h3>
               <div className="oec-meta">
-                <span><BookOpen size={11} />{test.questions} questions</span>
+                <span><BookOpen size={11} />{test.questions.length} questions</span>
                 <span><Clock size={11} />{test.duration} min</span>
                 <span><Star size={11} />{test.maxMarks} marks</span>
-                <span><AlertCircle size={11} />Due: {test.deadline}</span>
+                {test.deadline && <span><AlertCircle size={11} />Due: {test.deadline}</span>}
               </div>
             </div>
             <div className="oec-action">
@@ -321,7 +318,7 @@ export default function OnlineExamPage() {
                 <div className="oec-completed">
                   <CheckCircle size={16} />
                   <div>
-                    <strong>{test.score}/{test.maxScore}</strong>
+                    <strong>{test.score}/{test.maxMarks}</strong>
                     <small>Completed</small>
                   </div>
                 </div>

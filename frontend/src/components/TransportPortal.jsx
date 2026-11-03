@@ -40,7 +40,8 @@ import {
   GitPullRequest,
   CalendarDays,
   Boxes,
-  Settings
+  Settings,
+  Home
 } from 'lucide-react';
 import './TransportPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
@@ -470,9 +471,14 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
 
   const transportNavSections = [
     {
+      title: 'OVERVIEW',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: Home },
+      ]
+    },
+    {
       title: 'FLEET & TRANSIT OPERATIONS',
       items: [
-        { id: 'dashboard', label: 'Fleet Dashboard', icon: Bus },
         { id: 'fleet', label: 'Bus & Vehicle Directory', icon: Truck },
         { id: 'routes', label: 'Transit Routes & Stops', icon: MapPin },
         { id: 'trips', label: 'Live Telemetry & Tracking', icon: Navigation },

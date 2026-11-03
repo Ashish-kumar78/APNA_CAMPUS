@@ -35,7 +35,7 @@ export class BonafideController {
   @ApiOperation({ summary: 'Get summary statistics for student or reviewing staff' })
   async getDashboardStats(@CurrentUser() user: any) {
     const data = await this.bonafideService.getDashboardStats(user);
-    return { success: true, data };
+    return { success: true, ...data, data };
   }
 
   /**
@@ -47,7 +47,7 @@ export class BonafideController {
   @ApiOperation({ summary: 'Get authenticated student application list with filters' })
   async getMyApplications(@CurrentUser() user: any, @Query() query: any) {
     const result = await this.bonafideService.getMyApplications(user, query);
-    return { success: true, ...result };
+    return { success: true, ...result, data: result };
   }
 
   /**
@@ -59,7 +59,7 @@ export class BonafideController {
   @ApiOperation({ summary: 'Get review queue for Placement, Scholarship Cell, or Principal' })
   async getReviewQueue(@CurrentUser() user: any, @Query() query: any) {
     const result = await this.bonafideService.getReviewQueue(user, query);
-    return { success: true, ...result };
+    return { success: true, ...result, data: result };
   }
 
   /**
@@ -71,7 +71,7 @@ export class BonafideController {
   @ApiOperation({ summary: 'Get approved master fee structures for course duration' })
   async getFeeStructures() {
     const data = await this.bonafideService.getFeeStructures();
-    return { success: true, data };
+    return { success: true, feeStructures: data, data };
   }
 
   /**
@@ -111,6 +111,7 @@ export class BonafideController {
     return {
       success: true,
       message: dto.isDraft ? 'Draft saved successfully!' : 'Application submitted successfully!',
+      application: data,
       data,
     };
   }
@@ -128,7 +129,7 @@ export class BonafideController {
     @Body() dto: CreateBonafideDto,
   ) {
     const data = await this.bonafideService.updateDraft(id, user, dto);
-    return { success: true, message: 'Draft updated successfully!', data };
+    return { success: true, message: 'Draft updated successfully!', application: data, data };
   }
 
   /**
@@ -147,6 +148,7 @@ export class BonafideController {
     return {
       success: true,
       message: 'Application resubmitted with corrections successfully!',
+      application: data,
       data,
     };
   }
@@ -164,7 +166,7 @@ export class BonafideController {
     @Body() dto: WithdrawBonafideDto,
   ) {
     const data = await this.bonafideService.withdrawApplication(id, user, dto);
-    return { success: true, message: 'Application withdrawn successfully.', data };
+    return { success: true, message: 'Application withdrawn successfully.', application: data, data };
   }
 
   /**
@@ -183,6 +185,7 @@ export class BonafideController {
     return {
       success: true,
       message: `Application decision recorded: ${dto.action}`,
+      application: data,
       data,
     };
   }

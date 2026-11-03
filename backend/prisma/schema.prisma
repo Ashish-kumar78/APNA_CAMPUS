@@ -230,6 +230,7 @@ model Student {
   rollNumber         String             @unique
   name               String
   email              String             @unique
+  personalEmail      String?
   phone              String?
   gender             String?            @default("Female")
   dob                String?            @default("15-03-2005")
@@ -270,6 +271,8 @@ model Student {
   enrollments        StudentEnrollment[]
   internshipCards    InternshipIdCard[]
   bonafideApplications BonafideApplication[]
+  classNotes         ClassNote[]
+  quizSubmissions    QuizSubmission[]
 
   @@index([rollNumber])
   @@index([studentId])
@@ -451,17 +454,22 @@ model AuditLog {
   id            String   @id @default(cuid())
   user          String
   role          String
-  action        String?
-  target        String?
-  oldValue      String?
-  newValue      String?
   ipAddress     String?
   status        String?  @default("Success")
+
+  // Existing audit fields used by other modules
   targetStudent String?
   subject       String?
   assessment    String?
   oldMark       String?
   newMark       String?
+
+  // General administrative audit fields
+  action        String?
+  target        String?
+  oldValue      String?
+  newValue      String?
+
   changedAt     String
   reason        String
   createdAt     DateTime @default(now())
@@ -1055,6 +1063,12 @@ model AcademicYear {
   createdAt DateTime @default(now())
 }
 
+model AdmissionSequence {
+  key       String   @id
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
 enum ApplicantStatus {
   APPLIED
   VERIFIED
@@ -1092,6 +1106,7 @@ model Applicant {
 
   @@index([applicationNo])
   @@index([status])
+  @@index([email, academicYear])
 }
 
 model StudentEnrollment {
@@ -1113,6 +1128,66 @@ model StudentEnrollment {
   @@index([studentId])
   @@index([academicYear])
   @@index([semester])
+}
+
+model ClassNote {
+  id              String   @id @default(cuid())
+  studentId       String
+  student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject         String
+  subjectCode     String?
+  lectureDate     String
+  topic           String
+  description     String?
+  semester        String
+  section         String
+  fileData        String   @db.Text
+  fileName        String
+  fileType        String
+  status          String   @default("PENDING")
+  verifiedBy      String?
+  verifiedAt      DateTime?
+  reviewerRemarks String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status, subject])
+  @@index([studentId])
+}
+
+model FacultyQuiz {
+  id             String           @id @default(cuid())
+  title          String
+  subject        String
+  subjectCode    String
+  section        String           @default("Section A")
+  semester       String           @default("Semester 5")
+  date           String?
+  duration       Int              @default(30)
+  totalMarks     Float            @default(10)
+  assessmentSlot Int              @default(1)
+  status         String           @default("Draft")
+  questions      Json
+  createdBy      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  submissions    QuizSubmission[]
+
+  @@index([subjectCode, section, status])
+}
+
+model QuizSubmission {
+  id          String     @id @default(cuid())
+  quizId      String
+  quiz        FacultyQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answers     Json
+  score       Float
+  submittedAt DateTime   @default(now())
+
+  @@unique([quizId, studentId])
+  @@index([studentId, submittedAt])
 }
 
 model CourseOffering {

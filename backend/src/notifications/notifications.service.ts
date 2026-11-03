@@ -8,6 +8,7 @@ import {
 import { Subject, Observable, merge, interval } from 'rxjs';
 import { map, filter } from 'rxjs/operators';
 import { PrismaService } from '../prisma/prisma.service';
+import { Role } from '@prisma/client';
 import {
   NotificationDispatchInput,
   NOTIFICATION_EVENTS,
@@ -87,8 +88,9 @@ export class NotificationsService {
           this.logger.debug(`[Deduplication] Notification with dedupKey ${input.dedupKey} already exists. Skipping.`);
           return { success: true, duplicated: true, notification: existing };
         }
-      } catch (err) {
-        // Fallback if index lookup fails
+      } catch (error) {
+        this.logger.error('Notification deduplication lookup failed.', error);
+        throw error;
       }
     }
 
@@ -97,7 +99,12 @@ export class NotificationsService {
     const recipients = await this.resolveRecipients(targetFilter, input.targetScope);
 
     if (recipients.length === 0) {
-      this.logger.warn(`[Dispatch] No recipients resolved for event ${input.eventType || input.title}. TargetScope: ${input.targetScope}`);
+      this.logger.warn(`[Dispatch] No specific recipients resolved for event ${input.eventType || input.title}. TargetScope: ${input.targetScope}. Creating universal broadcast recipient.`);
+      recipients.push({
+        recipientRole: 'STUDENT',
+        recipientIdentifier: 'ALL_CAMPUS',
+        recipientName: 'Campus Wide Community',
+      });
     }
 
 
@@ -145,15 +152,9 @@ export class NotificationsService {
           recipients: true,
         },
       });
-    } catch (err: any) {
-      this.logger.error(`[Dispatch] Database persistence failed for notification: ${err.message}`, err.stack);
-      // Fallback create without relations if error
-      createdNotif = {
-        id: `notif-${Date.now()}`,
-        ...input,
-        createdAt: new Date(),
-        recipients,
-      };
+    } catch (error) {
+      this.logger.error('Notification persistence failed.', error);
+      throw error;
     }
 
     // D. Real-Time Broadcast via SSE
@@ -220,210 +221,132 @@ export class NotificationsService {
       }
     };
 
-    const hasDirectRecipients = Boolean((filter?.userIds && filter.userIds.length > 0) || (filter?.studentRollNumbers && filter.studentRollNumbers.length > 0));
-    const hasAcademicFilter = Boolean((filter?.departments && filter.departments.length > 0) || (filter?.semesters && filter.semesters.length > 0));
+    const hasDirectRecipients = Boolean(
+      filter?.userIds?.length ||
+      filter?.studentIds?.length ||
+      filter?.studentRollNumbers?.length ||
+      filter?.facultyEmployeeIds?.length,
+    );
 
-    const roles = (filter?.roles || []).map((r: any) => String(r).toUpperCase());
-    const isTargetingStudents = roles.includes('STUDENT') || (!hasDirectRecipients && (roles.length === 0 || roles.includes('STUDENT')));
-    const isTargetingFaculty = roles.includes('FACULTY') || (!hasDirectRecipients && roles.length === 0 && hasAcademicFilter);
-    const isTargetingHod = roles.includes('HOD') || (!hasDirectRecipients && roles.length === 0 && hasAcademicFilter);
-    const isTargetingPrincipal = roles.includes('PRINCIPAL');
-    const isTargetingAdmin = roles.includes('ADMIN') || roles.includes('SUPER_ADMIN');
-    const isTargetingAccounts = roles.includes('ACCOUNTS');
+    const roles = Array.from(new Set((filter?.roles || []).map((role) => normalizeRole(role).toUpperCase())));
+    const isTargetingStudents = !hasDirectRecipients && (
+      roles.includes('STUDENT') ||
+      roles.length === 0 ||
+      roles.includes('ALL')
+    );
+    const resolvedRoles = hasDirectRecipients
+      ? []
+      : roles.includes('ALL')
+        ? Object.values(Role).filter((role) => role !== Role.STUDENT)
+        : roles.filter((role): role is Role => Object.values(Role).includes(role as Role) && role !== Role.STUDENT);
 
-    // 1. Direct Student Roll Numbers specified
-    if (filter?.studentRollNumbers && filter.studentRollNumbers.length > 0) {
-      for (const roll of filter.studentRollNumbers) {
+    const addStudentRecords = (students: any[]) => {
+      for (const student of students) {
         addRecipient({
+          userId: student.userId || undefined,
           recipientRole: 'STUDENT',
-          recipientIdentifier: roll,
-          recipientName: `Student ${roll}`,
+          recipientIdentifier: student.rollNumber,
+          recipientName: student.name,
         });
       }
+    };
+
+    // Resolve direct student identifiers only from persisted student records.
+    const directStudentIds = filter?.studentIds || [];
+    const directStudentRolls = filter?.studentRollNumbers || [];
+    if (directStudentIds.length || directStudentRolls.length) {
+      const identifiers = [...directStudentIds, ...directStudentRolls];
+      const students = await this.prisma.student.findMany({
+        where: {
+          OR: [
+            { id: { in: identifiers } },
+            { studentId: { in: identifiers } },
+            { rollNumber: { in: identifiers } },
+          ],
+        },
+      });
+      addStudentRecords(students);
     }
 
-    // 2. Direct User IDs specified
-    if (filter?.userIds && filter.userIds.length > 0) {
-      try {
-        const users = await this.prisma.user.findMany({
-          where: { id: { in: filter.userIds } },
-          include: { student: true, faculty: true, hod: true },
-        });
-        for (const u of users) {
-          addRecipient({
-            userId: u.id,
-            recipientRole: u.role,
-            recipientIdentifier: u.student?.rollNumber || u.faculty?.employeeId || u.identifier || u.email,
-            recipientName: u.name,
-          });
-        }
-      } catch {
-        // Fallback
-        for (const uid of filter.userIds) {
-          addRecipient({
-            userId: uid,
-            recipientRole: 'USER',
-            recipientIdentifier: uid,
-          });
-        }
-      }
-    }
-
-    // 3. Resolve Academic Students (matching department, semester, section, CGPA, attendance)
-    if (isTargetingStudents && (!filter?.studentRollNumbers || filter.studentRollNumbers.length === 0)) {
-      let dbStudents: any[] = [];
-      try {
-        const whereClause: any = {};
-        if (filter?.departments && filter.departments.length > 0) {
-          whereClause.OR = [
-            { department: { in: filter.departments } },
-            { deptCode: { in: filter.departments } },
-          ];
-        }
-        if (filter?.semesters && filter.semesters.length > 0) {
-          whereClause.semester = { in: filter.semesters };
-        }
-        if (filter?.sections && filter.sections.length > 0 && !filter.sections.includes('ALL')) {
-          whereClause.section = { in: filter.sections };
-        }
-        if (filter?.minCgpa !== undefined) {
-          whereClause.cgpa = { gte: filter.minCgpa };
-        }
-        if (filter?.attendanceBelow !== undefined) {
-          whereClause.attendance = { lt: filter.attendanceBelow };
-        }
-
-        dbStudents = await this.prisma.student.findMany({
-          where: whereClause,
-          include: { user: true },
-        });
-      } catch {
-        // Ignore DB query errors in fallback
-      }
-
-      if (dbStudents.length > 0) {
-        for (const s of dbStudents) {
-          addRecipient({
-            userId: s.userId || undefined,
-            recipientRole: 'STUDENT',
-            recipientIdentifier: s.rollNumber,
-            recipientName: s.name,
-          });
-        }
-      } else {
-        // Match against canonical students roster
-        let cohort = [...this.canonicalStudents];
-        if (filter?.departments && filter.departments.length > 0) {
-          const depts = filter.departments.map((d) => d.toLowerCase());
-          cohort = cohort.filter((s) => depts.includes(s.deptCode.toLowerCase()) || depts.includes('all'));
-        }
-        if (filter?.semesters && filter.semesters.length > 0) {
-          const sems = filter.semesters.map((sm) => sm.toLowerCase().replace(/[^0-9]/g, ''));
-          cohort = cohort.filter((s) => sems.includes(s.semester.replace(/[^0-9]/g, '')) || filter.semesters!.includes(s.semester));
-        }
-        if (filter?.sections && filter.sections.length > 0 && !filter.sections.includes('ALL')) {
-          const secs = filter.sections.map((sc) => sc.toLowerCase());
-          cohort = cohort.filter((s) => secs.includes(s.section.toLowerCase()));
-        }
-        if (filter?.minCgpa !== undefined) {
-          cohort = cohort.filter((s) => s.cgpa >= filter.minCgpa!);
-        }
-        if (filter?.attendanceBelow !== undefined) {
-          cohort = cohort.filter((s) => s.attendance < filter.attendanceBelow!);
-        }
-
-        for (const s of cohort) {
-          addRecipient({
-            recipientRole: 'STUDENT',
-            recipientIdentifier: s.rollNumber,
-            recipientName: s.name,
-          });
-        }
-      }
-    }
-
-    // 4. Resolve Faculty (matching department or assignment)
-    if (isTargetingFaculty) {
-      try {
-        const whereClause: any = {};
-        if (filter?.departments && filter.departments.length > 0) {
-          whereClause.department = { in: filter.departments };
-        }
-        const faculties = await this.prisma.faculty.findMany({
-          where: whereClause,
-          include: { user: true },
-        });
-        for (const f of faculties) {
-          addRecipient({
-            userId: f.userId || undefined,
-            recipientRole: 'FACULTY',
-            recipientIdentifier: f.employeeId || f.email,
-            recipientName: f.name,
-          });
-        }
-      } catch {}
-
-      // Always ensure canonical Dr. S. Mohanty gets notified for CSE
-      if (recipientsMap.size === 0 || filter?.departments?.some((d) => d.includes('CSE'))) {
+    if (filter?.userIds?.length) {
+      const users = await this.prisma.user.findMany({
+        where: {
+          id: { in: filter.userIds },
+          isActive: true,
+          isActivated: true,
+        },
+        include: { student: true, faculty: true },
+      });
+      for (const user of users) {
         addRecipient({
-          recipientRole: 'FACULTY',
-          recipientIdentifier: 'FAC-042',
-          recipientName: 'Dr. S. Mohanty',
+          userId: user.id,
+          recipientRole: user.role,
+          recipientIdentifier: user.student?.rollNumber || user.faculty?.employeeId || user.identifier,
+          recipientName: user.name,
         });
       }
     }
 
-    // 5. Resolve HOD
-    if (isTargetingHod) {
-      try {
-        const hods = await this.prisma.hod.findMany({ include: { user: true } });
-        for (const h of hods) {
-          addRecipient({
-            userId: h.userId || undefined,
-            recipientRole: 'HOD',
-            recipientIdentifier: h.employeeId || h.email,
-            recipientName: h.name,
-          });
-        }
-      } catch {}
-
-      addRecipient({
-        recipientRole: 'HOD',
-        recipientIdentifier: 'HOD-CSE-01',
-        recipientName: 'Dr. Priya Ranjan (HOD CSE)',
+    if (filter?.facultyEmployeeIds?.length) {
+      const faculties = await this.prisma.faculty.findMany({
+        where: { employeeId: { in: filter.facultyEmployeeIds } },
+        include: { user: true },
       });
+      for (const faculty of faculties) {
+        addRecipient({
+          userId: faculty.userId || undefined,
+          recipientRole: 'FACULTY',
+          recipientIdentifier: faculty.employeeId,
+          recipientName: faculty.name,
+        });
+      }
     }
 
-    // 6. Principal
-    if (isTargetingPrincipal) {
-      addRecipient({
-        recipientRole: 'PRINCIPAL',
-        recipientIdentifier: 'PRINCIPAL-OFFICE',
-        recipientName: 'Dr. M. K. Sahoo (Principal)',
-      });
+    if (isTargetingStudents && !hasDirectRecipients) {
+      if (filter?.hasFeeDues !== undefined) {
+        throw new BadRequestException('Fee-due targeting is not supported by the current student records.');
+      }
+      const where: any = { status: 'Active' };
+      if (filter?.departments?.length) {
+        where.OR = [
+          { department: { in: filter.departments } },
+          { deptCode: { in: filter.departments } },
+        ];
+      }
+      if (filter?.semesters?.length) where.semester = { in: filter.semesters };
+      if (filter?.sections?.length && !filter.sections.includes('ALL')) {
+        where.section = { in: filter.sections };
+      }
+      if (filter?.minCgpa !== undefined) where.cgpa = { gte: filter.minCgpa };
+      if (filter?.attendanceBelow !== undefined) where.attendance = { lt: filter.attendanceBelow };
+      addStudentRecords(await this.prisma.student.findMany({ where }));
     }
 
-    // 7. Admin / Super Admin
-    if (isTargetingAdmin) {
-      addRecipient({
-        recipientRole: 'ADMIN',
-        recipientIdentifier: 'ADMIN-CENTRAL',
-        recipientName: 'College Administration Registry',
+    if (resolvedRoles.length) {
+      const where: any = {
+        role: { in: resolvedRoles },
+        isActive: true,
+        isActivated: true,
+      };
+      if (filter?.departments?.length) {
+        where.OR = [
+          { department: { in: filter.departments } },
+          { faculty: { is: { department: { in: filter.departments } } } },
+          { hod: { is: { department: { in: filter.departments } } } },
+        ];
+      }
+      const users = await this.prisma.user.findMany({
+        where,
+        include: { student: true, faculty: true, hod: true },
       });
-      addRecipient({
-        recipientRole: 'SUPER_ADMIN',
-        recipientIdentifier: 'SUPERADMIN-MASTER',
-        recipientName: 'Autonomous ERP Super Administrator',
-      });
-    }
-
-    // 8. Accounts & Finance
-    if (isTargetingAccounts) {
-      addRecipient({
-        recipientRole: 'ACCOUNTS',
-        recipientIdentifier: 'ACCOUNTS-DESK',
-        recipientName: 'Accounts & Bursar Directorate',
-      });
+      for (const user of users) {
+        addRecipient({
+          userId: user.id,
+          recipientRole: user.role,
+          recipientIdentifier: user.student?.rollNumber || user.faculty?.employeeId || user.hod?.employeeId || user.identifier,
+          recipientName: user.name,
+        });
+      }
     }
 
     // Remove any excluded User IDs
@@ -477,14 +400,28 @@ export class NotificationsService {
       roleDesks.push('PRINCIPAL-OFFICE');
     } else if (roleKey === 'HOD') {
       roleDesks.push('HOD-CENTRAL', 'HOD-CSE-01');
+    } else if (roleKey === 'EXAM_CELL') {
+      roleDesks.push('EXAM-CELL-DESK', 'COE-OFFICE');
     }
 
     if (roleDesks.length > 0) {
       conditions.push({ recipientIdentifier: { in: roleDesks } });
     }
 
-    // Also match global broadcasts explicitly targeted to recipientIdentifier: 'ALL'
-    conditions.push({ recipientIdentifier: 'ALL' });
+    // Also match global broadcasts explicitly targeted to ALL, ALL_CAMPUS, or the user's role
+    conditions.push({
+      recipientIdentifier: {
+        in: ['ALL', 'ALL_CAMPUS', 'ALL_STUDENTS', 'ALL_FACULTY', 'BROADCAST', roleKey, `${roleKey}-BROADCAST`],
+      },
+    });
+
+    if (roleKey) {
+      conditions.push({ recipientRole: roleKey });
+    }
+
+    if (conditions.length === 0) {
+      conditions.push({ isDismissed: false });
+    }
 
     return conditions;
   }
@@ -554,10 +491,7 @@ export class NotificationsService {
       ]);
 
       const unreadCount = await this.prisma.notificationRecipient.count({
-        where: {
-          ...where,
-          isRead: false,
-        },
+        where: { ...where, isRead: false },
       });
 
       const formatted = recipientRecords.map((r) => ({
@@ -591,26 +525,41 @@ export class NotificationsService {
         limit,
         totalPages: Math.ceil(total / limit),
       };
-    } catch (err: any) {
-      this.logger.warn(`[getUserNotifications] Fallback to in-memory: ${err.message}`);
-      return this.getUserNotificationsFallback(user, query);
+    } catch (error) {
+      this.logger.error('Unable to load persisted notifications.', error);
+      throw error;
     }
   }
 
-  async getUnreadCount(user: any): Promise<number> {
-    try {
-      const userConditions = this.buildUserRecipientConditions(user);
-      const count = await this.prisma.notificationRecipient.count({
+  async getNotificationSummary(user: any) {
+    const baseWhere = {
+      isDismissed: false,
+      OR: this.buildUserRecipientConditions(user),
+    };
+    const [total, unread, urgent] = await Promise.all([
+      this.prisma.notificationRecipient.count({ where: baseWhere }),
+      this.prisma.notificationRecipient.count({
+        where: { ...baseWhere, isRead: false },
+      }),
+      this.prisma.notificationRecipient.count({
         where: {
-          isDismissed: false,
-          isRead: false,
-          OR: userConditions,
+          ...baseWhere,
+          notification: { priority: 'URGENT' },
         },
-      });
-      return count;
-    } catch {
-      return 0;
-    }
+      }),
+    ]);
+    return { success: true, data: { total, unread, urgent } };
+  }
+
+  async getUnreadCount(user: any): Promise<number> {
+    const userConditions = this.buildUserRecipientConditions(user);
+    return this.prisma.notificationRecipient.count({
+      where: {
+        isDismissed: false,
+        isRead: false,
+        OR: userConditions,
+      },
+    });
   }
 
   // ============================================================================
@@ -641,13 +590,18 @@ export class NotificationsService {
         },
       });
 
+      if (updated.count === 0) {
+        throw new NotFoundException('Notification was not found for the current user.');
+      }
+
       return {
         success: true,
         message: 'Notification marked as read.',
         updatedCount: updated.count,
       };
-    } catch (err: any) {
-      return { success: true, message: 'Notification marked as read in cache.' };
+    } catch (error) {
+      this.logger.error('Unable to mark notification as read.', error);
+      throw error;
     }
   }
 
@@ -670,8 +624,9 @@ export class NotificationsService {
         message: 'All notifications marked as read.',
         updatedCount: updated.count,
       };
-    } catch (err: any) {
-      return { success: true, message: 'All notifications marked as read.' };
+    } catch (error) {
+      this.logger.error('Unable to mark notifications as read.', error);
+      throw error;
     }
   }
 
@@ -695,8 +650,9 @@ export class NotificationsService {
         message: 'Read notifications cleared.',
         clearedCount: updated.count,
       };
-    } catch (err: any) {
-      return { success: true, message: 'Read notifications cleared.' };
+    } catch (error) {
+      this.logger.error('Unable to clear read notifications.', error);
+      throw error;
     }
   }
 
@@ -759,102 +715,96 @@ export class NotificationsService {
 
   async getPreferences(user: any) {
     const identifier = user.identifier || user.email || user.id;
-    try {
-      let pref = await this.prisma.notificationPreference.findUnique({
-        where: { userIdentifier: identifier },
-      });
-      if (!pref) {
-        pref = await this.prisma.notificationPreference.create({
-          data: {
-            userId: user.id,
-            userIdentifier: identifier,
-          },
-        });
-      }
-      return { success: true, data: pref };
-    } catch {
-      return {
-        success: true,
+    let pref = await this.prisma.notificationPreference.findUnique({
+      where: { userIdentifier: identifier },
+    });
+    if (!pref) {
+      pref = await this.prisma.notificationPreference.create({
         data: {
-          emailAlerts: true,
-          smsAlerts: false,
-          academicAlerts: true,
-          financialAlerts: true,
-          placementAlerts: true,
-          urgentAlerts: true,
+          userId: user.id,
+          userIdentifier: identifier,
         },
-      };
+      });
     }
+    return { success: true, data: pref };
   }
 
   async updatePreferences(user: any, body: any) {
     const identifier = user.identifier || user.email || user.id;
-    try {
-      const pref = await this.prisma.notificationPreference.upsert({
-        where: { userIdentifier: identifier },
-        update: {
-          emailAlerts: body.emailAlerts ?? true,
-          smsAlerts: body.smsAlerts ?? false,
-          academicAlerts: body.academicAlerts ?? true,
-          financialAlerts: body.financialAlerts ?? true,
-          placementAlerts: body.placementAlerts ?? true,
-          urgentAlerts: body.urgentAlerts ?? true,
-        },
-        create: {
-          userId: user.id,
-          userIdentifier: identifier,
-          emailAlerts: body.emailAlerts ?? true,
-          smsAlerts: body.smsAlerts ?? false,
-          academicAlerts: body.academicAlerts ?? true,
-          financialAlerts: body.financialAlerts ?? true,
-          placementAlerts: body.placementAlerts ?? true,
-          urgentAlerts: body.urgentAlerts ?? true,
-        },
-      });
-      return { success: true, message: 'Preferences updated successfully.', data: pref };
-    } catch {
-      return { success: true, message: 'Preferences updated.', data: body };
-    }
+    const pref = await this.prisma.notificationPreference.upsert({
+      where: { userIdentifier: identifier },
+      update: {
+        emailAlerts: body.emailAlerts ?? true,
+        smsAlerts: body.smsAlerts ?? false,
+        academicAlerts: body.academicAlerts ?? true,
+        financialAlerts: body.financialAlerts ?? true,
+        placementAlerts: body.placementAlerts ?? true,
+        urgentAlerts: body.urgentAlerts ?? true,
+      },
+      create: {
+        userId: user.id,
+        userIdentifier: identifier,
+        emailAlerts: body.emailAlerts ?? true,
+        smsAlerts: body.smsAlerts ?? false,
+        academicAlerts: body.academicAlerts ?? true,
+        financialAlerts: body.financialAlerts ?? true,
+        placementAlerts: body.placementAlerts ?? true,
+        urgentAlerts: body.urgentAlerts ?? true,
+      },
+    });
+    return { success: true, message: 'Preferences updated successfully.', data: pref };
   }
 
   // ============================================================================
   // 7. BACKWARDS COMPATIBILITY (Faculty & Student Endpoints)
   // ============================================================================
 
-  async getFacultyNotifications(facultyName: string = 'Dr. S. Mohanty') {
-    return [
-      {
-        id: 'notif-101',
-        title: 'Continuous Internal Assessment (CIA) Modular 2 Examination Schedule',
-        message: 'The Autonomous Examination Cell has scheduled Modular 2 Theory & Practical examinations commencing on 15 Oct 2026.',
-        category: 'EXAMINATION',
-        priority: 'URGENT',
-        status: 'PUBLISHED',
-        facultyName,
-        totalRecipients: 32,
-        totalRead: 29,
-        publishedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-      },
-      {
-        id: 'notif-102',
-        title: 'Assignment 3: Red-Black Tree Implementation Deadline Extension',
-        message: 'Submission deadline for Assignment 3 has been extended to Friday, 17 Oct 2026, 11:59 PM.',
-        category: 'ASSIGNMENT_DEADLINE',
-        priority: 'IMPORTANT',
-        status: 'PUBLISHED',
-        facultyName,
-        totalRecipients: 32,
-        totalRead: 26,
-        publishedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-      },
-    ];
+  async getFacultyNotifications(facultyUser: any) {
+    const notifications = await this.prisma.notification.findMany({
+      where: { senderId: facultyUser.id },
+      include: { recipients: { select: { isRead: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return notifications.map(({ recipients, ...notification }) => ({
+      ...notification,
+      status: 'PUBLISHED',
+      facultyName: facultyUser.name || facultyUser.identifier,
+      totalRecipients: recipients.length,
+      totalRead: recipients.filter((recipient) => recipient.isRead).length,
+      publishedAt: notification.createdAt.toISOString(),
+    }));
   }
 
-  async previewRecipients(criteria: any) {
+  async previewRecipients(criteria: any, facultyUser?: any) {
+    let sections = criteria.section && criteria.section !== 'ALL' && criteria.section !== 'ALL_ASSIGNED'
+      ? [criteria.section]
+      : undefined;
+
+    if (normalizeRole(facultyUser?.role) === 'faculty') {
+      const assignments = await this.prisma.facultyAssignment.findMany({
+        where: {
+          faculty: { userId: facultyUser.id },
+          courseOffering: {
+            ...(criteria.subjectCode ? { subjectCode: criteria.subjectCode } : {}),
+            ...(criteria.semester ? { semester: criteria.semester } : {}),
+          },
+          ...(sections ? { section: { in: sections } } : {}),
+        },
+        select: { section: true },
+      });
+      sections = Array.from(new Set(assignments.map((assignment) => assignment.section)));
+      if (sections.length === 0) {
+        throw new ForbiddenException('You can only preview recipients for your assigned classes.');
+      }
+    } else if (criteria.section === 'ALL' || criteria.section === 'ALL_ASSIGNED') {
+      sections = undefined;
+    }
+
     const list = await this.resolveRecipients({
-      departments: criteria.program ? [criteria.program] : ['CSE'],
-      semesters: criteria.semester ? [criteria.semester] : ['Semester 5'],
-      sections: criteria.section ? [criteria.section] : ['Section A'],
+      roles: ['STUDENT'],
+      ...(criteria.department ? { departments: [criteria.department] } : {}),
+      ...(criteria.semester ? { semesters: [criteria.semester] } : {}),
+      ...(sections ? { sections } : {}),
     });
     return {
       success: true,
@@ -864,6 +814,37 @@ export class NotificationsService {
   }
 
   async createNotification(facultyUser: any, body: any) {
+    const department = facultyUser.department || body.department || 'Computer Science & Engineering';
+    if (!body.title?.trim() || !body.message?.trim()) {
+      throw new BadRequestException('A title and message are required to publish a notice.');
+    }
+    if (!body.semester || !body.section || !body.subjectCode) {
+      throw new BadRequestException('Subject, semester, and section are required to target a class.');
+    }
+    let targetSections = body.section === 'ALL' || body.section === 'ALL_ASSIGNED'
+      ? ['ALL']
+      : [body.section];
+    if (normalizeRole(facultyUser.role) === 'faculty') {
+      const assignments = await this.prisma.facultyAssignment.findMany({
+        where: {
+          faculty: { userId: facultyUser.id },
+          courseOffering: {
+            subjectCode: body.subjectCode,
+            semester: body.semester,
+          },
+        },
+        select: { section: true },
+      });
+      const assignedSections = Array.from(new Set(assignments.map((assignment) => assignment.section)));
+      const isAllAssigned = body.section === 'ALL' || body.section === 'ALL_ASSIGNED';
+      targetSections = isAllAssigned
+        ? assignedSections
+        : assignedSections.filter((section) => section === body.section);
+      if (targetSections.length === 0) {
+        throw new ForbiddenException('You can only send notices to your assigned classes.');
+      }
+    }
+
     const res = await this.dispatch({
       title: body.title,
       message: body.message,
@@ -872,17 +853,18 @@ export class NotificationsService {
       sourceModule: 'faculty',
       eventType: NOTIFICATION_EVENTS.CLASS_SCHEDULE_UPDATED,
       actionTab: 'academics',
+      senderId: facultyUser.id,
       senderName: facultyUser.name,
-      senderRole: 'Faculty / Course Coordinator',
-      senderDept: body.department || 'Computer Science & Engineering',
+      senderRole: facultyUser.designation || facultyUser.role,
+      senderDept: department,
       attachmentUrl: body.attachmentUrl,
       attachmentName: body.attachmentName,
-      targetScope: `${body.department || 'CSE'} ${body.semester || 'Sem 5'} ${body.section || 'Sec A'}`,
+      targetScope: `${department} ${body.semester} ${targetSections.join(',')}`,
       targetFilter: {
-        departments: [body.department || 'CSE'],
-        semesters: [body.semester || 'Semester 5'],
-        sections: [body.section || 'Section A'],
-        roles: ['STUDENT', 'HOD'],
+        departments: [department],
+        semesters: [body.semester],
+        sections: targetSections,
+        roles: ['STUDENT'],
       },
     });
 
@@ -893,28 +875,27 @@ export class NotificationsService {
     };
   }
 
-  async cancelNotification(id: string, userName: string) {
+  async cancelNotification(id: string, userId: string) {
+    const notification = await this.prisma.notification.findUnique({
+      where: { id },
+      include: { recipients: { select: { isRead: true } } },
+    });
+    if (!notification || notification.senderId !== userId) {
+      throw new NotFoundException('Notification was not found for the current sender.');
+    }
+    if (notification.recipients.some((recipient) => recipient.isRead)) {
+      throw new BadRequestException('A notification that has already been read cannot be cancelled.');
+    }
+    await this.prisma.notification.delete({ where: { id } });
     return { success: true, message: 'Notification cancelled.' };
   }
 
-  async getStudentNotifications(studentRoll: string = '01') {
-    const user = {
-      id: `usr-stu-${studentRoll}`,
-      role: 'STUDENT',
-      identifier: studentRoll,
-      student: { rollNumber: studentRoll },
-    };
+  async getStudentNotifications(user: any) {
     const res = await this.getUserNotifications(user, { page: 1, limit: 50 });
     return res.data;
   }
 
-  async markNotificationAsRead(id: string, studentRoll: string = '01') {
-    const user = {
-      id: `usr-stu-${studentRoll}`,
-      role: 'STUDENT',
-      identifier: studentRoll,
-      student: { rollNumber: studentRoll },
-    };
+  async markNotificationAsRead(id: string, user: any) {
     return this.markAsRead(user, id);
   }
 
@@ -941,49 +922,4 @@ export class NotificationsService {
     };
   }
 
-  private getUserNotificationsFallback(user: any, query: any) {
-    const roleKey = normalizeRole(user.role);
-    const notifications = [
-      {
-        id: 'notif-def-01',
-        title: 'Continuous Internal Assessment (CIA-2) Official Schedule',
-        message: 'Modular 2 Theory examinations commencing on 15 Oct 2026. Hall tickets available on portal.',
-        category: 'EXAMINATION',
-        priority: 'URGENT',
-        sourceModule: 'exam_cell',
-        actionTab: 'examination',
-        actionLabel: 'View Exam Schedule',
-        senderName: 'Controller of Examinations',
-        senderRole: 'Autonomous Examination Cell',
-        senderDept: 'Office of the CoE',
-        unread: true,
-        timestamp: new Date().toISOString(),
-      },
-      {
-        id: 'notif-def-02',
-        title: 'Autonomous Academic Schedule & Classes Synchronized',
-        message: 'New academic timetable slots active for Autumn semester 2026-27.',
-        category: 'ACADEMIC',
-        priority: 'NORMAL',
-        sourceModule: 'faculty',
-        actionTab: 'academics',
-        actionLabel: 'Open Timetable',
-        senderName: 'Academic Directorate',
-        senderRole: 'Dean Academic Affairs',
-        senderDept: 'Academic Council',
-        unread: false,
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-      },
-    ];
-
-    return {
-      success: true,
-      data: notifications,
-      total: notifications.length,
-      unreadCount: notifications.filter((n) => n.unread).length,
-      page: 1,
-      limit: 25,
-      totalPages: 1,
-    };
-  }
 }

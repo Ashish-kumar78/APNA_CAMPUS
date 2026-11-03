@@ -168,7 +168,7 @@ select:focus-visible {
   border: 0;
 }
 
-/* ─── Keyframes ──────────────────────────────────────────────────────────── */
+/* ─── Modern Keyframes & Animations ────────────────────────────────────────── */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -188,6 +188,377 @@ select:focus-visible {
 @keyframes shimmer {
   from { background-position: -200% 0; }
   to   { background-position: 200% 0; }
+}
+
+/* Modern Micro-Interaction Keyframes */
+@keyframes campusSlideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes campusFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes campusScalePop {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes campusPulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);
+  }
+}
+
+@keyframes campusBellWiggle {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(14deg); }
+  40% { transform: rotate(-12deg); }
+  60% { transform: rotate(8deg); }
+  80% { transform: rotate(-6deg); }
+}
+
+@keyframes campusFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Page, View & Tab Entry Animation */
+.campus-page-enter,
+.apna-main-content,
+.portal-main,
+.student-portal-main,
+.campus-os-body,
+.portal-feature-page {
+  animation: campusSlideUpFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ==============================================================================
+   UNIVERSAL CARD ELEVATION & HOVER ENGINE
+   Silky smooth 60fps micro-interactions across every module and portal.
+   ============================================================================== */
+.card,
+.dash-card,
+.dashboard-card,
+.stat-card,
+.stats-card,
+.portal-card,
+.adm-card,
+.admin-card,
+.matrix-card,
+.overview-card,
+.institution-exam-bulletin-card,
+.notice-card,
+.academic-card,
+.fee-card,
+.attendance-card,
+.event-card,
+.bulletin-card,
+.role-card,
+.staff-card,
+.warden-card,
+.dossier-card,
+.student-card,
+.erp-stat-card,
+.erp-panel,
+.institution-notif-card,
+.accounts-kpi-card,
+.acc-kpi-card {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease,
+              background-color 0.2s ease;
+  will-change: transform, box-shadow;
+}
+
+.card:hover,
+.dash-card:hover,
+.dashboard-card:hover,
+.stat-card:hover,
+.stats-card:hover,
+.portal-card:hover,
+.adm-card:hover,
+.admin-card:hover,
+.matrix-card:hover,
+.overview-card:hover,
+.institution-exam-bulletin-card:hover,
+.notice-card:hover,
+.academic-card:hover,
+.fee-card:hover,
+.attendance-card:hover,
+.event-card:hover,
+.bulletin-card:hover,
+.role-card:hover,
+.staff-card:hover,
+.warden-card:hover,
+.dossier-card:hover,
+.student-card:hover,
+.erp-stat-card:hover,
+.institution-notif-card:hover,
+.accounts-kpi-card:hover,
+.acc-kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+/* Active click depression on clickable cards */
+a.card:active,
+button.card:active,
+[role="button"].card:active,
+.institution-exam-bulletin-card:active,
+.institution-notif-card:active,
+.clickable:active {
+  transform: translateY(-1px) scale(0.995);
+  transition-duration: 0.06s !important;
+}
+
+/* Universal Table Rows Smooth Hover */
+table tbody tr,
+.data-table tbody tr,
+.adm-table tbody tr,
+.erp-table tbody tr {
+  transition: background-color 0.16s ease, transform 0.16s ease;
+}
+
+table tbody tr:hover,
+.data-table tbody tr:hover,
+.adm-table tbody tr:hover,
+.erp-table tbody tr:hover {
+  background-color: rgba(37, 99, 235, 0.035);
+}
+
+/* Interactive Badges & Tags Hover Lift */
+.badge,
+.pill,
+.chip,
+.tag,
+.status-badge,
+.dash-chip,
+.notice-tag-badge,
+.institution-exam-card-tag {
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.18s ease,
+              filter 0.18s ease;
+  will-change: transform;
+}
+
+.badge:hover,
+.pill:hover,
+.chip:hover,
+.tag:hover,
+.status-badge:hover,
+.dash-chip:hover {
+  transform: scale(1.05);
+}
+
+/* Smooth Focus Glow on Form Inputs */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+select,
+textarea {
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.15s ease,
+              transform 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="tel"]:focus,
+select:focus,
+textarea:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
+}
+
+/* Universal Enterprise Modal, Drawer & Dropdown Animations */
+.modal-overlay,
+.dialog-overlay,
+.apna-modal-overlay,
+.drawer-backdrop,
+.campus-whatsapp-drawer-overlay,
+.institution-notif-backdrop,
+.institution-notif-detail-backdrop,
+.preview-modal-overlay {
+  animation: campusFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.modal-content,
+.dialog-content,
+.apna-modal-container,
+.apna-modal-card,
+.account-activation-modal,
+.smart-complaint-modal,
+.student-dossier-modal,
+.institution-notif-detail,
+.doc-preview-modal {
+  animation: campusScalePop 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+/* Right-side Slide-in Drawers */
+.drawer-content,
+.drawer-right,
+.institution-notif-panel,
+.campus-whatsapp-drawer,
+.notif-drawer-panel {
+  animation: campusDrawerSlideRight 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform;
+}
+
+@keyframes campusDrawerSlideRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Dropdown Menus Fade and Vertical Movement */
+.dropdown-menu,
+.menu-dropdown,
+.select-dropdown,
+.apna-dropdown-content,
+.profile-dropdown-menu,
+.action-dropdown-list {
+  animation: campusDropdownSlide 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: top center;
+  will-change: transform, opacity;
+}
+
+@keyframes campusDropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Universal Enterprise Skeleton Loading States */
+.skeleton,
+.skeleton-box,
+.table-skeleton,
+.dash-skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: campusShimmer 1.5s infinite;
+  border-radius: var(--radius-sm, 6px);
+}
+
+/* Expandable row / accordion details */
+details[open] summary ~ * {
+  animation: campusSlideUpFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.table-expanded-details,
+.row-details-accordion {
+  animation: campusSlideUpFade 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Inline validation error animation */
+.form-error,
+.field-error,
+.input-error-msg,
+.validation-msg {
+  animation: campusSlideUpFade 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Multi-step form step transition */
+.wizard-step,
+.form-step,
+.tab-pane {
+  animation: campusSlideUpFade 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Button Loading Spinner Animation */
+.btn-loading-spinner,
+.btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: campusSpin 0.7s linear infinite;
+}
+
+@keyframes campusSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Toast Notifications Slide & Fade */
+.toast,
+.toast-item,
+.apna-toast,
+.notification-toast {
+  animation: campusToastSlideIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.toast.toast-dismissing,
+.toast-item.is-exiting {
+  animation: campusToastSlideOut 0.22s ease-in both;
+}
+
+@keyframes campusToastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes campusToastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -218,8 +589,218 @@ b, strong {
   font-weight: 800;
 }
 
-button {
+/* ==============================================================================
+   UNIVERSAL SMOOTH BUTTON & FAST INTERACTION ENGINE
+   - Hardware-accelerated GPU transforms (will-change)
+   - Zero tap delay on touch devices (touch-action: manipulation)
+   - Immediate tactile click response (active: scale(0.97))
+   - Smooth cubic-bezier physics for hover, focus, and state transitions
+   - Instant visual response across all roles, portals, and components
+   ============================================================================== */
+
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
   font-weight: 700;
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  outline: none;
+}
+
+/* Instant Tactile Button Depression upon Click (0ms Delay) */
+button:active:not(:disabled),
+[role="button"]:active:not([aria-disabled="true"]),
+input[type="button"]:active:not(:disabled),
+input[type="submit"]:active:not(:disabled) {
+  transform: scale(0.97) translateY(1px);
+  filter: brightness(0.95);
+  transition-duration: 0.05s !important;
+}
+
+/* Disabled State Clean Handling */
+button:disabled,
+[role="button"][aria-disabled="true"],
+input[type="button"]:disabled,
+input[type="submit"]:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.55 !important;
+  transform: none !important;
+  pointer-events: none !important;
+  box-shadow: none !important;
+}
+
+/* Smooth Focus Ring */
+button:focus-visible,
+[role="button"]:focus-visible,
+input[type="button"]:focus-visible,
+input[type="submit"]:focus-visible {
+  outline: 2px solid #2563eb !important;
+  outline-offset: 2px !important;
+}
+
+/* Universal Button Class Standards */
+.btn,
+.admin-btn,
+.portal-btn,
+.action-btn,
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.btn:hover:not(:disabled),
+.admin-btn:hover:not(:disabled),
+.portal-btn:hover:not(:disabled),
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.08));
+}
+
+.btn:active:not(:disabled),
+.admin-btn:active:not(:disabled),
+.portal-btn:active:not(:disabled),
+.action-btn:active:not(:disabled) {
+  transform: scale(0.97) translateY(1px) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  transition-duration: 0.05s !important;
+}
+
+/* Primary Button */
+.btn-primary,
+.admin-btn-primary {
+  background: var(--color-primary, #2563eb);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.btn-primary:hover:not(:disabled),
+.admin-btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover, #1d4ed8);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+}
+
+/* Secondary Button */
+.btn-secondary,
+.admin-btn-secondary {
+  background: #ffffff;
+  color: var(--color-text-primary, #0f172a);
+  border: 1px solid var(--color-border, #e2e8f0);
+}
+
+.btn-secondary:hover:not(:disabled),
+.admin-btn-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Danger Button */
+.btn-danger,
+.admin-btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.btn-danger:hover:not(:disabled),
+.admin-btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.35);
+}
+
+/* Success Button */
+.btn-success,
+.admin-btn-success {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.btn-success:hover:not(:disabled),
+.admin-btn-success:hover:not(:disabled) {
+  background: #15803d;
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.35);
+}
+
+/* Pill & Tab Buttons Smoothness */
+.pill-tab,
+.nav-tab,
+.dash-filter-btn {
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.15s ease,
+              border-color 0.15s ease,
+              color 0.15s ease,
+              box-shadow 0.15s ease;
+  will-change: transform;
+}
+
+.pill-tab:hover,
+.nav-tab:hover,
+.dash-filter-btn:hover {
+  transform: translateY(-1px);
+}
+
+.pill-tab:active,
+.nav-tab:active,
+.dash-filter-btn:active {
+  transform: scale(0.96) translateY(1px);
+  transition-duration: 0.05s !important;
+}
+
+/* Table Row Actions Smoothness */
+.table-action-btn,
+.admin-table-action-btn {
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.15s ease,
+              color 0.15s ease;
+  will-change: transform;
+}
+
+.table-action-btn:hover,
+.admin-table-action-btn:hover {
+  transform: scale(1.08);
+}
+
+.table-action-btn:active,
+.admin-table-action-btn:active {
+  transform: scale(0.92);
+  transition-duration: 0.05s !important;
 }
 
 /* Light Surfaces Defaults */
@@ -1692,4 +2273,302 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover,
 html.dark-mode ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* ==============================================================================
+   APNA CAMPUS — COMPLETE RESPONSIVE ENTERPRISE DESIGN SYSTEM
+   Full Breakpoints Support:
+     - Small mobile:    320px–374px
+     - Standard mobile: 375px–479px
+     - Large mobile:    480px–767px
+     - Tablet:          768px–1023px
+     - Small desktop:   1024px–1279px
+     - Desktop:         1280px–1535px
+     - Large desktop:   1536px+
+   Zero layout shifts, zero horizontal overflow, fluid touch-first UX.
+   ============================================================================== */
+
+/* 1. Global Viewport & Horizontal Overflow Prevention */
+html,
+body,
+#root,
+.apna-app-layout,
+.student-portal,
+.login-page {
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 2. Universal Table Responsiveness & Controlled Scrolling */
+.table-responsive,
+.table-container,
+.data-table-wrap,
+.admin-table-wrap,
+.erp-table-wrap,
+.accounts-table-wrap,
+.accounts-table-container,
+.student-doc-table-wrap,
+.hostel-indent-container,
+.requisition-table-wrap,
+.overflow-x-auto,
+div[style*="overflow-x: auto"],
+div[style*="overflow-x:auto"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-x: contain !important;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/* 3. Universal Recharts & Analytics Responsiveness */
+.recharts-responsive-container {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+/* 4. Touch-Friendly Interactive Targets (>= 44px on touch devices) */
+@media (pointer: coarse), (max-width: 768px) {
+  button:not(.btn-sm):not(.table-action-btn),
+  .btn:not(.btn-sm),
+  .admin-btn,
+  .portal-btn,
+  .action-btn,
+  .pill-tab,
+  .nav-tab,
+  .apna-sidebar-item,
+  .apna-hamburger-btn,
+  .apna-notification-trigger,
+  .campus-nav-toggle-btn {
+    min-height: 42px;
+  }
+
+  /* Prevent automatic iOS Safari zoom-in on input focus */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px !important;
+    min-height: 42px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BREAKPOINT: TABLET & BELOW (<= 1024px)
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  /* Dashboard Grids */
+  .overview-grid,
+  .grid-cols-4,
+  .grid-cols-3,
+  .accounts-kpi-grid,
+  .role-dash-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  /* Split Panes Collapse */
+  .dash-hero-split,
+  .portal-primary-grid,
+  .admin-erp-split {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Main Workspace Padding Adjustment */
+  .apna-main-workspace {
+    padding: 1.25rem 1rem 2.5rem !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BREAKPOINT: LARGE MOBILE (<= 768px)
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Topbar Adjustments */
+  .apna-topbar {
+    padding: 0 1rem;
+  }
+
+  /* Form Layouts */
+  .form-row,
+  .form-grid,
+  .grid-form,
+  .form-fields-duo {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Dashboard Action Bars */
+  .dash-hero {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 20px 18px !important;
+    gap: 16px !important;
+  }
+
+  .dash-hero-meta {
+    align-items: flex-start !important;
+    width: 100% !important;
+  }
+
+  /* Filter & Tab Controls - Smooth Horizontal Touch Scroll */
+  .dash-filter-bar,
+  .tab-nav-bar,
+  .apna-tabs-row,
+  .notices-cats {
+    display: flex !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 6px !important;
+    scrollbar-width: none !important;
+  }
+
+  .dash-filter-bar::-webkit-scrollbar,
+  .tab-nav-bar::-webkit-scrollbar,
+  .apna-tabs-row::-webkit-scrollbar,
+  .notices-cats::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BREAKPOINT: STANDARD & SMALL MOBILE (<= 640px)
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* KPI Cards Stack */
+  .overview-grid,
+  .grid-cols-4,
+  .grid-cols-3,
+  .grid-cols-2,
+  .accounts-kpi-grid,
+  .role-dash-kpi-grid,
+  .dash-stats,
+  .dash-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Compact Padding on Main Area */
+  .apna-main-workspace {
+    padding: 0.75rem 0.65rem 2rem !important;
+  }
+
+  /* Responsive Modals & Dialogs */
+  .modal-content,
+  .dialog-content,
+  .apna-modal-container,
+  .apna-modal-card,
+  .account-activation-modal,
+  .smart-complaint-modal,
+  .student-dossier-modal {
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: calc(100vh - 28px) !important;
+    padding: 16px !important;
+    margin: 10px auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    border-radius: 16px !important;
+  }
+
+  /* Full-width Notification Drawer */
+  .institution-notif-panel,
+  .notif-drawer-panel {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+  }
+
+  .institution-notif-header {
+    padding: 12px 14px !important;
+  }
+
+  .institution-notif-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    padding: 10px 14px !important;
+  }
+
+  .institution-notif-summary > div {
+    padding: 8px 6px !important;
+  }
+
+  .institution-notif-summary strong {
+    font-size: 1rem !important;
+  }
+
+  .institution-notif-search,
+  .institution-notif-filters,
+  .institution-notif-list {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Headings & Typography */
+  h1 {
+    font-size: 1.45rem !important;
+  }
+  h2 {
+    font-size: 1.25rem !important;
+  }
+  h3 {
+    font-size: 1.1rem !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BREAKPOINT: ULTRA-COMPACT MOBILE (320px–374px)
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 374px) {
+  .apna-topbar {
+    padding: 0 0.5rem !important;
+  }
+
+  .apna-topbar-title {
+    font-size: 0.8rem !important;
+  }
+
+  .dash-stat {
+    padding: 16px 14px !important;
+  }
+
+  .dash-stat-value {
+    font-size: 1.35rem !important;
+  }
+
+  .institution-notif-summary {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+
+  .apna-sidebar {
+    width: 88vw !important;
+  }
+}
+
 

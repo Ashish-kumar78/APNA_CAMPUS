@@ -21,7 +21,7 @@ import {
   ArrowUpRight, HelpCircle, Send, Share2, HeartHandshake,
   BookOpenCheck, UserCheck, ClipboardCheck,
   ChevronRight, ChevronLeft, PartyPopper, MapPin, Megaphone,
-  Check, CalendarDays, ShieldAlert, TrendingUp, TrendingDown, Settings as SettingsIcon, Bell
+  Check, CalendarDays, ShieldAlert, TrendingUp, TrendingDown, Settings as SettingsIcon, Bell, Home
 } from 'lucide-react';
 import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
 import './FacultyPortal.css';
@@ -33,6 +33,7 @@ import { downloadDepartmentGazettePdf } from '../utils/pdfGenerator';
 import { generateAllStudents } from '../data/collegeData.js';
 import { erpStore } from '../services/erpStore.js';
 import { facultyApi } from '../services/facultyApi.js';
+import { api } from '../services/api.js';
 import MarksManagementModule from '../marks/MarksManagementModule.jsx';
 import { notesApi } from '../services/notesApi.js';
 import { getDocumentsForRole, getAllStudents, saveStudent } from '../services/studentStore.js';
@@ -574,66 +575,8 @@ export default function FacultyPortal({ account, onLogout }) {
       correct: 0,
     }));
 
-  const [quizList, setQuizList] = useState([
-    {
-      id: 'QZ-001', title: 'Data Structures – Quiz 1', subject: 'Data Structures',
-      section: 'Section A', date: '2026-10-08', time: 30, totalMarks: 10,
-      status: 'Scheduled', attempts: 0, createdAt: '2026-10-05',
-      questions: [
-        { id:1, question:'What is the time complexity of binary search?', options:['O(n)','O(log n)','O(n²)','O(1)'], correct:1 },
-        { id:2, question:'Which data structure uses LIFO?', options:['Queue','Stack','Tree','Graph'], correct:1 },
-        { id:3, question:'AVL tree is a type of?', options:['Heap','BST','Trie','B-Tree'], correct:1 },
-        { id:4, question:'Which traversal visits root first?', options:['Inorder','Postorder','Preorder','Level order'], correct:2 },
-        { id:5, question:'Linked list node contains?', options:['Data only','Pointer only','Data & pointer','Index'], correct:2 },
-        { id:6, question:'Which sorting is O(n log n) worst case?', options:['Bubble sort','Insertion sort','Merge sort','Quick sort'], correct:2 },
-        { id:7, question:'Hash table collision handled by?', options:['Sorting','Chaining','Recursion','Searching'], correct:1 },
-        { id:8, question:'Queue follows?', options:['LIFO','FIFO','LILO','FILO'], correct:1 },
-        { id:9, question:'Complete binary tree has nodes at?', options:['Only root','All levels full except last','Only leaves','Root and leaves'], correct:1 },
-        { id:10, question:'Depth-first search uses?', options:['Queue','Stack','Heap','Array'], correct:1 },
-      ]
-    },
-    {
-      id: 'QZ-002', title: 'Operating Systems – Quiz 1', subject: 'Operating Systems',
-      section: 'Section A', date: '2026-10-10', time: 25, totalMarks: 10,
-      status: 'Scheduled', attempts: 0, createdAt: '2026-10-05',
-      questions: [
-        { id:1, question:'Which scheduling gives minimum avg wait time?', options:['FCFS','SJF','Round Robin','Priority'], correct:1 },
-        { id:2, question:'Deadlock occurs when?', options:['CPU is busy','Process waits for resources held by others','Memory is full','Disk is slow'], correct:1 },
-        { id:3, question:'Page fault occurs when?', options:['Page in RAM','Page not in RAM','RAM overflow','Cache miss'], correct:1 },
-        { id:4, question:'Process state after creation is?', options:['Ready','Running','Blocked','Terminated'], correct:0 },
-        { id:5, question:'Semaphore is used for?', options:['Sorting','Synchronization','Scheduling','Paging'], correct:1 },
-        { id:6, question:'Virtual memory extends?', options:['Cache','RAM using disk','ROM','CPU registers'], correct:1 },
-        { id:7, question:'Which is NOT a disk scheduling algorithm?', options:['SSTF','LOOK','Dijkstra','SCAN'], correct:2 },
-        { id:8, question:'Mutex allows how many threads in critical section?', options:['Unlimited','2','1','Depends'], correct:2 },
-        { id:9, question:'Thrashing is caused by?', options:['Excessive paging','Deadlock','Starvation','Cache miss'], correct:0 },
-        { id:10, question:'Context switching is done by?', options:['Compiler','OS Kernel','CPU only','RAM'], correct:1 },
-      ]
-    },
-    {
-      id: 'QZ-003', title: 'Data Structures – Quiz 2', subject: 'Data Structures',
-      section: 'Section B', date: '2026-10-12', time: 20, totalMarks: 10,
-      status: 'Scheduled', attempts: 0, createdAt: '2026-10-05',
-      questions: makeBlankQuestions()
-    },
-    {
-      id: 'QZ-004', title: 'Operating Systems – Quiz 2', subject: 'Operating Systems',
-      section: 'Section A', date: '2026-10-15', time: 30, totalMarks: 10,
-      status: 'Live', attempts: 34, createdAt: '2026-10-04',
-      questions: makeBlankQuestions()
-    },
-    {
-      id: 'QZ-005', title: 'Data Structures – Mid Quiz', subject: 'Data Structures',
-      section: 'All Sections', date: '2026-10-18', time: 45, totalMarks: 10,
-      status: 'Completed', attempts: 88, createdAt: '2026-10-03',
-      questions: makeBlankQuestions()
-    },
-    {
-      id: 'QZ-006', title: 'OS Practical Concepts Quiz', subject: 'Operating Systems',
-      section: 'Section A', date: '2026-10-20', time: 20, totalMarks: 10,
-      status: 'Draft', attempts: 0, createdAt: '2026-10-05',
-      questions: makeBlankQuestions()
-    },
-  ]);
+  const [quizList, setQuizList] = useState([]);
+  const [quizLoadError, setQuizLoadError] = useState('');
 
   const [showAddQuiz, setShowAddQuiz] = useState(false);
   const [viewQuiz, setViewQuiz] = useState(null);
@@ -655,26 +598,60 @@ export default function FacultyPortal({ account, onLogout }) {
       return { ...q, options: opts };
     }));
   };
-  const handleAddQuizSubmit = () => {
+  const handleAddQuizSubmit = async () => {
     if (!quizMeta.title.trim()) { setQuizFormError('Quiz title is required.'); return; }
     if (!quizMeta.date) { setQuizFormError('Please set the quiz date.'); return; }
     const incomplete = quizQuestions.findIndex(q => !q.question.trim() || q.options.some(o => !o.trim()));
     if (incomplete !== -1) { setQuizFormError(`Question ${incomplete + 1} is incomplete. Fill all options.`); return; }
+    const subjectAssignment = facultyAssignments.find((assignment) =>
+      assignment.subjectName?.toLowerCase() === quizMeta.subject.toLowerCase(),
+    );
     const newQuiz = {
       ...quizMeta,
-      id: `QZ-${String(quizList.length + 1).padStart(3,'0')}`,
+      subjectCode: subjectAssignment?.subjectCode || currentAssignment.subjectCode || 'CS501',
+      semester: subjectAssignment?.semester || currentAssignment.semester || 'Semester 5',
       attempts: 0,
       createdAt: new Date().toISOString().split('T')[0],
       questions: quizQuestions.map((q, i) => ({ ...q, id: i + 1 }))
     };
-    setQuizList(prev => [newQuiz, ...prev]);
-    triggerToast('✓ Quiz created successfully!');
+    try {
+      const response = await api.createFacultyQuiz(newQuiz);
+      if (!response?.success || !response.data) {
+        throw new Error(response?.message || 'The quiz was not saved.');
+      }
+      setQuizList((previous) => [response.data, ...previous.filter((quiz) => quiz.id !== response.data.id)]);
+      triggerToast('Quiz saved to the backend.');
+      setQuizLoadError('');
+    } catch (error) {
+      setQuizFormError(error.message || 'Could not save this quiz.');
+      return;
+    }
     setShowAddQuiz(false);
     setQuizStep(1);
     setQuizMeta({ title:'', subject:'Data Structures', section:'Section A', date:'', time:30, totalMarks:10, status:'Draft' });
     setQuizQuestions(makeBlankQuestions());
     setQuizFormError('');
   };
+
+  useEffect(() => {
+    let active = true;
+    api.getFacultyQuizzes()
+      .then((response) => {
+        if (!response?.success || !Array.isArray(response.data)) {
+          throw new Error(response?.message || 'The quiz list response was invalid.');
+        }
+        if (active) {
+          setQuizList(response.data);
+          setQuizLoadError('');
+        }
+      })
+      .catch((error) => {
+        if (active) setQuizLoadError(error.message || 'Could not load faculty quizzes.');
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const triggerToast = (msg) => {
     setToastMsg(msg);
@@ -686,24 +663,43 @@ export default function FacultyPortal({ account, onLogout }) {
   }, []);
 
   const loadModerationNotes = async () => {
-    const list = await notesApi.getClassNotes({ subject: 'ALL' });
-    if (list) setModerationNotesList(list);
+    try {
+      const list = await notesApi.getPendingPeerNotes();
+      setModerationNotesList(list.map((note) => ({
+        ...note,
+        date: note.lectureDate,
+        fileUrl: note.fileData,
+        uploadedBy: {
+          name: note.student?.name,
+          rollNumber: note.student?.rollNumber,
+        },
+        reports: [],
+        isFacultyVerified: false,
+      })));
+    } catch (error) {
+      triggerToast(error.message || 'Could not load student notes for review.');
+    }
   };
 
   const handleVerifyNote = async (id) => {
-    const facultyName = account?.name || 'Dr. Pratyush Mohapatra';
-    const res = await notesApi.verifyNoteByFaculty(id, facultyName);
-    if (res && res.success) {
-      triggerToast('✓ Class note marked as Faculty Verified!');
+    try {
+      const res = await notesApi.reviewPeerNote(id, 'VERIFIED');
+      if (!res?.success) throw new Error(res?.message || 'Could not approve this note.');
+      triggerToast('Class note verified and published to students.');
       await loadModerationNotes();
+    } catch (error) {
+      triggerToast(error.message || 'Could not approve this note.');
     }
   };
 
   const handleHideNote = async (id) => {
-    const res = await notesApi.hideNoteByFaculty(id);
-    if (res && res.success) {
-      triggerToast('✕ Class note hidden from students.');
+    try {
+      const res = await notesApi.reviewPeerNote(id, 'REJECTED');
+      if (!res?.success) throw new Error(res?.message || 'Could not reject this note.');
+      triggerToast('Class note rejected.');
       await loadModerationNotes();
+    } catch (error) {
+      triggerToast(error.message || 'Could not reject this note.');
     }
   };
 
@@ -915,6 +911,7 @@ export default function FacultyPortal({ account, onLogout }) {
     {
       title: 'TEACHING & CLASSES',
       items: [
+        { id: 'take-attendance', label: 'Take Attendance', icon: ClipboardCheck },
         { id: 'timetable', label: 'My Timetable', icon: Calendar },
         { id: 'subjects', label: 'My Subjects', icon: BookOpen },
         { id: 'students', label: `My Students (${scopedStudents.length || 150})`, icon: GraduationCap },
@@ -2200,6 +2197,11 @@ export default function FacultyPortal({ account, onLogout }) {
                     <BarChart2 size={14} /> Marks Matrix
                   </button>
                 </div>
+                {quizLoadError && (
+                  <div role="alert" style={{ marginBottom: 16, padding: 12, borderRadius: 8, background: '#fff1f2', color: '#b91c1c' }}>
+                    {quizLoadError}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
@@ -3021,7 +3023,7 @@ export default function FacultyPortal({ account, onLogout }) {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                           <ClipboardList size={13} color="#94a3b8" />
-                          <span>10 Questions · {quiz.totalMarks} Marks</span>
+                          <span>{quiz.questionsCount ?? quiz.questions?.length ?? 0} Questions · {quiz.totalMarks} Marks</span>
                         </div>
                       </div>
 
@@ -3051,9 +3053,15 @@ export default function FacultyPortal({ account, onLogout }) {
                           <button
                             type="button"
                             style={{ flex: 1, padding: '6px 0', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-                            onClick={() => {
-                              setQuizList(prev => prev.map(q => q.id === quiz.id ? { ...q, status: 'Scheduled' } : q));
-                              triggerToast('✓ Quiz scheduled successfully!');
+                            onClick={async () => {
+                              try {
+                                const response = await api.createFacultyQuiz({ ...quiz, status: 'Scheduled' });
+                                if (!response?.success || !response.data) throw new Error(response?.message || 'Quiz schedule was not saved.');
+                                setQuizList((previous) => previous.map((item) => item.id === quiz.id ? response.data : item));
+                                triggerToast('Quiz scheduled successfully.');
+                              } catch (error) {
+                                setQuizLoadError(error.message || 'Could not schedule this quiz.');
+                              }
                             }}
                           >
                             <CheckCircle2 size={13} /> Publish
@@ -3063,9 +3071,15 @@ export default function FacultyPortal({ account, onLogout }) {
                           <button
                             type="button"
                             style={{ flex: 1, padding: '6px 0', background: '#ecfdf5', color: '#065f46', border: '1px solid #6ee7b7', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-                            onClick={() => {
-                              setQuizList(prev => prev.map(q => q.id === quiz.id ? { ...q, status: 'Live' } : q));
-                              triggerToast('🔴 Quiz is now LIVE!');
+                            onClick={async () => {
+                              try {
+                                const response = await api.publishFacultyQuiz(quiz.id);
+                                if (!response?.success) throw new Error(response?.message || 'Quiz could not be published.');
+                                setQuizList((previous) => previous.map((item) => item.id === quiz.id ? { ...item, status: 'Live' } : item));
+                                triggerToast('Quiz is now live for students.');
+                              } catch (error) {
+                                setQuizLoadError(error.message || 'Could not publish this quiz.');
+                              }
                             }}
                           >
                             ● Go Live
@@ -3074,9 +3088,15 @@ export default function FacultyPortal({ account, onLogout }) {
                         <button
                           type="button"
                           style={{ padding: '6px 12px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
-                          onClick={() => {
-                            setQuizList(prev => prev.filter(q => q.id !== quiz.id));
-                            triggerToast('Quiz deleted.');
+                          onClick={async () => {
+                            try {
+                              const response = await api.deleteFacultyQuiz(quiz.id);
+                              if (!response?.success) throw new Error(response?.message || 'Quiz could not be deleted.');
+                              setQuizList((previous) => previous.filter((item) => item.id !== quiz.id));
+                              triggerToast('Quiz deleted.');
+                            } catch (error) {
+                              setQuizLoadError(error.message || 'Could not delete this quiz.');
+                            }
                           }}
                         >
                           <Trash2 size={13} />

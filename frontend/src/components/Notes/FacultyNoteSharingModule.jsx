@@ -57,6 +57,9 @@ export default function FacultyNoteSharingModule({ account }) {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toastMsg, setToastMsg] = useState('');
+  const [pendingPeerNotes, setPendingPeerNotes] = useState([]);
+  const [peerNotesError, setPeerNotesError] = useState('');
+  const [reviewingPeerNoteId, setReviewingPeerNoteId] = useState('');
 
   // 3. Modals State
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -134,6 +137,34 @@ export default function FacultyNoteSharingModule({ account }) {
   useEffect(() => {
     loadMaterials();
   }, [facultyName, subjectFilter, semesterFilter, typeFilter, searchQuery]);
+
+  const loadPendingPeerNotes = async () => {
+    try {
+      const notes = await notesApi.getPendingPeerNotes();
+      setPendingPeerNotes(notes);
+      setPeerNotesError('');
+    } catch (error) {
+      setPeerNotesError(error.message || 'Could not load student notes awaiting review.');
+    }
+  };
+
+  const reviewPeerNote = async (noteId, status) => {
+    setReviewingPeerNoteId(noteId);
+    try {
+      const response = await notesApi.reviewPeerNote(noteId, status);
+      if (!response?.success) throw new Error(response?.message || 'The note review was not saved.');
+      triggerToast(status === 'VERIFIED' ? 'Student note approved and published.' : 'Student note rejected.');
+      await loadPendingPeerNotes();
+    } catch (error) {
+      triggerToast(error.message || 'Could not save the note review.');
+    } finally {
+      setReviewingPeerNoteId('');
+    }
+  };
+
+  useEffect(() => {
+    loadPendingPeerNotes();
+  }, []);
 
   // Listen to external updates
   useEffect(() => {
@@ -483,6 +514,39 @@ export default function FacultyNoteSharingModule({ account }) {
           </div>
         </div>
       </div>
+
+      <section aria-label="Student notes awaiting review" style={{ margin: '18px 0', padding: 18, border: '1px solid #e2e8f0', borderRadius: 12, background: '#fff' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1rem' }}>Student Notes Awaiting Verification</h2>
+            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.82rem' }}>Approved notes become visible to students in the class notes library.</p>
+          </div>
+          <span style={{ borderRadius: 999, padding: '4px 10px', background: '#eff6ff', color: '#1d4ed8', fontWeight: 700 }}>{pendingPeerNotes.length} pending</span>
+        </div>
+        {peerNotesError && <p role="alert" style={{ color: '#b91c1c' }}>{peerNotesError}</p>}
+        {!peerNotesError && pendingPeerNotes.length === 0 && (
+          <p style={{ color: '#64748b', margin: 0 }}>There are no student notes waiting for review.</p>
+        )}
+        {pendingPeerNotes.map((note) => (
+          <article key={note.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, padding: '12px 0', borderTop: '1px solid #f1f5f9' }}>
+            <div>
+              <strong>{note.topic}</strong>
+              <div style={{ color: '#475569', fontSize: '0.82rem', marginTop: 4 }}>
+                {note.subject} · {note.semester} · {note.section} · {note.student?.name} ({note.student?.rollNumber})
+              </div>
+              <a href={note.fileData} target="_blank" rel="noreferrer" style={{ color: '#2563eb', fontSize: '0.8rem' }}>{note.fileName}</a>
+            </div>
+            <div style={{ display: 'flex', flexShrink: 0, gap: 8 }}>
+              <button type="button" className="fn-btn-primary" disabled={reviewingPeerNoteId === note.id} onClick={() => reviewPeerNote(note.id, 'VERIFIED')}>
+                <CheckCircle2 size={15} /> Approve
+              </button>
+              <button type="button" className="fn-btn-secondary" disabled={reviewingPeerNoteId === note.id} onClick={() => reviewPeerNote(note.id, 'REJECTED')}>
+                <X size={15} /> Reject
+              </button>
+            </div>
+          </article>
+        ))}
+      </section>
 
       {/* Metric Cards Row */}
       <div className="fn-stats-grid">

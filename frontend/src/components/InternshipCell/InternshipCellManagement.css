@@ -1043,6 +1043,13 @@
   color: #0f172a;
 }
 
+.icm-modal-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .icm-modal-body {
   padding: 1.25rem;
 }

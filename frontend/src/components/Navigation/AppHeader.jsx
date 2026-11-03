@@ -1,23 +1,56 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Menu,
-  Bell,
   LogOut,
   ChevronDown,
+  Bell,
 } from 'lucide-react';
+import { api } from '../../services/api.js';
+import { notificationsStore } from '../../services/notificationsStore.js';
 
 export default function AppHeader({
   account,
   onToggleSidebar,
   sidebarOpen = false,
-  sidebarCollapsed,
   onLogout,
-  unreadCount = 0,
+  unreadCount: propUnreadCount,
   onNotificationClick,
+  onOpenNotifications,
   portalName = 'Apna Campus',
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(propUnreadCount || 0);
   const menuRef = useRef(null);
+
+  const handleOpenNotifs = onNotificationClick || onOpenNotifications;
+
+  const loadUnreadCount = useCallback(async () => {
+    try {
+      const response = await api.getUnreadNotificationsCount();
+      if (response?.success && Number.isFinite(Number(response.unreadCount))) {
+        setUnreadCount(Number(response.unreadCount));
+        return;
+      }
+    } catch {
+      // Fallback below
+    }
+    try {
+      const count = notificationsStore.getUnreadCount(account);
+      setUnreadCount(count);
+    } catch {}
+  }, [account]);
+
+  useEffect(() => {
+    loadUnreadCount();
+    const timerId = window.setInterval(loadUnreadCount, 30_000);
+    window.addEventListener('apna_campus_notifications_updated', loadUnreadCount);
+    window.addEventListener('apna_campus_notification_dispatched', loadUnreadCount);
+    return () => {
+      window.clearInterval(timerId);
+      window.removeEventListener('apna_campus_notifications_updated', loadUnreadCount);
+      window.removeEventListener('apna_campus_notification_dispatched', loadUnreadCount);
+    };
+  }, [loadUnreadCount]);
 
   // Close dropdown on click outside or Escape
   useEffect(() => {
@@ -39,9 +72,9 @@ export default function AppHeader({
     };
   }, []);
 
-  const displayName = account?.name || 'Dr. S. Mohanty';
-  const displayRole = (account?.role || 'Faculty').replace(/_/g, ' ');
-  const displayDept = account?.department || 'Autonomous Higher Education';
+  const displayName = account?.name || 'Authorized User';
+  const displayRole = (account?.role || 'User').replace(/_/g, ' ');
+  const displayDept = account?.department || account?.program || 'Autonomous Higher Education';
 
   // Compute effective profile picture (DP)
   const effectivePhoto =
@@ -69,7 +102,7 @@ export default function AppHeader({
       .slice(0, 2)
       .map((p) => p[0])
       .join('')
-      .toUpperCase() || 'SM';
+      .toUpperCase() || 'AC';
 
   return (
     <header className="apna-topbar" role="banner">
@@ -90,18 +123,17 @@ export default function AppHeader({
           <img src="/logo.png" alt="Apna Campus Logo" className="apna-topbar-logo" />
           <div className="apna-topbar-brand-info">
             <span className="apna-topbar-title">APNA CAMPUS</span>
-            <span className="apna-topbar-badge">NAAC A++ AUTONOMOUS INSTITUTION</span>
+            <span className="apna-topbar-badge">COLLEGE MANAGEMENT ERP</span>
           </div>
         </div>
       </div>
 
       {/* Right: Notification Bell 🔔 + User Profile Pill */}
       <div className="apna-topbar-right" ref={menuRef}>
-        {/* Notification Bell 🔔 */}
         <button
           type="button"
-          className={`apna-topbar-icon-btn ${unreadCount > 0 ? 'has-unread' : ''}`}
-          onClick={onNotificationClick}
+          className={`apna-topbar-icon-btn apna-notification-trigger ${unreadCount > 0 ? 'has-unread' : ''}`}
+          onClick={handleOpenNotifs}
           title={
             unreadCount > 0
               ? `Campus Notifications (${unreadCount} unread)`
@@ -113,9 +145,9 @@ export default function AppHeader({
               : 'Campus Notifications'
           }
         >
-          <Bell size={18} />
+          <Bell size={19} />
           {unreadCount > 0 && (
-            <span className="apna-notif-pill">
+            <span className="apna-notification-count">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}

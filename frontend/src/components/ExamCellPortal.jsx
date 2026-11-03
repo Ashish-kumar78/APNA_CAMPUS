@@ -52,7 +52,8 @@ import {
   Building2,
   QrCode,
   Truck,
-  Barcode
+  Barcode,
+  Home
 } from 'lucide-react';
 import './ExamCellPortal.css';
 import './SuperAdminPortal.css';
@@ -69,6 +70,8 @@ import MalpracticeGrievancesModule from './ExaminationCell/MalpracticeGrievances
 import ExaminerManagementModule from './ExaminationCell/ExaminerManagementModule.jsx';
 import ExamSettingsModule from './ExaminationCell/ExamSettingsModule.jsx';
 import OfficialCollegeNoticeModal, { GIFT_MODULAR_TEST_2_NOTICE } from './ExaminationCell/OfficialCollegeNoticeModal.jsx';
+import { notificationsStore } from '../services/notificationsStore.js';
+import { api } from '../services/api.js';
 import { examinationStore } from '../services/examinationStore.js';
 import { erpStore } from '../services/erpStore.js';
 import { examsApi } from '../services/examsApi.js';
@@ -541,13 +544,57 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
   };
 
   // --- Handlers: Circulars ---
-  const handleCreateCircular = (e) => {
+  const handleCreateCircular = async (e) => {
     e.preventDefault();
     if (!circularForm.title.trim() || !circularForm.content.trim()) {
       triggerToast('Please provide circular title and official notification text');
       return;
     }
     erpStore.createExamCircular(circularForm);
+    const circularNo = circularForm.circularNo || `GIFT/COE/2026/${Math.floor(100 + Math.random() * 900)}`;
+    const priority = (circularForm.priority || 'High').toUpperCase() === 'HIGH' ? 'URGENT' : 'IMPORTANT';
+
+    // 1. Broadcast through the institutional notifications mesh
+    try {
+      notificationsStore.dispatchBroadcast({
+        title: `📢 [EXAM CELL] ${circularForm.title}`,
+        message: circularForm.content,
+        category: 'EXAMINATION',
+        priority: priority,
+        senderName: 'Controller of Examinations (CoE)',
+        senderRole: 'Controller of Examinations',
+        senderDept: 'Autonomous Examination Cell',
+        targetAudience: circularForm.audience || 'All Students & Faculty',
+        targetRoles: ['student', 'faculty', 'hod', 'admin', 'principal'],
+        actionTab: 'examination',
+        actionLabel: 'View Examination Notice',
+        attachmentName: `${circularNo.replace(/[\/\\]/g, '_')}.pdf`,
+        sourceModule: 'EXAM_CELL',
+        eventType: 'EXAM_CIRCULAR_PUBLISHED',
+      });
+    } catch (storeErr) {
+      console.warn('Local store broadcast warning:', storeErr);
+    }
+
+    // 2. Dispatch to backend API for multi-device PostgreSQL persistence
+    try {
+      await api.publishExamNotice({
+        title: circularForm.title,
+        message: circularForm.content,
+        priority: priority,
+        actionUrl: '/examinationcell',
+      });
+    } catch (backendErr) {
+      console.warn('Backend exam notice dispatch warning:', backendErr?.message);
+    }
+
+    // 3. Fire cross-module reactive events
+    window.dispatchEvent(new CustomEvent('apna_campus_notifications_updated'));
+    window.dispatchEvent(new CustomEvent('apna_campus_notification_dispatched', {
+      detail: { title: circularForm.title, category: 'EXAMINATION' },
+    }));
+
+    setExamCirculars([...erpStore.getExamCirculars()]);
     setNewCircularModal(false);
     setCircularForm({
       circularNo: `GIFT/COE/2026/${Math.floor(100 + Math.random() * 900)}`,
@@ -557,7 +604,7 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
       priority: 'High',
       content: '',
     });
-    triggerToast('Official Examination Circular released across campus!');
+    triggerToast('Official Examination Circular broadcasted to all Student & Faculty Portals!');
   };
 
   const handleDeleteCircular = (id) => {
@@ -620,9 +667,14 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
 
   const examNavSections = [
     {
+      title: 'OVERVIEW',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: Home },
+      ]
+    },
+    {
       title: 'OPERATIONAL COMMAND',
       items: [
-        { id: 'dashboard', label: 'Exam Cell Dashboard', icon: Layers },
         { id: 'cycles', label: 'Exam Cycles & Schedule', icon: CalendarDays },
         { id: 'registration', label: 'Candidate Registration', icon: Users },
         { id: 'hall_tickets', label: 'Admit Cards & Hall Tickets', icon: Ticket },

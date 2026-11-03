@@ -46,6 +46,34 @@ export class ExamsController {
     return { success: true, count: data.length, data };
   }
 
+  @Get('student/quizzes')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List published quizzes for the authenticated student' })
+  async getStudentQuizzes(@CurrentUser() user: any) {
+    if (normalizeRole(user?.role) !== 'student') {
+      throw new ForbiddenException('Only students can access assigned quizzes.');
+    }
+    const data = await this.examsService.getStudentQuizzes(user);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('student/quizzes/:id/submit')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Submit a quiz and record its score in student marks' })
+  async submitStudentQuiz(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body('answers') answers: Record<string, number>,
+  ) {
+    if (normalizeRole(user?.role) !== 'student') {
+      throw new ForbiddenException('Only students can submit quiz attempts.');
+    }
+    const data = await this.examsService.submitStudentQuiz(user, id, answers);
+    return { success: true, message: 'Quiz submitted and marks recorded.', data };
+  }
+
   @Post('cycles')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -188,4 +216,3 @@ export class ExamsController {
     return res;
   }
 }
-

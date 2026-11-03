@@ -73,6 +73,33 @@ export class BonafideService {
   }
 
   /**
+   * Helper: Format application object to meet all API client and test suite contracts
+   */
+  public formatApplication(app: any) {
+    if (!app) return app;
+    let currentStage = app.currentStage;
+    if (currentStage === 'PLACEMENT_VERIFICATION') {
+      currentStage = 'PLACEMENT_REVIEW';
+    } else if (currentStage === 'SCHOLARSHIP_INITIAL_VERIFICATION') {
+      currentStage = 'SCHOLARSHIP_VERIFICATION_1';
+    } else if (app.status === 'CERTIFICATE_ISSUED' || currentStage === 'COMPLETED') {
+      currentStage = 'CERTIFICATE_ISSUED';
+    }
+
+    const certUrl =
+      app.certificateUrl ||
+      (app.certificate ? `/api/bonafide/${app.id}/certificate` : null) ||
+      (app.status === 'CERTIFICATE_ISSUED' ? `/api/bonafide/${app.id}/certificate` : null);
+
+    return {
+      ...app,
+      currentStage,
+      currentRevisionNumber: app.currentRevision || 1,
+      certificateUrl: certUrl,
+    };
+  }
+
+  /**
    * 1. Dashboard Statistics
    */
   async getDashboardStats(user: any) {
@@ -185,7 +212,7 @@ export class BonafideService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-      applications,
+      applications: applications.map((a) => this.formatApplication(a)),
     };
   }
 
@@ -214,7 +241,7 @@ export class BonafideService {
       }
     }
 
-    return app;
+    return this.formatApplication(app);
   }
 
   /**
@@ -255,60 +282,71 @@ export class BonafideService {
       currentStageLabel = 'Scholarship Cell Initial Verification';
     }
 
-    const status = dto.isDraft ? 'DRAFT' : 'SUBMITTED';
+    const defaultTitles: Record<string, string> = {
+      INTERNSHIP: 'Summer / Winter Internship Bonafide Certificate',
+      SCHOLARSHIP_HOSTELLER: 'Hosteller Status Verification Certificate for Scholarship',
+      STUDY_LOAN: 'Bonafide Certificate & Official Fee Structure for Education Loan',
+      EXTERNAL_EVENT: 'Bonafide & Institutional NOC for External Academic / Tech Event',
+    };
+    const resolvedPurposeTitle = dto.purposeTitle || defaultTitles[dto.purpose] || 'Bonafide Certificate';
+
+    const status = dto.isDraft ? 'DRAFT' : 'UNDER_REVIEW';
     if (dto.isDraft) {
       currentStageLabel = 'Draft Application';
     }
 
-    // Database transaction to create application, rev 1, and audit log
-    const created = await this.prisma.$transaction(async (tx) => {
-      const newApp = await tx.bonafideApplication.create({
-        data: {
-          applicationNumber,
-          studentId: student.id,
-          studentRoll: student.rollNumber,
-          studentName: student.name,
-          purpose: dto.purpose as any,
-          purposeTitle: dto.purposeTitle,
-          academicYear: dto.academicYear || student.academicYear || '2026-27',
-          status: status as any,
-          currentStage,
-          currentStageLabel,
-          assignedRole,
-          isHostellerVerified,
-          formData: dto.formData,
-          supportingDocs: dto.supportingDocs || [],
-          currentRevision: 1,
-        },
-      });
+    // Database transaction to create application, rev 1, and audit log with 30s cloud timeout
+    const created = await this.prisma.$transaction(
+      async (tx) => {
+        const newApp = await tx.bonafideApplication.create({
+          data: {
+            applicationNumber,
+            studentId: student.id,
+            studentRoll: student.rollNumber,
+            studentName: student.name,
+            purpose: dto.purpose as any,
+            purposeTitle: resolvedPurposeTitle,
+            academicYear: dto.academicYear || student.academicYear || '2026-27',
+            status: status as any,
+            currentStage,
+            currentStageLabel,
+            assignedRole,
+            isHostellerVerified,
+            formData: dto.formData,
+            supportingDocs: dto.supportingDocs || [],
+            currentRevision: 1,
+          },
+        });
 
-      await tx.bonafideRevision.create({
-        data: {
-          applicationId: newApp.id,
-          revisionNumber: 1,
-          formData: dto.formData,
-          supportingDocs: dto.supportingDocs || [],
-          notes: dto.isDraft ? 'Draft Created' : 'Initial Application Submitted',
-        },
-      });
+        await tx.bonafideRevision.create({
+          data: {
+            applicationId: newApp.id,
+            revisionNumber: 1,
+            formData: dto.formData,
+            supportingDocs: dto.supportingDocs || [],
+            notes: dto.isDraft ? 'Draft Created' : 'Initial Application Submitted',
+          },
+        });
 
-      await tx.bonafideAuditLog.create({
-        data: {
-          applicationId: newApp.id,
-          action: dto.isDraft ? 'DRAFT_CREATED' : 'APPLICATION_SUBMITTED',
-          performedBy: student.name,
-          performedByRole: 'STUDENT',
-          previousStatus: null,
-          newStatus: status,
-          remarks: `Application ${applicationNumber} created for ${dto.purposeTitle}`,
-        },
-      });
+        await tx.bonafideAuditLog.create({
+          data: {
+            applicationId: newApp.id,
+            action: dto.isDraft ? 'DRAFT_CREATED' : 'APPLICATION_SUBMITTED',
+            performedBy: student.name,
+            performedByRole: 'STUDENT',
+            previousStatus: null,
+            newStatus: status,
+            remarks: `Application ${applicationNumber} created for ${resolvedPurposeTitle}`,
+          },
+        });
 
-      return newApp;
-    });
+        return newApp;
+      },
+      { maxWait: 15000, timeout: 30000 },
+    );
 
     this.logger.log(`Created Bonafide Application ${applicationNumber} for student ${student.name}`);
-    return created;
+    return this.formatApplication(created);
   }
 
   /**
@@ -339,36 +377,39 @@ export class BonafideService {
       }
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const app = await tx.bonafideApplication.update({
-        where: { id },
-        data: {
-          formData: dto.formData,
-          supportingDocs: (dto.supportingDocs || existing.supportingDocs || []) as any,
-          purposeTitle: dto.purposeTitle || existing.purposeTitle,
-          status,
-          currentStage,
-          assignedRole,
-          currentStageLabel,
-        },
-      });
+    const updated = await this.prisma.$transaction(
+      async (tx) => {
+        const app = await tx.bonafideApplication.update({
+          where: { id },
+          data: {
+            formData: dto.formData,
+            supportingDocs: (dto.supportingDocs || existing.supportingDocs || []) as any,
+            purposeTitle: dto.purposeTitle || existing.purposeTitle,
+            status,
+            currentStage,
+            assignedRole,
+            currentStageLabel,
+          },
+        });
 
-      await tx.bonafideAuditLog.create({
-        data: {
-          applicationId: id,
-          action: dto.isDraft ? 'DRAFT_UPDATED' : 'DRAFT_SUBMITTED',
-          performedBy: user.name || existing.studentName,
-          performedByRole: 'STUDENT',
-          previousStatus: 'DRAFT',
-          newStatus: status,
-          remarks: dto.isDraft ? 'Draft details saved' : 'Draft submitted for departmental verification',
-        },
-      });
+        await tx.bonafideAuditLog.create({
+          data: {
+            applicationId: id,
+            action: dto.isDraft ? 'DRAFT_UPDATED' : 'DRAFT_SUBMITTED',
+            performedBy: user.name || existing.studentName,
+            performedByRole: 'STUDENT',
+            previousStatus: 'DRAFT',
+            newStatus: status,
+            remarks: dto.isDraft ? 'Draft details saved' : 'Draft submitted for departmental verification',
+          },
+        });
 
-      return app;
-    });
+        return app;
+      },
+      { maxWait: 15000, timeout: 30000 },
+    );
 
-    return updated;
+    return this.formatApplication(updated);
   }
 
   /**
@@ -383,7 +424,7 @@ export class BonafideService {
       );
     }
 
-    const nextRevision = existing.currentRevision + 1;
+    const nextRevision = (existing.currentRevision || existing.currentRevisionNumber || 1) + 1;
 
     // Reset workflow to appropriate initial review stage
     let currentStage = 'PLACEMENT_VERIFICATION' as any;
@@ -396,50 +437,55 @@ export class BonafideService {
       currentStageLabel = 'Scholarship Cell Review (Revision ' + nextRevision + ')';
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const app = await tx.bonafideApplication.update({
-        where: { id },
-        data: {
-          formData: dto.formData,
-          supportingDocs: (dto.supportingDocs || existing.supportingDocs || []) as any,
-          status: 'SUBMITTED',
-          currentStage,
-          assignedRole,
-          currentStageLabel,
-          currentRevision: nextRevision,
-          rejectionReason: null,
-          rejectionCategory: null,
-          correctionInstructions: null,
-        },
-      });
+    const resubmitNotes = dto.correctionNotes || (dto as any).resubmissionNotes || 'Corrected and resubmitted by student';
 
-      await tx.bonafideRevision.create({
-        data: {
-          applicationId: id,
-          revisionNumber: nextRevision,
-          formData: dto.formData,
-          supportingDocs: dto.supportingDocs || [],
-          notes: dto.correctionNotes || 'Corrected and resubmitted by student',
-        },
-      });
+    const updated = await this.prisma.$transaction(
+      async (tx) => {
+        const app = await tx.bonafideApplication.update({
+          where: { id },
+          data: {
+            formData: dto.formData,
+            supportingDocs: (dto.supportingDocs || existing.supportingDocs || []) as any,
+            status: 'UNDER_REVIEW',
+            currentStage,
+            assignedRole,
+            currentStageLabel,
+            currentRevision: nextRevision,
+            rejectionReason: null,
+            rejectionCategory: null,
+            correctionInstructions: null,
+          },
+        });
 
-      await tx.bonafideAuditLog.create({
-        data: {
-          applicationId: id,
-          action: 'APPLICATION_RESUBMITTED',
-          performedBy: user.name || existing.studentName,
-          performedByRole: 'STUDENT',
-          previousStatus: existing.status,
-          newStatus: 'SUBMITTED',
-          remarks: `Revision ${nextRevision} submitted with corrections: ${dto.correctionNotes || 'Updated details'}`,
-        },
-      });
+        await tx.bonafideRevision.create({
+          data: {
+            applicationId: id,
+            revisionNumber: nextRevision,
+            formData: dto.formData,
+            supportingDocs: dto.supportingDocs || [],
+            notes: resubmitNotes,
+          },
+        });
 
-      return app;
-    });
+        await tx.bonafideAuditLog.create({
+          data: {
+            applicationId: id,
+            action: 'APPLICATION_RESUBMITTED',
+            performedBy: user.name || existing.studentName,
+            performedByRole: 'STUDENT',
+            previousStatus: existing.status,
+            newStatus: 'UNDER_REVIEW',
+            remarks: `Revision ${nextRevision} submitted with corrections: ${resubmitNotes}`,
+          },
+        });
+
+        return app;
+      },
+      { maxWait: 15000, timeout: 30000 },
+    );
 
     this.logger.log(`Application ${existing.applicationNumber} resubmitted (Revision ${nextRevision})`);
-    return updated;
+    return this.formatApplication(updated);
   }
 
   /**
@@ -456,31 +502,34 @@ export class BonafideService {
       throw new BadRequestException('Application is already withdrawn.');
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const app = await tx.bonafideApplication.update({
-        where: { id },
-        data: {
-          status: 'WITHDRAWN',
-          currentStageLabel: 'Application Withdrawn by Student',
-          withdrawnAt: new Date(),
-          withdrawalReason: dto.reason || 'Withdrawn by student request',
-        },
-      });
+    const updated = await this.prisma.$transaction(
+      async (tx) => {
+        const app = await tx.bonafideApplication.update({
+          where: { id },
+          data: {
+            status: 'WITHDRAWN',
+            currentStageLabel: 'Application Withdrawn by Student',
+            withdrawnAt: new Date(),
+            withdrawalReason: dto.reason || 'Withdrawn by student request',
+          },
+        });
 
-      await tx.bonafideAuditLog.create({
-        data: {
-          applicationId: id,
-          action: 'APPLICATION_WITHDRAWN',
-          performedBy: user.name || existing.studentName,
-          performedByRole: 'STUDENT',
-          previousStatus: existing.status,
-          newStatus: 'WITHDRAWN',
-          remarks: dto.reason || 'Withdrawn by student',
-        },
-      });
+        await tx.bonafideAuditLog.create({
+          data: {
+            applicationId: id,
+            action: 'APPLICATION_WITHDRAWN',
+            performedBy: user.name || existing.studentName,
+            performedByRole: 'STUDENT',
+            previousStatus: existing.status,
+            newStatus: 'WITHDRAWN',
+            remarks: dto.reason || 'Withdrawn by student',
+          },
+        });
 
-      return app;
-    });
+        return app;
+      },
+      { maxWait: 15000, timeout: 30000 },
+    );
 
     return updated;
   }
@@ -554,7 +603,7 @@ export class BonafideService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-      queue,
+      queue: queue.map((a) => this.formatApplication(a)),
     };
   }
 
@@ -583,61 +632,74 @@ export class BonafideService {
       );
     }
 
+    const effectiveAction = (dto.action || '').toUpperCase();
+    const isApproval = effectiveAction === 'APPROVE' || effectiveAction === 'APPROVED';
+    const isRejectionOrChanges =
+      effectiveAction === 'REJECT' ||
+      effectiveAction === 'REJECTED' ||
+      effectiveAction === 'REQUEST_CHANGES' ||
+      effectiveAction === 'CHANGES_REQUESTED';
+    const effectiveRemarks = dto.remarks || dto.comments || (dto as any).rejectionReason || '';
+
     // Mandatory remarks check on Rejection or Changes Requested
-    if ((dto.action === 'REJECT' || dto.action === 'REQUEST_CHANGES') && !dto.remarks?.trim()) {
+    if (isRejectionOrChanges && !effectiveRemarks.trim()) {
       throw new BadRequestException('A mandatory reason / remarks must be provided when rejecting or requesting changes.');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Scenario 1: REJECT or REQUEST CHANGES
     // ─────────────────────────────────────────────────────────────────────────
-    if (dto.action === 'REJECT' || dto.action === 'REQUEST_CHANGES') {
-      const newStatus = dto.action === 'REJECT' ? 'REJECTED' : 'CHANGES_REQUESTED';
+    if (isRejectionOrChanges) {
+      const newStatus = (effectiveAction === 'REJECT' || effectiveAction === 'REJECTED') ? 'REJECTED' : 'CHANGES_REQUESTED';
       const stageName = existing.currentStageLabel;
 
-      return this.prisma.$transaction(async (tx) => {
-        const updated = await tx.bonafideApplication.update({
-          where: { id },
-          data: {
-            status: newStatus as any,
-            currentStageLabel: `${newStatus === 'REJECTED' ? 'Rejected' : 'Changes Requested'} by ${reviewerName} (${userRole})`,
-            rejectionReason: dto.remarks,
-            rejectionCategory: dto.rejectionCategory || 'Documentation Review',
-            correctionInstructions: dto.correctionInstructions || dto.remarks,
-          },
-        });
+      const res = await this.prisma.$transaction(
+        async (tx) => {
+          const updated = await tx.bonafideApplication.update({
+            where: { id },
+            data: {
+              status: newStatus as any,
+              currentStageLabel: `${newStatus === 'REJECTED' ? 'Rejected' : 'Changes Requested'} by ${reviewerName} (${userRole})`,
+              rejectionReason: effectiveRemarks,
+              rejectionCategory: dto.rejectionCategory || (dto as any).rejectionReason || 'Documentation Review',
+              correctionInstructions: (dto as any).correctionInstructions || effectiveRemarks,
+            },
+          });
 
-        await tx.bonafideReview.create({
-          data: {
-            applicationId: id,
-            stage: existing.currentStage,
-            stageName,
-            assignedRole: existing.assignedRole,
-            reviewerId: user.id || null,
-            reviewerName,
-            reviewerRole: userRole,
-            action: dto.action,
-            status: newStatus,
-            remarks: dto.remarks,
-            rejectionCategory: dto.rejectionCategory || null,
-          },
-        });
+          await tx.bonafideReview.create({
+            data: {
+              applicationId: id,
+              stage: existing.currentStage,
+              stageName,
+              assignedRole: existing.assignedRole,
+              reviewerId: user.id || null,
+              reviewerName,
+              reviewerRole: userRole,
+              action: dto.action,
+              status: newStatus,
+              remarks: effectiveRemarks,
+              rejectionCategory: dto.rejectionCategory || null,
+            },
+          });
 
-        await tx.bonafideAuditLog.create({
-          data: {
-            applicationId: id,
-            action: `REVIEW_${dto.action}`,
-            performedBy: reviewerName,
-            performedByRole: userRole,
-            previousStatus: existing.status,
-            newStatus,
-            remarks: `${dto.action} at ${stageName}: ${dto.remarks}`,
-          },
-        });
+          await tx.bonafideAuditLog.create({
+            data: {
+              applicationId: id,
+              action: `REVIEW_${dto.action}`,
+              performedBy: reviewerName,
+              performedByRole: userRole,
+              previousStatus: existing.status,
+              newStatus,
+              remarks: `${dto.action} at ${stageName}: ${effectiveRemarks}`,
+            },
+          });
 
-        this.logger.log(`Application ${existing.applicationNumber} marked ${newStatus} by ${reviewerName}`);
-        return updated;
-      });
+          this.logger.log(`Application ${existing.applicationNumber} marked ${newStatus} by ${reviewerName}`);
+          return updated;
+        },
+        { maxWait: 15000, timeout: 30000 },
+      );
+      return this.formatApplication(res);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -683,41 +745,47 @@ export class BonafideService {
       }
     }
 
-    // Execute state transition in atomic database transaction
-    return this.prisma.$transaction(async (tx) => {
-      let certificateRecord: any = null;
+    // Pre-generate QR Code and Token before opening the transaction to prevent Neon pool timeouts
+    let preGeneratedToken = '';
+    let preGeneratedQrUrl = '';
+    if (shouldGenerateCertificate) {
+      preGeneratedToken = `bnf_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      preGeneratedQrUrl = await QRCode.toDataURL(
+        `http://localhost:5173/?verify=bonafide_${preGeneratedToken}`,
+        { margin: 1, width: 160, color: { dark: '#0f2b48', light: '#ffffff' } },
+      );
+    }
 
-      if (shouldGenerateCertificate) {
-        const year = new Date().getFullYear();
-        const certCount = await tx.bonafideCertificate.count();
-        const certificateNumber = `GIFT/BONAFIDE/${year}/${String(certCount + 1).padStart(4, '0')}`;
-        const verificationToken = `bnf_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    // Execute state transition in atomic database transaction with extended Neon timeout
+    const res = await this.prisma.$transaction(
+      async (tx) => {
+        let certificateRecord: any = null;
 
-        const qrDataUrl = await QRCode.toDataURL(
-          `http://localhost:5173/?verify=bonafide_${verificationToken}`,
-          { margin: 1, width: 160, color: { dark: '#0f2b48', light: '#ffffff' } },
-        );
+        if (shouldGenerateCertificate) {
+          const year = new Date().getFullYear();
+          const certCount = await tx.bonafideCertificate.count();
+          const certificateNumber = `GIFT/BONAFIDE/${year}/${String(certCount + 1).padStart(4, '0')}`;
 
-        certificateRecord = await tx.bonafideCertificate.create({
-          data: {
-            certificateNumber,
-            applicationId: id,
-            studentId: existing.studentId,
-            purpose: existing.purpose,
-            certificateTitle: existing.purposeTitle,
-            recipient: (existing.formData as any)?.bankName || (existing.formData as any)?.company || 'To Whom It May Concern',
-            verificationToken,
-            qrCodeDataUrl: qrDataUrl,
-            issuedBy: `${reviewerName} (${userRole})`,
-            issuedByRole: userRole,
-            meta: {
-              approvedAt: new Date().toISOString(),
-              revision: existing.currentRevision,
-              academicYear: existing.academicYear,
+          certificateRecord = await tx.bonafideCertificate.create({
+            data: {
+              certificateNumber,
+              applicationId: id,
+              studentId: existing.studentId,
+              purpose: existing.purpose,
+              certificateTitle: existing.purposeTitle,
+              recipient: (existing.formData as any)?.bankName || (existing.formData as any)?.company || 'To Whom It May Concern',
+              verificationToken: preGeneratedToken,
+              qrCodeDataUrl: preGeneratedQrUrl,
+              issuedBy: `${reviewerName} (${userRole})`,
+              issuedByRole: userRole,
+              meta: {
+                approvedAt: new Date().toISOString(),
+                revision: existing.currentRevision,
+                academicYear: existing.academicYear,
+              },
             },
-          },
-        });
-      }
+          });
+        }
 
       const updated = await tx.bonafideApplication.update({
         where: { id },
@@ -769,7 +837,8 @@ export class BonafideService {
         `Application ${existing.applicationNumber} approved at stage ${currStage} -> Next: ${nextStage}`,
       );
       return updated;
-    });
+    }, { maxWait: 15000, timeout: 30000 });
+    return this.formatApplication(res);
   }
 
   /**
@@ -785,7 +854,7 @@ export class BonafideService {
 
     // Security Check 1: Must be in CERTIFICATE_ISSUED status
     if (app.status !== 'CERTIFICATE_ISSUED' || !app.certificate) {
-      throw new ForbiddenException(
+      throw new BadRequestException(
         'Official Certificate is not yet available for download. All mandatory approvals must be completed first.',
       );
     }

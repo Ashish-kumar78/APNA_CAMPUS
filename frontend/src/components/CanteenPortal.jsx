@@ -39,7 +39,7 @@ import './CanteenPortal.css';
 
 export default function CanteenPortal({ account, onLogout }) {
   // Navigation Modules (8 strictly specified modules)
-  const [activeTab, setActiveTab] = useState('biometric_records');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [dataVersion, setDataVersion] = useState(0);
 
   // Sync listener for canteen data updates
@@ -317,6 +317,12 @@ export default function CanteenPortal({ account, onLogout }) {
   // 8 Navigation Sections matching exact user prompt
   const navSections = [
     {
+      title: 'OVERVIEW',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: Home }
+      ]
+    },
+    {
       title: 'Biometric Operations',
       items: [
         { id: 'biometric_records', label: 'Biometric Meal Records', icon: Fingerprint, badge: 'Live Terminal' },
@@ -346,13 +352,13 @@ export default function CanteenPortal({ account, onLogout }) {
       account={account}
       portalName="Canteen Directorate"
       portalSubtitle="Biometric Food Management System"
-      portalHomeTab="biometric_records"
+      portalHomeTab="dashboard"
       navSections={navSections}
       activeTab={activeTab}
       onTabChange={setActiveTab}
       onLogout={onLogout}
       pageTitle={
-        activeTab === 'biometric_records' ? 'Biometric Meal Access Records' :
+        (activeTab === 'biometric_records' || activeTab === 'dashboard') ? 'Biometric Meal Access Records' :
         activeTab === 'day_scholars' ? 'Day Scholars Meal Records' :
         activeTab === 'hostellers' ? 'Hostellers Mess Records' :
         activeTab === 'food_applications' ? 'Food Access Applications' :
@@ -362,7 +368,7 @@ export default function CanteenPortal({ account, onLogout }) {
         'Canteen Fees & Student Accounts'
       }
       pageSubtitle={
-        activeTab === 'biometric_records' ? 'Real-time fingerprint biometric verification, daily dining records & duplicate claim control' :
+        (activeTab === 'biometric_records' || activeTab === 'dashboard') ? 'Real-time fingerprint biometric verification, daily dining records & duplicate claim control' :
         activeTab === 'day_scholars' ? 'Dedicated attendance logs and lunch/breakfast access register for day-commuter students' :
         activeTab === 'hostellers' ? 'Full 3-meal mess dining records, hostel block allocation and resident verification' :
         activeTab === 'food_applications' ? 'Review student facility access requests, eligibility clearance and approval workflows' :
@@ -386,7 +392,7 @@ export default function CanteenPortal({ account, onLogout }) {
         {/* ======================================================== */}
         {/* TAB 1: BIOMETRIC MEAL RECORDS (TERMINAL + TODAY'S USAGE) */}
         {/* ======================================================== */}
-        {activeTab === 'biometric_records' && (
+        {(activeTab === 'biometric_records' || activeTab === 'dashboard') && (
           <div className="canteen-tab-content space-y-6">
             {/* Top KPI Summary Counters as specified in Section 6 */}
             <div className="canteen-summary-grid">

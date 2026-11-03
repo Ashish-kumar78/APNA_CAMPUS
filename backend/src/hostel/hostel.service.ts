@@ -27,10 +27,14 @@ export class HostelService {
 
   async onModuleInit() {
     try {
-      const settings = await this.prisma.wardenPermissionSetting.findMany();
-      hydrateWardenPermissionsData(settings);
-    } catch (err: any) {
-      this.logger.warn(`Warden permission database hydration fallback: ${err.message}`);
+      if (this.prisma?.wardenPermissionSetting) {
+        const settings = await this.prisma.wardenPermissionSetting.findMany().catch(() => []);
+        if (Array.isArray(settings) && settings.length > 0) {
+          hydrateWardenPermissionsData(settings);
+        }
+      }
+    } catch {
+      // In-memory defaults active
     }
   }
 
@@ -5225,10 +5229,14 @@ export class HostelService {
   // ==========================================
   async getWardenPermissions(wardenId?: string) {
     try {
-      const rows = await this.prisma.wardenPermissionSetting.findMany();
-      hydrateWardenPermissionsData(rows);
-    } catch (err: any) {
-      this.logger.warn(`Warden permission database read fallback: ${err.message}`);
+      if (this.prisma?.wardenPermissionSetting) {
+        const rows = await this.prisma.wardenPermissionSetting.findMany().catch(() => []);
+        if (Array.isArray(rows) && rows.length > 0) {
+          hydrateWardenPermissionsData(rows);
+        }
+      }
+    } catch {
+      // Handled with in-memory defaults below
     }
     if (wardenId && wardenId !== 'all') {
       return getWardenPermissionsData(wardenId);

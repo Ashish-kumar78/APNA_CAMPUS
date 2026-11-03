@@ -123,7 +123,7 @@ console.log('✓ Verified: Close retains PENDING status; Submit marks COMPLETED'
 
 // Test 9: Close (Review Later) Session Dismissal Lifecycle
 console.log('\nTest 9: Verify Close does NOT show immediately, and re-appears only on next login if uncompleted...');
-const { isSessionDismissed, setSessionDismissed, clearSessionDismissal } = await import('../src/components/CalendarReminderModal.jsx');
+const { isSessionDismissed, setSessionDismissed, clearSessionDismissal } = await import('../src/services/calendarNotesStore.js');
 
 const userIdA = resolveUserId(testUserA);
 // Initially not dismissed

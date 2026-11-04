@@ -1350,6 +1350,74 @@ export class HostelController {
     return { success: true, data };
   }
 
+  @Get('wardens/:id/pending-tasks')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all pending tasks, gate passes, complaints, and dockets for a hostel warden' })
+  async getWardenPendingTasks(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Query('status') status?: string,
+    @Query('category') category?: string,
+    @Query('priority') priority?: string,
+  ) {
+    const data = await this.hostelService.getWardenPendingTasks(id, { status, category, priority });
+    return {
+      success: true,
+      wardenId: id,
+      count: data.tasks.length,
+      pendingCount: data.pendingCount,
+      summary: data.summary,
+      data: data.tasks,
+    };
+  }
+
+  @Patch('wardens/:id/pending-tasks/:taskId/status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update status of a warden pending task with remarks and audit tracking' })
+  async updateWardenPendingTaskStatus(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Param('taskId') taskId: string,
+    @Body() body: { status: string; remarks?: string; resolutionNote?: string; action?: string },
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel_admin', 'admin', 'super_admin', 'warden', 'hostel'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Administrator or Warden privileges required.');
+    }
+    const result = await this.hostelService.updateWardenPendingTaskStatus(id, taskId, body, user);
+    return {
+      success: true,
+      message: `Pending task ${taskId} updated to ${body.status}.`,
+      data: result.task,
+      pendingCount: result.pendingCount,
+    };
+  }
+
+  @Post('wardens/:id/pending-tasks/batch-action')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Perform batch resolution or approval on multiple pending tasks' })
+  async batchActionWardenPendingTasks(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { taskIds: string[]; action: string; remarks?: string },
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel_admin', 'admin', 'super_admin', 'warden', 'hostel'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Administrator or Warden privileges required.');
+    }
+    const result = await this.hostelService.batchActionWardenPendingTasks(id, body, user);
+    return {
+      success: true,
+      message: `Batch action '${body.action}' processed for ${result.updatedCount} task(s).`,
+      ...result,
+    };
+  }
+
   @Put('wardens/:id/profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -1384,6 +1452,41 @@ export class HostelController {
     }
     const data = await this.hostelService.addWardenDocument(id, body, user);
     return { success: true, message: 'Document attached successfully.', data };
+  }
+
+  @Delete('wardens/:id/documents/:docId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove verification document from warden profile' })
+  async deleteWardenDocument(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Param('docId') docId: string,
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel_admin', 'admin', 'super_admin', 'warden', 'hostel'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Administrator or Warden privileges required.');
+    }
+    const data = await this.hostelService.deleteWardenDocument(id, docId, user);
+    return { success: true, message: 'Document removed successfully.', data };
+  }
+
+  @Delete('wardens/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a warden profile (Admin / Super Admin / Hostel Admin)' })
+  async deleteWarden(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+  ) {
+    const role = normalizeRole(user.role);
+    const authorized = ['hostel_admin', 'admin', 'super_admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied. Administrator privileges required.');
+    }
+    const data = await this.hostelService.deleteWarden(id, user);
+    return { success: true, message: `Warden ${id} deleted successfully.`, data };
   }
 
   @Patch('wardens/:id/status')
@@ -1429,7 +1532,8 @@ export class HostelController {
     }
     const dutyStatus = body.dutyStatus || (body.onDuty ? 'On Duty' : 'On Leave');
     const reason = body.reason || 'Duty status updated';
-    const data = await this.hostelService.updateWardenDutyStatus(id, dutyStatus, reason, user);
+    const relievingWarden = body.relievingWarden || (dutyStatus === 'On Duty' ? 'None Assigned' : undefined);
+    const data = await this.hostelService.updateWardenDutyStatus(id, dutyStatus, reason, user, relievingWarden);
     return {
       success: true,
       message: `Warden ${id} duty status updated to ${dutyStatus}.`,

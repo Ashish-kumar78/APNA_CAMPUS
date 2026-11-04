@@ -352,6 +352,98 @@ async function runTests() {
     assert.strictEqual(transportStore.canPerform('ADMIN_OFFICE', 'routes', 'create'), false, 'Create routes revoked');
   });
 
+  // 15. Operational Alerts & Daily Summary
+  test('Operational Alerts & Daily Operations Summary', () => {
+    const alerts = transportStore.getOperationalAlerts();
+    assert(Array.isArray(alerts) && alerts.length > 0, 'Alerts should be an array');
+    const summary = transportStore.getDailyOperationsSummary();
+    assert(summary.totalFleet > 0, 'Summary totalFleet should be > 0');
+    assert(summary.operational > 0, 'Operational fleet should be > 0');
+    assert(typeof summary.fleetReadinessPct === 'number', 'fleetReadinessPct should be numeric');
+    assert(typeof summary.todayFuelCost === 'number', 'todayFuelCost should be numeric');
+  });
+
+  // 16. Student Transport Applications Workflow
+  await testAsync('Student Transport Applications: Intake and Approval with Pass Provisioning', async () => {
+    const initialApps = transportStore.getStudentApplications();
+    const newApp = await transportStore.addStudentApplication({
+      studentName: 'Priyanka Senapati',
+      rollNumber: '2401432299',
+      department: 'Computer Science',
+      semester: 'Semester 3',
+      preferredRoute: 'Route 1 - Cuttack Badambadi Express',
+      preferredStop: 'Link Road Cuttack',
+      parentContact: '+91 94371 99999',
+    });
+    assert(newApp.id && newApp.status === 'Pending Review');
+    assert.strictEqual(transportStore.getStudentApplications().length, initialApps.length + 1);
+
+    // Approve application -> auto provisions bus pass
+    await transportStore.decideStudentApplication(newApp.id, 'Approved', 'Seat allocated on Bus 01');
+    const updated = transportStore.getStudentApplications().find(a => a.id === newApp.id);
+    assert.strictEqual(updated.status, 'Approved');
+    const passes = transportStore.getPasses();
+    const hasPass = passes.some(p => p.studentName === 'Priyanka Senapati');
+    assert.strictEqual(hasPass, true, 'Bus pass must be provisioned upon application approval');
+  });
+
+  // 17. Crew Duty Roster & Licence Verification
+  await testAsync('Crew Management: Duty Roster & Driving Licence Verification', async () => {
+    const roster = await transportStore.assignDutyRoster({
+      driverName: 'Ramesh Ch. Jena',
+      conductorName: 'Pravat Swain',
+      busNumber: 'OD-02-AK-4411',
+      routeName: 'Route 1: Cuttack Badambadi Express',
+      shift: 'Morning Academic Shift',
+    });
+    assert(roster.id && roster.status === 'Active Duty');
+    assert(transportStore.getDutyRoster().some(r => r.id === roster.id));
+
+    // Licence Verification
+    const lics = transportStore.getLicenseVerifications();
+    assert(lics.length > 0);
+    const targetLic = lics[0];
+    await transportStore.verifyLicenseDocument(targetLic.id, {
+      verificationStatus: 'Verified',
+      validityExpiry: '2029-12-31',
+    });
+    const updatedLic = transportStore.getLicenseVerifications().find(l => l.id === targetLic.id);
+    assert.strictEqual(updatedLic.verificationStatus, 'Verified');
+    assert.strictEqual(updatedLic.validityExpiry, '2029-12-31');
+  });
+
+  // 18. Breakdown Repairs, Fee Reconciliation, and Transport Expenses
+  await testAsync('Maintenance & Finance: Breakdown Repairs, Fee Reconciliation, and Expenses', async () => {
+    // Breakdown
+    const repair = await transportStore.addBreakdownRepair({
+      busNumber: 'OD-02-CL-1209',
+      reportedFault: 'Alternator belt snapped on highway',
+      breakdownLocation: 'Palasuni Square NH-16',
+      totalExpense: 3500,
+    });
+    assert(repair.id && repair.status === 'Under Repair');
+    await transportStore.resolveBreakdownRepair(repair.id, 'New Gates alternator belt fitted');
+    const resolved = transportStore.getBreakdownRepairs().find(b => b.id === repair.id);
+    assert.strictEqual(resolved.status, 'Resolved & Returned to Service');
+
+    // Fee Reconciliation
+    const recons = transportStore.getFeeReconciliation();
+    assert(recons.length > 0);
+    const firstRecon = recons[0];
+    await transportStore.reconcileFeeRecord(firstRecon.id, { accountsVerifiedPaid: 810000 });
+    const updatedRecon = transportStore.getFeeReconciliation().find(r => r.id === firstRecon.id);
+    assert.strictEqual(updatedRecon.accountsVerifiedPaid, 810000);
+
+    // Expenses
+    const expense = await transportStore.addTransportExpense({
+      category: 'Fuel (High Speed Diesel & CNG)',
+      amount: 18400,
+      vendor: 'IOCL Authorized Dealer Phulnakhara',
+    });
+    assert(expense.id && expense.amount === 18400);
+    assert(transportStore.getTransportExpenses().some(e => e.id === expense.id));
+  });
+
   console.log(`\n========================================`);
   console.log(`TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);
   console.log(`========================================`);

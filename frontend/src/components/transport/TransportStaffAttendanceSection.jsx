@@ -1,7 +1,18 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  UserCheck, Users, CheckCircle2, AlertCircle, Clock, 
-  Search, Filter, Calendar, Bus, Check, X, Shield 
+import {
+  AlertCircle,
+  Bus,
+  Calendar,
+  Check,
+  CheckCircle2,
+  Clock,
+  Filter,
+  Printer,
+  Search,
+  Shield,
+  UserCheck,
+  Users,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockStaffAttendance } from './transportData.js';
@@ -54,8 +65,8 @@ export default function TransportStaffAttendanceSection() {
           <p>Commercial bus pilots, relief drivers, workshop mechanics, and daily biometric shift logs.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.6rem' }}>
-          <button className="trans-btn trans-btn-outline" onClick={() => window.print()}>
-            Print Duty Sheet
+          <button className="trans-btn trans-btn-secondary" onClick={() => window.print()}>
+            <Printer size={15} /> Print Duty Sheet
           </button>
         </div>
       </div>
@@ -187,7 +198,7 @@ export default function TransportStaffAttendanceSection() {
                       style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
                       onClick={() => toggleAttendance(item.id)}
                     >
-                      {item.status.includes('Present') ? 'Mark Leave' : 'Mark Present'}
+                      {item.status.includes('Present') ? <><X size={12} className="text-amber-600" /> Mark Leave</> : <><Check size={12} /> Mark Present</>}
                     </button>
                   </td>
                 </tr>

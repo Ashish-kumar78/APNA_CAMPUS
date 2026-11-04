@@ -1,7 +1,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Fuel, DollarSign, Calendar, Search, Filter, Plus, 
-  Receipt, CheckCircle, Clock, FileText, X, AlertCircle 
+import {
+  AlertCircle,
+  Calendar,
+  Check,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  FileText,
+  Filter,
+  Fuel,
+  Plus,
+  Printer,
+  Receipt,
+  Search,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockFuelExpenses } from './transportData.js';
@@ -283,8 +295,8 @@ export default function TransportFuelSection() {
               </div>
             </div>
             <div className="trans-modal-footer">
-              <button className="trans-btn trans-btn-outline" onClick={() => setSelectedReceipt(null)}>Close</button>
-              <button className="trans-btn trans-btn-primary" onClick={() => window.print()}>Print Voucher</button>
+              <button className="trans-btn trans-btn-secondary" onClick={() => setSelectedReceipt(null)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Close</button>
+              <button className="trans-btn trans-btn-primary" onClick={() => window.print()} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Printer size={14} /> Print Voucher</button>
             </div>
           </div>
         </div>
@@ -355,8 +367,8 @@ export default function TransportFuelSection() {
                 </div>
               </div>
               <div className="trans-modal-footer">
-                <button type="button" className="trans-btn trans-btn-outline" onClick={() => setNewLogModal(false)}>Cancel</button>
-                <button type="submit" className="trans-btn trans-btn-primary">Record Dispense</button>
+                <button type="button" className="trans-btn trans-btn-secondary" onClick={() => setNewLogModal(false)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Cancel</button>
+                <button type="submit" className="trans-btn trans-btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Check size={14} /> Record Dispense</button>
               </div>
             </form>
           </div>

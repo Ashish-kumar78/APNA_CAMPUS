@@ -1,7 +1,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Users, CheckCircle2, Clock, AlertCircle, Search, Filter, 
-  QrCode, RefreshCw, Bus, MapPin, Calendar, Check, X, ShieldAlert 
+import {
+  AlertCircle,
+  Bus,
+  Calendar,
+  Check,
+  CheckCircle2,
+  Clock,
+  Filter,
+  MapPin,
+  QrCode,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  Users,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockBoardingAttendance } from './transportData.js';
@@ -339,7 +351,7 @@ export default function TransportBoardingSection() {
                     value={manualRoll}
                     onChange={(e) => setManualRoll(e.target.value)}
                   />
-                  <button type="submit" className="trans-btn trans-btn-primary">Verify</button>
+                  <button type="submit" className="trans-btn trans-btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><CheckCircle2 size={14} /> Verify Pass</button>
                 </form>
                 {scanMessage && (
                   <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: 8, fontSize: '0.85rem', background: '#e0f2fe', color: '#0369a1', fontWeight: 600 }}>
@@ -352,7 +364,7 @@ export default function TransportBoardingSection() {
               </div>
             </div>
             <div className="trans-modal-footer">
-              <button className="trans-btn trans-btn-outline" onClick={() => setScannerOpen(false)}>Close Simulator</button>
+              <button className="trans-btn trans-btn-secondary" onClick={() => setScannerOpen(false)} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><X size={14} /> Close Simulator</button>
             </div>
           </div>
         </div>

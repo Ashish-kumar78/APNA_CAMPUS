@@ -1,7 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  ShieldCheck, AlertTriangle, CheckCircle2, Clock, Search, 
-  Filter, FileText, Check, X, ShieldAlert, Award, Calendar 
+import {
+  AlertTriangle,
+  Award,
+  Calendar,
+  Check,
+  CheckCircle2,
+  Clock,
+  FileText,
+  Filter,
+  Search,
+  ShieldAlert,
+  ShieldCheck,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockSafetyInspections } from './transportData.js';
@@ -251,7 +261,7 @@ export default function TransportSafetySection() {
               </div>
             </div>
             <div className="trans-modal-footer">
-              <button className="trans-btn trans-btn-outline" onClick={() => setSelectedAudit(null)}>Close</button>
+              <button className="trans-btn trans-btn-secondary" onClick={() => setSelectedAudit(null)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Close</button>
               <button className="trans-btn trans-btn-primary" onClick={() => window.print()}>Print Safety Certificate</button>
             </div>
           </div>
@@ -313,8 +323,8 @@ export default function TransportSafetySection() {
                 </div>
               </div>
               <div className="trans-modal-footer">
-                <button type="button" className="trans-btn trans-btn-outline" onClick={() => setNewAuditModal(false)}>Cancel</button>
-                <button type="submit" className="trans-btn trans-btn-primary">Certify & Save Inspection</button>
+                <button type="button" className="trans-btn trans-btn-secondary" onClick={() => setNewAuditModal(false)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Cancel</button>
+                <button type="submit" className="trans-btn trans-btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Check size={14} /> Certify & Save Inspection</button>
               </div>
             </form>
           </div>

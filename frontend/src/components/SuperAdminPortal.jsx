@@ -49,12 +49,15 @@ import {
   Key,
   FileCheck,
   GitCompare,
-  UserPlus
+  UserPlus,
+  Utensils
 } from 'lucide-react';
 import { api } from '../services/api.js';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 import TransportManagementModule from './transport/TransportManagementModule.jsx';
+import CanteenManagementModule from './canteen/CanteenManagementModule.jsx';
+import HostelManagementModule from './hostel/HostelManagementModule.jsx';
 import './SuperAdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
@@ -876,6 +879,8 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
         { label: 'User Management', icon: Users, id: 'users' },
         { label: 'RBAC & Permissions', icon: KeyRound, id: 'rbac' },
         { label: 'Transport Management', icon: Bus, id: 'transport-management' },
+        { label: 'Canteen & Mess Management', icon: Utensils, id: 'canteen-management' },
+        { label: 'Hostel & Warden Management', icon: Building, id: 'hostel-management' },
         { label: 'Audit Trail', icon: History, id: 'audit' },
         { label: 'Pending Approvals', icon: FileCheck, id: 'approvals' },
       ]
@@ -902,6 +907,9 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
       users: { title: 'User Management', subtitle: 'Account provisioning, roles, and access control' },
       rbac: { title: 'RBAC & Permissions', subtitle: 'Role-based access control and policy management' },
       'transport-management': { title: 'Transport Management System', subtitle: 'Universal fleet logistics, compliance certificates, and RBAC policy governance' },
+      'canteen-management': { title: 'Canteen & Mess Operations ERP', subtitle: 'Institution-wide meal verification, hostellers, kitchen inventory, and accounts' },
+      'hostel-management': { title: 'Hostel & Warden Management System', subtitle: 'Universal residential life governance, wardens directory, room allocations, student leaves, and compliance governance' },
+      'wardens': { title: 'Hostel Wardens Administration', subtitle: 'Supervise residential hostel administration, student welfare, room allocation, and night curfew enforcement' },
       audit: { title: 'Audit Trail', subtitle: 'Comprehensive enterprise audit and compliance log' },
       approvals: { title: 'Pending Approvals', subtitle: 'Cross-portal escalated approval queue' },
       integrations: { title: 'Integrations', subtitle: 'Third-party API and service connectivity management' },
@@ -3116,6 +3124,20 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* TAB: TRANSPORT MANAGEMENT */}
+          {activeTab === 'transport-management' && (
+            <div style={{ marginTop: '1rem' }}>
+              <TransportManagementModule account={account} />
+            </div>
+          )}
+
+          {/* TAB: CANTEEN & MESS MANAGEMENT */}
+          {activeTab === 'canteen-management' && (
+            <div style={{ marginTop: '1rem' }}>
+              <CanteenManagementModule account={account} />
             </div>
           )}
         </div>

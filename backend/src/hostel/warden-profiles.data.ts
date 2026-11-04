@@ -9,6 +9,7 @@ export interface WardenCmsProfile {
   emailId: string;
   status: string;
   dutyStatus?: string;
+  relievingWarden?: string;
   avatar: string;
 
   // Personal Details
@@ -93,7 +94,16 @@ export interface WardenCmsProfile {
   pendingTasks: number;
   activeResidentsCount: number;
   totalBedsSupervised: number;
-  documents: Array<{ id: string; name: string; meta: string }>;
+  documents: Array<{
+    id: string;
+    name: string;
+    meta: string;
+    fileData?: string;
+    fileName?: string;
+    fileType?: string;
+    fileSize?: number;
+    uploadedAt?: string;
+  }>;
 }
 
 export const INITIAL_WARDEN_PROFILES: Record<string, WardenCmsProfile> = {
@@ -722,15 +732,47 @@ export function saveWardenCmsProfile(id: string, updates: Partial<WardenCmsProfi
   return merged;
 }
 
-export function appendWardenDocument(id: string, doc: { id?: string; name: string; meta?: string }) {
+export function appendWardenDocument(id: string, doc: {
+  id?: string;
+  name: string;
+  meta?: string;
+  fileData?: string;
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
+  uploadedAt?: string;
+}) {
   const profile = getWardenCmsProfile(id);
   if (!profile) return null;
   const newDoc = {
     id: doc.id || `doc-${Date.now()}`,
     name: doc.name,
     meta: doc.meta || `Uploaded on ${new Date().toLocaleDateString('en-GB')} by Administrator`,
+    fileData: doc.fileData || undefined,
+    fileName: doc.fileName || undefined,
+    fileType: doc.fileType || undefined,
+    fileSize: doc.fileSize || undefined,
+    uploadedAt: doc.uploadedAt || new Date().toISOString(),
   };
   profile.documents = [newDoc, ...(profile.documents || [])];
+  wardenCache.set(profile.employeeId.toUpperCase(), profile);
+  return profile;
+}
+
+export function deleteWardenCmsProfile(id: string): boolean {
+  const profile = getWardenCmsProfile(id);
+  if (!profile) return false;
+  wardenCache.delete(id.toUpperCase());
+  if (profile.employeeId) wardenCache.delete(profile.employeeId.toUpperCase());
+  if (profile.name) wardenCache.delete(profile.name.toUpperCase());
+  delete (INITIAL_WARDEN_PROFILES as any)[profile.employeeId];
+  return true;
+}
+
+export function removeWardenDocument(id: string, docId: string) {
+  const profile = getWardenCmsProfile(id);
+  if (!profile) return null;
+  profile.documents = (profile.documents || []).filter(d => d.id !== docId);
   wardenCache.set(profile.employeeId.toUpperCase(), profile);
   return profile;
 }
@@ -760,10 +802,18 @@ export function setWardenStatusBackend(id: string, status: string, dutyStatus?: 
   return saveWardenCmsProfile(id, updates);
 }
 
-export function setWardenDutyStatusBackend(id: string, dutyStatus: string): WardenCmsProfile | null {
+export function setWardenDutyStatusBackend(
+  id: string,
+  dutyStatus: string,
+  relievingWarden?: string
+): WardenCmsProfile | null {
   const profile = getWardenCmsProfile(id);
   if (!profile) return null;
-  return saveWardenCmsProfile(id, { dutyStatus });
+  const updates: any = { dutyStatus };
+  if (relievingWarden !== undefined) {
+    updates.relievingWarden = relievingWarden;
+  }
+  return saveWardenCmsProfile(id, updates);
 }
 
 export function getAllWardenCmsProfiles(): WardenCmsProfile[] {

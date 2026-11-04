@@ -7,11 +7,13 @@ import {
 } from 'lucide-react';
 import './WardenManagement.css';
 import AddNewWardenSection from './AddNewWardenSection.jsx';
+import WardenPendingTasksModal from './WardenPendingTasksModal.jsx';
 
 import {
   getAllWardens,
   saveWarden,
   setWardenAccountStatus,
+  setWardenDutyStatus,
   getAssignmentHistory,
   reassignWarden,
   getWardenPermissions,
@@ -29,7 +31,8 @@ import {
   approveStaffLeave,
   rejectStaffLeave,
   applyStaffLeave,
-  getLeaveSummary
+  getLeaveSummary,
+  evaluateAllWardensDutyStatus
 } from '../../../services/hostelStaffLeaveStore.js';
 
 
@@ -114,11 +117,15 @@ export default function WardenManagementSection({ account, initialTab = 'directo
     window.addEventListener('bput_wardens_updated', handleWardensUpdate);
     window.addEventListener('bput_warden_created', handleWardensUpdate);
     window.addEventListener('bput_warden_status_changed', handleWardensUpdate);
+    window.addEventListener('bput_warden_duty_changed', handleWardensUpdate);
+    window.addEventListener('hostel_staff_leave_updated', handleWardensUpdate);
     window.addEventListener('storage', handleWardensUpdate);
     return () => {
       window.removeEventListener('bput_wardens_updated', handleWardensUpdate);
       window.removeEventListener('bput_warden_created', handleWardensUpdate);
       window.removeEventListener('bput_warden_status_changed', handleWardensUpdate);
+      window.removeEventListener('bput_warden_duty_changed', handleWardensUpdate);
+      window.removeEventListener('hostel_staff_leave_updated', handleWardensUpdate);
       window.removeEventListener('storage', handleWardensUpdate);
     };
   }, []);
@@ -127,6 +134,31 @@ export default function WardenManagementSection({ account, initialTab = 'directo
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [hostelFilter, setHostelFilter] = useState('ALL');
+
+  // Pending tasks modal state
+  const [selectedWardenForTasks, setSelectedWardenForTasks] = useState(null);
+  const [isPendingTasksModalOpen, setIsPendingTasksModalOpen] = useState(false);
+
+  const handleOpenPendingTasks = (warden) => {
+    setSelectedWardenForTasks(warden);
+    setIsPendingTasksModalOpen(true);
+  };
+
+  // Real-time listener for task updates
+  useEffect(() => {
+    const handleTaskUpdate = (e) => {
+      if (e.detail && e.detail.wardenId) {
+        setWardens(prev => prev.map(w => {
+          if ((w.id || '').toUpperCase() === (e.detail.wardenId || '').toUpperCase()) {
+            return { ...w, pendingTasks: e.detail.pendingCount };
+          }
+          return w;
+        }));
+      }
+    };
+    window.addEventListener('apna_warden_tasks_updated', handleTaskUpdate);
+    return () => window.removeEventListener('apna_warden_tasks_updated', handleTaskUpdate);
+  }, []);
 
   // Modals state
   const [selectedProfileWarden, setSelectedProfileWarden] = useState(null);
@@ -192,6 +224,14 @@ export default function WardenManagementSection({ account, initialTab = 'directo
     setIsReassignModalOpen(true);
   };
 
+  // Evaluate and sync warden duty status based on active leaves
+  useEffect(() => {
+    const evaluated = evaluateAllWardensDutyStatus();
+    if (evaluated && evaluated.length > 0) {
+      setWardens(evaluated);
+    }
+  }, []);
+
   const [staffLeaves, setStaffLeaves] = useState(() => getAllStaffLeaves());
   const [leaveSummary, setLeaveSummary] = useState(() => getLeaveSummary());
 
@@ -209,7 +249,9 @@ export default function WardenManagementSection({ account, initialTab = 'directo
     );
     setStaffLeaves(updatedLeaves);
     setLeaveSummary(summary);
-    if (showToast) showToast(`✓ Leave sanctioned for ${applicantName}`);
+    const evaluated = evaluateAllWardensDutyStatus();
+    setWardens(evaluated);
+    if (showToast) showToast(`✓ Leave sanctioned for ${applicantName}. Duty status updated.`);
   };
 
   const handleRejectLeave = (leaveId, applicantName) => {
@@ -222,7 +264,17 @@ export default function WardenManagementSection({ account, initialTab = 'directo
     );
     setStaffLeaves(updatedLeaves);
     setLeaveSummary(summary);
+    const evaluated = evaluateAllWardensDutyStatus();
+    setWardens(evaluated);
     if (showToast) showToast(`Leave rejected for ${applicantName}`);
+  };
+
+  const handleResumeDuty = (wardenId, wardenName) => {
+    if (window.confirm(`Mark ${wardenName} as back On Duty? This will conclude active leave and restore standard shift roster.`)) {
+      setWardenDutyStatus(wardenId, 'On Duty', 'Warden reported back on campus duty', 'None Assigned');
+      setWardens(getAllWardens());
+      if (showToast) showToast(`✓ ${wardenName} resumed active resident duty.`);
+    }
   };
 
   const [isRecordLeaveModalOpen, setIsRecordLeaveModalOpen] = useState(false);
@@ -264,6 +316,8 @@ export default function WardenManagementSection({ account, initialTab = 'directo
 
     applyStaffLeave(payload);
     setStaffLeaves(getAllStaffLeaves());
+    const evaluated = evaluateAllWardensDutyStatus();
+    setWardens(evaluated);
     setIsRecordLeaveModalOpen(false);
     if (showToast) showToast(`✓ Staff leave application registered and sanctioned for ${applicantWarden.name}`);
   };
@@ -674,7 +728,10 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                       <span className={`had-badge ${w.accountStatus === 'Active' ? 'success' : 'danger'}`}>
                         {w.accountStatus}
                       </span>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Duty: {w.dutyStatus}</div>
+                      <div style={{ fontSize: '0.72rem', color: w.dutyStatus === 'On Leave' ? '#d97706' : '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: w.dutyStatus === 'On Leave' ? '#f59e0b' : '#10b981', display: 'inline-block' }} />
+                        Duty: {w.dutyStatus || 'On Duty'}
+                      </div>
                     </td>
                     <td>
                       <strong>{w.attendanceCompliance}%</strong>
@@ -686,9 +743,19 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                       </div>
                     </td>
                     <td>
-                      <span className={`had-badge ${w.pendingTasks > 0 ? 'warning' : 'neutral'}`}>
-                        {w.pendingTasks} Pending
-                      </span>
+                      <button
+                        type="button"
+                        className={`wm-pending-badge-btn ${w.pendingTasks > 0 ? 'warning' : 'neutral'}`}
+                        onClick={() => handleOpenPendingTasks(w)}
+                        title={`Click to view all pending tasks and operational docket for ${w.name}`}
+                      >
+                        {w.pendingTasks > 0 ? (
+                          <span className="pulse-dot" />
+                        ) : (
+                          <Clock size={12} />
+                        )}
+                        <span>{w.pendingTasks} Pending</span>
+                      </button>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -1156,23 +1223,44 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                         </a>
                       </td>
                       <td>
-                        <button
-                          className="had-btn had-btn-secondary"
-                          style={{ padding: '0.3rem 0.65rem', fontSize: '0.74rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                          onClick={() => {
-                            handleOpenReassignModal({
-                              wardenId: w.id,
-                              newHostelId: w.hostelId || 'hst-1',
-                              newHostelName: w.hostelName,
-                              assignedBlocks: Array.isArray(w.assignedBlocks) ? w.assignedBlocks[0] : w.assignedBlocks,
-                              dutyShift: w.dutyShift || 'General / 24x7 Resident',
-                              relievingWarden: w.relievingWarden || 'None',
-                              reason: 'Shift & roster adjustment'
-                            });
-                          }}
-                        >
-                          <Edit2 size={12} /> Edit Roster
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                          <button
+                            className="had-btn had-btn-secondary"
+                            style={{ padding: '0.3rem 0.65rem', fontSize: '0.74rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            onClick={() => {
+                              handleOpenReassignModal({
+                                wardenId: w.id,
+                                newHostelId: w.hostelId || 'hst-1',
+                                newHostelName: w.hostelName,
+                                assignedBlocks: Array.isArray(w.assignedBlocks) ? w.assignedBlocks[0] : w.assignedBlocks,
+                                dutyShift: w.dutyShift || 'General / 24x7 Resident',
+                                relievingWarden: w.relievingWarden || 'None',
+                                reason: 'Shift & roster adjustment'
+                              });
+                            }}
+                          >
+                            <Edit2 size={12} /> Edit Roster
+                          </button>
+                          {w.dutyStatus === 'On Leave' && (
+                            <button
+                              className="had-btn had-btn-success"
+                              style={{
+                                padding: '0.3rem 0.65rem',
+                                fontSize: '0.74rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                background: '#ecfdf5',
+                                color: '#047857',
+                                border: '1px solid #a7f3d0'
+                              }}
+                              title="Early return / Warden has reported back on duty"
+                              onClick={() => handleResumeDuty(w.id, w.name)}
+                            >
+                              <CheckCircle2 size={12} /> Resume Duty
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1338,7 +1426,11 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Avg Complaint Turnaround</div>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '0.6rem', borderRadius: '8px' }}>
+                <div
+                  style={{ background: '#f8fafc', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s ease' }}
+                  onClick={() => handleOpenPendingTasks(w)}
+                  title="Click to view all pending reviews & dockets"
+                >
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0284c7' }}>
                     {w.pendingTasks}
                   </div>
@@ -1994,6 +2086,20 @@ export default function WardenManagementSection({ account, initialTab = 'directo
       )}
 
       {/* RECORD STAFF LEAVE MODAL */}
+      {isPendingTasksModalOpen && selectedWardenForTasks && (
+        <WardenPendingTasksModal
+          warden={selectedWardenForTasks}
+          onClose={() => {
+            setIsPendingTasksModalOpen(false);
+            setSelectedWardenForTasks(null);
+          }}
+          showToast={showToast}
+          onTaskUpdated={(wId, newCount) => {
+            setWardens(prev => prev.map(w => (w.id || '').toUpperCase() === (wId || '').toUpperCase() ? { ...w, pendingTasks: newCount } : w));
+          }}
+        />
+      )}
+
       {isRecordLeaveModalOpen && (
         <div className="wm-modal-backdrop" onClick={() => setIsRecordLeaveModalOpen(false)}>
           <div className="wm-modal" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>

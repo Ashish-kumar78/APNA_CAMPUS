@@ -25,6 +25,7 @@ import {
   Trash2
 } from 'lucide-react';
 import './WardenEmployeeProfile.css';
+import { downloadWardenDocument, getWardenDocumentPreviewUrl } from '../../utils/wardenDocumentService.js';
 
 const DEFAULT_PROFILE_DATA = {
   // Left Summary
@@ -220,7 +221,70 @@ export default function WardenEmployeeProfile({ account, onBack, warden, wardenI
     }
     return () => { isMounted = false; };
   }, [effectiveId]);
-  const [newDocForm, setNewDocForm] = useState({ name: '', meta: '' });
+  const [newDocForm, setNewDocForm] = useState({
+    name: '',
+    meta: '',
+    fileData: null,
+    fileName: '',
+    fileType: '',
+    fileSize: null,
+    fileSizeFormatted: '',
+  });
+  const fileInputRef = useRef(null);
+
+  // Document viewer modal state
+  const [selectedDocForView, setSelectedDocForView] = useState(null);
+  const [isDocViewerOpen, setIsDocViewerOpen] = useState(false);
+  const [docViewerUrl, setDocViewerUrl] = useState(null);
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('File size exceeds 15MB limit. Please choose a smaller file.');
+      return;
+    }
+
+    const sizeFormatted = file.size > 1024 * 1024
+      ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+      : `${(file.size / 1024).toFixed(1)} KB`;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Data = event.target.result;
+      const cleanFileName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      const autoTitle = cleanFileName
+        .split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+
+      setNewDocForm(prev => ({
+        ...prev,
+        name: prev.name.trim() ? prev.name : autoTitle,
+        meta: prev.meta.trim() ? prev.meta : `Official Upload · ${file.name} (${sizeFormatted}) · Verified ${new Date().toLocaleDateString('en-GB')}`,
+        fileData: base64Data,
+        fileName: file.name,
+        fileType: file.type || 'application/pdf',
+        fileSize: file.size,
+        fileSizeFormatted: sizeFormatted,
+      }));
+      showToast(`Selected file: ${file.name} (${sizeFormatted})`);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleViewDocument = (doc) => {
+    setSelectedDocForView(doc);
+    const preview = getWardenDocumentPreviewUrl(doc, profileData);
+    setDocViewerUrl(preview);
+    setIsDocViewerOpen(true);
+  };
+
+  const handleDownloadPdf = (doc) => {
+    downloadWardenDocument(doc, profileData);
+    showToast(`Downloading official PDF: ${doc.name}`);
+  };
 
   // Listen for avatar sync from other tabs/dashboard
   useEffect(() => {
@@ -312,7 +376,13 @@ export default function WardenEmployeeProfile({ account, onBack, warden, wardenI
     const newDoc = {
       id: `doc-${Date.now()}`,
       name: newDocForm.name.trim(),
-      meta: newDocForm.meta.trim() || `Verified & Uploaded by Administrator on ${new Date().toLocaleDateString('en-GB')}`,
+      meta: newDocForm.meta.trim() || `Verified & Uploaded on ${new Date().toLocaleDateString('en-GB')}`,
+      fileData: newDocForm.fileData || null,
+      fileName: newDocForm.fileName || null,
+      fileType: newDocForm.fileType || (newDocForm.fileData ? 'application/pdf' : null),
+      fileSize: newDocForm.fileSize || null,
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: account?.name || 'Administrator',
     };
     const updatedDocs = [newDoc, ...documents];
     setDocuments(updatedDocs);
@@ -327,15 +397,31 @@ export default function WardenEmployeeProfile({ account, onBack, warden, wardenI
       console.warn('Backend document attachment fallback:', err.message);
     }
 
-    setNewDocForm({ name: '', meta: '' });
+    setNewDocForm({
+      name: '',
+      meta: '',
+      fileData: null,
+      fileName: '',
+      fileType: '',
+      fileSize: null,
+      fileSizeFormatted: '',
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setEditingSection(null);
     showToast('Verification document uploaded and attached to warden dossier.');
   };
 
-  const handleDeleteDocument = (id) => {
+  const handleDeleteDocument = async (id) => {
     const updated = documents.filter((d) => d.id !== id);
     setDocuments(updated);
-    localStorage.setItem('hostel_employee_docs_140', JSON.stringify(updated));
+    try {
+      localStorage.setItem(`hostel_employee_docs_${effectiveId}`, JSON.stringify(updated));
+    } catch {}
+    try {
+      await api.deleteWardenDocument(effectiveId, id);
+    } catch (err) {
+      console.warn('Backend document deletion fallback:', err.message);
+    }
     showToast('Document record removed.');
   };
 
@@ -984,14 +1070,16 @@ export default function WardenEmployeeProfile({ account, onBack, warden, wardenI
                         <button
                           type="button"
                           className="emp-doc-action-btn"
-                          onClick={() => showToast(`Previewing verified file: ${doc.name}`)}
+                          onClick={() => handleViewDocument(doc)}
+                          title="View real document / verified credential"
                         >
                           <Eye size={13} /> View
                         </button>
                         <button
                           type="button"
                           className="emp-doc-action-btn"
-                          onClick={() => showToast(`Downloading official record: ${doc.name}`)}
+                          onClick={() => handleDownloadPdf(doc)}
+                          title="Download real document in PDF"
                         >
                           <Download size={13} /> PDF
                         </button>
@@ -1134,7 +1222,7 @@ export default function WardenEmployeeProfile({ account, onBack, warden, wardenI
 
             {/* Modal Body */}
             {editingSection === 'documents' ? (
-              <form onSubmit={handleAddDocument} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <form onSubmit={handleAddDocument} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
                 <div className="emp-form-group">
                   <label className="emp-form-label">Document Title / Credential Name *</label>
                   <input
@@ -1146,6 +1234,7 @@ export default function WardenEmployeeProfile({ account, onBack, warden, wardenI
                     onChange={(e) => setNewDocForm({ ...newDocForm, name: e.target.value })}
                   />
                 </div>
+
                 <div className="emp-form-group">
                   <label className="emp-form-label">Issuing Authority / Meta Description</label>
                   <input
@@ -1156,17 +1245,94 @@ export default function WardenEmployeeProfile({ account, onBack, warden, wardenI
                     onChange={(e) => setNewDocForm({ ...newDocForm, meta: e.target.value })}
                   />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '1rem' }}>
+
+                {/* PDF Document Upload Drop Zone */}
+                <div className="emp-form-group">
+                  <label className="emp-form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Upload Document File (PDF / Scan)</span>
+                    <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: 600 }}>Supports PDF, PNG, JPG (Max 15MB)</span>
+                  </label>
+                  <div
+                    style={{
+                      border: '2px dashed #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '1.25rem',
+                      textAlign: 'center',
+                      background: newDocForm.fileData ? '#f0fdf4' : '#f8fafc',
+                      borderColor: newDocForm.fileData ? '#10b981' : '#cbd5e1',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept=".pdf,application/pdf,image/png,image/jpeg"
+                      style={{ display: 'none' }}
+                      onChange={handleFileSelect}
+                    />
+                    {newDocForm.fileData ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '0.65rem 0.9rem', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ background: '#dcfce7', color: '#15803d', width: '38px', height: '38px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <FileCheck2 size={22} />
+                          </div>
+                          <div style={{ textAlign: 'left' }}>
+                            <strong style={{ fontSize: '0.86rem', color: '#0f172a', display: 'block' }}>{newDocForm.fileName}</strong>
+                            <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600 }}>
+                              {newDocForm.fileSizeFormatted} · {newDocForm.fileType?.includes('pdf') ? 'PDF Document' : 'Image Scan'} (Ready to attach &amp; download)
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNewDocForm(prev => ({
+                              ...prev,
+                              fileData: null,
+                              fileName: '',
+                              fileType: '',
+                              fileSize: null,
+                              fileSizeFormatted: '',
+                            }));
+                            if (fileInputRef.current) fileInputRef.current.value = '';
+                          }}
+                          style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '4px' }}
+                          title="Remove selected file"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <Upload size={30} color="#0284c7" style={{ margin: '0 auto 8px' }} />
+                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>
+                          Click to select or drag &amp; drop PDF document
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
+                          Upload real PDF file to view inside browser and enable direct PDF download
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '0.5rem' }}>
                   <button
                     type="button"
-                    onClick={() => setEditingSection(null)}
-                    style={{ padding: '0.5rem 1rem', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}
+                    onClick={() => {
+                      setEditingSection(null);
+                      setNewDocForm({ name: '', meta: '', fileData: null, fileName: '', fileType: '', fileSize: null, fileSizeFormatted: '' });
+                    }}
+                    style={{ padding: '0.5rem 1rem', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    style={{ padding: '0.5rem 1.25rem', background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}
+                    style={{ padding: '0.5rem 1.25rem', background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)' }}
                   >
                     Add Document Record
                   </button>

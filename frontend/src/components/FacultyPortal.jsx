@@ -1705,7 +1705,7 @@ export default function FacultyPortal({ account, onLogout }) {
                       <button type="button" onClick={() => updateMonth(1)} aria-label="Next month" className="cal-btn-arrow">
                         <ChevronRight size={14} />
                       </button>
-                      <button type="button" onClick={() => setCurrentDate(new Date())} className="cal-btn-today">
+                      <button type="button" onClick={() => setCurrentMonth(new Date())} className="cal-btn-today">
                         Today
                       </button>
                     </div>

@@ -1,7 +1,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  AlertOctagon, ShieldAlert, CheckCircle2, Clock, Search, 
-  Filter, FileText, Plus, Eye, X, Lock, PhoneCall 
+import {
+  AlertOctagon,
+  Check,
+  CheckCircle2,
+  Clock,
+  Eye,
+  FileText,
+  Filter,
+  Lock,
+  PhoneCall,
+  Plus,
+  Printer,
+  Search,
+  ShieldAlert,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockAccidentIncidents } from './transportData.js';
@@ -257,8 +269,8 @@ export default function TransportAccidentsSection() {
               </div>
             </div>
             <div className="trans-modal-footer">
-              <button className="trans-btn trans-btn-outline" onClick={() => setSelectedIncident(null)}>Close</button>
-              <button className="trans-btn trans-btn-primary" onClick={() => window.print()}>Print Statutory Report</button>
+              <button className="trans-btn trans-btn-secondary" onClick={() => setSelectedIncident(null)}><X size={14} /> Close</button>
+              <button className="trans-btn trans-btn-primary" onClick={() => window.print()}><Printer size={14} /> Print Statutory Report</button>
             </div>
           </div>
         </div>
@@ -322,8 +334,8 @@ export default function TransportAccidentsSection() {
                 </div>
               </div>
               <div className="trans-modal-footer">
-                <button type="button" className="trans-btn trans-btn-outline" onClick={() => setNewIncidentModal(false)}>Cancel</button>
-                <button type="submit" className="trans-btn trans-btn-danger">Register Incident Dossier</button>
+                <button type="button" className="trans-btn trans-btn-secondary" onClick={() => setNewIncidentModal(false)}><X size={14} /> Cancel</button>
+                <button type="submit" className="trans-btn trans-btn-danger"><Check size={14} /> Register Incident Dossier</button>
               </div>
             </form>
           </div>

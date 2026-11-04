@@ -140,6 +140,38 @@ body {
 
 button, input, select, textarea { font: inherit; }
 
+/* ==========================================================================
+   APNA CAMPUS GLOBAL BUTTON RESET & NORMALIZATION
+   Guarantees NO button ever falls back to the default 1995 grey 3D buttonface
+   ========================================================================== */
+button {
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  line-height: 1.25;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 button, a { -webkit-tap-highlight-color: transparent; }
 
 a { color: inherit; }

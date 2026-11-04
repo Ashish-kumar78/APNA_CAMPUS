@@ -1,43 +1,43 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Bus,
-  MapPin,
-  Users,
-  Clock,
-  ShieldCheck,
-  CheckCircle,
-  AlertTriangle,
-  Phone,
-  FileText,
-  Plus,
-  Navigation,
-  Calendar,
-  Search,
-  Filter,
-  Download,
-  Printer,
-  Radio,
-  Wrench,
-  RotateCw,
-  QrCode,
-  Check,
-  Slash,
   AlertCircle,
-  CreditCard,
-  UserCheck,
-  MessageSquare,
-  Fuel,
-  FileCheck2,
-  MessageSquareWarning,
   AlertOctagon,
-  SquareParking,
-  Megaphone,
-  GitPullRequest,
-  CalendarDays,
+  AlertTriangle,
   Boxes,
+  Bus,
+  Calendar,
+  CalendarDays,
+  Check,
+  CheckCircle,
+  Clock,
+  CreditCard,
+  Download,
+  FileCheck2,
+  FileText,
+  Filter,
+  Fuel,
+  GitPullRequest,
+  MapPin,
+  Megaphone,
+  MessageSquare,
+  MessageSquareWarning,
+  Navigation,
+  Phone,
+  Plus,
+  Printer,
+  QrCode,
+  Radio,
+  RotateCw,
+  Search,
   Settings,
-  Sparkles,
   ShieldAlert,
+  ShieldCheck,
+  Slash,
+  Sparkles,
+  SquareParking,
+  UserCheck,
+  Users,
+  Wrench,
   X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
@@ -60,6 +60,14 @@ import TransportSafetySection from './TransportSafetySection.jsx';
 import TransportScheduleSection from './TransportScheduleSection.jsx';
 import TransportInventorySection from './TransportInventorySection.jsx';
 import TransportSettingsSection from './TransportSettingsSection.jsx';
+import TransportAlertsSection from './TransportAlertsSection.jsx';
+import TransportDailySummarySection from './TransportDailySummarySection.jsx';
+import TransportStudentApplicationsSection from './TransportStudentApplicationsSection.jsx';
+import TransportDutyRosterSection from './TransportDutyRosterSection.jsx';
+import TransportLicenseVerificationSection from './TransportLicenseVerificationSection.jsx';
+import TransportBreakdownSection from './TransportBreakdownSection.jsx';
+import TransportFeeReconciliationSection from './TransportFeeReconciliationSection.jsx';
+import TransportExpensesSection from './TransportExpensesSection.jsx';
 
 export default function TransportManagementModule({ account, userRole = 'SUPER_ADMIN' }) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -315,6 +323,14 @@ export default function TransportManagementModule({ account, userRole = 'SUPER_A
   // Sections navigation definition
   const navTabs = [
     { id: 'overview', label: 'Overview & KPIs', icon: Sparkles },
+    { id: 'alerts', label: 'Operational Alerts', icon: AlertTriangle },
+    { id: 'daily-summary', label: 'Daily Shift Summary', icon: Clock },
+    { id: 'student-applications', label: 'Student Applications', icon: FileText },
+    { id: 'duty-roster', label: 'Crew Duty Roster', icon: CalendarDays },
+    { id: 'license-verification', label: 'Licence Verification', icon: FileCheck2 },
+    { id: 'breakdown-repair', label: 'Breakdown & Repairs', icon: AlertOctagon },
+    { id: 'fee-reconciliation', label: 'Fee Reconciliation', icon: RotateCw },
+    { id: 'transport-expenses', label: 'Transport Expenses', icon: CreditCard },
     { id: 'fleet', label: 'Fleet Registry', icon: Bus },
     { id: 'routes', label: 'Route Network', icon: MapPin },
     { id: 'passes', label: 'Bus Passes', icon: Users },
@@ -918,6 +934,14 @@ export default function TransportManagementModule({ account, userRole = 'SUPER_A
       {activeTab === 'schedule-calendar' && <TransportScheduleSection userRole={userRole} />}
       {activeTab === 'inventory' && <TransportInventorySection userRole={userRole} />}
       {activeTab === 'settings-policies' && <TransportSettingsSection userRole={userRole} />}
+      {activeTab === 'alerts' && <TransportAlertsSection onNavigateSection={setActiveTab} userRole={userRole} />}
+      {activeTab === 'daily-summary' && <TransportDailySummarySection userRole={userRole} />}
+      {activeTab === 'student-applications' && <TransportStudentApplicationsSection userRole={userRole} />}
+      {activeTab === 'duty-roster' && <TransportDutyRosterSection userRole={userRole} />}
+      {activeTab === 'license-verification' && <TransportLicenseVerificationSection userRole={userRole} />}
+      {activeTab === 'breakdown-repair' && <TransportBreakdownSection userRole={userRole} />}
+      {activeTab === 'fee-reconciliation' && <TransportFeeReconciliationSection userRole={userRole} />}
+      {activeTab === 'transport-expenses' && <TransportExpensesSection userRole={userRole} />}
 
       {/* 23. REPORTS */}
       {activeTab === 'reports' && (

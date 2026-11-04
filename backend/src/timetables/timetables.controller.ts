@@ -35,6 +35,123 @@ export class TimetablesController {
   }
 
   // ==========================================
+  // DASHBOARD STATISTICS & KPIS
+  // ==========================================
+  @Get('dashboard-stats')
+  @ApiOperation({ summary: 'Get live real-time dashboard statistics across academic departments' })
+  async getDashboardStats(
+    @Query('department') department?: string,
+    @Query('academicYear') academicYear?: string,
+  ) {
+    const data = await this.timetablesService.getDashboardStats(department, academicYear || '2026-27');
+    return { success: true, data };
+  }
+
+  // ==========================================
+  // ACADEMIC SELECTIONS & DYNAMIC OPTIONS
+  // ==========================================
+  @Get('sections')
+  @ApiOperation({ summary: 'Get sections with optional department and semester filter' })
+  async getSections(
+    @Query('department') department?: string,
+    @Query('semester') semester?: string,
+  ) {
+    const data = await this.timetablesService.getSections(department, semester);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('sections')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add a new section' })
+  async createSection(@CurrentUser() user: any, @Body() body: any) {
+    this.checkAuthorizedRole(user, ['super_admin', 'admin', 'principal', 'hod']);
+    const data = await this.timetablesService.createSection(body);
+    return { success: true, message: `Section ${data.section} added successfully.`, data };
+  }
+
+  @Put('sections/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update an existing section' })
+  async updateSection(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    this.checkAuthorizedRole(user, ['super_admin', 'admin', 'principal', 'hod']);
+    const data = await this.timetablesService.updateSection(id, body);
+    return { success: true, message: `Section updated successfully.`, data };
+  }
+
+  @Delete('sections/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a section' })
+  async deleteSection(@CurrentUser() user: any, @Param('id') id: string) {
+    this.checkAuthorizedRole(user, ['super_admin', 'admin', 'principal', 'hod']);
+    await this.timetablesService.deleteSection(id);
+    return { success: true, message: `Section deleted successfully.` };
+  }
+
+  @Get('branches')
+  @ApiOperation({ summary: 'Get degree branches/programmes' })
+  async getBranches(@Query('department') department?: string) {
+    const data = await this.timetablesService.getBranches(department);
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('branches')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add a new branch/programme' })
+  async createBranch(@CurrentUser() user: any, @Body() body: any) {
+    this.checkAuthorizedRole(user, ['super_admin', 'admin', 'principal', 'hod']);
+    const data = await this.timetablesService.createBranch(body);
+    return { success: true, message: `Branch ${data.name} created.`, data };
+  }
+
+  @Get('academic-years')
+  @ApiOperation({ summary: 'Get institutional academic sessions' })
+  async getAcademicYears() {
+    const data = await this.timetablesService.getAcademicYears();
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('academic-years')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Register a new academic year' })
+  async createAcademicYear(@CurrentUser() user: any, @Body() body: any) {
+    this.checkAuthorizedRole(user, ['super_admin', 'admin', 'principal', 'hod']);
+    const data = await this.timetablesService.createAcademicYear(body);
+    return { success: true, message: `Academic year ${data.year} registered.`, data };
+  }
+
+  @Get('semesters')
+  @ApiOperation({ summary: 'Get semesters' })
+  async getSemesters() {
+    const data = await this.timetablesService.getSemesters();
+    return { success: true, count: data.length, data };
+  }
+
+  @Post('semesters')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Register a new semester' })
+  async createSemester(@CurrentUser() user: any, @Body() body: any) {
+    this.checkAuthorizedRole(user, ['super_admin', 'admin', 'principal', 'hod']);
+    const data = await this.timetablesService.createSemester(body);
+    return { success: true, message: `Semester ${data.label} registered.`, data };
+  }
+
+  @Post('subjects')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add a new curriculum subject' })
+  async createSubject(@CurrentUser() user: any, @Body() body: any) {
+    this.checkAuthorizedRole(user, ['super_admin', 'admin', 'principal', 'hod']);
+    const data = await this.timetablesService.createSubject(body);
+    return { success: true, message: `Subject ${data.code} registered.`, data };
+  }
+
+  // ==========================================
   // ROOMS & LABORATORIES
   // ==========================================
   @Get('rooms')
@@ -250,6 +367,33 @@ export class TimetablesController {
   ) {
     this.checkAuthorizedRole(user, ['super_admin', 'admin', 'principal', 'hod']);
     return this.timetablesService.updateTimetableEntry(timetableId, entryId, body, user);
+  }
+
+  @Patch(':id/entries/:entryId/lock')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Toggle lock state on a timetable session' })
+  async toggleEntryLock(
+    @CurrentUser() user: any,
+    @Param('id') timetableId: string,
+    @Param('entryId') entryId: string,
+  ) {
+    this.checkAuthorizedRole(user, ['super_admin', 'admin', 'principal', 'hod']);
+    const entry = await this.timetablesService.toggleEntryLock(timetableId, entryId);
+    return { success: true, message: 'Session lock status toggled.', data: entry };
+  }
+
+  @Post(':id/regenerate-unlocked')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Partially re-generate unlocked slots preserving locked sessions' })
+  async regenerateUnlockedEntries(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+  ) {
+    this.checkAuthorizedRole(user, ['super_admin', 'admin', 'principal', 'hod']);
+    const timetable = await this.timetablesService.regenerateUnlockedEntries(id, user);
+    return { success: true, message: 'Unlocked sessions regenerated without clashes.', data: timetable };
   }
 
   // ==========================================

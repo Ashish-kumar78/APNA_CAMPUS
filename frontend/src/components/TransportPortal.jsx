@@ -1,4 +1,17 @@
-import { Truck, Ticket, CheckCircle2, ArrowRightLeft, FileSpreadsheet } from 'lucide-react';
+import {
+  Activity,
+  ArrowRightLeft,
+  CheckCheck,
+  CheckCircle2,
+  Compass,
+  Edit3,
+  Eye,
+  FileSpreadsheet,
+  Play,
+  Ticket,
+  Truck,
+  Zap
+} from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from './Navigation';
 import {
@@ -43,6 +56,7 @@ import {
   Settings
 } from 'lucide-react';
 import './TransportPortal.css';
+import './transport/TransportExtraSections.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import { erpStore } from '../services/erpStore.js';
 import { api } from '../services/api.js';
@@ -63,6 +77,14 @@ import TransportSafetySection from './transport/TransportSafetySection.jsx';
 import TransportScheduleSection from './transport/TransportScheduleSection.jsx';
 import TransportInventorySection from './transport/TransportInventorySection.jsx';
 import TransportSettingsSection from './transport/TransportSettingsSection.jsx';
+import TransportAlertsSection from './transport/TransportAlertsSection.jsx';
+import TransportDailySummarySection from './transport/TransportDailySummarySection.jsx';
+import TransportStudentApplicationsSection from './transport/TransportStudentApplicationsSection.jsx';
+import TransportDutyRosterSection from './transport/TransportDutyRosterSection.jsx';
+import TransportLicenseVerificationSection from './transport/TransportLicenseVerificationSection.jsx';
+import TransportBreakdownSection from './transport/TransportBreakdownSection.jsx';
+import TransportFeeReconciliationSection from './transport/TransportFeeReconciliationSection.jsx';
+import TransportExpensesSection from './transport/TransportExpensesSection.jsx';
 
 export default function TransportPortal({ account, onLogout, onSwitchRole }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -75,6 +97,22 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
   const [drivers, setDrivers] = useState(() => erpStore.getTransportDrivers());
   const [trips, setTrips] = useState(() => erpStore.getTransportTrips());
   const [telemetry, setTelemetry] = useState(() => erpStore.getTransportTelemetry());
+  const [selectedTelemetryBus, setSelectedTelemetryBus] = useState(null);
+  const [telemetryFilter, setTelemetryFilter] = useState('ALL');
+  const [isPingingTelemetry, setIsPingingTelemetry] = useState(false);
+
+  const handlePingTelemetry = () => {
+    setIsPingingTelemetry(true);
+    setTimeout(() => {
+      setTelemetry(prev => prev.map(t => ({
+        ...t,
+        lastPingTime: 'Just now (0s ago)',
+        speedKmH: t.telemetryStatus === 'Live' ? Math.max(25, Math.min(55, t.speedKmH + Math.floor(Math.random() * 7 - 3))) : t.speedKmH
+      })));
+      setIsPingingTelemetry(false);
+      setToastMessage('Real-time AIS-140 GPS transponders successfully polled. 5/5 fleet beacons synced.');
+    }, 800);
+  };
   const [dashboardStats, setDashboardStats] = useState(() => erpStore.getTransportDashboardStats());
 
   // Search & Filter States
@@ -470,42 +508,64 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
 
   const transportNavSections = [
     {
-      title: 'FLEET & TRANSIT OPERATIONS',
+      title: 'A. TRANSPORT OVERVIEW',
       items: [
         { id: 'dashboard', label: 'Fleet Dashboard', icon: Bus },
-        { id: 'fleet', label: 'Bus & Vehicle Directory', icon: Truck },
-        { id: 'routes', label: 'Transit Routes & Stops', icon: MapPin },
-        { id: 'trips', label: 'Live Telemetry & Tracking', icon: Navigation },
-        { id: 'schedule-calendar', label: 'Schedule & Timetable', icon: Calendar },
+        { id: 'overview-alerts', label: 'Operational Alerts & Tasks', icon: AlertTriangle },
+        { id: 'overview-daily-summary', label: 'Daily Operations Summary', icon: Clock },
       ]
     },
     {
-      title: 'COMMUTERS & PASSES',
+      title: 'B. FLEET & ROUTE OPERATIONS',
       items: [
-        { id: 'passes', label: 'Student Bus Passes', icon: Ticket },
-        { id: 'boarding', label: 'QR Boarding Logs', icon: CheckCircle2 },
-        { id: 'fees-dues', label: 'Transport Fee Dues', icon: CreditCard },
+        { id: 'fleet', label: 'Vehicle Registry', icon: Truck },
+        { id: 'routes', label: 'Routes & Stops', icon: MapPin },
+        { id: 'trips', label: 'Trip & Dispatch Management', icon: Navigation },
+        { id: 'telemetry', label: 'Live GPS Tracking', icon: Radio },
+        { id: 'schedule-calendar', label: 'Transport Scheduling', icon: Calendar },
+        { id: 'parking', label: 'Depot & Parking Bays', icon: SquareParking },
+      ]
+    },
+    {
+      title: 'C. STUDENT TRANSPORT SERVICES',
+      items: [
+        { id: 'student-applications', label: 'Student Applications', icon: FileText },
+        { id: 'passes', label: 'Student Bus Pass Management', icon: Ticket },
+        { id: 'boarding', label: 'QR Boarding & Drop Logs', icon: QrCode },
         { id: 'requests', label: 'Route Change Requests', icon: ArrowRightLeft },
+        { id: 'fees-dues', label: 'Transport Fee Status', icon: CreditCard },
       ]
     },
     {
-      title: 'MAINTENANCE & SAFETY',
+      title: 'D. STAFF & CREW MANAGEMENT',
       items: [
-        { id: 'maintenance', label: 'Workshop & Maintenance', icon: Wrench },
-        { id: 'fuel-expenses', label: 'Fuel & Mileage Logs', icon: Fuel },
-        { id: 'safety-inspections', label: 'Fitness & RTO Compliance', icon: ShieldCheck },
-        { id: 'accidents', label: 'Safety Incident Records', icon: AlertTriangle },
+        { id: 'drivers', label: 'Driver & Conductor Directory', icon: Users },
+        { id: 'duty-roster', label: 'Duty Roster & Shifts', icon: CalendarDays },
+        { id: 'staff-attendance', label: 'Staff Attendance & Leave', icon: UserCheck },
+        { id: 'license-verification', label: 'Licence & Verification', icon: FileCheck2 },
       ]
     },
     {
-      title: 'STAFF & NOTICES',
+      title: 'E. MAINTENANCE, SAFETY & COMPLIANCE',
       items: [
-        { id: 'drivers', label: 'Drivers & Crew Roster', icon: Users },
-        { id: 'staff-attendance', label: 'Driver Attendance', icon: Clock },
-        { id: 'complaints', label: 'Commuter Grievances', icon: MessageSquare },
-        { id: 'notifications', label: 'Route Broadcasts', icon: Megaphone },
-        { id: 'reports', label: 'Transport Analytics', icon: FileSpreadsheet },
-        { id: 'settings-policies', label: 'Fleet Policies & Tariffs', icon: Settings },
+        { id: 'maintenance', label: 'Preventive Maintenance', icon: Wrench },
+        { id: 'breakdown-repair', label: 'Breakdown & Repair', icon: AlertOctagon },
+        { id: 'fuel-expenses', label: 'Fuel & Mileage Management', icon: Fuel },
+        { id: 'compliance', label: 'Fitness & Insurance Compliance', icon: ShieldCheck },
+        { id: 'safety-inspections', label: 'Safety Inspections', icon: CheckCircle2 },
+        { id: 'accidents', label: 'Accidents & Incidents', icon: MessageSquareWarning },
+        { id: 'inventory', label: 'Depot Spare Parts', icon: Boxes },
+      ]
+    },
+    {
+      title: 'F. FINANCE, COMMUNICATION & GOVERNANCE',
+      items: [
+        { id: 'fee-reconciliation', label: 'Transport Fee Reconciliation', icon: RotateCw },
+        { id: 'transport-expenses', label: 'Transport Expenses', icon: CreditCard },
+        { id: 'complaints', label: 'Complaints & Grievances', icon: MessageSquare },
+        { id: 'notifications', label: 'Notices & Broadcasts', icon: Megaphone },
+        { id: 'reports', label: 'Reports & Analytics', icon: FileSpreadsheet },
+        { id: 'settings-policies', label: 'Policies & Configuration', icon: Settings },
       ]
     }
   ];
@@ -514,23 +574,88 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
     switch (activeTab) {
       case 'dashboard':
         return {
-          title: 'Campus Transit & Fleet Operations',
+          title: 'Fleet Operations Command Center',
           subtitle: 'Live fleet telemetry, student bus passes, route schedules, and driver assignments.'
+        };
+      case 'overview-alerts':
+        return {
+          title: 'Operational Alerts & Tasks',
+          subtitle: 'Critical compliance alerts, route occupancy ceilings, and urgent commuter grievances.'
+        };
+      case 'overview-daily-summary':
+        return {
+          title: 'Daily Operations Summary & Manifest',
+          subtitle: 'Shift turnouts, boarding audits, daily fuel consumption, and transit timelines.'
         };
       case 'fleet':
         return {
           title: 'Official College Fleet Registry',
           subtitle: 'Bus fitness certificates, insurance records, seating capacities, and speed limiters.'
         };
+      case 'routes':
+        return {
+          title: 'Transit Routes & Ordered Stops',
+          subtitle: 'Pickup sequences, route capacities, transit tariffs, and disruption broadcasts.'
+        };
+      case 'trips':
+        return {
+          title: 'Trip Dispatch & Shift Operations',
+          subtitle: 'Morning academic pickup, evening return transit, and emergency event dispatches.'
+        };
+      case 'telemetry':
+        return {
+          title: 'Live GPS Telemetry & Tracking',
+          subtitle: 'Hardware OBD / AIS-140 gateway feed, speeds, route deviations, and live ETAs.'
+        };
+      case 'student-applications':
+        return {
+          title: 'Student Transport Applications',
+          subtitle: 'Commuter admission verification, route seat checks, and bus pass approvals.'
+        };
       case 'passes':
         return {
           title: 'Student & Faculty Bus Pass Registry',
           subtitle: 'QR-enabled route passes, pickup stop verification, and fee clearance audits.'
         };
+      case 'boarding':
+        return {
+          title: 'QR Boarding & Drop-off Logs',
+          subtitle: 'Real-time boarding scans, duplicate prevention, and absent student tracking.'
+        };
+      case 'duty-roster':
+        return {
+          title: 'Crew Duty Roster & Shift Assignments',
+          subtitle: 'Driver and conductor shift pairings, duty conflict prevention, and reserve crew.'
+        };
+      case 'license-verification':
+        return {
+          title: 'Driving Licence & Document Verification',
+          subtitle: 'HMV commercial licences, annual medical fitness audits, and RTO validity.'
+        };
+      case 'breakdown-repair':
+        return {
+          title: 'Breakdown & Repair Management',
+          subtitle: 'Emergency road assistance logs, workshop work orders, and vehicle downtime.'
+        };
+      case 'fee-reconciliation':
+        return {
+          title: 'Transport Fee Reconciliation',
+          subtitle: 'Read-only synchronized audit with Finance & Accounts department general ledger.'
+        };
+      case 'transport-expenses':
+        return {
+          title: 'Transport Operational Expenses',
+          subtitle: 'Fuel vouchers, maintenance expenditures, tolls, and cost per kilometer analytics.'
+        };
+      case 'reports':
+        return {
+          title: 'Transport Analytics & Official Reports',
+          subtitle: '12 analytical audits with date filtering and CSV export capabilities.'
+        };
       default:
         return {
           title: (activeTab || 'Transport Portal').replace(/-/g, ' ').toUpperCase(),
-          subtitle: 'Transport Department & Fleet Logistics'
+          subtitle: 'Transport Department & Fleet Operations'
         };
     }
   };
@@ -570,8 +695,8 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onLogout={onLogout}
-        pageTitle={transportHeading.title}
-        pageSubtitle={transportHeading.subtitle}
+        pageTitle={null}
+        pageSubtitle={null}
       >
         <div className="transport-portal-content-wrap">
         {activeTab === 'dashboard' ? (
@@ -604,6 +729,14 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
               else if (target === 'trans-schedule') setActiveTab('schedule-calendar');
               else if (target === 'trans-inventory') setActiveTab('inventory');
               else if (target === 'trans-settings') setActiveTab('settings-policies');
+              else if (target === 'trans-alerts') setActiveTab('overview-alerts');
+              else if (target === 'trans-daily-summary') setActiveTab('overview-daily-summary');
+              else if (target === 'trans-student-applications') setActiveTab('student-applications');
+              else if (target === 'trans-duty-roster') setActiveTab('duty-roster');
+              else if (target === 'trans-license-verification') setActiveTab('license-verification');
+              else if (target === 'trans-breakdown-repair') setActiveTab('breakdown-repair');
+              else if (target === 'trans-fee-reconciliation') setActiveTab('fee-reconciliation');
+              else if (target === 'trans-transport-expenses') setActiveTab('transport-expenses');
               else setActiveTab(target || 'fleet');
             }}
           />
@@ -612,7 +745,9 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
 
 
         <div className="erp-content-body">
-          {/* STATS ROW (CLICKABLE TO OPEN FILTERED VIEWS) */}
+          {/* STATS ROW (SHOWN ONLY ON FLEET REGISTRY) */}
+          {activeTab === 'fleet' && (
+          
           <div className="erp-stats-grid">
             <div
               className="erp-stat-card erp-stat-card-clickable"
@@ -695,6 +830,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
               <div className="erp-stat-note">Fitness / Insurance certificates</div>
             </div>
           </div>
+          )}
 
           {/* TAB: CAMPUS CONNECT (WHATSAPP CLONE) */}
           {activeTab === 'campus-connect' && (
@@ -822,7 +958,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                                 setShowStatusModal(true);
                               }}
                             >
-                              Update Status
+                              <Edit3 size={13} className="text-sky-600" /> Update Status
                             </button>
                           </td>
                         </tr>
@@ -926,7 +1062,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                                 setShowDisruptionModal(true);
                               }}
                             >
-                              Advisory / Diversion
+                              <AlertTriangle size={13} className="text-amber-500" /> Advisory / Diversion
                             </button>
                           </div>
                         </td>
@@ -1059,7 +1195,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                                   onClick={() => handlePassAction(p.id, 'APPROVE')}
                                   title="Approve pass"
                                 >
-                                  Approve
+                                  <CheckCircle2 size={13} /> Approve
                                 </button>
                               )}
                               {(p.status || '').includes('Active') && (
@@ -1069,7 +1205,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                                   style={{ color: '#ef4444' }}
                                   title="Suspend pass"
                                 >
-                                  Suspend
+                                  <AlertTriangle size={13} /> Suspend
                                 </button>
                               )}
                             </div>
@@ -1227,7 +1363,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                                 className="erp-btn-primary erp-btn-sm"
                                 onClick={() => handleTripAction(t.id, 'START_TRIP')}
                               >
-                                Start Trip
+                                <Play size={13} /> Start Trip
                               </button>
                             )}
                             {t.status === 'In Transit' && (
@@ -1236,7 +1372,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                                   className="erp-btn-secondary erp-btn-sm"
                                   onClick={() => handleTripAction(t.id, 'COMPLETE_TRIP')}
                                 >
-                                  Complete
+                                  <CheckCheck size={13} className="text-emerald-600" /> Complete
                                 </button>
                                 <button
                                   className="erp-btn-secondary erp-btn-sm"
@@ -1246,7 +1382,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                                   }}
                                   style={{ color: '#f59e0b' }}
                                 >
-                                  Log Delay
+                                  <Clock size={13} className="text-amber-500" /> Log Delay
                                 </button>
                               </>
                             )}
@@ -1257,7 +1393,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                                 style={{ color: '#ef4444' }}
                                 title="Report vehicle breakdown and dispatch backup"
                               >
-                                Breakdown
+                                <AlertTriangle size={13} className="text-rose-500" /> Breakdown
                               </button>
                             )}
                           </div>
@@ -1272,90 +1408,317 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
 
           {/* TAB 6: GPS TRACKING & TELEMETRY */}
           {activeTab === 'telemetry' && (
-            <div className="erp-panel">
-              <div className="erp-panel-header">
+            <div className="erp-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="erp-panel-header" style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', background: '#ffffff', borderRadius: '14px 14px 0 0' }}>
                 <div className="erp-panel-title">
-                  <h3>Fleet GPS Tracking &amp; Live Telematics Health</h3>
-                  <p>Real-time vehicle coordinates, speed telemetry, cellular link quality, and control room SOS helpline</p>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Radio size={22} color="#0284c7" /> Live GPS Tracking & Fleet Telematics Gateway
+                  </h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.86rem', color: '#64748b' }}>
+                    Real-time hardware OBD-II & satellite telemetry, vehicle speedometers, live coordinates, and 24x7 control room SOS helpline
+                  </p>
                 </div>
-                <div className="erp-panel-actions">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 600, color: '#10b981' }}>
-                    <span className="telemetry-pulse"></span> Control Room Link Online
+                <div className="erp-panel-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button 
+                    className="erp-btn-secondary" 
+                    onClick={handlePingTelemetry} 
+                    disabled={isPingingTelemetry}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '7px 14px' }}
+                  >
+                    <RotateCw size={14} className={isPingingTelemetry ? 'animate-spin text-sky-600' : 'text-sky-600'} />
+                    {isPingingTelemetry ? 'Polling Transponders...' : 'Poll GPS Transponders'}
+                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 700, color: '#10b981', background: '#ecfdf5', padding: '6px 12px', borderRadius: '8px', border: '1px solid #a7f3d0' }}>
+                    <span className="telemetry-pulse"></span> AIS-140 Gateway Online
                   </div>
                 </div>
               </div>
 
-              {/* Safety Helpline Banner */}
+              {/* Central Command Emergency Banner */}
               <div style={{
-                margin: '1.25rem 1.5rem 0 1.5rem',
-                background: 'linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%)',
-                border: '1px solid #bfdbfe',
-                borderRadius: '12px',
-                padding: '1rem 1.25rem',
+                margin: '0 1.5rem',
+                background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                border: '1px solid #bae6fd',
+                borderRadius: '14px',
+                padding: '1.15rem 1.35rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 flexWrap: 'wrap',
                 gap: '1rem',
+                boxShadow: '0 2px 6px rgba(2, 132, 199, 0.06)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Compass size={28} color="#0284c7" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', boxShadow: '0 4px 12px rgba(2₹32₹99,0.3)' }}>
+                    <Compass size={26} />
+                  </div>
                   <div>
-                    <strong style={{ fontSize: '0.9rem', color: '#0369a1' }}>Campus Transport Central Command Desk</strong>
-                    <div style={{ fontSize: '0.78rem', color: '#475569' }}>
-                      24x7 Transit Safety Hotline: <strong>+91 674 2320011</strong> · Emergency Cell: <strong>+91 94371 00214</strong>
+                    <strong style={{ fontSize: '0.98rem', color: '#0369a1', display: 'block', fontWeight: 800 }}>Campus Transport Central Command Desk</strong>
+                    <div style={{ fontSize: '0.82rem', color: '#334155', marginTop: '2px' }}>
+                      24x7 Transit Safety Hotline: <strong style={{ color: '#0f172a' }}>+91 674 2320011</strong> &bull; Emergency Response Cell: <strong style={{ color: '#e11d48' }}>+91 94371 00214</strong>
                     </div>
                   </div>
                 </div>
-                <div style={{ fontSize: '0.75rem', background: '#ffffff', padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontWeight: 600 }}>
-                  Telematics Protocol: AIS-140 GPS Compliance
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '0.78rem', background: '#ffffff', color: '#0369a1', padding: '6px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontWeight: 700 }}>
+                    AIS-140 Standard &bull; OBD-II Telematics &bull; IRNSS/NavIC
+                  </span>
                 </div>
               </div>
 
-              <div className="erp-table-responsive" style={{ padding: '1rem 0' }}>
-                <table className="erp-table">
+              {/* Telemetry KPI Metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem', padding: '0 1.5rem' }}>
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#f0f9ff', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                    <Bus size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a' }}>{telemetry.length}</div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Tracked Transponders</div>
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                    <Navigation size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#059669' }}>
+                      {telemetry.filter(t => t.telemetryStatus === 'Live').length}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Live En Route</div>
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#fffbeb', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                    <Clock size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#d97706' }}>
+                      {telemetry.filter(t => t.telemetryStatus === 'Delayed Updates').length}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Traffic / Delayed</div>
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#f8fafc', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                    <Wrench size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#475569' }}>
+                      {telemetry.filter(t => t.telemetryStatus === 'Offline').length}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Depot / Workshop</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interactive Campus Transit Radar & Corridor Map Simulator */}
+              <div style={{
+                margin: '0 1.5rem',
+                background: '#0f172a',
+                borderRadius: '14px',
+                padding: '1.25rem 1.5rem',
+                color: '#f8fafc',
+                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.25)',
+                border: '1px solid #1e293b'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
+                    <strong style={{ fontSize: '0.94rem', letterSpacing: '0.02em', color: '#38bdf8' }}>
+                      Bhubaneswar - Cuttack Transit Corridor &bull; Real-time GPS Radar Simulation
+                    </strong>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', background: '#1e293b', padding: '4px 10px', borderRadius: '6px' }}>
+                    Active GPS Geofence: 20.2961° N, 85.8245° E (NH-16 Arterial Route)
+                  </span>
+                </div>
+
+                {/* Visual Route Schematic with moving bus pins */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {telemetry.map(t => {
+                    const isSelected = selectedTelemetryBus?.vehicleId === t.vehicleId;
+                    const isLive = t.telemetryStatus === 'Live';
+                    const isDelayed = t.telemetryStatus === 'Delayed Updates';
+                    return (
+                      <div 
+                        key={t.vehicleId}
+                        onClick={() => setSelectedTelemetryBus(isSelected ? null : t)}
+                        style={{
+                          background: isSelected ? '#1e293b' : '#1e293b80',
+                          border: isSelected ? '1px solid #38bdf8' : '1px solid #334155',
+                          borderRadius: '10px',
+                          padding: '10px 16px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '12px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontWeight: 800,
+                            fontSize: '0.75rem',
+                            background: isLive ? '#065f46' : isDelayed ? '#854d0e' : '#374151',
+                            color: isLive ? '#34d399' : isDelayed ? '#fde047' : '#9ca3af'
+                          }}>
+                            {t.fleetCode}
+                          </span>
+                          <div>
+                            <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#ffffff' }}>{t.busNumber}</span>
+                            <span style={{ fontSize: '0.78rem', color: '#94a3b8', marginLeft: '8px' }}>{t.routeName}</span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#cbd5e1' }}>
+                            <MapPin size={13} color={isLive ? '#34d399' : '#f87171'} />
+                            <span>{t.location}</span>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{
+                              fontWeight: 800,
+                              fontSize: '0.85rem',
+                              color: t.speedKmH > 0 ? '#38bdf8' : '#94a3b8',
+                              background: '#0f172a',
+                              padding: '2px 8px',
+                              borderRadius: '4px'
+                            }}>
+                              {t.speedKmH} km/h
+                            </span>
+                            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                              Heading: {t.heading}
+                            </span>
+                          </div>
+
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '3px 8px',
+                            borderRadius: '9999px',
+                            background: isLive ? '#064e3b' : isDelayed ? '#78350f' : '#1f2937',
+                            color: isLive ? '#6ee7b7' : isDelayed ? '#fef08a' : '#d1d5db'
+                          }}>
+                            {isLive ? '● Live Stream' : isDelayed ? '▲ Signal Delayed' : '○ Standby'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Filter Strip */}
+              <div style={{ padding: '0 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {['ALL', 'Live', 'Delayed Updates', 'Offline'].map(status => (
+                    <button
+                      key={status}
+                      onClick={() => setTelemetryFilter(status)}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: telemetryFilter === status ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                        background: telemetryFilter === status ? '#0284c7' : '#ffffff',
+                        color: telemetryFilter === status ? '#ffffff' : '#475569',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {status === 'ALL' ? 'All Transponders (5)' :
+                       status === 'Live' ? '🟢 Live Moving (3)' :
+                       status === 'Delayed Updates' ? '🟡 Traffic Delayed (1)' :
+                       '⚪ Parked / Workshop (1)'}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                  Showing <strong>{telemetry.filter(t => telemetryFilter === 'ALL' || t.telemetryStatus === telemetryFilter).length}</strong> connected GPS units
+                </div>
+              </div>
+
+              {/* Telemetry Stream Data Table */}
+              <div className="erp-table-responsive" style={{ padding: '0 1.5rem 1.5rem 1.5rem' }}>
+                <table className="erp-table" style={{ background: '#ffffff', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                   <thead>
-                    <tr>
-                      <th>Vehicle &amp; Route</th>
-                      <th>Driver Name</th>
-                      <th>Last Reported Location</th>
-                      <th>Current Speed &amp; Heading</th>
-                      <th>Last Ping Timestamp</th>
-                      <th>Signal &amp; Telemetry Status</th>
+                    <tr style={{ background: '#f8fafc' }}>
+                      <th style={{ padding: '12px 16px', fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Vehicle & Route</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Driver Details</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Last Reported Location</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Velocity & Heading</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Transponder Health</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Telemetry Link</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {telemetry.map(t => (
-                      <tr key={t.vehicleId}>
-                        <td>
-                          <strong>{t.fleetCode}</strong> ({t.busNumber})
-                          <div style={{ fontSize: '0.74rem', color: '#0284c7' }}>{t.routeName}</div>
+                    {telemetry
+                      .filter(t => telemetryFilter === 'ALL' || t.telemetryStatus === telemetryFilter)
+                      .map(t => (
+                      <tr key={t.vehicleId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '12px 16px' }}>
+                          <strong style={{ color: '#0f172a' }}>{t.fleetCode}</strong> ({t.busNumber})
+                          <div style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: 600 }}>{t.routeName}</div>
                         </td>
-                        <td>
-                          <div>{t.driverName}</div>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{t.driverName}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Phone size={10} /> Contact Crew
+                          </div>
                         </td>
-                        <td>
-                          <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', color: '#0f172a' }}>
                             <MapPin size={13} color="#ef4444" /> {t.location}
                           </div>
+                          <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Geofence Check: Verified Corridor</div>
                         </td>
-                        <td>
-                          <strong style={{ color: t.speedKmH > 0 ? '#10b981' : '#64748b' }}>
-                            {t.speedKmH} km/h
-                          </strong>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Heading: {t.heading}</div>
-                        </td>
-                        <td>
-                          <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t.lastPingTime}</div>
-                          <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Battery: {t.batteryVoltage}</div>
-                        </td>
-                        <td>
-                          <span className={`badge-status ${t.telemetryStatus === 'Live' ? 'active' : t.telemetryStatus === 'Delayed Updates' ? 'warning' : 'danger'}`}>
-                            {t.telemetryStatus === 'Live' ? '🟢 Live GPS' : t.telemetryStatus === 'Delayed Updates' ? '🟡 Delayed' : '🔴 Offline'}
-                          </span>
-                          <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
-                            Link: {t.signalQuality}
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <strong style={{ color: t.speedKmH > 0 ? '#10b981' : '#64748b', fontSize: '0.92rem' }}>
+                              {t.speedKmH} km/h
+                            </strong>
+                            <div style={{ width: '40px', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ width: `${Math.min(100, (t.speedKmH / 60) * 100)}%`, height: '100%', background: t.speedKmH > 45 ? '#f59e0b' : '#10b981' }}></div>
+                            </div>
                           </div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
+                            <Compass size={11} color="#0284c7" /> Heading: {t.heading}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0f172a' }}>{t.lastPingTime}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 600 }}>Batt: {t.batteryVoltage}</div>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span className={`badge-status ${t.telemetryStatus === 'Live' ? 'active' : t.telemetryStatus === 'Delayed Updates' ? 'warning' : 'danger'}`}>
+                            {t.telemetryStatus === 'Live' ? '🟢 Live GPS' : t.telemetryStatus === 'Delayed Updates' ? '🟡 Delayed' : '🔴 Standby'}
+                          </span>
+                          <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '3px' }}>
+                            Signal: {t.signalQuality}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                          <button
+                            className="erp-btn-secondary erp-btn-sm"
+                            onClick={() => {
+                              setSelectedTelemetryBus(t);
+                              setToastMessage(`Tracking ${t.fleetCode} (${t.busNumber}) on ${t.routeName}. Current location: ${t.location}.`);
+                            }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', padding: '4px 10px' }}
+                          >
+                            <Navigation size={11} className="text-sky-600" /> Focus Live
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -1476,6 +1839,16 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
 
           {/* TAB 22: TRANSPORT SETTINGS & POLICIES */}
           {activeTab === 'settings-policies' && <TransportSettingsSection userRole="TRANSPORT" />}
+
+          {/* NEW ERP SECTIONS */}
+          {activeTab === 'overview-alerts' && <TransportAlertsSection onNavigateSection={setActiveTab} userRole="TRANSPORT" />}
+          {activeTab === 'overview-daily-summary' && <TransportDailySummarySection userRole="TRANSPORT" />}
+          {activeTab === 'student-applications' && <TransportStudentApplicationsSection userRole="TRANSPORT" />}
+          {activeTab === 'duty-roster' && <TransportDutyRosterSection userRole="TRANSPORT" />}
+          {activeTab === 'license-verification' && <TransportLicenseVerificationSection userRole="TRANSPORT" />}
+          {activeTab === 'breakdown-repair' && <TransportBreakdownSection userRole="TRANSPORT" />}
+          {activeTab === 'fee-reconciliation' && <TransportFeeReconciliationSection userRole="TRANSPORT" />}
+          {activeTab === 'transport-expenses' && <TransportExpensesSection userRole="TRANSPORT" />}
         </div>
           </>
         )}
@@ -1762,10 +2135,10 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
               </div>
               <div className="erp-modal-footer">
                 <button type="button" className="erp-btn-secondary" onClick={() => setShowAddDriverModal(false)}>
-                  Cancel
+                  <X size={14} /> Cancel
                 </button>
                 <button type="submit" className="erp-btn-primary">
-                  Enroll Driver
+                  <Check size={14} /> Enroll Driver
                 </button>
               </div>
             </form>
@@ -1866,10 +2239,10 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
               </div>
               <div className="erp-modal-footer">
                 <button type="button" className="erp-btn-secondary" onClick={() => setShowAllocatePassModal(false)}>
-                  Cancel
+                  <X size={14} /> Cancel
                 </button>
                 <button type="submit" className="erp-btn-primary">
-                  Generate Bus Pass
+                  <Check size={14} /> Generate Bus Pass
                 </button>
               </div>
             </form>
@@ -1946,7 +2319,7 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
             </div>
             <div className="erp-modal-footer">
               <button type="button" className="erp-btn-secondary" onClick={() => setShowPrintPassModal(false)}>
-                Close
+                <X size={14} /> Close
               </button>
               <button
                 type="button"
@@ -2001,11 +2374,9 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                 </div>
               </div>
               <div className="erp-modal-footer">
-                <button type="button" className="erp-btn-secondary" onClick={() => setShowStatusModal(false)}>
-                  Cancel
-                </button>
+                <button type="button" className="erp-btn-secondary" onClick={() => setShowStatusModal(false)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Cancel</button>
                 <button type="submit" className="erp-btn-primary">
-                  Save Status
+                  <Check size={14} /> Save Status
                 </button>
               </div>
             </form>
@@ -2049,11 +2420,9 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                 </div>
               </div>
               <div className="erp-modal-footer">
-                <button type="button" className="erp-btn-secondary" onClick={() => setShowDelayModal(false)}>
-                  Cancel
-                </button>
+                <button type="button" className="erp-btn-secondary" onClick={() => setShowDelayModal(false)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Cancel</button>
                 <button type="submit" className="erp-btn-primary" style={{ background: '#f59e0b' }}>
-                  Broadcast Delay
+                  <Megaphone size={14} /> Broadcast Delay
                 </button>
               </div>
             </form>
@@ -2091,11 +2460,9 @@ export default function TransportPortal({ account, onLogout, onSwitchRole }) {
                 </div>
               </div>
               <div className="erp-modal-footer">
-                <button type="button" className="erp-btn-secondary" onClick={() => setShowDisruptionModal(false)}>
-                  Cancel
-                </button>
+                <button type="button" className="erp-btn-secondary" onClick={() => setShowDisruptionModal(false)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Cancel</button>
                 <button type="submit" className="erp-btn-primary">
-                  Update Advisory
+                  <ShieldCheck size={14} /> Update Advisory
                 </button>
               </div>
             </form>

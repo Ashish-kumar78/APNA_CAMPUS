@@ -1,7 +1,18 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  CreditCard, DollarSign, CheckCircle2, Clock, AlertTriangle, 
-  Search, Filter, Receipt, FileText, X, Check, ArrowUpRight 
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  Check,
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  DollarSign,
+  FileText,
+  Filter,
+  Printer,
+  Receipt,
+  Search,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockTransportFees } from './transportData.js';
@@ -242,8 +253,8 @@ export default function TransportFeesSection() {
               </div>
             </div>
             <div className="trans-modal-footer">
-              <button className="trans-btn trans-btn-outline" onClick={() => setSelectedReceipt(null)}>Close</button>
-              <button className="trans-btn trans-btn-primary" onClick={() => window.print()}>Print Receipt</button>
+              <button className="trans-btn trans-btn-secondary" onClick={() => setSelectedReceipt(null)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Close</button>
+              <button className="trans-btn trans-btn-primary" onClick={() => window.print()} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Printer size={14} /> Print Receipt</button>
             </div>
           </div>
         </div>

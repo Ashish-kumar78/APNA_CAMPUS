@@ -1,7 +1,20 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Wrench, AlertTriangle, CheckCircle, Clock, Search, Filter, 
-  Calendar, Plus, DollarSign, FileText, X, Check, ArrowUpRight, ShieldCheck 
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  Calendar,
+  Check,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  Eye,
+  FileText,
+  Filter,
+  Plus,
+  Search,
+  ShieldCheck,
+  Wrench,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockVehicleMaintenance } from './transportData.js';
@@ -238,10 +251,10 @@ export default function TransportMaintenanceSection() {
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.4rem' }}>
                         <button 
                           className="trans-btn trans-btn-outline" 
-                          style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem' }}
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
                           onClick={() => setSelectedRecord(item)}
                         >
-                          View
+                          <Eye size={13} className="text-sky-600" /> View
                         </button>
                         {item.status !== 'Completed' && (
                           <button 
@@ -250,7 +263,7 @@ export default function TransportMaintenanceSection() {
                             onClick={() => handleUpdateStatus(item.id, 'Completed')}
                             title="Mark as Completed"
                           >
-                            <Check size={13} />
+                            <Check size={13} /> Complete
                           </button>
                         )}
                       </div>
@@ -309,7 +322,7 @@ export default function TransportMaintenanceSection() {
               </div>
             </div>
             <div className="trans-modal-footer">
-              <button className="trans-btn trans-btn-outline" onClick={() => setSelectedRecord(null)}>Close</button>
+              <button className="trans-btn trans-btn-secondary" onClick={() => setSelectedRecord(null)}><X size={14} /> Close</button>
               {selectedRecord.status !== 'Completed' && (
                 <button 
                   className="trans-btn trans-btn-success" 
@@ -392,8 +405,8 @@ export default function TransportMaintenanceSection() {
                 </div>
               </div>
               <div className="trans-modal-footer">
-                <button type="button" className="trans-btn trans-btn-outline" onClick={() => setNewLogModal(false)}>Cancel</button>
-                <button type="submit" className="trans-btn trans-btn-primary">Confirm & Book Slot</button>
+                <button type="button" className="trans-btn trans-btn-secondary" onClick={() => setNewLogModal(false)}><X size={14} /> Cancel</button>
+                <button type="submit" className="trans-btn trans-btn-primary"><Check size={14} /> Confirm & Book Slot</button>
               </div>
             </form>
           </div>

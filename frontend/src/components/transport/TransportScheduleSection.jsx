@@ -1,7 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  CalendarDays, Clock, Bus, MapPin, Users, Plus, 
-  Search, Filter, CheckCircle2, Calendar, FileText, X 
+import {
+  Bus,
+  Calendar,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  FileText,
+  Filter,
+  MapPin,
+  Plus,
+  Search,
+  Users,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockScheduleCalendar } from './transportData.js';
@@ -250,8 +260,8 @@ export default function TransportScheduleSection() {
                 </div>
               </div>
               <div className="trans-modal-footer">
-                <button type="button" className="trans-btn trans-btn-outline" onClick={() => setNewEventModal(false)}>Cancel</button>
-                <button type="submit" className="trans-btn trans-btn-primary">Add Schedule Slot</button>
+                <button type="button" className="trans-btn trans-btn-secondary" onClick={() => setNewEventModal(false)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Cancel</button>
+                <button type="submit" className="trans-btn trans-btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Plus size={14} /> Add Schedule Slot</button>
               </div>
             </form>
           </div>

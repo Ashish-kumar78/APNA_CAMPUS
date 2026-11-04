@@ -377,6 +377,42 @@
   border-bottom: 1px solid #ddd6fe;
 }
 
+.tt-slot-card.lunch {
+  background: #fff1f2;
+  border-left-color: #f43f5e;
+  border-right: 1px solid #fecdd3;
+  border-top: 1px solid #fecdd3;
+  border-bottom: 1px solid #fecdd3;
+}
+
+.tt-slot-card.hobby_club {
+  background: #ecfdf5;
+  border-left-color: #10b981;
+  border-right: 1px solid #a7f3d0;
+  border-top: 1px solid #a7f3d0;
+  border-bottom: 1px solid #a7f3d0;
+}
+
+.tt-slot-card.library {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+  border-right: 1px solid #fde68a;
+  border-top: 1px solid #fde68a;
+  border-bottom: 1px solid #fde68a;
+}
+
+.tt-slot-card.tutorial {
+  background: #eef2ff;
+  border-left-color: #6366f1;
+  border-right: 1px solid #c7d2fe;
+  border-top: 1px solid #c7d2fe;
+  border-bottom: 1px solid #c7d2fe;
+}
+
+.tt-slot-card.locked-card {
+  box-shadow: inset 0 0 0 1px #94a3b8;
+}
+
 .tt-slot-header {
   display: flex;
   justify-content: space-between;

@@ -1,0 +1,215 @@
+/* HostelManagementModule.css - Styling for Unified Hostel & Warden Management in Admin & Super Admin */
+
+.hostel-mgmt-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+/* Sub-navigation tabs strip */
+.hostel-mgmt-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.6rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  scrollbar-width: thin;
+}
+
+.hostel-mgmt-nav-bar::-webkit-scrollbar {
+  height: 5px;
+}
+
+.hostel-mgmt-nav-bar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.hostel-mgmt-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #475569;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease-in-out;
+}
+
+.hostel-mgmt-tab-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.hostel-mgmt-tab-btn.active {
+  background: #1e3a8a;
+  color: #ffffff;
+  border-color: #1e3a8a;
+  box-shadow: 0 2px 4px rgba(30, 58, 138, 0.2);
+}
+
+.hostel-mgmt-tab-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.hostel-mgmt-tab-btn:not(.active) .hostel-mgmt-tab-badge {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+/* Modals */
+.hostel-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 1rem;
+}
+
+.hostel-modal-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 650px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: hostelModalFadeIn 0.2s ease-out;
+}
+
+.hostel-modal-card.large {
+  max-width: 950px;
+}
+
+@keyframes hostelModalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.hostel-modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+}
+
+.hostel-modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.hostel-modal-header p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.hostel-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: calc(90vh - 140px);
+}
+
+.hostel-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  background: #f8fafc;
+}
+
+.hostel-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .hostel-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hostel-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.hostel-form-group.col-span-2 {
+  grid-column: span 2;
+}
+
+.hostel-form-label {
+  font-size: 0.775rem;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.hostel-form-input,
+.hostel-form-select,
+.hostel-form-textarea {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.85rem;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.hostel-form-input:focus,
+.hostel-form-select:focus,
+.hostel-form-textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Custom styled badge for OFFICE SUPERVISION */
+.office-supervision-badge {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+

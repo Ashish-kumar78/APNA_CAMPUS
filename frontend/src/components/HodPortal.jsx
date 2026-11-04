@@ -903,7 +903,7 @@ export default function HodPortal({ account, onLogout }) {
         { id: 'digital-evaluation', label: 'Digital Evaluation & Approval', icon: FileCheck },
         { id: 'subjects', label: 'Department Subjects', icon: BookOpen },
         { id: 'take-attendance', label: 'Take Attendance', icon: ClipboardCheck },
-        { id: 'timetable', label: 'Timetable & Schedules', icon: Calendar },
+        { id: 'timetable', label: 'Timetable Management', icon: Calendar },
       ]
     },
     {
@@ -980,8 +980,8 @@ export default function HodPortal({ account, onLogout }) {
         };
       case 'timetable':
         return {
-          title: 'Department Timetable & Schedules',
-          subtitle: 'Weekly section schedules, lecture room allocations, and faculty load matrix.'
+          title: 'Academic Timetable Management System',
+          subtitle: 'Automated constraint-optimized schedules, multi-section scheduling, faculty workload matrix, and institutional publishing.'
         };
       case 'report-generation':
         return {

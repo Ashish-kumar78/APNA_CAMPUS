@@ -1,7 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Boxes, AlertTriangle, CheckCircle2, Clock, Search, 
-  Filter, Plus, PackageCheck, DollarSign, ArrowDownRight, X, Check 
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  Boxes,
+  Check,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  Filter,
+  PackageCheck,
+  Plus,
+  Search,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockInventorySpareParts } from './transportData.js';
@@ -153,7 +163,7 @@ export default function TransportInventorySection() {
               {filteredData.map(item => {
                 const isLow = item.inStock <= item.minStock;
                 return (
-                  <tr key={item.id} style={{ background: isLow ? '#fffbeb' : 'transparent' }}>
+                  <tr key={item.id}>
                     <td>
                       <div style={{ fontWeight: 800, color: '#0f172a' }}>{item.name}</div>
                       <div style={{ fontSize: '0.74rem', color: '#64748b', fontFamily: 'monospace' }}>{item.id} • {item.condition}</div>
@@ -185,7 +195,7 @@ export default function TransportInventorySection() {
                         onClick={() => { setSelectedItem(item); setIssueModal(true); }}
                         disabled={item.inStock === 0}
                       >
-                        Issue Part
+                        <PackageCheck size={13} className="text-indigo-600" /> Issue Part
                       </button>
                     </td>
                   </tr>
@@ -231,8 +241,8 @@ export default function TransportInventorySection() {
                 </div>
               </div>
               <div className="trans-modal-footer">
-                <button type="button" className="trans-btn trans-btn-outline" onClick={() => setIssueModal(false)}>Cancel</button>
-                <button type="submit" className="trans-btn trans-btn-primary">Confirm Issue & Deduct Stock</button>
+                <button type="button" className="trans-btn trans-btn-secondary" onClick={() => setIssueModal(false)}><X size={14} /> Cancel</button>
+                <button type="submit" className="trans-btn trans-btn-primary"><Check size={14} /> Confirm Issue & Deduct Stock</button>
               </div>
             </form>
           </div>

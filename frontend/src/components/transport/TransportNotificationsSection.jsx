@@ -1,7 +1,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Bell, Megaphone, AlertTriangle, Calendar, Plus, 
-  Search, Filter, Send, X, Check, Eye, Clock, Users 
+import {
+  AlertTriangle,
+  Bell,
+  Calendar,
+  Check,
+  Clock,
+  Eye,
+  Filter,
+  Megaphone,
+  Plus,
+  Printer,
+  Search,
+  Send,
+  Users,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockTransportNotifications } from './transportData.js';
@@ -142,12 +154,8 @@ export default function TransportNotificationsSection() {
         {filteredData.map(item => (
           <div 
             key={item.id} 
+            className="trans-notice-card"
             style={{ 
-              background: '#ffffff', 
-              border: '1px solid #e2e8f0', 
-              borderRadius: 12, 
-              padding: '1.25rem',
-              boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
               borderLeft: item.priority === 'Urgent' ? '4px solid #ef4444' : item.priority === 'Important' ? '4px solid #f59e0b' : '4px solid #0284c7'
             }}
           >
@@ -211,8 +219,8 @@ export default function TransportNotificationsSection() {
               </div>
             </div>
             <div className="trans-modal-footer">
-              <button className="trans-btn trans-btn-outline" onClick={() => setSelectedNotice(null)}>Close</button>
-              <button className="trans-btn trans-btn-primary" onClick={() => window.print()}>Print Official Circular</button>
+              <button className="trans-btn trans-btn-secondary" onClick={() => setSelectedNotice(null)}><X size={14} /> Close</button>
+              <button className="trans-btn trans-btn-primary" onClick={() => window.print()}><Printer size={14} /> Print Official Circular</button>
             </div>
           </div>
         </div>
@@ -276,7 +284,7 @@ export default function TransportNotificationsSection() {
                 </div>
               </div>
               <div className="trans-modal-footer">
-                <button type="button" className="trans-btn trans-btn-outline" onClick={() => setNewNoticeModal(false)}>Cancel</button>
+                <button type="button" className="trans-btn trans-btn-secondary" onClick={() => setNewNoticeModal(false)}><X size={14} /> Cancel</button>
                 <button type="submit" className="trans-btn trans-btn-primary">
                   <Send size={14} /> Publish Circular
                 </button>

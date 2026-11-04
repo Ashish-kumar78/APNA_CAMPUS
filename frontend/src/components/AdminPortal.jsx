@@ -62,6 +62,7 @@ import {
   Send,
   Check,
   TrendingDown,
+  Building,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -110,6 +111,8 @@ import { useTimeGreeting, getTimeWish } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 import TransportManagementModule from './transport/TransportManagementModule.jsx';
+import CanteenManagementModule from './canteen/CanteenManagementModule.jsx';
+import HostelManagementModule from './hostel/HostelManagementModule.jsx';
 import RegisterStudentWizard from './RegisterStudentWizard.jsx';
 
 const defaultStudentFormState = {
@@ -1450,6 +1453,8 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       items: [
         { id: 'accounts-fees', label: 'Accounts & Fees', icon: CreditCard },
         { id: 'transport-management', label: 'Transport Management', icon: Bus },
+        { id: 'canteen-management', label: 'Canteen & Mess Directorate', icon: Utensils },
+        { id: 'hostel-management', label: 'Hostel & Residential Life', icon: Building },
         { id: 'documents', label: 'Student Documents', icon: FileText },
         { id: 'placements', label: 'Training & Placement', icon: TrendingUp },
         { id: 'ai-complaints', label: 'Grievance Intelligence', icon: AlertCircle },
@@ -1469,6 +1474,11 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const getAdminHeading = () => {
     switch (activeTab) {
+      case 'canteen-management':
+        return {
+          title: 'Campus Canteen & Mess Directorate ERP',
+          subtitle: 'Institutional meal operations, hosteller dining verification, food consumption, and kitchen inventory.'
+        };
       case 'transport-management':
         return {
           title: 'Campus Transport Management',
@@ -2057,203 +2067,15 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
             </div>
           )}
 
-          {/* TAB: HOSTEL WARDENS ROSTER (BOYS & GIRLS) */}
-          {activeTab === 'wardens' && (
-            <div>
-              <div className="admin-view-header">
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
-                    <h2>Hostel Wardens Administration</h2>
-                    <span className="admin-badge boys" style={{ fontWeight: 700 }}>Boys &amp; Girls Hostels</span>
-                  </div>
-                  <p>Supervise residential hostel administration, student welfare, room allocation, and night curfew enforcement.</p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  <button className="admin-action-btn-primary" onClick={handleOpenAddWarden}>
-                    <Plus size={15} /> Appoint Hostel Warden
-                  </button>
-                </div>
-              </div>
-
-              {/* KPI Cards */}
-              <div className="admin-kpi-grid">
-                <div className="admin-kpi-card">
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Total Wardens</span>
-                    <div className="admin-kpi-card-icon purple"><Home size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">{wardenList.length}</div>
-                  <small style={{ color: '#64748b' }}>Residential staff appointed</small>
-                </div>
-
-                <div className="admin-kpi-card">
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Boys Hostel Wardens</span>
-                    <div className="admin-kpi-card-icon blue"><Users size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">
-                    {wardenList.filter(w => w.hostelCategory === 'Boys Hostel').length}
-                  </div>
-                  <small style={{ color: '#1d4ed8', fontWeight: 600 }}>Gandhi &amp; Kalam Residences</small>
-                </div>
-
-                <div className="admin-kpi-card">
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Girls Hostel Wardens</span>
-                    <div className="admin-kpi-card-icon rose"><Users size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">
-                    {wardenList.filter(w => w.hostelCategory === 'Girls Hostel').length}
-                  </div>
-                  <small style={{ color: '#be185d', fontWeight: 600 }}>Sarojini &amp; Kalpana Residences</small>
-                </div>
-
-                <div className="admin-kpi-card">
-                  <div className="admin-kpi-card-header">
-                    <span className="admin-kpi-label">Total Residents Supervised</span>
-                    <div className="admin-kpi-card-icon emerald"><GraduationCap size={18} /></div>
-                  </div>
-                  <div className="admin-kpi-val">
-                    {wardenList.reduce((acc, curr) => acc + Number(curr.residentsCount || 0), 0)}
-                  </div>
-                  <small style={{ color: '#059669', fontWeight: 600 }}>Across 4 Hostels</small>
-                </div>
-              </div>
-
-              {/* Filter Toolbar */}
-              <div className="admin-card" style={{ padding: '1rem', marginBottom: '1.25rem' }}>
-                <div className="admin-toolbar" style={{ margin: 0 }}>
-                  <div className="admin-search-wrap">
-                    <Search size={16} />
-                    <input
-                      type="text"
-                      className="admin-search-input"
-                      placeholder="Search warden name, assigned hostel, phone..."
-                      value={wardenSearch}
-                      onChange={(e) => setWardenSearch(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="admin-filters-wrap">
-                    <div className="admin-filter-pills">
-                      <button
-                        className={`admin-filter-pill-btn ${wardenFilterCategory === 'All' ? 'active' : ''}`}
-                        onClick={() => setWardenFilterCategory('All')}
-                      >
-                        All Wardens ({wardenList.length})
-                      </button>
-                      <button
-                        className={`admin-filter-pill-btn ${wardenFilterCategory === 'Boys Hostel' ? 'active' : ''}`}
-                        onClick={() => setWardenFilterCategory('Boys Hostel')}
-                      >
-                        <span style={{ color: '#1d4ed8' }}>●</span> Boys Hostel ({wardenList.filter(w => w.hostelCategory === 'Boys Hostel').length})
-                      </button>
-                      <button
-                        className={`admin-filter-pill-btn ${wardenFilterCategory === 'Girls Hostel' ? 'active' : ''}`}
-                        onClick={() => setWardenFilterCategory('Girls Hostel')}
-                      >
-                        <span style={{ color: '#be185d' }}>●</span> Girls Hostel ({wardenList.filter(w => w.hostelCategory === 'Girls Hostel').length})
-                      </button>
-                    </div>
-
-                    {(wardenSearch || wardenFilterCategory !== 'All') && (
-                      <button
-                        className="admin-action-btn-secondary"
-                        style={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem' }}
-                        onClick={() => {
-                          setWardenSearch('');
-                          setWardenFilterCategory('All');
-                        }}
-                      >
-                        Reset
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Wardens Table */}
-              <div className="admin-table-container">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Warden ID</th>
-                      <th>Warden Name</th>
-                      <th>Hostel Category</th>
-                      <th>Assigned Residence</th>
-                      <th>Office / Cabin</th>
-                      <th>Duty Schedule</th>
-                      <th>Contact Phone &amp; Email</th>
-                      <th>Capacity</th>
-                      <th>Status</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredWardens.map(w => (
-                      <tr key={w.id}>
-                        <td><strong>{w.id}</strong></td>
-                        <td style={{ fontWeight: 600 }}>{w.name}</td>
-                        <td>
-                          <span className={`admin-badge ${w.hostelCategory === 'Boys Hostel' ? 'boys' : 'girls'}`}>
-                            {w.hostelCategory}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 500, color: '#1e293b' }}>{w.assignedHostel}</td>
-                        <td style={{ color: '#64748b' }}>{w.roomOffice}</td>
-                        <td>
-                          <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', color: '#475569' }}>
-                            {w.shift}
-                          </span>
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 500 }}>{w.phone}</div>
-                          <small style={{ color: '#64748b' }}>{w.email}</small>
-                        </td>
-                        <td>
-                          <span style={{ fontWeight: 600, color: '#059669' }}>{w.residentsCount}</span>
-                          <span style={{ color: '#64748b', fontWeight: 500 }}> / {w.totalBeds} beds</span>
-                        </td>
-                        <td>
-                          <span className={`admin-badge ${w.status === 'Active' ? 'active' : 'inactive'}`}>
-                            {w.status}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button
-                            className="admin-table-action-btn"
-                            title="View Warden Profile"
-                            onClick={() => setViewDetailsItem({ type: 'Warden', data: w })}
-                          >
-                            <Eye size={15} />
-                          </button>
-                          <button
-                            className="admin-table-action-btn"
-                            title="Edit Warden"
-                            onClick={() => handleOpenEditWarden(w)}
-                          >
-                            <Edit2 size={15} />
-                          </button>
-                          <button
-                            className="admin-table-action-btn delete"
-                            title="Remove Warden"
-                            onClick={() => handleDeleteWarden(w.id, w.name)}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredWardens.length === 0 && (
-                      <tr>
-                        <td colSpan="10" style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
-                          No wardens found matching criteria.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+          {/* TAB: HOSTEL WARDENS & COMPLETE RESIDENTIAL MANAGEMENT */}
+          {(activeTab === 'wardens' || activeTab === 'hostel-management') && (
+            <div className="admin-tab-pane">
+              <HostelManagementModule
+                account={account}
+                userRole="ADMIN"
+                initialTab="wardens"
+                showToast={showToast}
+              />
             </div>
           )}
 
@@ -4233,6 +4055,20 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB: TRANSPORT MANAGEMENT */}
+          {activeTab === 'transport-management' && (
+            <div className="admin-tab-pane">
+              <TransportManagementModule account={account} />
+            </div>
+          )}
+
+          {/* TAB: CANTEEN & MESS MANAGEMENT */}
+          {activeTab === 'canteen-management' && (
+            <div className="admin-tab-pane">
+              <CanteenManagementModule account={account} />
             </div>
           )}
 

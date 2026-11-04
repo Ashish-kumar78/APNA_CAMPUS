@@ -1,7 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  FileCheck2, ShieldAlert, ShieldCheck, AlertTriangle, Search, 
-  Upload, Eye, Calendar, FileText, Check, X, RefreshCw 
+import {
+  AlertTriangle,
+  Calendar,
+  Check,
+  Eye,
+  FileCheck2,
+  FileText,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  ShieldCheck,
+  Upload,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockVehicleCompliance } from './transportData.js';
@@ -158,7 +168,7 @@ export default function TransportComplianceSection() {
             </thead>
             <tbody>
               {filteredData.map(item => (
-                <tr key={item.id} style={{ background: item.status === 'Expiring Soon' ? '#fffbeb' : 'transparent' }}>
+                <tr key={item.id}>
                   <td>
                     <div style={{ fontWeight: 800, color: '#0f172a' }}>{item.busNumber}</div>
                     <div style={{ fontSize: '0.74rem', color: '#0284c7', fontWeight: 600 }}>{item.fleetCode}</div>
@@ -245,7 +255,7 @@ export default function TransportComplianceSection() {
               </div>
             </div>
             <div className="trans-modal-footer">
-              <button className="trans-btn trans-btn-outline" onClick={() => setSelectedDoc(null)}>Close</button>
+              <button className="trans-btn trans-btn-secondary" onClick={() => setSelectedDoc(null)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Close</button>
               <button className="trans-btn trans-btn-primary" onClick={() => { setSelectedDoc(null); setUploadModal(true); setDocBus(selectedDoc.busNumber); }}>
                 Upload Renewal Slip
               </button>
@@ -303,8 +313,8 @@ export default function TransportComplianceSection() {
                 </div>
               </div>
               <div className="trans-modal-footer">
-                <button type="button" className="trans-btn trans-btn-outline" onClick={() => setUploadModal(false)}>Cancel</button>
-                <button type="submit" className="trans-btn trans-btn-primary">Update Compliance Record</button>
+                <button type="button" className="trans-btn trans-btn-secondary" onClick={() => setUploadModal(false)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Cancel</button>
+                <button type="submit" className="trans-btn trans-btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Check size={14} /> Update Compliance Record</button>
               </div>
             </form>
           </div>

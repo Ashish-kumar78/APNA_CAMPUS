@@ -1,7 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  SquareParking, Bus, CheckCircle2, AlertCircle, Search, 
-  MapPin, User, Calendar, Edit3, X, Check 
+import {
+  AlertCircle,
+  Bus,
+  Calendar,
+  Check,
+  CheckCircle2,
+  Edit3,
+  MapPin,
+  Plus,
+  Search,
+  SquareParking,
+  User,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockParkingAssignments } from './transportData.js';
@@ -22,8 +32,8 @@ export default function TransportParkingSection() {
   const filteredData = useMemo(() => {
     return data.filter(item => {
       const matchSearch = item.bayNumber.toLowerCase().includes(search.toLowerCase()) ||
-                          item.busNumber.toLowerCase().includes(search.toLowerCase()) ||
-                          item.assignedDriver.toLowerCase().includes(search.toLowerCase());
+        item.busNumber.toLowerCase().includes(search.toLowerCase()) ||
+        item.assignedDriver.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === 'ALL' || item.status === statusFilter;
       return matchSearch && matchStatus;
     });
@@ -123,9 +133,9 @@ export default function TransportParkingSection() {
         <div className="trans-filter-group">
           <div className="trans-search-input">
             <Search size={16} color="#64748b" />
-            <input 
-              type="text" 
-              placeholder="Search bay number, bus, driver..." 
+            <input
+              type="text"
+              placeholder="Search bay number, bus, driver..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -149,12 +159,12 @@ export default function TransportParkingSection() {
       {/* Parking Bays Grid Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' }}>
         {filteredData.map(bay => (
-          <div 
-            key={bay.id} 
-            style={{ 
-              background: '#ffffff', 
-              border: '1px solid #e2e8f0', 
-              borderRadius: 12, 
+          <div
+            key={bay.id}
+            style={{
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: 12,
               padding: '1.25rem',
               display: 'flex',
               flexDirection: 'column',
@@ -191,28 +201,28 @@ export default function TransportParkingSection() {
             <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               {bay.status === 'Occupied' ? (
                 <>
-                  <button 
-                    className="trans-btn trans-btn-outline" 
-                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                  <button
+                    className="trans-btn trans-btn-outline"
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}
                     onClick={() => { setSelectedSlot(bay); setReassignModal(true); }}
                   >
-                    <Edit3 size={12} /> Reassign
+                    <Edit3 size={13} className="text-sky-600" /> Reassign
                   </button>
-                  <button 
-                    className="trans-btn trans-btn-outline" 
-                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: '#e11d48' }}
+                  <button
+                    className="trans-btn trans-btn-outline"
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', color: '#e11d48' }}
                     onClick={() => handleReleaseBay(bay.id)}
                   >
-                    Release Slot
+                    <X size={13} /> Release Slot
                   </button>
                 </>
               ) : (
-                <button 
-                  className="trans-btn trans-btn-primary" 
-                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem' }}
+                <button
+                  className="trans-btn trans-btn-primary"
+                  style={{ padding: '0.35rem 0.85rem', fontSize: '0.78rem' }}
                   onClick={() => { setSelectedSlot(bay); setReassignModal(true); }}
                 >
-                  Assign Vehicle
+                  <Plus size={13} /> Assign Vehicle
                 </button>
               )}
             </div>
@@ -253,8 +263,12 @@ export default function TransportParkingSection() {
                 </div>
               </div>
               <div className="trans-modal-footer">
-                <button type="button" className="trans-btn trans-btn-outline" onClick={() => setReassignModal(false)}>Cancel</button>
-                <button type="submit" className="trans-btn trans-btn-primary">Confirm Slot Allocation</button>
+                <button type="button" className="trans-btn trans-btn-secondary" onClick={() => setReassignModal(false)}>
+                  <X size={14} /> Cancel
+                </button>
+                <button type="submit" className="trans-btn trans-btn-primary">
+                  <Check size={14} /> Confirm Slot Allocation
+                </button>
               </div>
             </form>
           </div>

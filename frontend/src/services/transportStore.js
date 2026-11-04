@@ -15,6 +15,13 @@ import {
   mockScheduleCalendar,
   mockInventorySpareParts,
   mockTransportPolicies,
+  mockStudentApplications,
+  mockDutyRoster,
+  mockLicenseVerifications,
+  mockBreakdownRepairs,
+  mockFeeReconciliation,
+  mockTransportExpenses,
+  mockOperationalAlerts,
 } from '../components/transport/transportData.js';
 
 const defaultVehicles = [
@@ -459,6 +466,14 @@ const defaultPermissions = [
   { role: 'admin_office', section: 'policies', canView: true, canCreate: false, canEdit: false, canUpdate: false, canDelete: false, canExport: true, canManageSettings: false },
   { role: 'admin_office', section: 'reports', canView: true, canCreate: false, canEdit: false, canUpdate: false, canDelete: false, canExport: true, canManageSettings: false },
   { role: 'admin_office', section: 'permissions', canView: false, canCreate: false, canEdit: false, canUpdate: false, canDelete: false, canExport: false, canManageSettings: false },
+  { role: 'admin_office', section: 'alerts', canView: true, canCreate: false, canEdit: false, canUpdate: false, canDelete: false, canExport: true, canManageSettings: false },
+  { role: 'admin_office', section: 'daily-summary', canView: true, canCreate: false, canEdit: false, canUpdate: false, canDelete: false, canExport: true, canManageSettings: false },
+  { role: 'admin_office', section: 'student-applications', canView: true, canCreate: true, canEdit: true, canUpdate: true, canDelete: false, canExport: true, canManageSettings: false },
+  { role: 'admin_office', section: 'duty-roster', canView: true, canCreate: true, canEdit: true, canUpdate: true, canDelete: false, canExport: true, canManageSettings: false },
+  { role: 'admin_office', section: 'license-verification', canView: true, canCreate: false, canEdit: true, canUpdate: true, canDelete: false, canExport: true, canManageSettings: false },
+  { role: 'admin_office', section: 'breakdown-repair', canView: true, canCreate: true, canEdit: true, canUpdate: true, canDelete: false, canExport: true, canManageSettings: false },
+  { role: 'admin_office', section: 'fee-reconciliation', canView: true, canCreate: false, canEdit: true, canUpdate: true, canDelete: false, canExport: true, canManageSettings: false },
+  { role: 'admin_office', section: 'transport-expenses', canView: true, canCreate: true, canEdit: true, canUpdate: true, canDelete: false, canExport: true, canManageSettings: false },
 ];
 
 class TransportStore {
@@ -485,6 +500,13 @@ class TransportStore {
       schedules: mockScheduleCalendar,
       inventory: mockInventorySpareParts,
       policies: mockTransportPolicies,
+      studentApplications: mockStudentApplications,
+      dutyRoster: mockDutyRoster,
+      licenseVerifications: mockLicenseVerifications,
+      breakdownRepairs: mockBreakdownRepairs,
+      feeReconciliation: mockFeeReconciliation,
+      transportExpenses: mockTransportExpenses,
+      operationalAlerts: mockOperationalAlerts,
       permissions: defaultPermissions,
     };
 
@@ -1369,6 +1391,167 @@ class TransportStore {
     } catch (e) {
       console.warn('API updatePermission error:', e);
     }
+  }
+
+  // --- STUDENT APPLICATIONS ---
+  getStudentApplications() { return this.state.studentApplications || []; }
+  async addStudentApplication(app) {
+    const newApp = {
+      id: app.id || `APP-TRN-${Date.now().toString().slice(-4)}`,
+      applicationNumber: `TRN-APP-${new Date().getFullYear()}-${Date.now().toString().slice(-3)}`,
+      submissionDate: new Date().toISOString().split('T')[0],
+      status: 'Pending Review',
+      ...app,
+    };
+    this.state.studentApplications = [newApp, ...(this.state.studentApplications || [])];
+    this.notify();
+    return newApp;
+  }
+  async decideStudentApplication(id, decision, remarks) {
+    this.state.studentApplications = (this.state.studentApplications || []).map(a =>
+      a.id === id ? { ...a, status: decision, remarks: remarks || a.remarks, decidedAt: new Date().toISOString() } : a
+    );
+    if (decision === 'Approved') {
+      const app = (this.state.studentApplications || []).find(a => a.id === id);
+      if (app) {
+        await this.allocatePass({
+          studentName: app.studentName,
+          regNo: app.rollNumber,
+          department: app.department,
+          semester: app.semester,
+          routeName: app.preferredRoute,
+          stopName: app.preferredStop,
+          fareAmount: 15000,
+          feePaid: true,
+          autoApprove: true,
+        });
+      }
+    }
+    this.notify();
+  }
+
+  // --- DUTY ROSTER ---
+  getDutyRoster() { return this.state.dutyRoster || []; }
+  async assignDutyRoster(assignment) {
+    const newRoster = {
+      id: assignment.id || `ROSTER-${Date.now().toString().slice(-4)}`,
+      status: 'Active Duty',
+      date: new Date().toISOString().split('T')[0],
+      ...assignment,
+    };
+    this.state.dutyRoster = [newRoster, ...(this.state.dutyRoster || [])];
+    this.notify();
+    return newRoster;
+  }
+  async deleteDutyRoster(id) {
+    this.state.dutyRoster = (this.state.dutyRoster || []).filter(r => r.id !== id);
+    this.notify();
+  }
+
+  // --- LICENSE VERIFICATIONS ---
+  getLicenseVerifications() { return this.state.licenseVerifications || []; }
+  async verifyLicenseDocument(id, updates) {
+    this.state.licenseVerifications = (this.state.licenseVerifications || []).map(l =>
+      l.id === id ? { ...l, ...updates, lastVerified: new Date().toISOString() } : l
+    );
+    this.notify();
+  }
+
+  // --- BREAKDOWN REPAIRS ---
+  getBreakdownRepairs() { return this.state.breakdownRepairs || []; }
+  async addBreakdownRepair(record) {
+    const newRecord = {
+      id: record.id || `BRK-${Date.now().toString().slice(-4)}`,
+      incidentDate: new Date().toISOString().split('T')[0],
+      status: 'Under Repair',
+      ...record,
+    };
+    this.state.breakdownRepairs = [newRecord, ...(this.state.breakdownRepairs || [])];
+    this.notify();
+    return newRecord;
+  }
+  async resolveBreakdownRepair(id, resolution) {
+    this.state.breakdownRepairs = (this.state.breakdownRepairs || []).map(b =>
+      b.id === id ? { ...b, status: 'Resolved & Returned to Service', recoveryAction: resolution, resolvedAt: new Date().toISOString() } : b
+    );
+    this.notify();
+  }
+
+  // --- FEE RECONCILIATION ---
+  getFeeReconciliation() { return this.state.feeReconciliation || []; }
+  async reconcileFeeRecord(id, updates) {
+    this.state.feeReconciliation = (this.state.feeReconciliation || []).map(f =>
+      f.id === id ? { ...f, ...updates, lastSyncWithAccounts: new Date().toISOString().replace('T', ' ').slice(0, 19) + ' IST' } : f
+    );
+    this.notify();
+  }
+
+  // --- TRANSPORT EXPENSES ---
+  getTransportExpenses() { return this.state.transportExpenses || []; }
+  async addTransportExpense(exp) {
+    const newExp = {
+      id: exp.id || `EXP-TRN-${Date.now().toString().slice(-4)}`,
+      month: new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }),
+      approvalStatus: 'Approved by Finance & Accounts',
+      ...exp,
+    };
+    this.state.transportExpenses = [newExp, ...(this.state.transportExpenses || [])];
+    this.notify();
+    return newExp;
+  }
+
+  // --- OPERATIONAL ALERTS ---
+  getOperationalAlerts() {
+    const alerts = [...(this.state.operationalAlerts || [])];
+    (this.state.compliance || []).forEach(c => {
+      if (c.daysRemaining !== undefined && c.daysRemaining <= 45 && !alerts.some(a => a.id === `dyn-cmp-${c.id}`)) {
+        alerts.push({
+          id: `dyn-cmp-${c.id}`,
+          severity: c.daysRemaining < 15 ? 'High' : 'Medium',
+          category: 'Compliance Expiry',
+          title: `${c.fleetCode} (${c.busNumber}) Document Validity Warning`,
+          description: `Upcoming regulatory renewal required in ${c.daysRemaining} days.`,
+          actionTarget: 'compliance',
+          actionLabel: 'View Compliance',
+          timestamp: 'Live Alert',
+        });
+      }
+    });
+    return alerts;
+  }
+
+  // --- DAILY OPERATIONS SUMMARY ---
+  getDailyOperationsSummary() {
+    const fleet = this.state.fleet || [];
+    const passes = this.state.passes || [];
+    const boarding = this.state.boarding || [];
+    const fuel = this.state.fuel || [];
+    const staff = this.state.staffAttendance || [];
+
+    const totalFleet = fleet.length;
+    const operational = fleet.filter(v => (v.status || '').includes('Active') || (v.status || '').includes('Available')).length;
+    const maintenance = fleet.filter(v => (v.status || '').includes('Maintenance') || (v.status || '').includes('Out of Service')).length;
+    const activeCommuters = passes.filter(p => (p.status || '').includes('Active')).length;
+    const boardedToday = boarding.filter(b => b.boardingStatus === 'Boarded').length;
+    const presentStaff = staff.filter(s => (s.status || '').includes('Present')).length;
+    const todayFuelLitres = fuel.reduce((sum, f) => sum + (Number(f.quantityLitres) || 0), 0);
+    const todayFuelCost = fuel.reduce((sum, f) => sum + (Number(f.totalCost) || 0), 0);
+
+    return {
+      totalFleet,
+      operational,
+      maintenance,
+      activeCommuters,
+      boardedToday,
+      boardingCompliancePct: activeCommuters > 0 ? Math.round((boardedToday / activeCommuters) * 100) : 92,
+      presentStaff,
+      totalStaff: staff.length,
+      todayFuelLitres,
+      todayFuelCost,
+      morningTripsStatus: '100% Completed on Schedule (5/5 Routes)',
+      eveningTripsStatus: 'Scheduled 05:00 PM - Boarding Commenced',
+      fleetReadinessPct: totalFleet > 0 ? Math.round((operational / totalFleet) * 100) : 95,
+    };
   }
 }
 

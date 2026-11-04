@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Settings, Shield, Sliders, Bell, CheckCircle2, 
-  Lock, Save, RefreshCw, Key, ShieldCheck, FileText 
+import {
+  Bell,
+  CheckCircle2,
+  FileText,
+  Key,
+  Lock,
+  RefreshCw,
+  Save,
+  Settings,
+  Shield,
+  ShieldCheck,
+  Sliders
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockTransportPolicies } from './transportData.js';
@@ -99,8 +108,7 @@ export default function TransportSettingsSection() {
                 </label>
                 <input 
                   type="number" 
-                  className="trans-select" 
-                  style={{ width: '100%' }} 
+                  className="trans-input" 
                   value={speedCeiling} 
                   onChange={e => setSpeedCeiling(e.target.value)} 
                 />
@@ -113,8 +121,7 @@ export default function TransportSettingsSection() {
                 </label>
                 <input 
                   type="text" 
-                  className="trans-select" 
-                  style={{ width: '100%' }} 
+                  className="trans-input" 
                   value={morningDispatch} 
                   onChange={e => setMorningDispatch(e.target.value)} 
                 />
@@ -127,8 +134,7 @@ export default function TransportSettingsSection() {
                 </label>
                 <input 
                   type="text" 
-                  className="trans-select" 
-                  style={{ width: '100%' }} 
+                  className="trans-input" 
                   value={eveningDispatch} 
                   onChange={e => setEveningDispatch(e.target.value)} 
                 />
@@ -141,8 +147,7 @@ export default function TransportSettingsSection() {
                 </label>
                 <input 
                   type="number" 
-                  className="trans-select" 
-                  style={{ width: '100%' }} 
+                  className="trans-input" 
                   value={passGraceDays} 
                   onChange={e => setPassGraceDays(e.target.value)} 
                 />
@@ -155,8 +160,7 @@ export default function TransportSettingsSection() {
                 </label>
                 <input 
                   type="number" 
-                  className="trans-select" 
-                  style={{ width: '100%' }} 
+                  className="trans-input" 
                   value={refundWindowDays} 
                   onChange={e => setRefundWindowDays(e.target.value)} 
                 />
@@ -164,13 +168,13 @@ export default function TransportSettingsSection() {
               </div>
             </div>
 
-            <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', color: '#1e293b', cursor: 'pointer' }}>
+            <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.85rem' }}>
+              <label className="trans-checkbox-card">
                 <input type="checkbox" checked={smsAlerts} onChange={e => setSmsAlerts(e.target.checked)} />
                 <span>Transmit automated SMS/In-App alert on trip delays exceeding 15 minutes</span>
               </label>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', color: '#1e293b', cursor: 'pointer' }}>
+              <label className="trans-checkbox-card">
                 <input type="checkbox" checked={autoPassRenew} onChange={e => setAutoPassRenew(e.target.checked)} />
                 <span>Auto-roll over semester bus pass reservations upon clearance of tuition fees</span>
               </label>

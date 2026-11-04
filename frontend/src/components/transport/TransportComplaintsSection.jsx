@@ -1,7 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  MessageSquareWarning, AlertCircle, CheckCircle2, Clock, 
-  Search, Filter, User, Bus, Check, X, FileText 
+import {
+  AlertCircle,
+  Bus,
+  Check,
+  CheckCircle2,
+  Clock,
+  Eye,
+  FileText,
+  Filter,
+  MessageSquareWarning,
+  Search,
+  User,
+  X
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockTransportComplaints } from './transportData.js';
@@ -187,7 +197,7 @@ export default function TransportComplaintsSection() {
                       style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
                       onClick={() => { setActiveComplaint(item); setResolutionInput(item.resolutionNotes || ''); }}
                     >
-                      Review & Resolve
+                      <Eye size={12} className="text-sky-600" /> Review & Resolve
                     </button>
                   </td>
                 </tr>
@@ -239,7 +249,7 @@ export default function TransportComplaintsSection() {
                 </div>
               </div>
               <div className="trans-modal-footer">
-                <button type="button" className="trans-btn trans-btn-outline" onClick={() => setActiveComplaint(null)}>Close</button>
+                <button type="button" className="trans-btn trans-btn-secondary" onClick={() => setActiveComplaint(null)}><X size={14} /> Close</button>
                 <button type="submit" className="trans-btn trans-btn-success">
                   <Check size={14} /> Submit Resolution & Close Case
                 </button>

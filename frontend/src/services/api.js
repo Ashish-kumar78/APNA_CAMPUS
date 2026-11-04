@@ -652,6 +652,10 @@ export const api = {
   // Warden Directory & CMS Full Dossier
   getWardens: () => request('/hostel/wardens'),
   getWardenProfile: (id) => request(`/hostel/wardens/${encodeURIComponent(id)}`),
+  deleteWarden: (id) =>
+    request(`/hostel/wardens/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
   createWarden: (payload) =>
     request('/hostel/wardens', {
       method: 'POST',
@@ -662,10 +666,10 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ status, reason }),
     }),
-  updateWardenDutyStatus: (id, dutyStatus, reason = 'Duty status updated') =>
+  updateWardenDutyStatus: (id, dutyStatus, reason = 'Duty status updated', relievingWarden = null) =>
     request(`/hostel/wardens/${encodeURIComponent(id)}/duty-status`, {
       method: 'PATCH',
-      body: JSON.stringify({ dutyStatus, reason }),
+      body: JSON.stringify({ dutyStatus, reason, relievingWarden }),
     }),
   getStaffLeaves: () => request('/hostel/staff-leaves'),
   applyStaffLeave: (payload) =>
@@ -687,6 +691,29 @@ export const api = {
     request(`/hostel/wardens/${encodeURIComponent(id)}/documents`, {
       method: 'POST',
       body: JSON.stringify(doc),
+    }),
+  deleteWardenDocument: (id, docId) =>
+    request(`/hostel/wardens/${encodeURIComponent(id)}/documents/${encodeURIComponent(docId)}`, {
+      method: 'DELETE',
+    }),
+  // Warden Pending Operational Tasks
+  getWardenPendingTasks: (id, params = {}) => {
+    const q = new URLSearchParams();
+    if (params.status && params.status !== 'ALL') q.set('status', params.status);
+    if (params.category && params.category !== 'ALL') q.set('category', params.category);
+    if (params.priority && params.priority !== 'ALL') q.set('priority', params.priority);
+    const qs = q.toString();
+    return request(`/hostel/wardens/${encodeURIComponent(id)}/pending-tasks${qs ? `?${qs}` : ''}`);
+  },
+  updateWardenPendingTaskStatus: (id, taskId, payload) =>
+    request(`/hostel/wardens/${encodeURIComponent(id)}/pending-tasks/${encodeURIComponent(taskId)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  batchActionWardenPendingTasks: (id, payload) =>
+    request(`/hostel/wardens/${encodeURIComponent(id)}/pending-tasks/batch-action`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
     }),
 
   // Warden Granular Permissions
@@ -1793,6 +1820,38 @@ export const api = {
     const q = new URLSearchParams({ facultyName }).toString();
     return request(`/timetables/view/faculty?${q}`);
   },
+  getTimetableDashboardStats: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/timetables/dashboard-stats${q ? '?' + q : ''}`);
+  },
+  getTimetableSections: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/timetables/sections${q ? '?' + q : ''}`);
+  },
+  createTimetableSection: (data) =>
+    request('/timetables/sections', { method: 'POST', body: JSON.stringify(data) }),
+  updateTimetableSection: (id, data) =>
+    request(`/timetables/sections/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTimetableSection: (id) =>
+    request(`/timetables/sections/${id}`, { method: 'DELETE' }),
+  getTimetableBranches: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/timetables/branches${q ? '?' + q : ''}`);
+  },
+  createTimetableBranch: (data) =>
+    request('/timetables/branches', { method: 'POST', body: JSON.stringify(data) }),
+  getTimetableAcademicYears: () => request('/timetables/academic-years'),
+  createTimetableAcademicYear: (data) =>
+    request('/timetables/academic-years', { method: 'POST', body: JSON.stringify(data) }),
+  getTimetableSemesters: () => request('/timetables/semesters'),
+  createTimetableSemester: (data) =>
+    request('/timetables/semesters', { method: 'POST', body: JSON.stringify(data) }),
+  createTimetableSubject: (data) =>
+    request('/timetables/subjects', { method: 'POST', body: JSON.stringify(data) }),
+  toggleLockTimetableEntry: (timetableId, entryId) =>
+    request(`/timetables/${timetableId}/entries/${entryId}/lock`, { method: 'PATCH' }),
+  regenerateUnlockedTimetable: (id) =>
+    request(`/timetables/${id}/regenerate-unlocked`, { method: 'POST' }),
 
   // 36. Governing Body & Management Portal Operations
   getManagementOverview: (params = {}) => {

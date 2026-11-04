@@ -2,8 +2,14 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException,
 import { PrismaService } from '../prisma/prisma.service';
 import { AiAssignmentService } from './ai-assignment.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { getWardenCmsProfile, saveWardenCmsProfile, appendWardenDocument, INITIAL_WARDEN_PROFILES, isWardenSuspendedBackend, setWardenStatusBackend, setWardenDutyStatusBackend, getAllWardenCmsProfiles, createWardenCmsProfile } from './warden-profiles.data';
-import { getAllStaffLeavesBackend, createStaffLeaveBackend, updateStaffLeaveStatusBackend } from './staff-leaves.data';
+import { getWardenCmsProfile, saveWardenCmsProfile, appendWardenDocument, deleteWardenCmsProfile, removeWardenDocument, INITIAL_WARDEN_PROFILES, isWardenSuspendedBackend, setWardenStatusBackend, setWardenDutyStatusBackend, getAllWardenCmsProfiles, createWardenCmsProfile } from './warden-profiles.data';
+import {
+  getWardenPendingTasksBackend,
+  updateWardenPendingTaskStatusBackend,
+  batchActionWardenPendingTasksBackend,
+  countPendingTasksForWarden
+} from './warden-pending-tasks.data';
+import { getAllStaffLeavesBackend, createStaffLeaveBackend, updateStaffLeaveStatusBackend, evaluateLeaveDutyStatusBackend } from './staff-leaves.data';
 import bcrypt from 'bcryptjs';
 import { normalizeRole } from '../rbac/rbac';
 import {
@@ -38,7 +44,7 @@ export class HostelService {
     public readonly prisma: PrismaService,
     public readonly aiAssignmentService: AiAssignmentService,
     public readonly notificationsService: NotificationsService,
-  ) {}
+  ) { }
 
   private inMemoryHostels: any[] = [
     {
@@ -276,8 +282,8 @@ export class HostelService {
           bedsPerRoom === 4
             ? '4-Bed Quad Non-AC Standard'
             : bedsPerRoom === 3
-            ? '3-Bed Triple Non-AC'
-            : '2-Bed Double AC';
+              ? '3-Bed Triple Non-AC'
+              : '2-Bed Double AC';
         try {
           await this.prisma.hostelRoom.create({
             data: {
@@ -290,7 +296,7 @@ export class HostelService {
               type: roomType,
             },
           });
-        } catch {}
+        } catch { }
       }
       createdRooms += floorRooms;
       if (createdRooms >= totalRooms) break;
@@ -1531,7 +1537,7 @@ export class HostelService {
             updateData.assignedStaffPhone = staff.phone;
             updateData.assignedStaffRole = staff.roleOrCategory;
           }
-        } catch {}
+        } catch { }
       }
       updateData.status = 'In Progress';
       history.push({
@@ -1629,7 +1635,7 @@ export class HostelService {
           data: { attachmentUrl: docUrl }
         });
       }
-    } catch {}
+    } catch { }
 
     return existing;
   }
@@ -2295,8 +2301,8 @@ export class HostelService {
     // Duplicate prevention for same student + meal + date
     const isDuplicate = this.inMemoryFoodFeedback.some(
       f => (f.rollNumber === rollNumber || (f.studentName && f.studentName.toLowerCase() === studentName.toLowerCase())) &&
-           f.mealDate === payload.mealDate &&
-           f.mealType.toLowerCase() === payload.mealType.toLowerCase()
+        f.mealDate === payload.mealDate &&
+        f.mealType.toLowerCase() === payload.mealType.toLowerCase()
     );
     if (isDuplicate) {
       throw new BadRequestException(`You have already submitted feedback for ${payload.mealType} on ${payload.mealDate}.`);
@@ -2403,7 +2409,7 @@ export class HostelService {
           if (studentRoll && (rRoll === studentRoll.toLowerCase() || rRoll.includes(studentRoll.toLowerCase()) || studentRoll.toLowerCase().includes(rRoll))) return true;
           if (studentName && rName && (rName.includes(studentName) || studentName.includes(rName))) return true;
           if ((studentRoll === '2305200001' || studentRoll === '2305201001' || studentRoll === '03' || studentRoll === '3') &&
-              (rRoll === '2305201001' || rRoll === '2305200001' || rRoll === '03' || rRoll === '3' || rName.includes('rakesh') || rName.includes('aman') || rName.includes('raj'))) {
+            (rRoll === '2305201001' || rRoll === '2305200001' || rRoll === '03' || rRoll === '3' || rName.includes('rakesh') || rName.includes('aman') || rName.includes('raj'))) {
             return true;
           }
           return false;
@@ -2480,7 +2486,7 @@ export class HostelService {
             where: { OR: [{ id }, { feedbackCode: id }] }
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     if (!record) throw new NotFoundException(`Food feedback record ${id} not found.`);
 
@@ -2526,7 +2532,7 @@ export class HostelService {
             where: { OR: [{ id }, { feedbackCode: id }] }
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     if (!record) throw new NotFoundException(`Food feedback record ${id} not found.`);
 
@@ -2571,7 +2577,7 @@ export class HostelService {
             where: { OR: [{ id }, { feedbackCode: id }] }
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     if (!record) throw new NotFoundException(`Food feedback record ${id} not found.`);
 
@@ -2631,7 +2637,7 @@ export class HostelService {
             where: { OR: [{ id }, { feedbackCode: id }] }
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     if (!record) throw new NotFoundException(`Food feedback record ${id} not found.`);
 
@@ -2663,7 +2669,7 @@ export class HostelService {
             where: { OR: [{ id }, { feedbackCode: id }] }
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     if (!record) throw new NotFoundException(`Food feedback record ${id} not found.`);
 
@@ -3060,7 +3066,7 @@ export class HostelService {
         });
         if (student) validStudentId = student.id;
       }
-    } catch {}
+    } catch { }
 
     const record = {
       id: complaintId,
@@ -3179,12 +3185,14 @@ export class HostelService {
           where: {
             OR: [
               {
-                category: { in: [
-                  'Room Cleaning', 'Bathroom / Toilet Cleaning', 'Dustbin Not Emptied',
-                  'Dirty Floor', 'Unclean Bedding', 'Bad Odour', 'Pest or Insect Issue',
-                  'Common Area Cleaning', 'Corridor Cleaning', 'Other Cleanliness Issue',
-                  'Cleaning', 'Housekeeping'
-                ] }
+                category: {
+                  in: [
+                    'Room Cleaning', 'Bathroom / Toilet Cleaning', 'Dustbin Not Emptied',
+                    'Dirty Floor', 'Unclean Bedding', 'Bad Odour', 'Pest or Insect Issue',
+                    'Common Area Cleaning', 'Corridor Cleaning', 'Other Cleanliness Issue',
+                    'Cleaning', 'Housekeeping'
+                  ]
+                }
               },
               { id: { startsWith: 'cln-' } },
               { predictedCategory: 'cleaning' }
@@ -3308,7 +3316,7 @@ export class HostelService {
           };
           this.inMemoryCleanlinessComplaints.push(record);
         }
-      } catch {}
+      } catch { }
     }
     if (!record) {
       record = {
@@ -3389,7 +3397,7 @@ export class HostelService {
           record = { ...dbRec };
           this.inMemoryCleanlinessComplaints.push(record);
         }
-      } catch {}
+      } catch { }
     }
     if (!record) {
       record = {
@@ -3436,7 +3444,7 @@ export class HostelService {
           }
         });
       }
-    } catch {}
+    } catch { }
 
     return record;
   }
@@ -3461,7 +3469,7 @@ export class HostelService {
           };
           this.inMemoryCleanlinessComplaints.push(record);
         }
-      } catch {}
+      } catch { }
     }
     if (!record) throw new NotFoundException(`Cleanliness complaint ticket ${id} not found.`);
 
@@ -3480,7 +3488,7 @@ export class HostelService {
           }
         });
       }
-    } catch (e) {}
+    } catch (e) { }
 
     return record;
   }
@@ -3505,7 +3513,7 @@ export class HostelService {
           };
           this.inMemoryCleanlinessComplaints.push(record);
         }
-      } catch {}
+      } catch { }
     }
     if (!record) throw new NotFoundException(`Cleanliness complaint ticket ${id} not found.`);
 
@@ -3536,7 +3544,7 @@ export class HostelService {
           }
         });
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Notify student to verify
     try {
@@ -3581,7 +3589,7 @@ export class HostelService {
           };
           this.inMemoryCleanlinessComplaints.push(record);
         }
-      } catch {}
+      } catch { }
     }
     if (!record) throw new NotFoundException(`Cleanliness complaint ticket ${id} not found.`);
 
@@ -3656,7 +3664,7 @@ export class HostelService {
           }
         });
       }
-    } catch (e) {}
+    } catch (e) { }
 
     return record;
   }
@@ -3679,7 +3687,7 @@ export class HostelService {
           };
           this.inMemoryCleanlinessComplaints.push(record);
         }
-      } catch {}
+      } catch { }
     }
     if (!record) throw new NotFoundException(`Cleanliness complaint ticket ${id} not found.`);
 
@@ -3712,7 +3720,7 @@ export class HostelService {
           }
         });
       }
-    } catch (e) {}
+    } catch (e) { }
 
     return record;
   }
@@ -3732,7 +3740,7 @@ export class HostelService {
           };
           this.inMemoryCleanlinessComplaints.push(record);
         }
-      } catch {}
+      } catch { }
     }
     if (!record) throw new NotFoundException(`Cleanliness complaint ticket ${id} not found.`);
 
@@ -3765,7 +3773,7 @@ export class HostelService {
           }
         });
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Notify Admin
     try {
@@ -3797,12 +3805,14 @@ export class HostelService {
           where: {
             OR: [
               {
-                category: { in: [
-                  'Room Cleaning', 'Bathroom / Toilet Cleaning', 'Dustbin Not Emptied',
-                  'Dirty Floor', 'Unclean Bedding', 'Bad Odour', 'Pest or Insect Issue',
-                  'Common Area Cleaning', 'Corridor Cleaning', 'Other Cleanliness Issue',
-                  'Cleaning', 'Housekeeping'
-                ] }
+                category: {
+                  in: [
+                    'Room Cleaning', 'Bathroom / Toilet Cleaning', 'Dustbin Not Emptied',
+                    'Dirty Floor', 'Unclean Bedding', 'Bad Odour', 'Pest or Insect Issue',
+                    'Common Area Cleaning', 'Corridor Cleaning', 'Other Cleanliness Issue',
+                    'Cleaning', 'Housekeeping'
+                  ]
+                }
               },
               { id: { startsWith: 'cln-' } },
               { predictedCategory: 'cleaning' }
@@ -3877,243 +3887,243 @@ export class HostelService {
   // 10. REQUISITIONS & INDENTS (WARDEN & HOSTEL ADMIN)
   // ==========================================
   private defaultIndentsSeed = [
-  {
-    "referenceNo": "REQ-7037/15350",
-    "indentNo": "7037/15350",
-    "requestTitle": "Session Student Documentation Cover & Files",
-    "requestType": "General Hostel Supplies",
-    "productName": "File with GIFT Logo (Folder File)",
-    "materialName": "File with GIFT Logo (Folder File)",
-    "isCustom": false,
-    "code": "S-201",
-    "quantity": "4.00 pcs",
-    "unit": "Pieces",
-    "approxCost": "RS. 82.18",
-    "costNum": 82.18,
-    "estimatedCost": 82.18,
-    "hostelName": "BPUT Boy's Hostel 1 (Kalam Block)",
-    "roomLocation": "Hostel Office & Record Room",
-    "purpose": "bh-1,bh-2 (Hostel Office)",
-    "priority": "Medium",
-    "expectedDate": "22-01-2024",
-    "raisedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
-    "currentLevel": "Level-2 (Store Issued)",
-    "isApproved": true,
-    "issued": true,
-    "status": "Approved & Issued",
-    "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
-    "approvedAt": "24-01-2024",
-    "submittedAt": "22 Jan 2024, 10:15 AM",
-    "remarks": "Approved for session student files.",
-    "itemCondition": "Routine Maintenance Requirement",
-    "repairPossible": "Yes - Can be repaired on campus by technician",
-    "replacementRequired": "Routine Refill / Store Issue",
-    "affectedRooms": 1,
-    "safetyHazard": false
-  },
-  {
-    "referenceNo": "REQ-7037/15349",
-    "indentNo": "7037/15349",
-    "requestTitle": "Curfew & Night Roll-Call Student Attendance Registers",
-    "requestType": "General Hostel Supplies",
-    "productName": "Attendance Register Student",
-    "materialName": "Attendance Register Student",
-    "isCustom": false,
-    "code": "S-211",
-    "quantity": "2.00 pcs",
-    "unit": "Pieces",
-    "approxCost": "RS. 217.11",
-    "costNum": 217.11,
-    "estimatedCost": 217.11,
-    "hostelName": "BPUT Boy's Hostel 1 (Kalam Block)",
-    "roomLocation": "Warden Guard Booth & Entry Desk",
-    "purpose": "bh-1,bh-2 (Guard Station)",
-    "priority": "High",
-    "expectedDate": "22-01-2024",
-    "raisedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
-    "currentLevel": "Level-2 (Store Issued)",
-    "isApproved": true,
-    "issued": true,
-    "status": "Approved & Issued",
-    "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
-    "approvedAt": "23-01-2024",
-    "submittedAt": "22 Jan 2024, 09:30 AM",
-    "remarks": "Approved for night roll-call record register.",
-    "itemCondition": "Routine Maintenance Requirement",
-    "repairPossible": "Yes - Can be repaired on campus by technician",
-    "replacementRequired": "Routine Refill / Store Issue",
-    "affectedRooms": 1,
-    "safetyHazard": false
-  },
-  {
-    "referenceNo": "REQ-6396/13875",
-    "indentNo": "6396/13875",
-    "requestTitle": "Administrative Filing System Covers",
-    "requestType": "General Hostel Supplies",
-    "productName": "Cover File",
-    "materialName": "Cover File",
-    "isCustom": false,
-    "code": "S-202",
-    "quantity": "4.00 pcs",
-    "unit": "Pieces",
-    "approxCost": "RS. 109.33",
-    "costNum": 109.33,
-    "estimatedCost": 109.33,
-    "hostelName": "BPUT Boy's Hostel 2 (Raman Block)",
-    "roomLocation": "Warden Archive Desk",
-    "purpose": "bh-1,bh-2",
-    "priority": "Low",
-    "expectedDate": "11-10-2023",
-    "raisedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
-    "currentLevel": "Level-2 (Store Issued)",
-    "isApproved": true,
-    "issued": true,
-    "status": "Approved & Issued",
-    "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
-    "approvedAt": "12-10-2023",
-    "submittedAt": "11 Oct 2023, 11:20 AM",
-    "remarks": "Office filing requisitions approved.",
-    "itemCondition": "Routine Maintenance Requirement",
-    "repairPossible": "Yes - Can be repaired on campus by technician",
-    "replacementRequired": "Routine Refill / Store Issue",
-    "affectedRooms": 1,
-    "safetyHazard": false
-  },
-  {
-    "referenceNo": "REQ-6396/13874",
-    "indentNo": "6396/13874",
-    "requestTitle": "Block Resident Muster Rolls",
-    "requestType": "General Hostel Supplies",
-    "productName": "Attendance Register Student",
-    "materialName": "Attendance Register Student",
-    "isCustom": false,
-    "code": "S-211",
-    "quantity": "2.00 pcs",
-    "unit": "Pieces",
-    "approxCost": "RS. 221.75",
-    "costNum": 221.75,
-    "estimatedCost": 221.75,
-    "hostelName": "Sarojini Girls Hostel (Block A)",
-    "roomLocation": "Girls Hostel Ground Desk",
-    "purpose": "gh-1 (Sarojini)",
-    "priority": "Medium",
-    "expectedDate": "11-10-2023",
-    "raisedBy": "Mrs. Nibedita Das (Hostel Warden)",
-    "currentLevel": "Level-2 (Store Issued)",
-    "isApproved": true,
-    "issued": true,
-    "status": "Approved & Issued",
-    "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
-    "approvedAt": "12-10-2023",
-    "submittedAt": "11 Oct 2023, 08:45 AM",
-    "remarks": "Approved for Kalam & Sarojini residence blocks.",
-    "itemCondition": "Routine Maintenance Requirement",
-    "repairPossible": "Yes - Can be repaired on campus by technician",
-    "replacementRequired": "Routine Refill / Store Issue",
-    "affectedRooms": 1,
-    "safetyHazard": false
-  },
-  {
-    "referenceNo": "REQ-2851/4122",
-    "indentNo": "2851/4122",
-    "requestTitle": "Heavy Brass Scissors for Warden Station",
-    "requestType": "General Hostel Supplies",
-    "productName": "Scissor Heavy Brass",
-    "materialName": "Scissor",
-    "isCustom": false,
-    "code": "S-104",
-    "quantity": "1.00 pcs",
-    "unit": "Pieces",
-    "approxCost": "RS. 126.67",
-    "costNum": 126.67,
-    "estimatedCost": 126.67,
-    "hostelName": "BPUT Boy's Hostel 1 (Kalam Block)",
-    "roomLocation": "Warden Office",
-    "purpose": "OFFICE",
-    "priority": "Low",
-    "expectedDate": "03-01-2023",
-    "raisedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
-    "currentLevel": "Level-2 (Store Issued)",
-    "isApproved": true,
-    "issued": true,
-    "status": "Approved & Issued",
-    "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
-    "approvedAt": "04-01-2023",
-    "submittedAt": "03 Jan 2023, 02:00 PM",
-    "remarks": "Stationery procurement.",
-    "itemCondition": "Routine Maintenance Requirement",
-    "repairPossible": "Yes - Can be repaired on campus by technician",
-    "replacementRequired": "Routine Refill / Store Issue",
-    "affectedRooms": 1,
-    "safetyHazard": false
-  },
-  {
-    "referenceNo": "REQ-8492/18920",
-    "indentNo": "8492/18920",
-    "requestTitle": "Emergency Door Stay Handle & Lock Replacement",
-    "requestType": "Furniture Request",
-    "productName": "Aluminium door Stay Handle & lock",
-    "materialName": "Aluminium door Stay Handle & lock",
-    "isCustom": false,
-    "code": "H-301",
-    "quantity": "12.00 pcs",
-    "unit": "Pieces",
-    "approxCost": "RS. 1,446.00",
-    "costNum": 1446,
-    "estimatedCost": 1446,
-    "hostelName": "Gandhi Boys Residence",
-    "roomLocation": "Gandhi Block Rooms 101-106",
-    "purpose": "bh-1 (Gandhi Block Rooms 101-106)",
-    "priority": "High",
-    "expectedDate": "2026-11-02",
-    "raisedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
-    "currentLevel": "Level-1 (Pending Review)",
-    "isApproved": false,
-    "issued": false,
-    "status": "Pending Admin Review",
-    "submittedAt": "28 Oct 2026, 04:15 PM",
-    "remarks": "Damaged locks require urgent replacement before winter term exams.",
-    "itemCondition": "Damaged / Malfunctioning",
-    "repairPossible": "No - Requires external procurement",
-    "replacementRequired": "Yes - Complete item replacement",
-    "affectedRooms": 6,
-    "safetyHazard": true
-  },
-  {
-    "referenceNo": "REQ-8492/18921",
-    "indentNo": "8492/18921",
-    "requestTitle": "Shower Spindles & CPVC Fitting Replacement",
-    "requestType": "Plumbing Problem",
-    "productName": "Shower Spindle 7mm & CPVC Sockets",
-    "materialName": "Shower Spindle 7mm & CPVC Sockets",
-    "isCustom": true,
-    "code": "P-707-CUST",
-    "quantity": "8.00 pcs",
-    "unit": "Pieces",
-    "approxCost": "RS. 860.00",
-    "costNum": 860,
-    "estimatedCost": 860,
-    "hostelName": "Sarojini Girls Hostel (Block A)",
-    "roomLocation": "2nd Floor Common Washrooms",
-    "purpose": "gh-1 (Sarojini Girls Residence)",
-    "priority": "Urgent",
-    "expectedDate": "2026-11-05",
-    "raisedBy": "Mrs. Nibedita Das (Hostel Warden)",
-    "currentLevel": "Rejected",
-    "isApproved": false,
-    "issued": false,
-    "status": "Rejected",
-    "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
-    "approvedAt": "29 Oct 2026, 11:00 AM",
-    "submittedAt": "28 Oct 2026, 05:40 PM",
-    "remarks": "Rejected by Admin: Budget constraint or alternative item available in central store.",
-    "itemCondition": "Damaged / Malfunctioning",
-    "repairPossible": "Yes - Can be repaired on campus by technician",
-    "replacementRequired": "Yes - Complete item replacement",
-    "affectedRooms": 4,
-    "safetyHazard": false
-  }
-];
+    {
+      "referenceNo": "REQ-7037/15350",
+      "indentNo": "7037/15350",
+      "requestTitle": "Session Student Documentation Cover & Files",
+      "requestType": "General Hostel Supplies",
+      "productName": "File with GIFT Logo (Folder File)",
+      "materialName": "File with GIFT Logo (Folder File)",
+      "isCustom": false,
+      "code": "S-201",
+      "quantity": "4.00 pcs",
+      "unit": "Pieces",
+      "approxCost": "RS. 82.18",
+      "costNum": 82.18,
+      "estimatedCost": 82.18,
+      "hostelName": "BPUT Boy's Hostel 1 (Kalam Block)",
+      "roomLocation": "Hostel Office & Record Room",
+      "purpose": "bh-1,bh-2 (Hostel Office)",
+      "priority": "Medium",
+      "expectedDate": "22-01-2024",
+      "raisedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
+      "currentLevel": "Level-2 (Store Issued)",
+      "isApproved": true,
+      "issued": true,
+      "status": "Approved & Issued",
+      "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
+      "approvedAt": "24-01-2024",
+      "submittedAt": "22 Jan 2024, 10:15 AM",
+      "remarks": "Approved for session student files.",
+      "itemCondition": "Routine Maintenance Requirement",
+      "repairPossible": "Yes - Can be repaired on campus by technician",
+      "replacementRequired": "Routine Refill / Store Issue",
+      "affectedRooms": 1,
+      "safetyHazard": false
+    },
+    {
+      "referenceNo": "REQ-7037/15349",
+      "indentNo": "7037/15349",
+      "requestTitle": "Curfew & Night Roll-Call Student Attendance Registers",
+      "requestType": "General Hostel Supplies",
+      "productName": "Attendance Register Student",
+      "materialName": "Attendance Register Student",
+      "isCustom": false,
+      "code": "S-211",
+      "quantity": "2.00 pcs",
+      "unit": "Pieces",
+      "approxCost": "RS. 217.11",
+      "costNum": 217.11,
+      "estimatedCost": 217.11,
+      "hostelName": "BPUT Boy's Hostel 1 (Kalam Block)",
+      "roomLocation": "Warden Guard Booth & Entry Desk",
+      "purpose": "bh-1,bh-2 (Guard Station)",
+      "priority": "High",
+      "expectedDate": "22-01-2024",
+      "raisedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
+      "currentLevel": "Level-2 (Store Issued)",
+      "isApproved": true,
+      "issued": true,
+      "status": "Approved & Issued",
+      "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
+      "approvedAt": "23-01-2024",
+      "submittedAt": "22 Jan 2024, 09:30 AM",
+      "remarks": "Approved for night roll-call record register.",
+      "itemCondition": "Routine Maintenance Requirement",
+      "repairPossible": "Yes - Can be repaired on campus by technician",
+      "replacementRequired": "Routine Refill / Store Issue",
+      "affectedRooms": 1,
+      "safetyHazard": false
+    },
+    {
+      "referenceNo": "REQ-6396/13875",
+      "indentNo": "6396/13875",
+      "requestTitle": "Administrative Filing System Covers",
+      "requestType": "General Hostel Supplies",
+      "productName": "Cover File",
+      "materialName": "Cover File",
+      "isCustom": false,
+      "code": "S-202",
+      "quantity": "4.00 pcs",
+      "unit": "Pieces",
+      "approxCost": "RS. 109.33",
+      "costNum": 109.33,
+      "estimatedCost": 109.33,
+      "hostelName": "BPUT Boy's Hostel 2 (Raman Block)",
+      "roomLocation": "Warden Archive Desk",
+      "purpose": "bh-1,bh-2",
+      "priority": "Low",
+      "expectedDate": "11-10-2023",
+      "raisedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
+      "currentLevel": "Level-2 (Store Issued)",
+      "isApproved": true,
+      "issued": true,
+      "status": "Approved & Issued",
+      "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
+      "approvedAt": "12-10-2023",
+      "submittedAt": "11 Oct 2023, 11:20 AM",
+      "remarks": "Office filing requisitions approved.",
+      "itemCondition": "Routine Maintenance Requirement",
+      "repairPossible": "Yes - Can be repaired on campus by technician",
+      "replacementRequired": "Routine Refill / Store Issue",
+      "affectedRooms": 1,
+      "safetyHazard": false
+    },
+    {
+      "referenceNo": "REQ-6396/13874",
+      "indentNo": "6396/13874",
+      "requestTitle": "Block Resident Muster Rolls",
+      "requestType": "General Hostel Supplies",
+      "productName": "Attendance Register Student",
+      "materialName": "Attendance Register Student",
+      "isCustom": false,
+      "code": "S-211",
+      "quantity": "2.00 pcs",
+      "unit": "Pieces",
+      "approxCost": "RS. 221.75",
+      "costNum": 221.75,
+      "estimatedCost": 221.75,
+      "hostelName": "Sarojini Girls Hostel (Block A)",
+      "roomLocation": "Girls Hostel Ground Desk",
+      "purpose": "gh-1 (Sarojini)",
+      "priority": "Medium",
+      "expectedDate": "11-10-2023",
+      "raisedBy": "Mrs. Nibedita Das (Hostel Warden)",
+      "currentLevel": "Level-2 (Store Issued)",
+      "isApproved": true,
+      "issued": true,
+      "status": "Approved & Issued",
+      "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
+      "approvedAt": "12-10-2023",
+      "submittedAt": "11 Oct 2023, 08:45 AM",
+      "remarks": "Approved for Kalam & Sarojini residence blocks.",
+      "itemCondition": "Routine Maintenance Requirement",
+      "repairPossible": "Yes - Can be repaired on campus by technician",
+      "replacementRequired": "Routine Refill / Store Issue",
+      "affectedRooms": 1,
+      "safetyHazard": false
+    },
+    {
+      "referenceNo": "REQ-2851/4122",
+      "indentNo": "2851/4122",
+      "requestTitle": "Heavy Brass Scissors for Warden Station",
+      "requestType": "General Hostel Supplies",
+      "productName": "Scissor Heavy Brass",
+      "materialName": "Scissor",
+      "isCustom": false,
+      "code": "S-104",
+      "quantity": "1.00 pcs",
+      "unit": "Pieces",
+      "approxCost": "RS. 126.67",
+      "costNum": 126.67,
+      "estimatedCost": 126.67,
+      "hostelName": "BPUT Boy's Hostel 1 (Kalam Block)",
+      "roomLocation": "Warden Office",
+      "purpose": "OFFICE",
+      "priority": "Low",
+      "expectedDate": "03-01-2023",
+      "raisedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
+      "currentLevel": "Level-2 (Store Issued)",
+      "isApproved": true,
+      "issued": true,
+      "status": "Approved & Issued",
+      "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
+      "approvedAt": "04-01-2023",
+      "submittedAt": "03 Jan 2023, 02:00 PM",
+      "remarks": "Stationery procurement.",
+      "itemCondition": "Routine Maintenance Requirement",
+      "repairPossible": "Yes - Can be repaired on campus by technician",
+      "replacementRequired": "Routine Refill / Store Issue",
+      "affectedRooms": 1,
+      "safetyHazard": false
+    },
+    {
+      "referenceNo": "REQ-8492/18920",
+      "indentNo": "8492/18920",
+      "requestTitle": "Emergency Door Stay Handle & Lock Replacement",
+      "requestType": "Furniture Request",
+      "productName": "Aluminium door Stay Handle & lock",
+      "materialName": "Aluminium door Stay Handle & lock",
+      "isCustom": false,
+      "code": "H-301",
+      "quantity": "12.00 pcs",
+      "unit": "Pieces",
+      "approxCost": "RS. 1,446.00",
+      "costNum": 1446,
+      "estimatedCost": 1446,
+      "hostelName": "Gandhi Boys Residence",
+      "roomLocation": "Gandhi Block Rooms 101-106",
+      "purpose": "bh-1 (Gandhi Block Rooms 101-106)",
+      "priority": "High",
+      "expectedDate": "2026-11-02",
+      "raisedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
+      "currentLevel": "Level-1 (Pending Review)",
+      "isApproved": false,
+      "issued": false,
+      "status": "Pending Admin Review",
+      "submittedAt": "28 Oct 2026, 04:15 PM",
+      "remarks": "Damaged locks require urgent replacement before winter term exams.",
+      "itemCondition": "Damaged / Malfunctioning",
+      "repairPossible": "No - Requires external procurement",
+      "replacementRequired": "Yes - Complete item replacement",
+      "affectedRooms": 6,
+      "safetyHazard": true
+    },
+    {
+      "referenceNo": "REQ-8492/18921",
+      "indentNo": "8492/18921",
+      "requestTitle": "Shower Spindles & CPVC Fitting Replacement",
+      "requestType": "Plumbing Problem",
+      "productName": "Shower Spindle 7mm & CPVC Sockets",
+      "materialName": "Shower Spindle 7mm & CPVC Sockets",
+      "isCustom": true,
+      "code": "P-707-CUST",
+      "quantity": "8.00 pcs",
+      "unit": "Pieces",
+      "approxCost": "RS. 860.00",
+      "costNum": 860,
+      "estimatedCost": 860,
+      "hostelName": "Sarojini Girls Hostel (Block A)",
+      "roomLocation": "2nd Floor Common Washrooms",
+      "purpose": "gh-1 (Sarojini Girls Residence)",
+      "priority": "Urgent",
+      "expectedDate": "2026-11-05",
+      "raisedBy": "Mrs. Nibedita Das (Hostel Warden)",
+      "currentLevel": "Rejected",
+      "isApproved": false,
+      "issued": false,
+      "status": "Rejected",
+      "approvedBy": "Mr. Rajesh Jena (Hostel Admin)",
+      "approvedAt": "29 Oct 2026, 11:00 AM",
+      "submittedAt": "28 Oct 2026, 05:40 PM",
+      "remarks": "Rejected by Admin: Budget constraint or alternative item available in central store.",
+      "itemCondition": "Damaged / Malfunctioning",
+      "repairPossible": "Yes - Can be repaired on campus by technician",
+      "replacementRequired": "Yes - Complete item replacement",
+      "affectedRooms": 4,
+      "safetyHazard": false
+    }
+  ];
 
   async getHostelIndents(filter: { hostel?: string; status?: string; raisedBy?: string; search?: string } = {}) {
     let requests = await this.prisma.workflowRequest.findMany({
@@ -4378,88 +4388,88 @@ export class HostelService {
   // 11. OUTSTATION RESIDENT LEAVES
   // ==========================================
   private defaultLeavesSeed = [
-  {
-    "id": "LEV-2026-101",
-    "studentName": "Rakesh Das",
-    "rollNumber": "2305200001",
-    "regNo": "2305201001",
-    "hostelName": "Gandhi Boys Residence",
-    "roomNumber": "101",
-    "phone": "+91 94370 11999",
-    "startDate": "2026-10-29",
-    "endDate": "2026-10-31",
-    "days": 2,
-    "reason": "Home Visit / Family emergency religious festival celebration.",
-    "status": "Approved",
-    "appliedAt": "2026-10-28 09:30 AM",
-    "guardianName": "D. Das",
-    "guardianPhone": "+91 94370 11888",
-    "parentConsent": "VERIFIED",
-    "approvedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
-    "approvedAt": "2026-10-28 02:00 PM",
-    "actionRemarks": "Parental telephone confirmation verified."
-  },
-  {
-    "id": "LEV-2026-102",
-    "studentName": "Sneha Mohanty",
-    "rollNumber": "2305200006",
-    "regNo": "2305201006",
-    "hostelName": "Sarojini Girls Residence (Block A)",
-    "roomNumber": "204",
-    "phone": "+91 94370 22006",
-    "startDate": "2026-10-25",
-    "endDate": "2026-10-28",
-    "days": 3,
-    "reason": "Medical consultation and specialized health checkup in Cuttack.",
-    "status": "Returned",
-    "appliedAt": "2026-10-24 11:15 AM",
-    "guardianName": "M. Mohanty",
-    "guardianPhone": "+91 94370 22888",
-    "parentConsent": "VERIFIED",
-    "approvedBy": "Mrs. Nibedita Das (Hostel Warden)",
-    "approvedAt": "2026-10-24 04:30 PM",
-    "actionRemarks": "Doctor prescription submitted.",
-    "returnedAt": "2026-10-28 07:15 PM"
-  },
-  {
-    "id": "LEV-2026-103",
-    "studentName": "Priya Patra",
-    "rollNumber": "2305200004",
-    "regNo": "2305201004",
-    "hostelName": "Sarojini Girls Residence (Block A)",
-    "roomNumber": "204",
-    "phone": "+91 94370 22004",
-    "startDate": "2026-11-02",
-    "endDate": "2026-11-06",
-    "days": 4,
-    "reason": "Elder sister's wedding ceremony in Bhubaneswar.",
-    "status": "Pending Warden Approval",
-    "appliedAt": "2026-10-29 08:20 AM",
-    "guardianName": "S. Patra",
-    "guardianPhone": "+91 94370 22444",
-    "parentConsent": "PENDING",
-    "actionRemarks": "Awaiting parent telephonic verification by warden."
-  },
-  {
-    "id": "LEV-2026-104",
-    "studentName": "Amit Kumar Sahoo",
-    "rollNumber": "2305200009",
-    "regNo": "2305201009",
-    "hostelName": "BPUT Boy's Hostel 2 (Raman Block)",
-    "roomNumber": "102",
-    "phone": "+91 94370 33009",
-    "startDate": "2026-10-31",
-    "endDate": "2026-11-02",
-    "days": 2,
-    "reason": "Weekend Outstation trip with local guardians.",
-    "status": "Pending Warden Approval",
-    "appliedAt": "2026-10-29 10:45 AM",
-    "guardianName": "R. Sahoo",
-    "guardianPhone": "+91 94370 33888",
-    "parentConsent": "VERIFIED",
-    "actionRemarks": "Parent consent verified."
-  }
-];
+    {
+      "id": "LEV-2026-101",
+      "studentName": "Rakesh Das",
+      "rollNumber": "2305200001",
+      "regNo": "2305201001",
+      "hostelName": "Gandhi Boys Residence",
+      "roomNumber": "101",
+      "phone": "+91 94370 11999",
+      "startDate": "2026-10-29",
+      "endDate": "2026-10-31",
+      "days": 2,
+      "reason": "Home Visit / Family emergency religious festival celebration.",
+      "status": "Approved",
+      "appliedAt": "2026-10-28 09:30 AM",
+      "guardianName": "D. Das",
+      "guardianPhone": "+91 94370 11888",
+      "parentConsent": "VERIFIED",
+      "approvedBy": "Mr. Tanmaya Kumar Routray (Hostel Warden)",
+      "approvedAt": "2026-10-28 02:00 PM",
+      "actionRemarks": "Parental telephone confirmation verified."
+    },
+    {
+      "id": "LEV-2026-102",
+      "studentName": "Sneha Mohanty",
+      "rollNumber": "2305200006",
+      "regNo": "2305201006",
+      "hostelName": "Sarojini Girls Residence (Block A)",
+      "roomNumber": "204",
+      "phone": "+91 94370 22006",
+      "startDate": "2026-10-25",
+      "endDate": "2026-10-28",
+      "days": 3,
+      "reason": "Medical consultation and specialized health checkup in Cuttack.",
+      "status": "Returned",
+      "appliedAt": "2026-10-24 11:15 AM",
+      "guardianName": "M. Mohanty",
+      "guardianPhone": "+91 94370 22888",
+      "parentConsent": "VERIFIED",
+      "approvedBy": "Mrs. Nibedita Das (Hostel Warden)",
+      "approvedAt": "2026-10-24 04:30 PM",
+      "actionRemarks": "Doctor prescription submitted.",
+      "returnedAt": "2026-10-28 07:15 PM"
+    },
+    {
+      "id": "LEV-2026-103",
+      "studentName": "Priya Patra",
+      "rollNumber": "2305200004",
+      "regNo": "2305201004",
+      "hostelName": "Sarojini Girls Residence (Block A)",
+      "roomNumber": "204",
+      "phone": "+91 94370 22004",
+      "startDate": "2026-11-02",
+      "endDate": "2026-11-06",
+      "days": 4,
+      "reason": "Elder sister's wedding ceremony in Bhubaneswar.",
+      "status": "Pending Warden Approval",
+      "appliedAt": "2026-10-29 08:20 AM",
+      "guardianName": "S. Patra",
+      "guardianPhone": "+91 94370 22444",
+      "parentConsent": "PENDING",
+      "actionRemarks": "Awaiting parent telephonic verification by warden."
+    },
+    {
+      "id": "LEV-2026-104",
+      "studentName": "Amit Kumar Sahoo",
+      "rollNumber": "2305200009",
+      "regNo": "2305201009",
+      "hostelName": "BPUT Boy's Hostel 2 (Raman Block)",
+      "roomNumber": "102",
+      "phone": "+91 94370 33009",
+      "startDate": "2026-10-31",
+      "endDate": "2026-11-02",
+      "days": 2,
+      "reason": "Weekend Outstation trip with local guardians.",
+      "status": "Pending Warden Approval",
+      "appliedAt": "2026-10-29 10:45 AM",
+      "guardianName": "R. Sahoo",
+      "guardianPhone": "+91 94370 33888",
+      "parentConsent": "VERIFIED",
+      "actionRemarks": "Parent consent verified."
+    }
+  ];
 
   async getHostelLeaves(filter: { rollNumber?: string; hostel?: string; status?: string; search?: string } = {}) {
     let requests = await this.prisma.workflowRequest.findMany({
@@ -4783,7 +4793,7 @@ export class HostelService {
   async deleteComplaint(id: string, user: any) {
     try {
       await this.prisma.hostelComplaint.delete({ where: { id } });
-    } catch {}
+    } catch { }
     return { success: true, message: 'Complaint #' + id + ' permanently deleted by Hostel Administrator.' };
   }
 
@@ -4812,7 +4822,7 @@ export class HostelService {
           resolutionNotes: updates.notes || updates.resolutionNotes
         }
       });
-    } catch {}
+    } catch { }
 
     return this.inMemoryCleanlinessComplaints[memIndex] || updates;
   }
@@ -4821,7 +4831,7 @@ export class HostelService {
     this.inMemoryCleanlinessComplaints = this.inMemoryCleanlinessComplaints.filter(c => c.id !== id && c.complaintCode !== id);
     try {
       await this.prisma.hostelComplaint.delete({ where: { id } });
-    } catch {}
+    } catch { }
     return { success: true, message: 'Cleanliness complaint #' + id + ' deleted.' };
   }
 
@@ -4849,7 +4859,7 @@ export class HostelService {
           correctiveAction: updates.correctiveAction
         }
       });
-    } catch {}
+    } catch { }
 
     return this.inMemoryFoodFeedback[memIndex] || updates;
   }
@@ -4858,7 +4868,7 @@ export class HostelService {
     this.inMemoryFoodFeedback = this.inMemoryFoodFeedback.filter(f => f.id !== id && f.feedbackCode !== id);
     try {
       await this.prisma.foodFeedback.delete({ where: { id } });
-    } catch {}
+    } catch { }
     return { success: true, message: 'Food feedback #' + id + ' deleted.' };
   }
 
@@ -4880,7 +4890,7 @@ export class HostelService {
   async deleteVisitor(id: string, user: any) {
     try {
       await this.prisma.hostelVisitor.delete({ where: { id } });
-    } catch {}
+    } catch { }
     return { success: true, message: 'Visitor record #' + id + ' deleted.' };
   }
 
@@ -4957,6 +4967,7 @@ export class HostelService {
 
   // 18. WARDEN DIRECTORY & CMS FULL PROFILE
   async getWardens() {
+    evaluateLeaveDutyStatusBackend();
     try {
       const dbStaff = await this.prisma.staffRoster.findMany({
         where: { staffType: 'WARDEN' },
@@ -4994,6 +5005,7 @@ export class HostelService {
       email: w.emailId,
       accountStatus: w.status,
       dutyStatus: w.dutyStatus || 'On Duty',
+      relievingWarden: (w as any).relievingWarden || 'None Assigned',
       ...w,
     }));
   }
@@ -5021,7 +5033,7 @@ export class HostelService {
           assignedHostelOrPost: updated.hostelName,
         },
       });
-    } catch {}
+    } catch { }
 
     this.logger.log(`Warden profile ${id} updated by ${user?.name || 'Administrator'}`);
     return updated;
@@ -5033,6 +5045,15 @@ export class HostelService {
       throw new NotFoundException(`Warden with ID '${id}' not found.`);
     }
     this.logger.log(`Document attached to warden ${id} by ${user?.name || 'Administrator'}`);
+    return updated;
+  }
+
+  async deleteWardenDocument(id: string, docId: string, user: any) {
+    const updated = removeWardenDocument(id, docId);
+    if (!updated) {
+      throw new NotFoundException(`Warden with ID '${id}' or document '${docId}' not found.`);
+    }
+    this.logger.log(`Document ${docId} removed from warden ${id} by ${user?.name || 'Administrator'}`);
     return updated;
   }
 
@@ -5188,15 +5209,54 @@ export class HostelService {
         where: { badgeNumber: id },
         data: { status: status.toUpperCase() },
       });
-    } catch {}
+    } catch { }
     this.logger.log(`Warden ${id} status set to ${status} by ${user?.name || 'Administrator'}. Reason: ${reason}`);
     return updated;
   }
 
-  async updateWardenDutyStatus(id: string, dutyStatus: string, reason: string, user: any) {
-    const updated = setWardenDutyStatusBackend(id, dutyStatus);
+  async deleteWarden(id: string, user: any) {
+    if (this.isWardenSuspended(user)) {
+      throw new ForbiddenException('Warden account is suspended.');
+    }
+    const role = normalizeRole(user.role);
+    if (!['super_admin', 'admin', 'hostel_admin'].includes(role)) {
+      throw new ForbiddenException('Only Administrators can delete warden profiles.');
+    }
+    try {
+      await this.prisma.staffRoster.deleteMany({
+        where: { badgeNumber: id }
+      });
+    } catch (e: any) {
+      this.logger.warn(`Could not delete warden from database: ${e?.message || e}`);
+    }
+    const deleted = deleteWardenCmsProfile(id);
+    this.logger.log(`Warden ${id} deleted by ${user?.name || 'Administrator'}`);
+    return { success: deleted, id };
+  }
+
+  async updateWardenDutyStatus(id: string, dutyStatus: string, reason: string, user: any, relievingWarden?: string) {
+    const updated = setWardenDutyStatusBackend(id, dutyStatus, relievingWarden);
     this.logger.log(`Warden ${id} duty status set to ${dutyStatus} by ${user?.name || 'Administrator'}. Reason: ${reason}`);
     return updated;
+  }
+
+  // ==========================================
+  // WARDEN PENDING OPERATIONAL TASKS & DOCKETS
+  // ==========================================
+  async getWardenPendingTasks(wardenId: string, filter?: { status?: string; category?: string; priority?: string }) {
+    return getWardenPendingTasksBackend(wardenId, filter);
+  }
+
+  async updateWardenPendingTaskStatus(wardenId: string, taskId: string, updates: any, user: any) {
+    const result = updateWardenPendingTaskStatusBackend(wardenId, taskId, updates, user);
+    this.logger.log(`Warden task ${taskId} updated to status '${updates.status}' by ${user?.name || 'Administrator'}`);
+    return result;
+  }
+
+  async batchActionWardenPendingTasks(wardenId: string, body: any, user: any) {
+    const result = batchActionWardenPendingTasksBackend(wardenId, body, user);
+    this.logger.log(`Batch action '${body.action}' executed for warden ${wardenId} by ${user?.name || 'Administrator'}`);
+    return result;
   }
 
   // ==========================================
@@ -5351,7 +5411,7 @@ export class HostelService {
     return submitted;
   }
 
-    async getStudentLatestHostelAttendance(identifier: string) {
+  async getStudentLatestHostelAttendance(identifier: string) {
     const all = getSubmittedHostelAttendances();
     if (!all || all.length === 0) {
       return { lastHostelAttendanceDate: '16/10/2026', totalSubmissions: 0 };

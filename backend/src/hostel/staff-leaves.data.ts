@@ -1,7 +1,7 @@
 // Staff & Warden Leaves Data Store (Backend)
 // Synchronizes leave sanctions, institutional balances, and live warden duty status
 
-import { setWardenDutyStatusBackend } from './warden-profiles.data';
+import { setWardenDutyStatusBackend, getAllWardenCmsProfiles } from './warden-profiles.data';
 
 export interface StaffLeaveRecord {
   id: string;
@@ -16,6 +16,7 @@ export interface StaffLeaveRecord {
   session?: string;
   reason: string;
   alternativeArrangement?: string;
+  relievingWarden?: string;
   stationLeaving?: string;
   contactAddress?: string;
   contactPhone?: string;
@@ -43,6 +44,7 @@ export const INITIAL_BACKEND_STAFF_LEAVES: StaffLeaveRecord[] = [
     stationLeaving: 'Yes',
     contactAddress: 'At/PO - Tangi, Naya Sahi, Dist - Cuttack, Pin 754022',
     contactPhone: '+91 78730 08197',
+    relievingWarden: 'Mr. P. Mohanty',
     status: 'Pending Approval',
     appliedOn: '2026-10-26 10:30 AM',
     approvedBy: null,
@@ -65,6 +67,7 @@ export const INITIAL_BACKEND_STAFF_LEAVES: StaffLeaveRecord[] = [
     stationLeaving: 'Yes',
     contactAddress: 'Sector 6, CDA, Cuttack, Odisha',
     contactPhone: '+91 94370 00120',
+    relievingWarden: 'Dr. Swapna Patra',
     status: 'Pending Approval',
     appliedOn: '2026-10-25 04:15 PM',
     approvedBy: null,
@@ -120,7 +123,50 @@ export const INITIAL_BACKEND_STAFF_LEAVES: StaffLeaveRecord[] = [
 const staffLeavesCache = new Map<string, StaffLeaveRecord>();
 INITIAL_BACKEND_STAFF_LEAVES.forEach(l => staffLeavesCache.set(l.id, { ...l }));
 
+/**
+ * Automatically evaluates whether any hostel warden has an active approved leave for today (or target date).
+ * If today falls within [startDate, endDate], the warden's duty status is set to 'On Leave' with their relieving official.
+ * When the leave expires (today > endDate) or is rejected/resumed, the warden is automatically restored to 'On Duty'.
+ */
+export function evaluateLeaveDutyStatusBackend(targetDateStr?: string): void {
+  const targetDate = targetDateStr || new Date().toISOString().split('T')[0];
+  const allLeaves = Array.from(staffLeavesCache.values());
+  const approvedLeaves = allLeaves.filter(l => l.status === 'Approved by Hostel Admin');
+  const allWardens = getAllWardenCmsProfiles();
+
+  for (const warden of allWardens) {
+    // Check if this warden has an active approved leave today
+    const activeLeave = approvedLeaves.find(l => {
+      const matchId = (l.employeeId && (l.employeeId.toUpperCase() === warden.employeeId.toUpperCase() || l.employeeId.toUpperCase() === (warden as any).id?.toUpperCase()));
+      const matchName = l.applicantName && warden.name && (
+        l.applicantName.trim().toLowerCase() === warden.name.trim().toLowerCase() ||
+        l.applicantName.toLowerCase().includes(warden.name.toLowerCase()) ||
+        warden.name.toLowerCase().includes(l.applicantName.toLowerCase())
+      );
+      if (!matchId && !matchName) return false;
+      const start = (l.startDate || '').trim();
+      const end = (l.endDate || l.startDate || '').trim();
+      if (!start) return false;
+      return targetDate >= start && targetDate <= end;
+    });
+
+    if (activeLeave) {
+      const relieving = (activeLeave as any).relievingWarden || 
+        (activeLeave.alternativeArrangement && activeLeave.alternativeArrangement.includes('Dr. Swapna Patra') ? 'Dr. Swapna Patra' : null) ||
+        (warden as any).relievingWarden ||
+        'Relief Official Assigned';
+      setWardenDutyStatusBackend(warden.employeeId, 'On Leave', relieving);
+    } else {
+      // If warden was 'On Leave' but no active approved leave exists for today, automatically return to On Duty
+      if (warden.dutyStatus === 'On Leave') {
+        setWardenDutyStatusBackend(warden.employeeId, 'On Duty', 'None Assigned');
+      }
+    }
+  }
+}
+
 export function getAllStaffLeavesBackend(): StaffLeaveRecord[] {
+  evaluateLeaveDutyStatusBackend();
   return Array.from(staffLeavesCache.values());
 }
 
@@ -151,11 +197,8 @@ export function createStaffLeaveBackend(form: any): StaffLeaveRecord {
 
   staffLeavesCache.set(newId, record);
 
-  // If created directly with Approved status, update warden dutyStatus
-  if (record.status === 'Approved by Hostel Admin' && record.employeeId) {
-    setWardenDutyStatusBackend(record.employeeId, 'On Leave');
-  }
-
+  // If created directly with Approved status, immediately evaluate warden dutyStatus
+  evaluateLeaveDutyStatusBackend();
   return record;
 }
 
@@ -182,21 +225,8 @@ export function updateStaffLeaveStatusBackend(
 
   staffLeavesCache.set(id, updated);
 
-  // Automatically update warden duty status in profiles cache
-  if (updated.employeeId) {
-    if (normalizedStatus === 'Approved by Hostel Admin') {
-      setWardenDutyStatusBackend(updated.employeeId, 'On Leave');
-    } else {
-      // Check if any other approved leave is currently active for this employee
-      const hasOtherApproved = Array.from(staffLeavesCache.values()).some(
-        l => l.id !== id && l.employeeId === updated.employeeId && l.status === 'Approved by Hostel Admin'
-      );
-      if (!hasOtherApproved) {
-        setWardenDutyStatusBackend(updated.employeeId, 'On Duty');
-      }
-    }
-  }
-
+  // Automatically update warden duty status in profiles cache based on active dates
+  evaluateLeaveDutyStatusBackend();
   return updated;
 }
 

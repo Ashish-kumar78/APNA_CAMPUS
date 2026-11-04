@@ -1,7 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  GitPullRequest, CheckCircle2, XCircle, Clock, Search, 
-  Filter, FileText, Check, X, User, AlertCircle 
+import {
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  Clock,
+  FileCheck2,
+  FileText,
+  Filter,
+  GitPullRequest,
+  Search,
+  User,
+  X,
+  XCircle
 } from 'lucide-react';
 import { transportStore } from '../../services/transportStore';
 import { mockTransportRequests } from './transportData.js';
@@ -181,7 +191,7 @@ export default function TransportRequestsSection() {
                       style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
                       onClick={() => { setSelectedReq(item); setReviewNote(item.reviewNotes || ''); }}
                     >
-                      Audit
+                      <FileCheck2 size={12} className="text-sky-600" /> Audit
                     </button>
                   </td>
                 </tr>
@@ -228,7 +238,7 @@ export default function TransportRequestsSection() {
               </div>
             </div>
             <div className="trans-modal-footer">
-              <button className="trans-btn trans-btn-outline" onClick={() => setSelectedReq(null)}>Cancel</button>
+              <button className="trans-btn trans-btn-secondary" onClick={() => setSelectedReq(null)} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={14} /> Cancel</button>
               <button className="trans-btn trans-btn-danger" onClick={() => handleDecision(selectedReq.id, 'Rejected')}>
                 <X size={14} /> Reject Request
               </button>

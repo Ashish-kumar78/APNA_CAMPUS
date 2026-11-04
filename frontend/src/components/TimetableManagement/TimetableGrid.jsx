@@ -10,44 +10,68 @@ import {
   CheckCircle,
   X,
   Sparkles,
-  Info
+  Info,
+  Lock,
+  Unlock,
+  Trash2,
+  Calendar,
+  Layers,
+  Palette,
+  Coffee
 } from 'lucide-react';
+
+/**
+ * 30-Minute Base Unit Timing Helper
+ */
+function getSlotTiming(unitIndex, durationUnits = 1, baseHour = 8, baseMinute = 30) {
+  const startTotalMinutes = baseHour * 60 + baseMinute + unitIndex * 30;
+  const endTotalMinutes = startTotalMinutes + durationUnits * 30;
+
+  const format = (mins) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    const mm = m < 10 ? `0${m}` : `${m}`;
+    return `${h12 < 10 ? '0' + h12 : h12}:${mm} ${ampm}`;
+  };
+
+  return {
+    startTime: format(startTotalMinutes),
+    endTime: format(endTotalMinutes),
+    label: `${format(startTotalMinutes)} – ${format(endTotalMinutes)}`,
+  };
+}
 
 export default function TimetableGrid({
   timetable,
   config,
   onSlotClick,
   onMoveEntry,
-  canEdit = false,
+  onToggleLock,
+  onDeleteEntry,
+  canEdit = true,
 }) {
   const [editingEntry, setEditingEntry] = useState(null);
   const [targetDay, setTargetDay] = useState('');
   const [targetPeriod, setTargetPeriod] = useState(0);
   const [targetRoom, setTargetRoom] = useState('');
+  const [targetFaculty, setTargetFaculty] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
 
   const workingDays = config?.workingDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const periodsCount = config?.periodsPerDay || 8;
-  const slotTimings = config?.slotTimings || [
-    { period: 1, startTime: '08:30 AM', endTime: '09:30 AM', isBreak: false, label: 'Period 1' },
-    { period: 2, startTime: '09:30 AM', endTime: '10:30 AM', isBreak: false, label: 'Period 2' },
-    { period: 3, startTime: '10:30 AM', endTime: '11:30 AM', isBreak: false, label: 'Period 3' },
-    { period: 4, startTime: '11:30 AM', endTime: '12:30 PM', isBreak: false, label: 'Period 4' },
-    { period: 5, startTime: '12:30 PM', endTime: '01:30 PM', isBreak: true, label: 'Lunch Break' },
-    { period: 6, startTime: '01:30 PM', endTime: '02:30 PM', isBreak: false, label: 'Period 5' },
-    { period: 7, startTime: '02:30 PM', endTime: '03:30 PM', isBreak: false, label: 'Period 6' },
-    { period: 8, startTime: '03:30 PM', endTime: '04:30 PM', isBreak: false, label: 'Period 7' },
-  ];
+  const unitsCount = config?.periodsPerDay || 16; // 16 units of 30 min (08:30 to 16:30)
 
   const entries = timetable?.entries || [];
 
   const handleOpenEdit = (entry) => {
-    if (!canEdit) return;
+    if (!canEdit || entry.sessionType === 'LUNCH') return;
     setEditingEntry(entry);
     setTargetDay(entry.dayOfWeek);
     setTargetPeriod(entry.periodIndex);
     setTargetRoom(entry.roomNumber || '');
+    setTargetFaculty(entry.facultyName || '');
     setValidationError('');
   };
 
@@ -63,12 +87,34 @@ export default function TimetableGrid({
         dayOfWeek: targetDay,
         periodIndex: Number(targetPeriod),
         roomNumber: targetRoom,
+        facultyName: targetFaculty,
       });
       setEditingEntry(null);
     } catch (err) {
-      setValidationError(err?.message || 'Conflict detected: The proposed move violates a scheduling constraint.');
+      setValidationError(err?.message || 'Constraint Conflict: Move violates a 60-min gap or double-booking constraint.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleLockClick = async () => {
+    if (!editingEntry || !onToggleLock) return;
+    try {
+      await onToggleLock(editingEntry.id);
+      setEditingEntry(null);
+    } catch (err) {
+      setValidationError(err?.message || 'Failed to toggle session lock state.');
+    }
+  };
+
+  const handleDeleteClick = async () => {
+    if (!editingEntry || !onDeleteEntry) return;
+    if (!window.confirm(`Delete ${editingEntry.subjectCode} session on ${editingEntry.dayOfWeek}?`)) return;
+    try {
+      await onDeleteEntry(editingEntry.id);
+      setEditingEntry(null);
+    } catch (err) {
+      setValidationError(err?.message || 'Failed to delete session.');
     }
   };
 
@@ -77,90 +123,110 @@ export default function TimetableGrid({
       <table className="tt-grid-table">
         <thead>
           <tr>
-            <th className="time-col">Timing</th>
+            <th className="time-col">Timing (30-Min Resolution)</th>
             {workingDays.map((day) => (
               <th key={day}>{day}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {Array.from({ length: periodsCount }).map((_, pIdx) => {
-            const slot = slotTimings[pIdx] || {
-              startTime: `${8 + pIdx}:30 AM`,
-              endTime: `${9 + pIdx}:30 AM`,
-              isBreak: pIdx === 4,
-              label: pIdx === 4 ? 'Lunch Break' : `Period ${pIdx + 1}`,
-            };
-
-            const isLunch = slot.isBreak;
-
-            if (isLunch) {
-              return (
-                <tr key={`break-${pIdx}`} className="tt-break-row">
-                  <td className="time-cell">
-                    {slot.startTime} - {slot.endTime}
-                    <small>Recess</small>
-                  </td>
-                  <td colSpan={workingDays.length}>
-                    🍽️ INSTITUTIONAL LUNCH &amp; REFRESHMENT BREAK ({slot.startTime} – {slot.endTime})
-                  </td>
-                </tr>
-              );
-            }
+          {Array.from({ length: unitsCount }).map((_, uIdx) => {
+            const slotTiming = getSlotTiming(uIdx, 1);
 
             return (
-              <tr key={`period-${pIdx}`}>
+              <tr key={`unit-${uIdx}`}>
                 <td className="time-cell">
-                  {slot.startTime} - {slot.endTime}
-                  <small>{slot.label}</small>
+                  {slotTiming.startTime} - {slotTiming.endTime}
+                  <small>Slot #{uIdx + 1}</small>
                 </td>
-                {workingDays.map((day) => {
-                  const item = entries.find(
-                    (e) => e.dayOfWeek === day && e.periodIndex === pIdx,
-                  );
 
-                  if (!item) {
+                {workingDays.map((day) => {
+                  // Check if any entry covers this day & unit index
+                  const coveringEntry = entries.find((e) => {
+                    const dur = e.durationPeriods || 1;
+                    return e.dayOfWeek === day && uIdx >= e.periodIndex && uIdx < e.periodIndex + dur;
+                  });
+
+                  // If coveringEntry started at an earlier unit, skip this <td> (rowSpan covers it)
+                  if (coveringEntry && coveringEntry.periodIndex < uIdx) {
+                    return null;
+                  }
+
+                  // If coveringEntry starts at this unit, render with rowSpan
+                  if (coveringEntry && coveringEntry.periodIndex === uIdx) {
+                    const durUnits = coveringEntry.durationPeriods || 1;
+                    const isLunch = coveringEntry.sessionType === 'LUNCH';
+                    const isHobby = coveringEntry.sessionType === 'HOBBY_CLUB';
+                    const isLibrary = coveringEntry.sessionType === 'LIBRARY';
+                    const isLab = coveringEntry.sessionType === 'LAB' || coveringEntry.sessionType === 'PRACTICAL';
+                    const isTut = coveringEntry.sessionType === 'TUTORIAL';
+                    const isLocked = coveringEntry.isLocked || coveringEntry.notes?.includes('[LOCKED]');
+
+                    let cardClass = 'theory';
+                    if (isLunch) cardClass = 'lunch';
+                    else if (isHobby) cardClass = 'hobby_club';
+                    else if (isLibrary) cardClass = 'library';
+                    else if (isLab) cardClass = 'lab';
+                    else if (isTut) cardClass = 'tutorial';
+
                     return (
-                      <td key={`${day}-${pIdx}`}>
+                      <td
+                        key={`${day}-${uIdx}`}
+                        rowSpan={durUnits}
+                        style={{ height: `${durUnits * 46}px` }}
+                      >
                         <div
-                          className="tt-empty-slot"
-                          title="Free Period - No Session Scheduled"
+                          className={`tt-slot-card ${cardClass} ${isLocked ? 'locked-card' : ''}`}
+                          onClick={() => handleOpenEdit(coveringEntry)}
+                          title={isLunch ? 'Staggered 30-Min Lunch Break' : (canEdit ? 'Click to inspect, reassign or lock session' : `${coveringEntry.subjectName}`)}
                         >
-                          <span>Free Slot</span>
+                          <div>
+                            <div className="tt-slot-header">
+                              <span className="tt-sub-code">
+                                {isLunch ? '🍽️ LUNCH' : coveringEntry.subjectCode}
+                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {isLocked && <Lock size={11} color="#64748b" title="Session Locked (Preserved during re-generation)" />}
+                                <span className={`tt-type-pill ${cardClass}`}>
+                                  {isLunch ? '30m' : (durUnits === 3 ? '1.5h' : (durUnits === 4 ? '2.0h' : (durUnits === 6 ? '3.0h' : '1.0h')))}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="tt-sub-name" title={coveringEntry.subjectName}>
+                              {coveringEntry.subjectName}
+                            </div>
+                          </div>
+
+                          <div className="tt-slot-footer">
+                            <span className="tt-slot-rm" title="Classroom or Lab">
+                              <MapPin size={11} /> {coveringEntry.roomNumber || 'Room TBA'}
+                            </span>
+                            <span className="tt-slot-fac" title={coveringEntry.facultyName || 'Instructor'}>
+                              {coveringEntry.facultyName ? (
+                                <>
+                                  <UserCheck size={11} /> {coveringEntry.facultyName.split(' ').slice(0, 2).join(' ')}
+                                </>
+                              ) : (
+                                'Faculty TBA'
+                              )}
+                            </span>
+                          </div>
                         </div>
                       </td>
                     );
                   }
 
-                  const isLab = item.sessionType === 'LAB' || item.isConsecutive;
-
+                  // No entry covers this unit: render free 30-min slot
                   return (
-                    <td key={`${day}-${pIdx}`}>
+                    <td key={`${day}-${uIdx}`} className="tt-empty-cell">
                       <div
-                        className={`tt-slot-card ${isLab ? 'lab' : 'theory'} ${item.isConsecutive ? 'consecutive' : ''}`}
-                        onClick={() => handleOpenEdit(item)}
-                        title={canEdit ? 'Click to inspect or manually move slot' : `${item.subjectName} (${item.subjectCode})`}
+                        className="tt-empty-slot"
+                        title="Free 30-min window"
+                        onClick={() => {
+                          if (onSlotClick) onSlotClick(day, uIdx);
+                        }}
                       >
-                        <div>
-                          <div className="tt-slot-header">
-                            <span className="tt-sub-code">{item.subjectCode}</span>
-                            <span className={`tt-type-pill ${isLab ? 'lb' : 'th'}`}>
-                              {isLab ? 'LAB' : 'TH'}
-                            </span>
-                          </div>
-                          <div className="tt-sub-name" title={item.subjectName}>
-                            {item.subjectName}
-                          </div>
-                        </div>
-
-                        <div className="tt-slot-footer">
-                          <span className="tt-slot-rm" title="Classroom / Lab">
-                            <MapPin size={11} /> {item.roomNumber || 'Rm TBA'}
-                          </span>
-                          <span className="tt-slot-fac" title={item.facultyName || 'Faculty'}>
-                            {item.facultyName || 'Instructor'}
-                          </span>
-                        </div>
+                        <span>Free</span>
                       </div>
                     </td>
                   );
@@ -174,10 +240,10 @@ export default function TimetableGrid({
       {/* Manual Slot Reassignment Modal */}
       {editingEntry && (
         <div className="tt-modal-overlay">
-          <div className="tt-modal-card" style={{ maxWidth: '480px' }}>
+          <div className="tt-modal-card" style={{ maxWidth: '500px' }}>
             <div className="tt-modal-header">
               <h3>
-                <Move size={18} color="#2563eb" /> Manual Slot Editor &amp; Revalidation
+                <Move size={18} color="#2563eb" /> Inspect &amp; Reassign Session
               </h3>
               <button className="tt-modal-close" onClick={() => setEditingEntry(null)}>
                 <X size={18} />
@@ -186,28 +252,31 @@ export default function TimetableGrid({
 
             <form onSubmit={handleSaveMove}>
               <div className="tt-modal-body">
-                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>
-                    {editingEntry.subjectCode} · {editingEntry.subjectName}
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{editingEntry.subjectCode} · {editingEntry.subjectName}</span>
+                    <span style={{ fontSize: '0.78rem', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px' }}>
+                      {editingEntry.durationPeriods ? `${editingEntry.durationPeriods * 30} mins` : '60 mins'}
+                    </span>
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '3px' }}>
-                    Section: <strong>{editingEntry.section}</strong> · Faculty: <strong>{editingEntry.facultyName}</strong>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
+                    Section: <strong>{editingEntry.section}</strong> · Current Time: <strong>{editingEntry.startTime} – {editingEntry.endTime}</strong>
                   </div>
                 </div>
 
                 {validationError && (
-                  <div className="tt-conflict-alert" style={{ fontSize: '0.82rem', padding: '10px' }}>
+                  <div className="tt-conflict-alert" style={{ fontSize: '0.82rem', padding: '10px', marginTop: '10px' }}>
                     <AlertTriangle size={18} style={{ flexShrink: 0 }} />
                     <div>
-                      <strong>Move Blocked by Constraint Engine:</strong>
-                      <div style={{ marginTop: '3px' }}>{validationError}</div>
+                      <strong>Move Blocked:</strong>
+                      <div style={{ marginTop: '2px' }}>{validationError}</div>
                     </div>
                   </div>
                 )}
 
-                <div className="tt-form-row">
+                <div className="tt-form-row" style={{ marginTop: '12px' }}>
                   <div className="tt-form-group">
-                    <label>Target Day of Week</label>
+                    <label>Target Day</label>
                     <select
                       className="tt-form-select"
                       value={targetDay}
@@ -220,39 +289,80 @@ export default function TimetableGrid({
                   </div>
 
                   <div className="tt-form-group">
-                    <label>Target Period</label>
+                    <label>Target Start Slot</label>
                     <select
                       className="tt-form-select"
                       value={targetPeriod}
-                      onChange={(e) => setTargetPeriod(e.target.value)}
+                      onChange={(e) => setTargetPeriod(Number(e.target.value))}
                     >
-                      {slotTimings.map((s, idx) => (
-                        <option key={idx} value={idx} disabled={s.isBreak}>
-                          {s.label} ({s.startTime}) {s.isBreak ? '- Break' : ''}
-                        </option>
-                      ))}
+                      {Array.from({ length: unitsCount }).map((_, idx) => {
+                        const t = getSlotTiming(idx, editingEntry.durationPeriods || 2);
+                        return (
+                          <option key={idx} value={idx}>
+                            {t.startTime} – {t.endTime} (Slot #{idx + 1})
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                 </div>
 
-                <div className="tt-form-group">
-                  <label>Room Allocation</label>
-                  <input
-                    type="text"
-                    className="tt-form-input"
-                    value={targetRoom}
-                    onChange={(e) => setTargetRoom(e.target.value)}
-                    placeholder="e.g. Room 301 or CS Lab-1"
-                  />
-                  <small style={{ color: '#64748b', fontSize: '0.72rem' }}>
-                    Moving a session automatically validates against faculty, section, and room double-bookings.
-                  </small>
+                <div className="tt-form-row">
+                  <div className="tt-form-group">
+                    <label>Assigned Room</label>
+                    <input
+                      type="text"
+                      className="tt-form-input"
+                      value={targetRoom}
+                      onChange={(e) => setTargetRoom(e.target.value)}
+                      placeholder="e.g. Room 301, CS Lab-1"
+                    />
+                  </div>
+
+                  <div className="tt-form-group">
+                    <label>Assigned Faculty</label>
+                    <input
+                      type="text"
+                      className="tt-form-input"
+                      value={targetFaculty}
+                      onChange={(e) => setTargetFaculty(e.target.value)}
+                      placeholder="e.g. Dr. P. Mohapatra"
+                    />
+                  </div>
                 </div>
 
-                <div className="tt-assistant-box">
-                  <Info size={18} style={{ flexShrink: 0 }} />
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    className="tt-btn tt-btn-secondary"
+                    style={{ flex: 1, fontSize: '0.78rem' }}
+                    onClick={handleToggleLockClick}
+                  >
+                    {editingEntry.isLocked || editingEntry.notes?.includes('[LOCKED]') ? (
+                      <>
+                        <Unlock size={14} color="#059669" /> Unlock Session
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={14} color="#d97706" /> Pin / Lock Session
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="tt-btn tt-btn-secondary"
+                    style={{ color: '#dc2626', borderColor: '#fca5a5', fontSize: '0.78rem' }}
+                    onClick={handleDeleteClick}
+                  >
+                    <Trash2 size={14} /> Delete
+                  </button>
+                </div>
+
+                <div className="tt-assistant-box" style={{ marginTop: '12px' }}>
+                  <Info size={16} style={{ flexShrink: 0 }} />
                   <div>
-                    <strong>Conflict-Resolution Safeguard:</strong> Changes will only commit if the new slot satisfies all institutional constraints.
+                    <strong>Constraint-Protected Reassignment:</strong> The system verifies that the instructor has a minimum 60-minute gap and that no section or room double-booking occurs.
                   </div>
                 </div>
               </div>
@@ -270,7 +380,7 @@ export default function TimetableGrid({
                   className="tt-btn tt-btn-primary"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Validating...' : 'Apply & Revalidate'}
+                  {isSubmitting ? 'Validating Constraints...' : 'Commit & Revalidate'}
                 </button>
               </div>
             </form>

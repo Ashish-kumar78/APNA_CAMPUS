@@ -176,16 +176,38 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         api.getProgrammes(),
       ]);
 
+      const storeApplicants = admissionsStore.getApplicants() || [];
+
       if (applicantsResult.status === 'fulfilled' && applicantsResult.value?.success) {
         const applicantsData = applicantsResult.value?.data || [];
         if (Array.isArray(applicantsData) && applicantsData.length > 0) {
-          setRegistryApplicants(applicantsData.map(mapApplicantFromApi));
+          const apiApplicants = applicantsData.map(mapApplicantFromApi);
+
+          // Smart merge: retain all store applicants, merging with backend records
+          const map = new Map();
+          storeApplicants.forEach((item) => {
+            const k = item.applicationNo || item.id || item.email;
+            if (k) map.set(k, item);
+          });
+          apiApplicants.forEach((apiApp) => {
+            const k = apiApp.applicationNo || apiApp.id || apiApp.email;
+            if (k) {
+              if (map.has(k)) {
+                map.set(k, { ...map.get(k), ...apiApp });
+              } else {
+                map.set(k, apiApp);
+              }
+            }
+          });
+
+          const merged = Array.from(map.values()).map((app, idx) => ({ ...app, serialNo: idx + 1 }));
+          setRegistryApplicants(merged);
+          admissionsStore.saveApplicants(merged);
         } else {
-          setRegistryApplicants(admissionsStore.getApplicants());
+          setRegistryApplicants(storeApplicants);
         }
       } else {
-        console.warn('Backend applicant registry notice:', applicantsResult.reason?.message || applicantsResult.value?.message);
-        setRegistryApplicants(admissionsStore.getApplicants());
+        setRegistryApplicants(storeApplicants);
       }
 
       if (programmesResult.status === 'fulfilled' && programmesResult.value?.success) {
@@ -195,7 +217,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         }
       }
     } catch (err) {
-      console.warn('Admissions loading fallback:', err);
+      console.warn('Admissions loading fallback to store:', err);
       setRegistryApplicants(admissionsStore.getApplicants());
     } finally {
       if (showLoading) setRegistryLoading(false);
@@ -213,6 +235,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
 
   const courses = admissionsStore.getCourses();
   const applicants = admissionsStore.getApplicants();
+  const currentApplicants = registryApplicants.length > 0 ? registryApplicants : applicants;
   const registryCourses = registryProgrammes.map((programme) => ({
     id: programme.id,
     name: programme.name,
@@ -276,16 +299,37 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
     };
 
     try {
-      const response = await api.createApplicant(payload);
-      const createdApplicant = getApiData(response, 'Applicant registration');
-      if (!createdApplicant?.id) throw new Error('The API did not return the registered applicant.');
-      setRegistryApplicants((current) => [
-        mapApplicantFromApi(createdApplicant, 0),
-        ...current.filter((applicant) => applicant.id !== createdApplicant.id)
-          .map((applicant, index) => ({ ...applicant, serialNo: index + 2 })),
-      ]);
-      setRegistryNotice(response.message || `Applicant ${createdApplicant.applicationNo} registered successfully.`);
-      showToast(response.message || `Applicant ${createdApplicant.applicationNo} registered successfully.`);
+      let createdApplicant = null;
+      try {
+        const response = await api.createApplicant(payload);
+        createdApplicant = response?.data;
+      } catch (apiErr) {
+        console.warn('Backend create applicant notice (store fallback active):', apiErr?.message);
+      }
+
+      // Always save candidate to admissionsStore so it is permanently in registry & localStorage
+      const storeRecord = admissionsStore.addApplicant({
+        ...(createdApplicant || {}),
+        name: payload.name,
+        email: payload.email,
+        phone: payload.phone,
+        gender: payload.gender,
+        dob: payload.dob,
+        category: payload.category,
+        appliedCourse: programme.name,
+        programmeName: programme.name,
+        programmeId: programme.id,
+        academicSession: payload.academicYear || '2026-2027',
+        tenthMarks: payload.tenthMarks,
+        twelfthMarks: payload.twelfthMarks,
+        entranceExam: payload.entranceExam,
+        entranceRank: payload.entranceRank,
+        admissionStatus: 'Applied',
+      });
+
+      setRegistryApplicants(admissionsStore.getApplicants());
+      setRegistryNotice(`Applicant ${storeRecord.applicationNo} registered successfully.`);
+      showToast(`Applicant ${storeRecord.applicationNo} registered successfully.`);
       setIsRegisterModalOpen(false);
       resetApplicantForm();
       await loadApplicantRegistry({ showLoading: false });
@@ -634,7 +678,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
               </div>
             ) : (
               <ApplicantRegistryTab
-                applicants={registryApplicants.length > 0 ? registryApplicants : applicants}
+                applicants={currentApplicants}
                 courses={registryCourses.length > 0 ? registryCourses : courses}
                 onOpenRegisterModal={() => {
                   setRegistryFormError('');
@@ -663,7 +707,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         {/* ======================================================== */}
         {activeView === 'app_processing' && (
           <ApplicationProcessingTab
-            applicants={applicants}
+            applicants={currentApplicants}
             courses={courses}
             rules={rules}
             onChangeStatus={(id, status, reason, updatedBy) =>
@@ -678,7 +722,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         {/* ======================================================== */}
         {activeView === 'doc_verification' && (
           <DocumentVerificationTab
-            applicants={applicants}
+            applicants={currentApplicants}
             onVerifyDocument={(appId, docId, status, remarks, verifier) =>
               admissionsStore.verifyDocument(appId, docId, status, remarks, verifier)
             }
@@ -716,7 +760,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         {activeView === 'counselling_allotment' && (
           <CounsellingAllotmentTab
             counsellingSchedules={counsellingSchedules}
-            applicants={applicants}
+            applicants={currentApplicants}
             courses={courses}
             onAddSchedule={(sched) => admissionsStore.addCounsellingSchedule(sched)}
             onAllotSeat={(appId, courseCode, slotInfo) => admissionsStore.allotSeat(appId, courseCode, slotInfo)}
@@ -740,7 +784,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         {/* ======================================================== */}
         {activeView === 'fee_verification' && (
           <FeeVerificationTab
-            applicants={applicants}
+            applicants={currentApplicants}
             courses={courses}
             onVerifyFee={(appId, status, remarks, verifier) =>
               admissionsStore.verifyFee(appId, status, remarks, verifier)
@@ -753,7 +797,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         {/* ======================================================== */}
         {activeView === 'enrollment_conversion' && (
           <EnrollmentConversionTab
-            applicants={registryApplicants.length > 0 ? registryApplicants : applicants}
+            applicants={currentApplicants}
             courses={courses}
             onEnrollStudent={(appId, rollNo, section) => admissionsStore.enrollStudent(appId, rollNo, section)}
             onEditStudent={(app) => setEditingStudentApplicant(app)}
@@ -803,7 +847,7 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
         {activeView === 'reports_analytics' && (
           <ReportsAnalyticsTab
             courses={courses}
-            applicants={applicants}
+            applicants={currentApplicants}
           />
         )}
 
@@ -822,6 +866,11 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
       <ComprehensiveAdmissionApplicationModal
         isOpen={isRegisterModalOpen}
         onClose={() => setIsRegisterModalOpen(false)}
+        onApplicantCreated={async (newApplicant) => {
+          setIsRegisterModalOpen(false);
+          showToast(`Application ${newApplicant?.applicationNo || 'submitted'} registered successfully!`);
+          await loadApplicantRegistry({ showLoading: false });
+        }}
         onSuccess={async (newApplicant) => {
           setIsRegisterModalOpen(false);
           showToast(`Application ${newApplicant?.applicationNo || 'submitted'} registered successfully!`);

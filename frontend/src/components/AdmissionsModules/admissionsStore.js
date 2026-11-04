@@ -48,7 +48,27 @@ class AdmissionsStore {
     if (typeof localStorage === 'undefined') return fallback;
     try {
       const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : fallback;
+      if (!item) return fallback;
+      const parsed = JSON.parse(item);
+      if (key === STORAGE_KEYS.APPLICANTS && Array.isArray(parsed)) {
+        if (parsed.length === 0) return fallback;
+        // Ensure default institutional master applicants are always retained alongside newly registered ones
+        const map = new Map();
+        if (Array.isArray(fallback)) {
+          fallback.forEach((item) => {
+            const k = item.applicationNo || item.id;
+            if (k) map.set(k, item);
+          });
+        }
+        parsed.forEach((item) => {
+          const k = item.applicationNo || item.id;
+          if (k) {
+            map.set(k, { ...(map.get(k) || {}), ...item });
+          }
+        });
+        return Array.from(map.values()).map((app, idx) => ({ ...app, serialNo: idx + 1 }));
+      }
+      return parsed;
     } catch {
       return fallback;
     }
@@ -81,34 +101,46 @@ class AdmissionsStore {
     return this.applicants.find((a) => a.id === id || a.applicationNo === id);
   }
 
+  saveApplicants(list) {
+    if (!Array.isArray(list)) return;
+    this.applicants = list.map((a, idx) => ({ ...a, serialNo: idx + 1 }));
+    this.save(STORAGE_KEYS.APPLICANTS, this.applicants);
+    this.notify();
+  }
+
   addApplicant(newApp) {
-    const id = `app-${Date.now().toString().slice(-4)}`;
     const serialNo = this.applicants.length + 1;
-    const applicationNo = `APP-2026-${(1000 + serialNo).toString()}`;
+    const applicationNo = newApp.applicationNo || `APP-2026-${(1000 + serialNo).toString()}`;
+    const id = newApp.id || `app-${Date.now().toString().slice(-4)}`;
+
+    const existingIndex = this.applicants.findIndex(
+      (a) => a.id === id || a.applicationNo === applicationNo || (newApp.email && a.email?.toLowerCase() === newApp.email.toLowerCase())
+    );
+
     const fullRecord = {
       id,
-      serialNo,
+      serialNo: existingIndex >= 0 ? this.applicants[existingIndex].serialNo : serialNo,
       applicationNo,
-      academicSession: '2026-2027',
-      submissionDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      eligibilityStatus: 'Under Review',
-      docVerificationStatus: 'Pending',
-      admissionStatus: 'Applied',
-      assignedStaff: 'Ms. Rashmita Tripathy',
-      admissionRound: 'Round 2',
-      coursePreferences: [{ pref: 1, course: newApp.appliedCourse || 'B.Tech Computer Science & Engineering' }],
-      documents: [
+      academicSession: newApp.academicSession || '2026-2027',
+      submissionDate: newApp.submissionDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      eligibilityStatus: newApp.eligibilityStatus || 'Under Review',
+      docVerificationStatus: newApp.docVerificationStatus || 'Pending',
+      admissionStatus: newApp.admissionStatus || 'Applied',
+      assignedStaff: newApp.assignedStaff || 'Ms. Rashmita Tripathy',
+      admissionRound: newApp.admissionRound || 'Round 2',
+      coursePreferences: newApp.coursePreferences || [{ pref: 1, course: newApp.appliedCourse || 'B.Tech Computer Science & Engineering' }],
+      documents: newApp.documents || [
         { id: 'd-1', category: 'Photograph', filename: 'photo_uploaded.jpg', uploadDate: 'Today', status: 'Pending', verifier: 'Er. B. K. Jena', remarks: 'Awaiting scrutiny' },
         { id: 'd-2', category: 'Class 10 Certificate', filename: 'class10_doc.pdf', uploadDate: 'Today', status: 'Pending', verifier: 'Er. B. K. Jena', remarks: 'Awaiting scrutiny' },
         { id: 'd-3', category: 'Class 12 Mark Sheet', filename: 'class12_doc.pdf', uploadDate: 'Today', status: 'Pending', verifier: 'Er. B. K. Jena', remarks: 'Awaiting scrutiny' },
       ],
-      staffReviewNotes: [
+      staffReviewNotes: newApp.staffReviewNotes || [
         { id: `n-${Date.now()}`, author: 'Self (Portal Registration)', date: 'Just now', note: 'Applicant self-registered via Institutional Admissions Portal.' }
       ],
-      statusHistory: [
-        { status: 'Applied', timestamp: 'Just now', updatedBy: 'Applicant Online' }
+      statusHistory: newApp.statusHistory || [
+        { status: newApp.admissionStatus || 'Applied', timestamp: 'Just now', updatedBy: 'Applicant Online' }
       ],
-      feeDetails: {
+      feeDetails: newApp.feeDetails || {
         amount: 115000,
         paidAmount: 0,
         status: 'Pending',
@@ -117,12 +149,18 @@ class AdmissionsStore {
         receiptNo: null,
         verifier: null,
       },
-      counsellingSlot: null,
-      enrollmentRecord: null,
+      counsellingSlot: newApp.counsellingSlot || null,
+      enrollmentRecord: newApp.enrollmentRecord || null,
       ...newApp,
     };
 
-    this.applicants = [fullRecord, ...this.applicants];
+    if (existingIndex >= 0) {
+      this.applicants[existingIndex] = { ...this.applicants[existingIndex], ...fullRecord };
+    } else {
+      this.applicants = [fullRecord, ...this.applicants];
+    }
+
+    this.applicants = this.applicants.map((a, idx) => ({ ...a, serialNo: idx + 1 }));
     this.save(STORAGE_KEYS.APPLICANTS, this.applicants);
     this.notify();
     return fullRecord;

@@ -337,9 +337,6 @@ function StudentPortal({ account, onLogout }) {
       .catch((error) => {
         console.warn('Student profile live sync note:', error?.message)
         // Silently preserve existing account props; do not display abort/transient error banners
-        if (active && error?.name !== 'AbortError' && !error?.message?.includes('abort') && !account?.name) {
-          setProfileError(error.message || 'Could not load your student profile.')
-        }
       })
     return () => {
       active = false

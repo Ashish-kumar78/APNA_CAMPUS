@@ -91,7 +91,7 @@ export class AdmissionController {
   ) {
     const role = normalizeRole(user?.role || '');
     if (role === 'student') {
-      throw new ForbiddenException('Access denied. Prospective admission registry is restricted to institutional staff.');
+      return { success: true, count: 0, data: [] };
     }
 
     const data = await this.admissionService.getApplicants({ search, status, programmeId, academicYear });

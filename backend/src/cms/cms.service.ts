@@ -66,29 +66,24 @@ export class CmsService {
     }
 
 
-    // Dispatch notification to target audience
-    try {
-      await this.notificationsService.dispatch({
-        eventType: NotificationEventType.ANNOUNCEMENT_PUBLISHED,
-        title: data.title,
-        message: data.summary || data.content.slice(0, 160),
-        category,
-        priority: data.pinned ? NotificationPriority.HIGH : priority,
-        sourceModule: 'Campus Connect',
-        senderName: data.publisher || 'Dean Office',
-        senderRole: 'ADMIN',
-        actionUrl: '/cms',
-        actionTab: 'notices',
-        actionLabel: 'Read Circular',
-        target: {
-          department: data.department,
-          semester: data.semester,
-        },
-        dedupKey: `cms-notice-${notice.id}`,
-      });
-    } catch {
-      // Non-blocking
-    }
+    await this.notificationsService.dispatch({
+      eventType: NotificationEventType.ANNOUNCEMENT_PUBLISHED,
+      title: data.title,
+      message: data.summary || data.content.slice(0, 160),
+      category,
+      priority: data.pinned ? NotificationPriority.HIGH : priority,
+      sourceModule: 'Campus Connect',
+      senderName: data.publisher || 'Dean Office',
+      senderRole: 'ADMIN',
+      actionUrl: '/cms',
+      actionTab: 'notices',
+      actionLabel: 'Read Circular',
+      target: {
+        department: data.department,
+        semester: data.semester,
+      },
+      dedupKey: `cms-notice-${notice.id}`,
+    });
 
     return notice;
   }

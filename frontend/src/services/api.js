@@ -15,6 +15,12 @@ function getAuthHeader() {
 }
 
 async function request(endpoint, options = {}) {
+  if (!API_BASE_URL) {
+    throw new Error(
+      'Backend API URL is not configured. Set VITE_API_URL to the deployed backend URL ending in /api.',
+    );
+  }
+
   // Normalize path to prevent duplicate /api prefixes e.g. /api/api
   let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   if (API_BASE_URL.endsWith('/api') && cleanEndpoint.startsWith('/api/')) {
@@ -30,8 +36,14 @@ async function request(endpoint, options = {}) {
   };
 
   const controller = new AbortController();
-  const timeoutMs = options.timeout || (isFormData ? 8000 : 2500);
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutMs = options.timeout || (isFormData ? 20000 : 12000);
+  const timeoutId = setTimeout(() => {
+    try {
+      controller.abort(new Error(`Request timed out after ${timeoutMs}ms`));
+    } catch {
+      controller.abort();
+    }
+  }, timeoutMs);
 
   try {
     const response = await fetch(url, { ...options, headers, signal: options.signal || controller.signal });
@@ -62,8 +74,12 @@ async function request(endpoint, options = {}) {
     return data;
   } catch (error) {
     clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
+    if (error.name === 'AbortError' || error.message?.includes('aborted') || error.message?.includes('abort')) {
       console.warn(`API call to ${cleanEndpoint} timed out after ${timeoutMs}ms (offline resilience active).`);
+      const timeoutErr = new Error(`Request timed out after ${timeoutMs}ms`);
+      timeoutErr.name = 'AbortError';
+      timeoutErr.isTimeout = true;
+      throw timeoutErr;
     } else {
       console.warn(`API call to ${cleanEndpoint} failed:`, error.message);
     }
@@ -108,6 +124,25 @@ export const api = {
 
   getProfile: () => request('/students/profile'),
 
+  getClassNotes: (filters = {}) => {
+    const query = new URLSearchParams(filters).toString();
+    return request(`/class-notes${query ? `?${query}` : ''}`);
+  },
+
+  uploadClassNotes: (payload) =>
+    request('/class-notes', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getPendingStudentNotes: () => request('/faculty/class-notes/pending'),
+
+  reviewStudentNote: (id, status, remarks) =>
+    request(`/faculty/class-notes/${encodeURIComponent(id)}/${status === 'VERIFIED' ? 'verify' : 'reject'}`, {
+      method: 'POST',
+      body: JSON.stringify({ remarks }),
+    }),
+
   saveTransferPreference: (campus, city, confirmed = true) =>
     request('/students/transfer-preference', {
       method: 'POST',
@@ -132,7 +167,8 @@ export const api = {
     }),
 
   // 3. Marks & Continuous Assessment
-  getStudentMarks: (rollNumber = '01') => request(`/marks/student?rollNumber=${rollNumber}`),
+  getStudentMarks: (rollNumber) =>
+    request(`/marks/student${rollNumber ? `?rollNumber=${encodeURIComponent(rollNumber)}` : ''}`),
 
   getSectionMarks: (subjectCode, section = 'Section A') =>
     request(`/marks/section/${subjectCode}?section=${section}`),
@@ -843,6 +879,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ isActive }),
     }),
+  updateAdminUserRole: (id, role, department) =>
+    request(`/admin/users/${id}/role`, {
+      method: 'POST',
+      body: JSON.stringify({ role, department }),
+    }),
   resetAdminUserPassword: (id) =>
     request(`/admin/users/${id}/reset-password`, { method: 'POST' }),
   getAdminBackups: () => request('/admin/backups'),
@@ -924,6 +965,11 @@ export const api = {
   getExamGradeRoster: () => request('/exams/results/roster'),
   getExamReevaluations: () => request('/exams/re-evaluation'),
   getExamCirculars: () => request('/exams/circulars'),
+  publishExamNotice: (data) =>
+    request('/exams/notices', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   getExamSchedules: () => request('/exam-cell/schedules'),
   createExamSchedule: (payload) =>
     request('/exam-cell/schedules', {
@@ -1022,27 +1068,10 @@ export const api = {
   getLibraryPolicies: () => request('/library/policies'),
 
   // 13. Placement
-  getPlacementDrives: () => request('/placement/drives'),
-  createPlacementDrive: (payload) =>
-    request('/placement/drives', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-  applyToPlacementDrive: (driveId, cgpa) =>
-    request('/placement/apply', {
-      method: 'POST',
-      body: JSON.stringify({ driveId, cgpa }),
-    }),
   getPlacementApplications: (driveId) =>
     request(`/placement/applications${driveId ? '?driveId=' + driveId : ''}`),
 
   // 14. Transport Fleet
-  getTransportRoutes: () => request('/transport/routes'),
-  createTransportRoute: (payload) =>
-    request('/transport/routes', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
 
   // 15. Staff (Labs & Campus Operations)
   getLabEquipment: (department = '') =>
@@ -1583,6 +1612,16 @@ export const api = {
     request(`/faculty/quizzes/${id}/publish`, {
       method: 'PUT',
     }),
+  deleteFacultyQuiz: (id) =>
+    request(`/faculty/quizzes/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+  getStudentQuizzes: () => request('/exams/student/quizzes'),
+  submitStudentQuiz: (id, answers) =>
+    request(`/exams/student/quizzes/${encodeURIComponent(id)}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ answers }),
+    }),
   getFacultyPerformance: (subjectCode = 'CS501', section = 'Section A') =>
     request(`/faculty/performance?subjectCode=${encodeURIComponent(subjectCode)}&section=${encodeURIComponent(section)}`),
   getFacultyEarlyWarning: (subjectCode = 'CS501', section = 'Section A') =>
@@ -1680,6 +1719,14 @@ export const api = {
     return request(`/admission/applicants${q ? '?' + q : ''}`);
   },
   getApplicantById: (id) => request(`/admission/applicants/${id}`),
+  applyPublicAdmission: (data) =>
+    request('/admission/apply', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  trackApplication: (applicationNo) =>
+    request(`/admission/track/${encodeURIComponent(applicationNo)}`),
+  getPublicAdmissionProgrammes: () => request('/admission/programmes'),
   createApplicant: (data) =>
     request('/admission/applicants', {
       method: 'POST',
@@ -1698,14 +1745,25 @@ export const api = {
     request(`/admission/applicants/${id}/approve`, {
       method: 'POST',
     }),
+  updateApplicant: (id, data) =>
+    request(`/admission/applicants/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 
   // 26. Account Activation & Password Recovery
   verifyActivationToken: (token) => request(`/auth/verify-activation-token?token=${encodeURIComponent(token)}`),
-  activateAccount: (token, newPassword) =>
-    request('/auth/activate-account', {
+  activateAccount: async (token, newPassword) => {
+    const response = await request('/auth/activate-account', {
       method: 'POST',
       body: JSON.stringify({ token, newPassword }),
-    }),
+    });
+    if (response.success && response.accessToken) {
+      localStorage.setItem('collegeflow_token', response.accessToken);
+      localStorage.setItem('collegeflow_user', JSON.stringify(response.user));
+    }
+    return response;
+  },
   forgotPassword: (identifier) =>
     request('/auth/forgot-password', {
       method: 'POST',
@@ -1950,6 +2008,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ isActive }),
     }),
+  updateAdminUserRole: (id, role, department) =>
+    request(`/admin/users/${id}/role`, {
+      method: 'POST',
+      body: JSON.stringify({ role, department }),
+    }),
   resetAdminUserPassword: (id) =>
     request(`/admin/users/${id}/reset-password`, {
       method: 'POST',
@@ -2030,6 +2093,141 @@ export const api = {
   updateAdminMarkingScheme: (id, payload) =>
     request(`/admin/marking-schemes/${id}`, {
       method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
+  // College Administration ERP Endpoints
+  // 1. Governance & Institutional Management
+  getAdminGovernanceMeetings: (academicYear) =>
+    request(`/admin/governance/meetings${academicYear ? `?academicYear=${encodeURIComponent(academicYear)}` : ''}`),
+  createAdminGovernanceMeeting: (payload) =>
+    request('/admin/governance/meetings', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getAdminGovernanceResolutions: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/governance/resolutions${q ? '?' + q : ''}`);
+  },
+  createAdminGovernanceResolution: (payload) =>
+    request('/admin/governance/resolutions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getAdminGovernanceCirculars: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/governance/circulars${q ? '?' + q : ''}`);
+  },
+  publishAdminGovernanceCircular: (payload) =>
+    request('/admin/governance/circulars', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getAdminGovernanceActionItems: (status) =>
+    request(`/admin/governance/action-items${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  updateAdminGovernanceActionItem: (id, payload) =>
+    request(`/admin/governance/action-items/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  // 2. Human Resources & Workforce
+  getAdminHrEmployees: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/hr/employees${q ? '?' + q : ''}`);
+  },
+  getAdminHrLeaves: (status) =>
+    request(`/admin/hr/leaves${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  decideAdminHrLeave: (id, payload) =>
+    request(`/admin/hr/leaves/${id}/decide`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getAdminHrRecruitments: () =>
+    request('/admin/hr/recruitments'),
+  createAdminHrRecruitment: (payload) =>
+    request('/admin/hr/recruitments', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  // 3. Finance & Procurement
+  getAdminFinanceBudgets: (academicYear) =>
+    request(`/admin/finance/budgets${academicYear ? `?academicYear=${encodeURIComponent(academicYear)}` : ''}`),
+  getAdminFinancePurchaseRequisitions: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/finance/purchase-requisitions${q ? '?' + q : ''}`);
+  },
+  createAdminFinancePurchaseRequisition: (payload) =>
+    request('/admin/finance/purchase-requisitions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  decideAdminFinancePurchaseRequisition: (id, payload) =>
+    request(`/admin/finance/purchase-requisitions/${id}/decide`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getAdminFinanceVendors: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/finance/vendors${q ? '?' + q : ''}`);
+  },
+  getAdminFinanceInvoices: (status) =>
+    request(`/admin/finance/invoices${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  verifyAdminFinanceInvoice: (id, payload) =>
+    request(`/admin/finance/invoices/${id}/verify`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  // 4. Campus Facilities & Operations
+  getAdminFacilitiesInventory: () =>
+    request('/admin/facilities/inventory'),
+  getAdminFacilitiesWorkOrders: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/facilities/work-orders${q ? '?' + q : ''}`);
+  },
+  createAdminFacilitiesWorkOrder: (payload) =>
+    request('/admin/facilities/work-orders', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateAdminFacilitiesWorkOrder: (id, payload) =>
+    request(`/admin/facilities/work-orders/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  getAdminFacilitiesPreventiveMaintenance: () =>
+    request('/admin/facilities/preventive-maintenance'),
+  getAdminFacilitiesSafetyInspections: () =>
+    request('/admin/facilities/safety-inspections'),
+
+  // 5. Statutory Compliance & Risk Management (CAPA)
+  getAdminComplianceRegister: (status) =>
+    request(`/admin/compliance/register${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  updateAdminComplianceItem: (id, payload) =>
+    request(`/admin/compliance/register/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  getAdminComplianceRisks: (severity) =>
+    request(`/admin/compliance/risks${severity ? `?severity=${encodeURIComponent(severity)}` : ''}`),
+  getAdminComplianceCorrectiveActions: (status) =>
+    request(`/admin/compliance/corrective-actions${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  updateAdminComplianceCorrectiveAction: (id, payload) =>
+    request(`/admin/compliance/corrective-actions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  // 6. Official Records & Document Management
+  getAdminOfficialDocuments: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/admin/documents/vault${q ? '?' + q : ''}`);
+  },
+  registerAdminOfficialDocument: (payload) =>
+    request('/admin/documents/vault', {
+      method: 'POST',
       body: JSON.stringify(payload),
     }),
   // 28. Enterprise Academic Reports
@@ -2279,8 +2477,10 @@ export const api = {
     const q = new URLSearchParams(params).toString();
     return request(`/notifications${q ? `?${q}` : ''}`);
   },
+  getNotificationSummary: () => request('/notifications/summary'),
   getUnreadNotificationsCount: () => request('/notifications/unread-count'),
-  markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: 'POST' }),
+  markNotificationRead: (id) =>
+    request(`/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' }),
   markAllNotificationsRead: (filter = {}) =>
     request('/notifications/mark-all-read', { method: 'POST', body: JSON.stringify(filter) }),
   clearReadNotifications: () => request('/notifications/clear-read', { method: 'POST' }),
@@ -2395,4 +2595,3 @@ export { notesApi } from './notesApi.js';
 export { facultyApi } from './facultyApi.js';
 export { hodApi } from './hodApi.js';
 export default api;
-

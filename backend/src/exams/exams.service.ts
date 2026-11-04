@@ -11,6 +11,227 @@ export class ExamsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
+  async getStudentQuizzes(user: any) {
+    const identifier = user.identifier || user.registrationNumber || user.id;
+    const student = await this.prisma.student.findFirst({
+      where: {
+        OR: [
+          { userId: user.id },
+          { rollNumber: identifier },
+          { studentId: identifier },
+        ],
+      },
+    });
+    if (!student) throw new NotFoundException('Student profile not found.');
+
+    const quizzes = await this.prisma.facultyQuiz.findMany({
+      where: {
+        status: 'Live',
+        section: { in: [student.section, 'All Sections'] },
+        semester: student.semester,
+      },
+      include: {
+        submissions: {
+          where: { studentId: student.id },
+          select: { score: true, submittedAt: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return quizzes.map((quiz) => ({
+      id: quiz.id,
+      title: quiz.title,
+      subject: quiz.subject,
+      code: quiz.subjectCode,
+      subjectCode: quiz.subjectCode,
+      section: quiz.section,
+      semester: quiz.semester,
+      deadline: quiz.date,
+      duration: quiz.duration,
+      maxMarks: quiz.totalMarks,
+      questions: Array.isArray(quiz.questions)
+        ? quiz.questions.map((question: any, index: number) => ({
+            id: String(question.id ?? index + 1),
+            question: String(question.question || ''),
+            options: Array.isArray(question.options) ? question.options : [],
+          }))
+        : [],
+      attempts: 1,
+      status: quiz.submissions.length ? 'completed' : 'available',
+      score: quiz.submissions[0]?.score ?? null,
+      submittedAt: quiz.submissions[0]?.submittedAt ?? null,
+    }));
+  }
+
+  async submitStudentQuiz(
+    user: any,
+    quizId: string,
+    answers: Record<string, number>,
+  ) {
+    const identifier = user.identifier || user.registrationNumber || user.id;
+    const student = await this.prisma.student.findFirst({
+      where: {
+        OR: [
+          { userId: user.id },
+          { rollNumber: identifier },
+          { studentId: identifier },
+        ],
+      },
+    });
+    if (!student) throw new NotFoundException('Student profile not found.');
+
+    const quiz = await this.prisma.facultyQuiz.findUnique({ where: { id: quizId } });
+    if (!quiz || quiz.status !== 'Live') {
+      throw new NotFoundException('This quiz is not available.');
+    }
+    if (
+      ![student.section, 'All Sections'].includes(quiz.section) ||
+      quiz.semester !== student.semester
+    ) {
+      throw new ForbiddenException('This quiz is not assigned to your section.');
+    }
+    if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+      throw new BadRequestException('Quiz answers must be submitted as an answer map.');
+    }
+    const priorSubmission = await this.prisma.quizSubmission.findUnique({
+      where: { quizId_studentId: { quizId: quiz.id, studentId: student.id } },
+      select: { id: true },
+    });
+    if (priorSubmission) {
+      throw new BadRequestException('You have already submitted this quiz.');
+    }
+
+    const questions = Array.isArray(quiz.questions) ? quiz.questions as any[] : [];
+    if (
+      questions.length === 0 ||
+      questions.some((question) =>
+        !Array.isArray(question.options) ||
+        !Number.isInteger(Number(question.correctIndex)) ||
+        Number(question.correctIndex) < 0 ||
+        Number(question.correctIndex) >= question.options.length
+      )
+    ) {
+      throw new BadRequestException('This quiz does not contain any questions.');
+    }
+    if (quiz.assessmentSlot < 1 || quiz.assessmentSlot > 6) {
+      throw new BadRequestException('This quiz does not have a valid marks assessment slot.');
+    }
+    const answerReview = questions.map((question: any, index: number) => {
+      const questionId = String(question.id ?? index + 1);
+      const selectedIndex = answers[questionId];
+      const correctIndex = Number(question.correctIndex);
+      if (
+        selectedIndex !== undefined &&
+        (!Number.isInteger(selectedIndex) ||
+          selectedIndex < 0 ||
+          selectedIndex >= question.options.length)
+      ) {
+        throw new BadRequestException(`Answer for question ${index + 1} is invalid.`);
+      }
+      return {
+        questionId,
+        selectedIndex: selectedIndex ?? null,
+        correctIndex,
+        correct: selectedIndex === correctIndex,
+      };
+    });
+    const correctCount = answerReview.filter((answer) => answer.correct).length;
+    const score = Number(((correctCount / questions.length) * quiz.totalMarks).toFixed(2));
+    const markValue = Number(((score / quiz.totalMarks) * 10).toFixed(2));
+    const quizField = `quiz${quiz.assessmentSlot}`;
+
+    const data = await this.prisma.$transaction(async (tx) => {
+      const submission = await tx.quizSubmission.create({
+        data: {
+          quizId: quiz.id,
+          studentId: student.id,
+          answers,
+          score,
+        },
+      });
+
+      const existing = await tx.assessmentMark.findUnique({
+        where: {
+          studentId_subjectCode: {
+            studentId: student.id,
+            subjectCode: quiz.subjectCode,
+          },
+        },
+      });
+      const marks: Record<string, number> = {
+        modular1: existing?.modular1 ?? 0,
+        modular2: existing?.modular2 ?? 0,
+        quiz1: existing?.quiz1 ?? 0,
+        quiz2: existing?.quiz2 ?? 0,
+        quiz3: existing?.quiz3 ?? 0,
+        quiz4: existing?.quiz4 ?? 0,
+        quiz5: existing?.quiz5 ?? 0,
+        quiz6: existing?.quiz6 ?? 0,
+        assignment1: existing?.assignment1 ?? 0,
+        assignment2: existing?.assignment2 ?? 0,
+        surpriseTest1: existing?.surpriseTest1 ?? 0,
+        surpriseTest2: existing?.surpriseTest2 ?? 0,
+        labWork: existing?.labWork ?? 0,
+      };
+      marks[quizField] = markValue;
+      const bestFiveQuizAverage = Object.keys(marks)
+        .filter((key) => /^quiz[1-6]$/.test(key))
+        .map((key) => marks[key])
+        .sort((left, right) => right - left)
+        .slice(0, 5)
+        .reduce((total, value) => total + value, 0) / 5;
+      const finalWeightage = Number(
+        (
+          ((marks.modular1 + marks.modular2) / 2) * 1.5 +
+          bestFiveQuizAverage * 2 +
+          ((marks.assignment1 + marks.assignment2) / 2) +
+          ((marks.surpriseTest1 + marks.surpriseTest2) / 2) +
+          marks.labWork * 3
+        ).toFixed(2),
+      );
+      const totalMarks = Number(
+        Object.values(marks).reduce((total, value) => total + value, 0).toFixed(1),
+      );
+      const markRecord = await tx.assessmentMark.upsert({
+        where: {
+          studentId_subjectCode: {
+            studentId: student.id,
+            subjectCode: quiz.subjectCode,
+          },
+        },
+        create: {
+          studentId: student.id,
+          rollNumber: student.rollNumber,
+          studentName: student.name,
+          subjectCode: quiz.subjectCode,
+          subjectName: quiz.subject,
+          semester: student.semester,
+          section: student.section,
+          ...marks,
+          totalMarks,
+          finalWeightage,
+        },
+        update: {
+          [quizField]: markValue,
+          totalMarks,
+          finalWeightage,
+        },
+      });
+
+      return { submission, markRecord };
+    });
+
+    return {
+      score,
+      maxMarks: quiz.totalMarks,
+      percentage: Number(((score / quiz.totalMarks) * 100).toFixed(1)),
+      answerReview,
+      submittedAt: data.submission.submittedAt,
+      markRecord: data.markRecord,
+    };
+  }
+
   // 1. Dashboard Metrics & Operational KPIs
   async getDashboardStats() {
     const defaultStats = {

@@ -6,7 +6,7 @@
 
 ## 🏛️ Architecture Overview
 
-c
+
 
 ### Monorepo Structure
 
@@ -303,7 +303,7 @@ You can deploy the backend using Render's free tier with a connected PostgreSQL 
    - **PostgreSQL Database**: `apna-campus-db`
    - **Web Service**: `apna-campus-backend` with all required build and start commands.
 5. In the blueprint review:
-   - Set `CLIENT_URL` to your Vercel URL (or `*` during initial setup).
+   - Set `CLIENT_URL` to the exact Vercel frontend origin. For example, use `https://your-app.vercel.app`; do not use `*`. Multiple trusted origins can be comma-separated.
 6. Click **Apply**.
 7. Once deployed, note your backend URL: `https://<your-backend-service>.onrender.com`.
 
@@ -322,7 +322,7 @@ If configuring manually:
    - `DATABASE_URL`: `postgresql://...` (your PostgreSQL connection string)
    - `JWT_SECRET`: A long random secret string (32+ characters)
    - `JWT_EXPIRES_IN`: `8h`
-   - `CLIENT_URL`: `https://<your-frontend-app>.vercel.app`
+   - `CLIENT_URL`: `https://<your-frontend-app>.vercel.app` (add any trusted preview origin as a comma-separated value)
 6. Click **Create Web Service**.
 7. Test the health endpoint: `https://<your-backend>.onrender.com/api` should return `{"message":"..."}`.
 8. (Optional) In the Render Shell tab, run: `npm run prisma:seed` to populate default demo accounts.
@@ -344,4 +344,3 @@ If configuring manually:
 6. Click **Deploy**.
 7. Once deployment finishes, Vercel gives you a live production URL (e.g., `https://cms-frontend-xxxx.vercel.app`).
 8. Copy this URL, go back to Render, and set `CLIENT_URL` to this Vercel URL in your backend environment variables.
-

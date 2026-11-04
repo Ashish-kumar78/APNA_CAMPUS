@@ -1187,7 +1187,7 @@ export default function HostelPortal({ account, onLogout }) {
     {
       title: 'OVERVIEW',
       items: [
-        { id: 'dashboard', label: 'Warden Dashboard', icon: Home }
+        { id: 'dashboard', label: 'Warden Dashboard', icon: Home },
       ]
     },
     {

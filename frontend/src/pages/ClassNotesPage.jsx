@@ -49,6 +49,7 @@ export const CLASS_NOTE_SUBJECTS = [
 
 export default function ClassNotesPage({ account, initialSubject = 'ALL', onNotesUpdated }) {
   const [notesList, setNotesList] = useState([])
+  const [loadError, setLoadError] = useState('')
   const [subjectFilter, setSubjectFilter] = useState(initialSubject || 'ALL')
   const [materialTypeFilter, setMaterialTypeFilter] = useState('ALL')
   const [dateFilter, setDateFilter] = useState('')
@@ -115,13 +116,23 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
   }
 
   const loadNotes = async () => {
-    const data = await notesApi.getClassNotes({
-      subject: subjectFilter,
-      materialType: materialTypeFilter,
-      date: dateFilter,
-      search: searchQuery
-    })
-    if (data) setNotesList(data)
+    try {
+      const studentSection = account?.section || account?.sectionName || 'Section A';
+      const studentSemester = account?.semester || account?.currentSemester || 'Semester 5';
+      const data = await notesApi.getApprovedPeerNotes({
+        subject: subjectFilter,
+        materialType: materialTypeFilter,
+        date: dateFilter,
+        search: searchQuery,
+        section: studentSection,
+        semester: studentSemester,
+      })
+      setNotesList(data)
+      setLoadError('')
+    } catch (error) {
+      console.warn('Class notes load error:', error);
+      setLoadError(error.message || 'Could not load class notes.')
+    }
   }
 
   const toggleLikeNote = (noteId) => {
@@ -162,13 +173,10 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
     }
 
     setSelectedFile(file)
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader()
-      reader.onload = (evt) => setFilePreviewUrl(evt.target.result)
-      reader.readAsDataURL(file)
-    } else {
-      setFilePreviewUrl('PDF_FILE')
-    }
+    const reader = new FileReader()
+    reader.onload = (evt) => setFilePreviewUrl(evt.target.result)
+    reader.onerror = () => setFileError('Could not read the selected file. Please choose it again.')
+    reader.readAsDataURL(file)
   }
 
   // Proceed to Preview
@@ -191,6 +199,8 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
     if (submittingUpload) return
     setSubmittingUpload(true)
 
+    const studentSec = account?.section || account?.sectionName || 'Section A';
+    const studentSem = account?.semester || account?.currentSemester || 'Semester 5';
     const payload = {
       subject: uploadForm.subject,
       date: uploadForm.date,
@@ -200,21 +210,23 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
       fileName: selectedFile ? selectedFile.name : 'class_notes.png',
       fileType: selectedFile ? selectedFile.type : 'image/png',
       studentName: account?.name || 'Rakesh Das',
-      rollNumber: account?.registrationNumber || '2305201001',
-      department: account?.department || 'Computer Science'
+      rollNumber: account?.registrationNumber || account?.rollNumber || '2305201001',
+      department: account?.department || 'Computer Science & Engineering',
+      section: studentSec,
+      semester: studentSem,
     }
 
     try {
-      const res = await notesApi.uploadClassNotes(payload)
+      const res = await notesApi.submitPeerNote(payload)
       if (res && res.success) {
-        triggerToast('Class notes shared successfully! Available for classmates.')
+        triggerToast(`Class notes shared successfully! Visible to all students in ${studentSec}.`)
         await loadNotes()
         if (onNotesUpdated) onNotesUpdated()
         setShowUploadModal(false)
         resetUploadForm()
       }
-    } catch {
-      triggerToast('Failed to upload notes. Please try again.')
+    } catch (error) {
+      triggerToast(error.message || 'Failed to upload notes. Please try again.')
     } finally {
       setSubmittingUpload(false)
     }
@@ -267,7 +279,23 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
       {/* Header Bar */}
       <div className="notes-header">
         <div>
-          <h1 className="notes-title">Class Notes & Study Material Sharing</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h1 className="notes-title">Class Notes & Study Material Sharing</h1>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '3px 10px',
+              borderRadius: '9999px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              background: '#eff6ff',
+              color: '#1d4ed8',
+              border: '1px solid #bfdbfe',
+              letterSpacing: '0.02em'
+            }}>
+              {account?.section || account?.sectionName || 'Section A'} Cohort
+            </span>
+          </div>
           <p className="notes-subtitle">Access handwritten notes, lecture slides & board photos shared by peers for missed classes</p>
         </div>
         <button 
@@ -282,6 +310,11 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
           <span>Upload Class Notes</span>
         </button>
       </div>
+      {loadError && (
+        <div role="alert" style={{ margin: '0 0 14px', padding: '10px 14px', borderRadius: 8, background: '#fff1f2', color: '#b91c1c' }}>
+          {loadError}
+        </div>
+      )}
 
       {/* Campus Connect Integration Callout */}
       <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', border: '1px solid rgba(6, 182, 212, 0.35)', borderRadius: '12px', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', color: '#fff' }}>
@@ -669,7 +702,7 @@ export default function ClassNotesPage({ account, initialSubject = 'ALL', onNote
                   <h4 style={{ margin: '0 0 8px', fontSize: '0.9rem', color: '#0f172a' }}>Preview Note Attachment</h4>
 
                   <div style={{ textAlign: 'center', background: '#ffffff', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '10px' }}>
-                    {filePreviewUrl === 'PDF_FILE' ? (
+                    {selectedFile?.type === 'application/pdf' ? (
                       <div style={{ padding: '20px', color: '#4338ca' }}>
                         <FileText size={48} style={{ margin: '0 auto 8px', display: 'block' }} />
                         <strong>{selectedFile?.name || 'Notes_Document.pdf'}</strong>

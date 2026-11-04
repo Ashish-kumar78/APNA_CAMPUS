@@ -1246,7 +1246,8 @@
 
 .iform-group input,
 .iform-group select,
-.iform-group textarea {
+.iform-group textarea,
+.iform-select {
   width: 100%;
   padding: 8px 12px;
   border-radius: 8px;
@@ -1260,9 +1261,22 @@
 
 .iform-group input:focus,
 .iform-group select:focus,
-.iform-group textarea:focus {
+.iform-group textarea:focus,
+.iform-select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.custom-input-highlight {
+  background: #f0f9ff;
+  border: 1px dashed #0284c7;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.iform-row {
+  display: grid;
+  gap: 1rem;
 }
 
 .iform-row.two-col {

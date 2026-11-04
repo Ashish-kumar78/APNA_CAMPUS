@@ -30,7 +30,8 @@ import {
   Bell,
   User,
   HelpCircle,
-  CheckCircle
+  CheckCircle,
+  Home
 } from 'lucide-react';
 
 import './StaffPortal.css';
@@ -119,17 +120,18 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
     triggerToast(`Focused on laboratory: ${newLabId}`);
   };
 
-  // Master Navigation Sections matching the Master Prompt specifications exactly
+  // Master Navigation Sections
   const staffNavSections = [
     {
-      title: 'A. DASHBOARD',
-      collapsible: false,
+      title: 'OVERVIEW',
+      collapsible: true,
+      defaultCollapsed: false,
       items: [
-        { id: 'dashboard', label: 'Staff Dashboard', icon: Wrench },
+        { id: 'dashboard', label: 'Dashboard', icon: Home }
       ]
     },
     {
-      title: 'B. LABORATORY OPERATIONS',
+      title: 'LABORATORY OPERATIONS',
       collapsible: true,
       defaultCollapsed: false,
       items: [

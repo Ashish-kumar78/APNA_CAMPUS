@@ -1,133 +1,154 @@
 import { useState, useEffect } from 'react'
 import { 
-  Bell, 
   Search, 
   Pin, 
   Download, 
   Calendar, 
-  ExternalLink, 
-  Filter, 
-  CheckCircle,
-  FileText,
-  Megaphone
+  FileText
 } from 'lucide-react'
-import { downloadNoticePdf } from '../utils/pdfGenerator'
 import { notificationsApi } from '../services/notificationsApi.js'
-import OfficialCollegeNoticeModal, { GIFT_MODULAR_TEST_2_NOTICE } from '../components/ExaminationCell/OfficialCollegeNoticeModal.jsx'
+import { notificationsStore } from '../services/notificationsStore.js'
+import { erpStore } from '../services/erpStore.js'
 import './NoticesPage.css'
-
-const allNotices = [
-  {
-    id: 'gift-mod2-2026',
-    title: 'B.Tech 5th Semester Modular test-II schedule, 2026',
-    tag: 'exam',
-    date: '04 Nov 2026',
-    publisher: 'Controller of Examinations (GIFT)',
-    pinned: true,
-    summary: 'The Modular Test -II for B.Tech 5th Semester will be conducted from 05 November 2026 to 12 November 2026 across all branches (CSE, CSE-AI, CS & IOT, CIVIL, EEE, ECE, MECH, AGRIL). Time: 8:30 am to 9:30 am.',
-    content: 'Dear Students, The Modular Test -II for B.Tech 5th Semester will be conducted from 05 November 2026 to 12 November 2026 as per official schedule. All students are advised to prepare accordingly. Lab examinations will be conducted per respective HoD schedules.',
-    attachment: 'BTech_5th_Sem_Modular_Test_II_Schedule_2026.pdf',
-    isOfficialModularNotice: true,
-  },
-  {
-    id: 1,
-    title: 'Registration & Verification for PRERANA State Scholarship 2026-27',
-    tag: 'scholarship',
-    date: '27 Sep 2026',
-    publisher: 'Dean of Student Welfare',
-    pinned: true,
-    summary: 'Eligible SC/ST/OBC students from Odisha must submit online renewal forms with valid income and caste certificates before 15 October 2026.',
-    content: 'All eligible undergraduate and postgraduate scholars belonging to reserved categories are hereby advised to update their biometric Aadhaar linking and upload current semester marksheets on the official state portal.',
-    attachment: 'Circular_PRERANA_2026.pdf'
-  },
-  {
-    id: 2,
-    title: 'BPUT Even Semester Result Declaration & Re-checking Guidelines',
-    tag: 'exam',
-    date: '25 Sep 2026',
-    publisher: 'Controller of Examinations',
-    pinned: true,
-    summary: 'Results for B.Tech 6th Semester Regular/Back exams have been published on the university portal. Deadline for re-checking applications is 05 October.',
-    content: 'Students desiring verification/photocopy of answer scripts must apply through college student cell with a processing fee of Rs. 200 per theory subject.',
-    attachment: 'Rechecking_Notification_2026.pdf'
-  },
-  {
-    id: 3,
-    title: 'Cognizant & Tata Consultancy Services Campus Recruitment Drive',
-    tag: 'placement',
-    date: '22 Sep 2026',
-    publisher: 'Training & Placement Cell',
-    pinned: false,
-    summary: 'Final year CSE, IT, and ECE students having 65% aggregate without active backlogs must complete the registration portal before Friday.',
-    content: 'Online aptitude assessments will be conducted on campus server labs starting Monday. Professional dress code and college RFID ID card are strictly mandatory.',
-    attachment: 'Placement_Eligibility_Matrix.pdf'
-  },
-  {
-    id: 4,
-    title: 'AICTE-Approved Weekend GATE Preparation and Mentorship Classes',
-    tag: 'academic',
-    date: '19 Sep 2026',
-    publisher: 'Department of Computer Science',
-    pinned: false,
-    summary: 'Special weekend coaching for GATE 2027 by senior professors commences this Saturday at Seminar Hall 2.',
-    content: 'Detailed schedule, syllabus modules, and practice mock tests will be hosted on the college LMS. Attendance in these sessions will be counted towards academic credits.',
-    attachment: 'GATE_Module_Syllabus.pdf'
-  },
-  {
-    id: 5,
-    title: 'Annual Inter-College Sports & Cultural Fiesta - TARANG 2026',
-    tag: 'event',
-    date: '15 Sep 2026',
-    publisher: 'Cultural & Sports Committee',
-    pinned: false,
-    summary: 'Auditions for music, dance, hackathons, and cricket tournament trials start from next week. Cash prizes worth Rs. 2,00,000.',
-    content: 'Club leaders and branch coordinators may register their respective squads at the student affairs desk.',
-    attachment: 'TARANG_Rulebook.pdf'
-  }
-]
 
 export default function NoticesPage() {
   const [selectedTag, setSelectedTag] = useState('all')
   const [query, setQuery] = useState('')
   const [selectedNotice, setSelectedNotice] = useState(null)
-  const [showOfficialModal, setShowOfficialModal] = useState(false)
   const [facultyNotices, setFacultyNotices] = useState([])
+  const [campusNotices, setCampusNotices] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     let isMounted = true;
     const loadFacultyNotices = async () => {
+      setLoading(true);
+      setLoadError('');
+
+      // Load instant local/offline exam circulars and notifications
+      const localExamCircs = (erpStore.getExamCirculars() || []).map((c) => ({
+        id: c.id,
+        title: c.title,
+        tag: 'exam',
+        category: 'EXAMINATION',
+        date: c.date || 'Today',
+        publisher: 'Controller of Examinations (CoE)',
+        pinned: c.priority === 'High' || c.priority === 'URGENT',
+        summary: (c.content || '').slice(0, 160) + ((c.content || '').length > 160 ? '...' : ''),
+        content: c.content,
+        attachment: c.circularNo ? `${c.circularNo.replace(/[\/\\]/g, '_')}.pdf` : '',
+      }));
+
+      const storeNotifs = (notificationsStore.getNotifications({ role: 'student' }) || []).map((n) => ({
+        id: n.id,
+        title: n.title,
+        tag: ({
+          EXAMINATION: 'exam',
+          PLACEMENT: 'placement',
+          COURSE_UPDATE: 'academic',
+          ACADEMIC: 'academic',
+          FEES: 'scholarship',
+        })[n.category] || 'faculty',
+        category: n.category,
+        date: n.timestamp
+          ? new Date(n.timestamp).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+          : 'Recently',
+        publisher: `${n.senderName || 'Campus'}${n.senderDept ? ` · ${n.senderDept}` : ''}`,
+        pinned: n.priority === 'URGENT' || n.priority === 'HIGH',
+        summary: (n.message || '').slice(0, 160) + ((n.message || '').length > 160 ? '...' : ''),
+        content: n.message,
+        attachment: n.attachmentName || '',
+        attachmentUrl: n.attachmentUrl || '',
+      }));
+
       try {
-        const list = await notificationsApi.getStudentNotifications('01');
-        if (!isMounted || !Array.isArray(list)) return;
+        const [notificationList, officialNotices] = await Promise.allSettled([
+          notificationsApi.getStudentNotifications(),
+          notificationsApi.getCampusNotices(),
+        ]);
+        if (!isMounted) return;
 
-        const mapped = list.map(n => ({
-          id: `fac-${n.id}`,
-          title: n.title,
-          tag: 'faculty',
-          category: n.category,
-          date: n.publishedAt ? new Date(n.publishedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today',
-          publisher: `${n.facultyName || 'Course Faculty'} (${n.subjectCode || 'CSE Dept'})`,
-          pinned: n.priority === 'URGENT',
-          summary: n.message.slice(0, 150) + (n.message.length > 150 ? '...' : ''),
-          content: n.message,
-          attachment: n.attachmentName || (n.category === 'EXAMINATION' ? 'Modular_Exam_Notice.pdf' : 'Academic_Notification.pdf')
-        }));
+        let mappedNotifications = [];
+        if (notificationList.status === 'fulfilled' && Array.isArray(notificationList.value)) {
+          mappedNotifications = notificationList.value.map((n) => ({
+            id: n.id,
+            title: n.title,
+            tag: ({
+              EXAMINATION: 'exam',
+              PLACEMENT: 'placement',
+              COURSE_UPDATE: 'academic',
+              ACADEMIC: 'academic',
+              FEES: 'scholarship',
+            })[n.category] || 'faculty',
+            category: n.category,
+            date: n.publishedAt
+              ? new Date(n.publishedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+              : 'Recently',
+            publisher: `${n.facultyName || n.senderName || 'Campus'}${n.subjectCode ? ` (${n.subjectCode})` : ''}`,
+            pinned: n.priority === 'URGENT',
+            summary: (n.message || '').slice(0, 150) + ((n.message || '').length > 150 ? '...' : ''),
+            content: n.message,
+            attachment: n.attachmentName || '',
+            attachmentUrl: n.attachmentUrl || '',
+          }));
+        }
 
-        setFacultyNotices(mapped);
+        let mappedOfficialNotices = [];
+        if (officialNotices.status === 'fulfilled' && Array.isArray(officialNotices.value)) {
+          mappedOfficialNotices = officialNotices.value.map((notice) => ({
+            ...notice,
+            tag: ({
+              examination: 'exam',
+              scholarships: 'scholarship',
+              career: 'placement',
+            })[String(notice.tag || '').toLowerCase()] || String(notice.tag || 'academic').toLowerCase(),
+            date: notice.date || new Date(notice.createdAt).toLocaleDateString('en-IN', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            }),
+            publisher: notice.publisher || 'Campus Administration',
+            attachment: notice.attachment || '',
+            attachmentUrl: notice.attachmentUrl || '',
+          }));
+        }
+
+        // Combine all, ensuring deduplication by ID
+        const existingIds = new Set();
+        const allList = [];
+        for (const item of [...mappedNotifications, ...mappedOfficialNotices, ...localExamCircs, ...storeNotifs]) {
+          if (!existingIds.has(item.id)) {
+            existingIds.add(item.id);
+            allList.push(item);
+          }
+        }
+
+        setFacultyNotices(allList);
+        setCampusNotices([]);
       } catch (e) {
-        console.warn('Failed to load faculty notices on Notices page', e);
+        if (isMounted) {
+          // Even if backend fails, seamlessly present local and store circulars
+          const fallbackList = [...localExamCircs, ...storeNotifs];
+          setFacultyNotices(fallbackList);
+          setCampusNotices([]);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
 
     loadFacultyNotices();
     window.addEventListener('apna_campus_notifications_updated', loadFacultyNotices);
+    window.addEventListener('apna_campus_notification_dispatched', loadFacultyNotices);
     return () => {
       isMounted = false;
       window.removeEventListener('apna_campus_notifications_updated', loadFacultyNotices);
+      window.removeEventListener('apna_campus_notification_dispatched', loadFacultyNotices);
     };
   }, []);
 
-  const combinedNotices = [...facultyNotices, ...allNotices];
+  const combinedNotices = [...campusNotices, ...facultyNotices];
 
   const filtered = combinedNotices.filter((n) => {
     const matchesTag = selectedTag === 'all' || n.tag === selectedTag
@@ -180,6 +201,15 @@ export default function NoticesPage() {
       </div>
 
       <div className="notices-list">
+        {loading && <p role="status">Loading notices…</p>}
+        {!loading && loadError && <p role="alert">{loadError}</p>}
+        {!loading && !loadError && filtered.length === 0 && (
+          <p>
+            {query.trim() || selectedTag !== 'all'
+              ? 'No notices match your current filters.'
+              : 'No notices have been published yet.'}
+          </p>
+        )}
         {filtered.map((item) => (
           <div key={item.id} className={`notice-card ${item.pinned ? 'pinned' : ''}`}>
             <div className="notice-meta-row">
@@ -207,16 +237,22 @@ export default function NoticesPage() {
             </div>
 
             <div className="notice-footer">
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <FileText size={14} color="#64748b" /> {item.attachment}
-              </span>
+              {item.attachment ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <FileText size={14} color="#64748b" /> {item.attachment}
+                </span>
+              ) : <span>No attachment</span>}
               <div className="notice-actions">
-                <button 
-                  className="btn-notice-action" 
-                  onClick={() => downloadNoticePdf(item)}
-                >
-                  <Download size={14} /> PDF
-                </button>
+                {item.attachmentUrl && (
+                  <a
+                    className="btn-notice-action"
+                    href={item.attachmentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Download size={14} /> Attachment
+                  </a>
+                )}
                 <button 
                   className="btn-notice-action"
                   onClick={() => setSelectedNotice(item)}
@@ -244,38 +280,23 @@ export default function NoticesPage() {
             <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', fontSize: '0.92rem', lineHeight: '1.6', color: '#334155', marginBottom: '20px' }}>
               {selectedNotice.content}
             </div>
-            {(selectedNotice.isOfficialModularNotice || selectedNotice.title?.includes('Modular')) && (
-              <div style={{ marginBottom: '16px' }}>
-                <button
-                  type="button"
-                  className="btn-pay-now"
-                  style={{ width: '100%', justifyContent: 'center', background: '#1e3a8a', padding: '10px' }}
-                  onClick={() => setShowOfficialModal(true)}
-                >
-                  🏛 View Full Official Multi-Branch Schedule Circular (PDF View)
-                </button>
-              </div>
-            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button 
-                className="btn-pay-now" 
-                style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-                onClick={() => downloadNoticePdf(selectedNotice)}
-              >
-                <Download size={14} /> Download Official Letter
-              </button>
+              {selectedNotice.attachmentUrl && (
+                <a
+                  className="btn-pay-now"
+                  style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+                  href={selectedNotice.attachmentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Download size={14} /> Open Attachment
+                </a>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {showOfficialModal && (
-        <OfficialCollegeNoticeModal
-          notice={GIFT_MODULAR_TEST_2_NOTICE}
-          userBranch="CSE"
-          onClose={() => setShowOfficialModal(false)}
-        />
-      )}
     </div>
   )
 }

@@ -47,7 +47,8 @@ import {
   Phone,
   Award,
   FileCheck,
-  Radio
+  Radio,
+  Home
 } from 'lucide-react';
 import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
 import { AppLayout } from './Navigation';
@@ -71,6 +72,9 @@ import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import HodGrievanceMonitoringModule from './HodGrievanceMonitoringModule.jsx';
 import { complaintsApi } from '../services/complaintsApi.js';
 import { notificationsApi } from '../services/notificationsApi.js';
+import DirectParentNoticeModal from './Common/DirectParentNoticeModal.jsx';
+import Student360DossierModal from './Common/Student360DossierModal.jsx';
+import { getStudentComprehensiveDetails, dispatchParentNotice } from '../services/parentNoticeService.js';
 
 const holidays = [
   [
@@ -436,6 +440,9 @@ export default function HodPortal({ account, onLogout }) {
 
   // Interactive Modals State
   const [selectedStudentModal, setSelectedStudentModal] = useState(null);
+  const [parentNoticeModalStudent, setParentNoticeModalStudent] = useState(null);
+  const [dossierModalStudent, setDossierModalStudent] = useState(null);
+  const [studentAlertFilter, setStudentAlertFilter] = useState('ALL'); // ALL, CRITICAL_ATTENDANCE, HIGH_FEES, DUAL_CRITICAL, SHORTAGE
   const [selectedFacultyModal, setSelectedFacultyModal] = useState(null);
   const [selectedSubjectModal, setSelectedSubjectModal] = useState(null);
   const [inspectingMarksModal, setInspectingMarksModal] = useState(null);
@@ -711,7 +718,15 @@ export default function HodPortal({ account, onLogout }) {
       if (studentSemFilter !== 'ALL' && (s.semester || 'Semester 5') !== studentSemFilter) return false;
       if (studentSectionFilter !== 'ALL' && !((s.section || 'Section A').includes(studentSectionFilter.replace('Section ', '')))) return false;
 
-      const att = s.attendance || 85;
+      const details = getStudentComprehensiveDetails(s);
+
+      // Alert Filter Pill filtering
+      if (studentAlertFilter === 'CRITICAL_ATTENDANCE' && !details.isCriticalShortage) return false;
+      if (studentAlertFilter === 'HIGH_FEES' && !details.fees?.hasHighDues) return false;
+      if (studentAlertFilter === 'DUAL_CRITICAL' && !(details.isCriticalShortage && details.fees?.hasHighDues)) return false;
+      if (studentAlertFilter === 'SHORTAGE' && !details.isShortage) return false;
+
+      const att = details.attendance;
       if (studentAttendanceFilter === 'SHORTAGE' && att >= 75) return false;
       if (studentAttendanceFilter === 'REGULAR' && (att < 75 || att > 85)) return false;
       if (studentAttendanceFilter === 'HIGH' && att <= 85) return false;
@@ -731,13 +746,34 @@ export default function HodPortal({ account, onLogout }) {
           s.name.toLowerCase().includes(q) ||
           s.rollNumber.includes(q) ||
           (s.registrationNumber && s.registrationNumber.includes(q)) ||
-          (s.studentId && s.studentId.includes(q));
+          (s.studentId && s.studentId.includes(q)) ||
+          (details.parent?.phone && details.parent.phone.includes(q));
         if (!match) return false;
       }
 
       return true;
     });
-  }, [students, studentYearFilter, studentProgramFilter, studentSemFilter, studentSectionFilter, studentAttendanceFilter, studentRiskFilter, studentMissingMarksFilter, studentSearch]);
+  }, [students, studentYearFilter, studentProgramFilter, studentSemFilter, studentSectionFilter, studentAttendanceFilter, studentRiskFilter, studentMissingMarksFilter, studentSearch, studentAlertFilter]);
+
+  // Alert metrics counts across department students
+  const critAttCount = useMemo(() => {
+    return students.filter(s => getStudentComprehensiveDetails(s).isCriticalShortage).length;
+  }, [students]);
+
+  const highFeesCount = useMemo(() => {
+    return students.filter(s => getStudentComprehensiveDetails(s).fees?.hasHighDues).length;
+  }, [students]);
+
+  const dualCritCount = useMemo(() => {
+    return students.filter(s => {
+      const d = getStudentComprehensiveDetails(s);
+      return d.isCriticalShortage && d.fees?.hasHighDues;
+    }).length;
+  }, [students]);
+
+  const shortageCount = useMemo(() => {
+    return students.filter(s => getStudentComprehensiveDetails(s).isShortage).length;
+  }, [students]);
 
   // Cross-section comparative performance analytics
   const sectionComparisonData = useMemo(() => {
@@ -892,7 +928,7 @@ export default function HodPortal({ account, onLogout }) {
     {
       title: 'OVERVIEW',
       items: [
-        { id: 'dashboard', label: 'Department Dashboard', icon: Layers },
+        { id: 'dashboard', label: 'Dashboard', icon: Home },
       ]
     },
     {
@@ -2252,6 +2288,25 @@ export default function HodPortal({ account, onLogout }) {
                   >
                     <FileSpreadsheet size={14} /> Export CSV Roster
                   </button>
+                  <button
+                    type="button"
+                    className="admin-action-btn-primary"
+                    style={{ background: '#dc2626', borderColor: '#b91c1c' }}
+                    onClick={() => {
+                      const criticalStudents = filteredDepartmentStudents.filter(s => {
+                        const d = getStudentComprehensiveDetails(s);
+                        return d.isCriticalShortage || d.fees?.hasHighDues;
+                      });
+                      if (criticalStudents.length === 0) {
+                        showToast('No students with critical attendance (<50%) or high fee dues in current filter.');
+                        return;
+                      }
+                      setParentNoticeModalStudent(criticalStudents[0]);
+                    }}
+                    title="Send immediate parent alert for at-risk students"
+                  >
+                    <Send size={14} /> Send Parent Notice ({critAttCount + highFeesCount})
+                  </button>
                 </div>
               </div>
 
@@ -2372,6 +2427,88 @@ export default function HodPortal({ account, onLogout }) {
                 </div>
               </div>
 
+              {/* Quick Alert Filter Pills for Parent Notices & Student 360 Oversight */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Bell size={13} color="#dc2626" /> PARENT ACTION FILTERS:
+                </span>
+                <button
+                  type="button"
+                  className={`admin-action-btn-secondary ${studentAlertFilter === 'ALL' ? 'active' : ''}`}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    background: studentAlertFilter === 'ALL' ? '#2563eb' : '#fff',
+                    color: studentAlertFilter === 'ALL' ? '#fff' : '#475569',
+                    borderColor: studentAlertFilter === 'ALL' ? '#2563eb' : '#cbd5e1'
+                  }}
+                  onClick={() => setStudentAlertFilter('ALL')}
+                >
+                  All Students ({students.length})
+                </button>
+                <button
+                  type="button"
+                  className={`admin-action-btn-secondary ${studentAlertFilter === 'CRITICAL_ATTENDANCE' ? 'active' : ''}`}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    background: studentAlertFilter === 'CRITICAL_ATTENDANCE' ? '#dc2626' : '#fef2f2',
+                    color: studentAlertFilter === 'CRITICAL_ATTENDANCE' ? '#fff' : '#dc2626',
+                    borderColor: studentAlertFilter === 'CRITICAL_ATTENDANCE' ? '#dc2626' : '#fca5a5'
+                  }}
+                  onClick={() => setStudentAlertFilter(studentAlertFilter === 'CRITICAL_ATTENDANCE' ? 'ALL' : 'CRITICAL_ATTENDANCE')}
+                >
+                  🚨 Attendance &lt; 50% ({critAttCount})
+                </button>
+                <button
+                  type="button"
+                  className={`admin-action-btn-secondary ${studentAlertFilter === 'HIGH_FEES' ? 'active' : ''}`}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    background: studentAlertFilter === 'HIGH_FEES' ? '#d97706' : '#fffbeb',
+                    color: studentAlertFilter === 'HIGH_FEES' ? '#fff' : '#b45309',
+                    borderColor: studentAlertFilter === 'HIGH_FEES' ? '#d97706' : '#fcd34d'
+                  }}
+                  onClick={() => setStudentAlertFilter(studentAlertFilter === 'HIGH_FEES' ? 'ALL' : 'HIGH_FEES')}
+                >
+                  💳 High Fee Dues &gt; ₹25k ({highFeesCount})
+                </button>
+                <button
+                  type="button"
+                  className={`admin-action-btn-secondary ${studentAlertFilter === 'DUAL_CRITICAL' ? 'active' : ''}`}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    background: studentAlertFilter === 'DUAL_CRITICAL' ? '#7f1d1d' : '#fff1f2',
+                    color: studentAlertFilter === 'DUAL_CRITICAL' ? '#fff' : '#991b1b',
+                    borderColor: studentAlertFilter === 'DUAL_CRITICAL' ? '#7f1d1d' : '#fecdd3'
+                  }}
+                  onClick={() => setStudentAlertFilter(studentAlertFilter === 'DUAL_CRITICAL' ? 'ALL' : 'DUAL_CRITICAL')}
+                >
+                  🔥 Dual Critical Shortage &amp; Dues ({dualCritCount})
+                </button>
+                <button
+                  type="button"
+                  className={`admin-action-btn-secondary ${studentAlertFilter === 'SHORTAGE' ? 'active' : ''}`}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    background: studentAlertFilter === 'SHORTAGE' ? '#f59e0b' : '#fff',
+                    color: studentAlertFilter === 'SHORTAGE' ? '#fff' : '#b45309',
+                    borderColor: studentAlertFilter === 'SHORTAGE' ? '#f59e0b' : '#fde68a'
+                  }}
+                  onClick={() => setStudentAlertFilter(studentAlertFilter === 'SHORTAGE' ? 'ALL' : 'SHORTAGE')}
+                >
+                  ⚠️ Shortage (&lt;75%) ({shortageCount})
+                </button>
+              </div>
+
               {/* View 1: Section Comparative Analytics */}
               {studentViewMode === 'section_comparison' && (
                 <div>
@@ -2458,42 +2595,102 @@ export default function HodPortal({ account, onLogout }) {
                     <thead>
                       <tr>
                         <th>Roll #</th>
-                        <th>Student Name</th>
-                        <th>Registration / ID</th>
-                        <th>Cohort</th>
-                        <th>Attendance</th>
-                        <th>CGPA</th>
-                        <th>Academic Health &amp; Risk</th>
-                        <th>Continuous Marks &amp; CIA</th>
+                        <th>Student &amp; Parent</th>
+                        <th>Registration / Cohort</th>
+                        <th>Attendance Turnout</th>
+                        <th>Continuous Marks</th>
+                        <th>Fees Account &amp; Dues</th>
+                        <th>Risk Assessment</th>
                         <th style={{ textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredDepartmentStudents.map(s => {
                         const risk = erpStore.calculateStudentRisk(s);
-                        const isShortage = (s.attendance || 85) < 75;
+                        const details = getStudentComprehensiveDetails(s);
                         const internalMarks = getStudentInternalMarks(s);
+                        const isCritAtt = details.isCriticalShortage; // < 50%
+                        const hasHighFees = details.fees?.hasHighDues; // >= 25k
 
                         return (
-                          <tr key={s.id}>
+                          <tr key={s.id} style={{ background: isCritAtt && hasHighFees ? '#fff1f2' : isCritAtt ? '#fef2f2' : hasHighFees ? '#fffbeb' : 'transparent' }}>
                             <td><strong>#{s.rollNumber}</strong></td>
                             <td style={{ fontWeight: 600 }}>
                               <div>{s.name}</div>
-                              <small style={{ color: '#64748b', fontSize: '0.72rem' }}>{s.email}</small>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                Parent: <strong>{details.parent?.fatherName}</strong>
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: '#0369a1' }}>
+                                📞 {details.parent?.phone}
+                              </div>
                             </td>
-                            <td><code>{s.registrationNumber || s.studentId}</code></td>
-                            <td>{s.semester || 'Semester 5'} · {s.section || 'Section A'}</td>
                             <td>
-                              <strong style={{ color: isShortage ? '#dc2626' : '#0f766e' }}>
-                                {s.attendance || 85}%
-                              </strong>
-                              {isShortage && (
-                                <span style={{ display: 'block', fontSize: '0.68rem', color: '#b91c1c', fontWeight: 700 }}>
-                                  Shortage Alert
+                              <div><code>{s.registrationNumber || s.studentId}</code></div>
+                              <small style={{ color: '#64748b', fontSize: '0.72rem' }}>
+                                {s.semester || 'Semester 5'} · {s.section || 'Section A'}
+                              </small>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <strong style={{ fontSize: '0.92rem', color: isCritAtt ? '#b91c1c' : details.isShortage ? '#d97706' : '#0f766e' }}>
+                                  {details.attendance}%
+                                </strong>
+                                <small style={{ color: '#64748b', fontSize: '0.72rem' }}>({details.attendedLectures}/{details.totalLectures})</small>
+                              </div>
+                              {isCritAtt ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 6px', borderRadius: '4px', background: '#dc2626', color: '#fff', fontSize: '0.66rem', fontWeight: 800, marginTop: '2px' }}>
+                                  🚨 CRITICAL &lt;50% DEBARMENT
+                                </span>
+                              ) : details.isShortage ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 6px', borderRadius: '4px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', fontSize: '0.66rem', fontWeight: 700, marginTop: '2px' }}>
+                                  ⚠️ Shortage &lt;75%
+                                </span>
+                              ) : (
+                                <span style={{ display: 'inline-block', fontSize: '0.68rem', color: '#059669', fontWeight: 600 }}>
+                                  ✓ Eligible (Exam Cleared)
                                 </span>
                               )}
                             </td>
-                            <td><strong style={{ color: '#059669' }}>{s.cgpa}</strong></td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <strong style={{ color: '#059669', fontSize: '0.88rem' }}>{details.marks.cgpa} CGPA</strong>
+                                <span style={{ color: '#64748b', fontSize: '0.74rem' }}>| CIA: <strong>{details.marks.totalInternal}</strong>/100</span>
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
+                                Mid 1: {details.marks.mid1}/30 · Mid 2: {details.marks.mid2}/30
+                                {details.marks.backlogCount > 0 && (
+                                  <span style={{ color: '#dc2626', fontWeight: 700, marginLeft: '4px' }}>
+                                    · {details.marks.backlogCount} Backlog
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              {details.fees.dueFees > 0 ? (
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <strong style={{ color: hasHighFees ? '#dc2626' : '#d97706', fontSize: '0.88rem' }}>
+                                      ₹{details.fees.dueFees.toLocaleString('en-IN')} Due
+                                    </strong>
+                                  </div>
+                                  {hasHighFees ? (
+                                    <span style={{ display: 'inline-block', padding: '1px 6px', borderRadius: '4px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', fontSize: '0.66rem', fontWeight: 800, marginTop: '2px' }}>
+                                      💳 High Dues Pending
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                                      Paid: ₹{details.fees.paidFees.toLocaleString('en-IN')}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div>
+                                  <span className="admin-badge approved" style={{ fontSize: '0.7rem' }}>
+                                    ✓ Cleared (₹0 Due)
+                                  </span>
+                                </div>
+                              )}
+                            </td>
                             <td>
                               <span
                                 style={{
@@ -2514,33 +2711,32 @@ export default function HodPortal({ account, onLogout }) {
                                 {risk.category}
                               </span>
                             </td>
-                            <td>
-                              {internalMarks.hasMissing ? (
-                                <div>
-                                  <span className="hod-missing-tag">
-                                    <AlertTriangle size={11} /> Missing {internalMarks.missingItems.join(', ')}
-                                  </span>
-                                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
-                                    Partial: <strong>{internalMarks.totalInternal}</strong> / 100
-                                  </div>
-                                </div>
-                              ) : (
-                                <div>
-                                  <span className="admin-badge approved" style={{ fontSize: '0.7rem' }}>
-                                    ✓ CIA Complete ({internalMarks.totalInternal}/100)
-                                  </span>
-                                </div>
-                              )}
-                            </td>
                             <td style={{ textAlign: 'right' }}>
-                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
                                 <button
                                   type="button"
                                   className="admin-action-btn-secondary"
-                                  style={{ padding: '3px 8px', fontSize: '0.72rem' }}
-                                  onClick={() => setSelectedStudentModal({ student: s, activeTab: 'overview' })}
+                                  style={{
+                                    padding: '3px 8px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    background: isCritAtt || hasHighFees ? '#dc2626' : '#fff',
+                                    color: isCritAtt || hasHighFees ? '#fff' : '#b91c1c',
+                                    borderColor: isCritAtt || hasHighFees ? '#dc2626' : '#fca5a5'
+                                  }}
+                                  onClick={() => setParentNoticeModalStudent(s)}
+                                  title={`Dispatch official parent notice (${isCritAtt ? 'Critical Attendance < 50%' : hasHighFees ? 'High Fee Dues' : 'Direct Parent Notice'})`}
                                 >
-                                  Profile
+                                  📩 Notice to Parent
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-action-btn-secondary"
+                                  style={{ padding: '3px 8px', fontSize: '0.72rem', fontWeight: 600 }}
+                                  onClick={() => setDossierModalStudent(s)}
+                                  title="Open Student 360 Full Academic, Attendance & Fee Dossier"
+                                >
+                                  360° Profile
                                 </button>
                                 {(risk.isAtRisk || internalMarks.hasMissing) && (
                                   <button
@@ -2559,7 +2755,7 @@ export default function HodPortal({ account, onLogout }) {
                       })}
                       {filteredDepartmentStudents.length === 0 && (
                         <tr>
-                          <td colSpan="9" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                          <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
                             No department students found matching your selected criteria.
                           </td>
                         </tr>
@@ -4289,6 +4485,33 @@ export default function HodPortal({ account, onLogout }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 360 Student Dossier Modal */}
+      {dossierModalStudent && (
+        <Student360DossierModal
+          isOpen={!!dossierModalStudent}
+          student={dossierModalStudent}
+          onClose={() => setDossierModalStudent(null)}
+          sender={{ name: account?.name || 'Prof. S. R. Pattnaik', role: 'HOD', deptCode: 'CSE' }}
+          onOpenParentNoticeModal={(st) => {
+            setDossierModalStudent(null);
+            setParentNoticeModalStudent(st);
+          }}
+        />
+      )}
+
+      {/* Direct Parent Notice Dispatcher Modal */}
+      {parentNoticeModalStudent && (
+        <DirectParentNoticeModal
+          isOpen={!!parentNoticeModalStudent}
+          student={parentNoticeModalStudent}
+          onClose={() => setParentNoticeModalStudent(null)}
+          sender={{ name: account?.name || 'Prof. S. R. Pattnaik', role: 'HOD', deptCode: 'CSE' }}
+          onNoticeSent={(res) => {
+            showToast(`Official parent notice dispatched to ${res.parentName} via ${res.channels.join(', ')}`);
+          }}
+        />
       )}
     </>
   );

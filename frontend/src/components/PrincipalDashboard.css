@@ -1,0 +1,991 @@
+/* PrincipalDashboard.css - Institutional Principal Executive Dashboard */
+
+.pdb-root {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  color: #0f172a;
+  font-family: inherit;
+}
+
+/* 1. HERO BANNER */
+.pdb-hero {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 58, 138, 0.88) 100%), url('/campus_background.jpg') center/cover no-repeat;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  color: #ffffff;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.pdb-hero-content {
+  flex: 1;
+  min-width: 280px;
+}
+
+.pdb-hero-tag {
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #93c5fd;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.pdb-hero-title {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+}
+
+.pdb-hero-wave {
+  font-size: 1.4rem;
+}
+
+.pdb-hero-desc {
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  max-width: 680px;
+  line-height: 1.5;
+  margin: 0 0 14px 0;
+}
+
+.pdb-hero-message-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 0.78rem;
+  color: #e2e8f0;
+}
+
+.pdb-hero-message-badge {
+  font-weight: 800;
+  color: #ffffff;
+  background: rgba(59, 130, 246, 0.4);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pdb-hero-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.pdb-hero-timebox {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 10px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.pdb-hero-academic-year {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #93c5fd;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  text-align: right;
+}
+
+.pdb-hero-time-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.pdb-hero-time-row.time-clock {
+  font-size: 0.96rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+}
+
+/* 2. KPI METRIC CARDS (6-column grid with mini sparklines) */
+.pdb-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 1400px) {
+  .pdb-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .pdb-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .pdb-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdb-kpi-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 16px 16px 12px 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.pdb-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  border-color: #cbd5e1;
+}
+
+.pdb-kpi-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.pdb-kpi-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pdb-kpi-icon-wrap.students { background: #e0f2fe; color: #0284c7; }
+.pdb-kpi-icon-wrap.faculty { background: #f3e8ff; color: #9333ea; }
+.pdb-kpi-icon-wrap.depts { background: #dcfce7; color: #16a34a; }
+.pdb-kpi-icon-wrap.programs { background: #fee2e2; color: #e11d48; }
+.pdb-kpi-icon-wrap.research { background: #fef3c7; color: #d97706; }
+.pdb-kpi-icon-wrap.revenue { background: #fee2e2; color: #dc2626; }
+
+.pdb-kpi-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: capitalize;
+}
+
+.pdb-kpi-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.pdb-kpi-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdb-kpi-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 12px;
+}
+
+.pdb-kpi-pill.green { background: #dcfce7; color: #16a34a; }
+.pdb-kpi-pill.grey { background: #f1f5f9; color: #64748b; }
+
+.pdb-kpi-sub {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+
+.pdb-kpi-sparkline {
+  height: 24px;
+  width: 100%;
+  margin-top: auto;
+}
+
+/* 3. ROW 2: PROFILE DOSSIER + ACADEMIC & GOVERNANCE KPIS */
+.pdb-profile-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .pdb-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdb-card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.pdb-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+
+.pdb-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.pdb-card-title svg {
+  color: #2563eb;
+}
+
+.pdb-select {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  outline: none;
+}
+
+.pdb-card-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+}
+
+.pdb-card-link:hover {
+  text-decoration: underline;
+}
+
+/* Principal Profile Card Inside */
+.pdb-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.pdb-profile-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 2px solid #e2e8f0;
+}
+
+.pdb-profile-meta {
+  flex: 1;
+}
+
+.pdb-profile-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.pdb-profile-role {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.pdb-profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.pdb-profile-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+}
+
+.pdb-profile-tab {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.pdb-profile-tab.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.pdb-profile-table {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  font-size: 0.76rem;
+  margin-bottom: 16px;
+}
+
+.pdb-profile-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.pdb-profile-label {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.pdb-profile-val {
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdb-profile-btn {
+  width: 100%;
+  padding: 10px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+.pdb-profile-btn:hover {
+  background: #1d4ed8;
+}
+
+/* Middle & Right Subcards in Profile Row */
+.pdb-subcard-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pdb-mini-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.pdb-mini-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* Faculty Attendance Progress Bar */
+.pdb-att-bar-wrap {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  margin: 10px 0 8px 0;
+}
+
+.pdb-att-bar-fill {
+  background: #16a34a;
+  height: 100%;
+}
+
+.pdb-att-bar-absent {
+  background: #ef4444;
+  height: 100%;
+}
+
+.pdb-att-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+/* Approvals rows */
+.pdb-approval-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 6px;
+}
+
+.pdb-approval-row:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.pdb-approval-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.pdb-approval-count {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 4. ROW 3: 3-COLUMN CHARTS */
+.pdb-three-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .pdb-three-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Donut container */
+.pdb-donut-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 220px;
+}
+
+.pdb-donut-wrapper {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  flex-shrink: 0;
+}
+
+.pdb-donut-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.pdb-donut-center-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdb-donut-center-lbl {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.pdb-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.pdb-donut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: #475569;
+}
+
+.pdb-donut-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  display: inline-block;
+}
+
+.pdb-donut-count {
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Facility progress bars */
+.pdb-facility-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 220px;
+  justify-content: center;
+}
+
+.pdb-facility-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pdb-facility-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pdb-facility-bar-bg {
+  width: 100%;
+  height: 7px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.pdb-facility-bar-fill {
+  height: 100%;
+  border-radius: 10px;
+}
+
+/* 5. ROW 4: ACADEMIC HEALTH TABLE + NOTICES */
+.pdb-table-notices-grid {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .pdb-table-notices-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdb-table-container {
+  overflow-x: auto;
+}
+
+.pdb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.pdb-table th {
+  text-align: left;
+  padding: 8px 10px;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.pdb-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.pdb-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.pdb-status-pill.excellent { background: #dcfce7; color: #16a34a; }
+.pdb-status-pill.good { background: #e0f2fe; color: #0284c7; }
+.pdb-status-pill.satisfactory { background: #fef3c7; color: #d97706; }
+.pdb-status-pill.attention { background: #fee2e2; color: #dc2626; }
+
+/* Circulars list */
+.pdb-notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pdb-notice-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pdb-notice-item:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.pdb-notice-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pdb-notice-datebox {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.pdb-notice-day {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.pdb-notice-month {
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.pdb-notice-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pdb-notice-cat {
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pdb-notice-cat.exam { color: #9333ea; }
+.pdb-notice-cat.academic { color: #2563eb; }
+.pdb-notice-cat.infra { color: #0d9488; }
+.pdb-notice-cat.event { color: #db2777; }
+
+.pdb-notice-title {
+  font-size: 0.77rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdb-notice-meta {
+  font-size: 0.67rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 6. ROW 5: CALENDAR + EVENTS + HOLIDAYS */
+.pdb-calendar-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .pdb-calendar-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mini Calendar */
+.pdb-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.pdb-cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pdb-cal-btn {
+  background: #f1f5f9;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #475569;
+}
+
+.pdb-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+  font-size: 0.72rem;
+}
+
+.pdb-cal-dow {
+  font-weight: 700;
+  color: #64748b;
+  font-size: 0.64rem;
+  padding: 4px 0;
+}
+
+.pdb-cal-dow.sun { color: #ef4444; }
+
+.pdb-cal-cell {
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pdb-cal-cell.other-month {
+  color: #cbd5e1;
+}
+
+.pdb-cal-cell.today {
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.pdb-cal-cell.event-day {
+  background: #fef3c7;
+  color: #d97706;
+  font-weight: 700;
+}
+
+.pdb-cal-cell.fest-day {
+  background: #fed7aa;
+  color: #c2410c;
+  font-weight: 700;
+}
+
+.pdb-cal-cell.sunday {
+  color: #ef4444;
+}
+
+.pdb-cal-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* Event & Holiday Items */
+.pdb-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pdb-list-item:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.pdb-badge-date {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #334155;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.pdb-badge-date.purple { background: #f3e8ff; color: #9333ea; }
+.pdb-badge-date.amber { background: #fef3c7; color: #d97706; }
+.pdb-badge-date.pink { background: #fce7f3; color: #db2777; }
+.pdb-badge-date.blue { background: #e0f2fe; color: #0284c7; }
+
+.pdb-badge-day {
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.pdb-badge-month {
+  font-size: 0.54rem;
+  font-weight: 700;
+}
+
+.pdb-list-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pdb-list-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdb-list-sub {
+  font-size: 0.68rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdb-list-tag {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.pdb-list-tag.seminar { background: #f3e8ff; color: #9333ea; }
+.pdb-list-tag.meeting { background: #e0f2fe; color: #0284c7; }
+.pdb-list-tag.event { background: #fce7f3; color: #db2777; }
+.pdb-list-tag.alumni { background: #f3e8ff; color: #7e22ce; }
+.pdb-list-tag.holiday { background: #dcfce7; color: #16a34a; }
+

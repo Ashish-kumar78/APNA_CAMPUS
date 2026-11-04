@@ -1,0 +1,5 @@
+ALTER TABLE "AuditLog"
+ADD COLUMN "action" TEXT,
+ADD COLUMN "target" TEXT,
+ADD COLUMN "oldValue" TEXT,
+ADD COLUMN "newValue" TEXT;

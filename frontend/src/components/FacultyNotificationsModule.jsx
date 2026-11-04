@@ -5,7 +5,7 @@ import {
   AlertTriangle, Check, BookOpen, Layers
 } from 'lucide-react';
 import { notificationsApi } from '../services/notificationsApi';
-import { erpStore } from '../services/erpStore';
+import { notificationsStore } from '../services/notificationsStore.js';
 import './FacultyNotificationsModule.css';
 
 export default function FacultyNotificationsModule({ account }) {
@@ -23,9 +23,12 @@ export default function FacultyNotificationsModule({ account }) {
   const [viewingDrilldown, setViewingDrilldown] = useState(null);
 
   // Form State
-  const facultyAssignments = useMemo(() => {
-    return erpStore.getFacultyAssignedClasses(facultyName);
-  }, [facultyName]);
+  const [facultyAssignments, setFacultyAssignments] = useState([]);
+  const [assignmentError, setAssignmentError] = useState('');
+  const [assignmentLoading, setAssignmentLoading] = useState(true);
+  const [previewError, setPreviewError] = useState('');
+  const [facultyLoadError, setFacultyLoadError] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const defaultAssignment = facultyAssignments[0] || {
     semester: 'Semester 5',
@@ -52,15 +55,30 @@ export default function FacultyNotificationsModule({ account }) {
     attachmentName: ''
   });
 
-  const [previewInfo, setPreviewInfo] = useState({ count: 32, label: 'B.Tech · Semester 5 · Section A' });
+  const [previewInfo, setPreviewInfo] = useState({ count: 0, label: '', });
+  const semesterOptions = [...new Set(facultyAssignments.map((assignment) => assignment.semester))];
+  const semesterAssignments = facultyAssignments.filter((assignment) => assignment.semester === form.semester);
+  const sectionOptions = [...new Set(semesterAssignments.map((assignment) => assignment.section))];
+  const subjectAssignments = semesterAssignments.filter((assignment) =>
+    form.section === 'ALL_ASSIGNED' || assignment.section === form.section
+  );
+  const subjectOptions = [...new Map(subjectAssignments.map((assignment) => [
+    assignment.subjectCode,
+    assignment,
+  ])).values()];
+  const selectedCourseSections = facultyAssignments.filter((assignment) =>
+    assignment.semester === form.semester && assignment.subjectCode === form.subjectCode
+  );
 
   const loadData = async () => {
     try {
       setLoading(true);
       const list = await notificationsApi.getFacultyNotifications(facultyName);
       setNotifications(list);
+      setFacultyLoadError('');
     } catch (e) {
-      console.warn('Failed to load notifications:', e);
+      setFacultyLoadError(e.message || 'Failed to load notifications.');
+      console.error('Failed to load notifications:', e);
     } finally {
       setLoading(false);
     }
@@ -68,6 +86,29 @@ export default function FacultyNotificationsModule({ account }) {
 
   useEffect(() => {
     loadData();
+    setAssignmentLoading(true);
+    notificationsApi.getFacultyAssignments()
+      .then((assignments) => {
+        setFacultyAssignments(assignments);
+        setAssignmentError(assignments.length ? '' : 'No teaching assignments are configured for this account.');
+        if (assignments.length) {
+          const firstAssignment = assignments[0];
+          setForm((current) => ({
+            ...current,
+            semester: firstAssignment.semester,
+            section: firstAssignment.section,
+            subjectCode: firstAssignment.subjectCode,
+            subjectName: firstAssignment.subjectName,
+          }));
+        }
+      })
+      .catch((error) => {
+        setAssignmentError(error.message || 'Unable to load your teaching assignments.');
+        console.error('Failed to load faculty assignments:', error);
+      })
+      .finally(() => {
+        setAssignmentLoading(false);
+      });
     const handleUpdate = () => loadData();
     window.addEventListener('apna_campus_notifications_updated', handleUpdate);
     return () => window.removeEventListener('apna_campus_notifications_updated', handleUpdate);
@@ -76,21 +117,28 @@ export default function FacultyNotificationsModule({ account }) {
   // Update recipient preview whenever cohort targets change
   useEffect(() => {
     const runPreview = async () => {
-      const res = await notificationsApi.previewRecipients({
-        semester: form.semester,
-        section: form.section,
-        subjectCode: form.subjectCode,
-        program: form.program
-      });
-      if (res && res.success) {
+      setPreviewLoading(true);
+      setPreviewError('');
+      try {
+        const res = await notificationsApi.previewRecipients({
+          semester: form.semester,
+          section: form.section,
+          subjectCode: form.subjectCode,
+          program: form.program
+        });
         setPreviewInfo({
           count: res.eligibleStudentsCount,
           label: res.targetGroupLabel
         });
+      } catch (error) {
+        setPreviewInfo({ count: 0, label: '', });
+        setPreviewError(error.message || 'Unable to preview recipients.');
+      } finally {
+        setPreviewLoading(false);
       }
     };
-    runPreview();
-  }, [form.semester, form.section, form.program]);
+    if (facultyAssignments.length) runPreview();
+  }, [facultyAssignments, form.semester, form.section, form.subjectCode, form.program]);
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -158,6 +206,10 @@ export default function FacultyNotificationsModule({ account }) {
       alert('Please fill in title and description.');
       return;
     }
+    if (previewLoading || previewError || previewInfo.count === 0) {
+      alert(previewError || 'There are no eligible students in this target cohort.');
+      return;
+    }
 
     // If broadcasting to ALL assigned sections, show confirmation dialog first!
     if (form.section === 'ALL' || form.section === 'ALL_ASSIGNED') {
@@ -187,6 +239,32 @@ export default function FacultyNotificationsModule({ account }) {
       };
 
       const res = await notificationsApi.createNotification(payload, { name: facultyName });
+
+      try {
+        notificationsStore.dispatchBroadcast({
+          title: `📝 [FACULTY] ${form.title}`,
+          message: form.message,
+          category: form.category || 'ACADEMIC',
+          priority: form.priority || 'NORMAL',
+          senderName: facultyName,
+          senderRole: account?.designation || 'Faculty Member',
+          senderDept: account?.department || 'Computer Science & Engineering',
+          targetAudience: `${form.semester || 'All Semesters'} · ${form.section || 'All Sections'} (${form.subjectCode || 'General'})`,
+          targetRoles: ['student', 'hod'],
+          actionTab: 'academics',
+          actionLabel: 'View Course Announcement',
+          attachmentName: form.attachmentName || null,
+          sourceModule: 'FACULTY',
+          eventType: 'FACULTY_ANNOUNCEMENT',
+        });
+      } catch (storeErr) {
+        console.warn('Local store broadcast warning:', storeErr);
+      }
+      window.dispatchEvent(new CustomEvent('apna_campus_notifications_updated'));
+      window.dispatchEvent(new CustomEvent('apna_campus_notification_dispatched', {
+        detail: { title: form.title, category: form.category },
+      }));
+
       setIsConfirmMultipleOpen(false);
       setIsComposeOpen(false);
       showToast(res.message || 'Notification broadcasted successfully.');
@@ -341,7 +419,19 @@ export default function FacultyNotificationsModule({ account }) {
               </tr>
             </thead>
             <tbody>
-              {filteredNotifications.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} role="status" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                    Loading notifications…
+                  </td>
+                </tr>
+              ) : facultyLoadError ? (
+                <tr>
+                  <td colSpan={7} role="alert" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#b91c1c' }}>
+                    {facultyLoadError}
+                  </td>
+                </tr>
+              ) : filteredNotifications.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8' }}>
                     <Megaphone size={36} style={{ margin: '0 auto 0.75rem', color: '#cbd5e1' }} />
@@ -453,13 +543,24 @@ export default function FacultyNotificationsModule({ account }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Users size={18} color="#0f766e" />
                     <span>
-                      Target Audience: <strong>{previewInfo.label}</strong> (<strong>{previewInfo.count} Students</strong> will receive this)
+                      Target Audience:{' '}
+                      {previewLoading ? 'Checking assigned students…' : (
+                        <>
+                          <strong>{previewInfo.label || 'No eligible cohort'}</strong>
+                          {' '}(<strong>{previewInfo.count} students</strong> will receive this)
+                        </>
+                      )}
                     </span>
                   </div>
                   <span style={{ fontSize: '0.72rem', background: '#ccfbf1', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
                     Strictly Scoped
                   </span>
                 </div>
+                {(previewError || assignmentError) && (
+                  <p role="alert" style={{ color: '#b91c1c', fontSize: '0.8rem' }}>
+                    {previewError || assignmentError}
+                  </p>
+                )}
 
                 <div className="fac-form-group">
                   <label htmlFor="title">Notification Title *</label>
@@ -521,10 +622,23 @@ export default function FacultyNotificationsModule({ account }) {
                       <select
                         id="semester"
                         value={form.semester}
-                        onChange={(e) => setForm({ ...form, semester: e.target.value })}
+                        disabled={assignmentLoading || semesterOptions.length === 0}
+                        onChange={(e) => {
+                          const next = facultyAssignments.find((assignment) => assignment.semester === e.target.value);
+                          if (next) {
+                            setForm({
+                              ...form,
+                              semester: next.semester,
+                              section: next.section,
+                              subjectCode: next.subjectCode,
+                              subjectName: next.subjectName,
+                            });
+                          }
+                        }}
                       >
-                        <option value="Semester 5">Semester 5 (Current Active)</option>
-                        <option value="Semester 3">Semester 3</option>
+                        {semesterOptions.map((semester) => (
+                          <option key={semester} value={semester}>{semester}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -533,11 +647,30 @@ export default function FacultyNotificationsModule({ account }) {
                       <select
                         id="section"
                         value={form.section}
-                        onChange={(e) => setForm({ ...form, section: e.target.value })}
+                        disabled={assignmentLoading || sectionOptions.length === 0}
+                        onChange={(e) => {
+                          const section = e.target.value;
+                          const next = facultyAssignments.find((assignment) =>
+                            assignment.semester === form.semester &&
+                            (section === 'ALL_ASSIGNED' || assignment.section === section) &&
+                            assignment.subjectCode === form.subjectCode
+                          ) || facultyAssignments.find((assignment) =>
+                            assignment.semester === form.semester &&
+                            (section === 'ALL_ASSIGNED' || assignment.section === section)
+                          );
+                          setForm({
+                            ...form,
+                            section,
+                            ...(next ? { subjectCode: next.subjectCode, subjectName: next.subjectName } : {}),
+                          });
+                        }}
                       >
-                        <option value="Section A">Section A (32 Students)</option>
-                        <option value="Section B">Section B (30 Students)</option>
-                        <option value="ALL_ASSIGNED">All Assigned Sections (Section A &amp; B)</option>
+                        {sectionOptions.map((section) => (
+                          <option key={section} value={section}>{section}</option>
+                        ))}
+                        {selectedCourseSections.length > 1 && (
+                          <option value="ALL_ASSIGNED">All assigned sections ({selectedCourseSections.length})</option>
+                        )}
                       </select>
                     </div>
 
@@ -546,14 +679,22 @@ export default function FacultyNotificationsModule({ account }) {
                       <select
                         id="subjectCode"
                         value={form.subjectCode}
+                        disabled={assignmentLoading || subjectOptions.length === 0}
                         onChange={(e) => {
                           const code = e.target.value;
-                          const name = code === 'CS502' ? 'Operating Systems' : 'Data Structures & Algorithms';
-                          setForm({ ...form, subjectCode: code, subjectName: name });
+                          const assignment = subjectOptions.find((item) => item.subjectCode === code);
+                          setForm({
+                            ...form,
+                            subjectCode: code,
+                            subjectName: assignment?.subjectName || code,
+                          });
                         }}
                       >
-                        <option value="CS501">CS501 - Data Structures</option>
-                        <option value="CS502">CS502 - Operating Systems</option>
+                        {subjectOptions.map((assignment) => (
+                          <option key={assignment.subjectCode} value={assignment.subjectCode}>
+                            {assignment.subjectCode} - {assignment.subjectName}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -657,7 +798,7 @@ export default function FacultyNotificationsModule({ account }) {
             </div>
             <div className="fac-modal-body">
               <p style={{ margin: 0, fontSize: '0.84rem', color: '#334155', lineHeight: 1.5 }}>
-                You have selected <strong>All Assigned Sections</strong> ({previewInfo.label}). This notice will simultaneously notify <strong>{previewInfo.count} students</strong> across Section A and Section B.
+                You have selected <strong>all assigned sections</strong> ({previewInfo.label}). This notice will notify <strong>{previewInfo.count} students</strong>.
               </p>
               <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', fontSize: '0.78rem', color: '#92400e', marginTop: '0.75rem' }}>
                 Please confirm that the date, time, and instructions apply equally to all recipient sections.

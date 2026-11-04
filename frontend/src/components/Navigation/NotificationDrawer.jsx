@@ -31,16 +31,6 @@ import {
   Download,
   FileText,
   Volume2,
-  Plus,
-  Maximize2,
-  Minimize2,
-  Send,
-  FileSpreadsheet,
-  CheckSquare,
-  FileEdit,
-  Archive,
-  BarChart3,
-  Inbox
 } from 'lucide-react';
 import { notificationsStore, normalizeRole } from '../../services/notificationsStore.js';
 import OfficialCollegeNoticeModal, { GIFT_MODULAR_TEST_2_NOTICE } from '../ExaminationCell/OfficialCollegeNoticeModal.jsx';
@@ -84,21 +74,41 @@ export default function NotificationDrawer({
 
   // Notifications State (Inbox)
   const [notifications, setNotifications] = useState([]);
-  const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL' | 'UNREAD' | 'URGENT' | 'ACADEMIC' | 'SYSTEM'
+  const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL' | 'UNREAD' | 'URGENT' | 'ACADEMIC' | 'SYSTEM' | 'ANALYSIS'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNotif, setSelectedNotif] = useState(null);
   const [showOfficialNoticeModal, setShowOfficialNoticeModal] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
+  // Analysis & Peer Mesh State
+  const [networkAnalytics, setNetworkAnalytics] = useState(() => notificationsStore.getNetworkAnalytics(account));
+  const [connectedPeers, setConnectedPeers] = useState(() => notificationsStore.getConnectedPeers(account));
+  const [outboxBroadcasts, setOutboxBroadcasts] = useState(() => notificationsStore.getOutboxBroadcasts());
+
+  // Broadcast Compose Modal State
+  const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
+  const [isSubmittingBroadcast, setIsSubmittingBroadcast] = useState(false);
+  const [composeForm, setComposeForm] = useState({
+    title: '',
+    message: '',
+    category: 'EXAMINATION',
+    priority: 'NORMAL',
+    targetScope: 'ALL_CAMPUS',
+    attachmentName: ''
+  });
+
   const roleKey = normalizeRole(account?.role);
   const roleDisplay = roleKey.replace(/_/g, ' ').toUpperCase();
   const isStudent = roleKey.toLowerCase() === 'student';
 
-  // Load and subscribe to store notifications
+  // Load and subscribe to store notifications and outbox ledger
   const reloadNotifications = () => {
     if (!account) return;
     const list = notificationsStore.getNotifications(account);
     setNotifications(list);
+    setNetworkAnalytics(notificationsStore.getNetworkAnalytics(account));
+    setConnectedPeers(notificationsStore.getConnectedPeers(account));
+    setOutboxBroadcasts(notificationsStore.getOutboxBroadcasts());
   };
 
   useEffect(() => {
@@ -106,14 +116,25 @@ export default function NotificationDrawer({
     const unsubscribe = notificationsStore.subscribe(() => {
       reloadNotifications();
     });
-    return () => unsubscribe();
+
+    const handleDispatched = () => reloadNotifications();
+    window.addEventListener('apna_campus_notification_dispatched', handleDispatched);
+    window.addEventListener('apna_campus_notifications_updated', handleDispatched);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('apna_campus_notification_dispatched', handleDispatched);
+      window.removeEventListener('apna_campus_notifications_updated', handleDispatched);
+    };
   }, [account]);
 
-  // Handle escape key to close drawer or modal
+  // Handle escape key to close drawer or modals
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
-        if (selectedNotif) {
+        if (isComposeModalOpen) {
+          setIsComposeModalOpen(false);
+        } else if (selectedNotif) {
           setSelectedNotif(null);
         } else if (isComposerOpen) {
           setIsComposerOpen(false);
@@ -122,21 +143,6 @@ export default function NotificationDrawer({
         }
       }
     }
-    if (isOpen || selectedNotif || isComposerOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isOpen, selectedNotif, isComposerOpen, onClose]);
-
-  // Auto-expand for spreadsheets, document studio, or forms on wide screens
-  const handleTabClick = (tabId) => {
-    setActiveCommTab(tabId);
-    if (['Spreadsheets', 'Document Studio', 'Forms & Surveys', 'Delivery Reports'].includes(tabId)) {
-      if (typeof window !== 'undefined' && window.innerWidth >= 992) {
-        setIsExpanded(true);
-      }
-    }
-  };
 
   // Toast feedback helper
   const showToast = (msg) => {
@@ -189,7 +195,6 @@ export default function NotificationDrawer({
 
   const handleSendTestAlert = () => {
     notificationsStore.sendTestAlert(account);
-    showToast('Live institutional test alert dispatched!');
   };
 
   const handleCardClick = (notif) => {
@@ -225,7 +230,7 @@ export default function NotificationDrawer({
     } else if (activeFilter === 'URGENT') {
       result = result.filter(n => n.priority === 'URGENT' || n.priority === 'IMPORTANT');
     } else if (activeFilter === 'ACADEMIC') {
-      result = result.filter(n => ['EXAMINATION', 'ACADEMIC', 'ASSIGNMENT', 'EVALUATION', 'SCRUTINY'].includes(n.category));
+      result = result.filter(n => ['EXAMINATION', 'ACADEMIC', 'ASSIGNMENT', 'EVALUATION', 'SCRUTINY', 'DUTY_ROSTER'].includes(n.category));
     } else if (activeFilter === 'SYSTEM') {
       result = result.filter(n => ['SYSTEM', 'SECURITY', 'BACKUP', 'RBAC', 'OPERATIONS', 'GOVERNANCE'].includes(n.category));
     }
@@ -236,6 +241,8 @@ export default function NotificationDrawer({
         (n.title && n.title.toLowerCase().includes(q)) ||
         (n.message && n.message.toLowerCase().includes(q)) ||
         (n.senderName && n.senderName.toLowerCase().includes(q)) ||
+        (n.connectedPerson && n.connectedPerson.toLowerCase().includes(q)) ||
+        (n.targetAudience && n.targetAudience.toLowerCase().includes(q)) ||
         (n.category && n.category.toLowerCase().includes(q))
       );
     }
@@ -267,6 +274,7 @@ export default function NotificationDrawer({
         return <Calendar size={13} />;
       case 'ACADEMIC':
       case 'ASSIGNMENT':
+      case 'DUTY_ROSTER':
         return <BookOpen size={13} />;
       case 'FEES':
       case 'COLLECTION':
@@ -281,13 +289,13 @@ export default function NotificationDrawer({
       case 'SYSTEM':
       case 'BACKUP':
       case 'RBAC':
+      case 'GOVERNANCE':
         return <ShieldAlert size={13} />;
       default:
         return <Layers size={13} />;
     }
   };
 
-  if (!isOpen && !selectedNotif && !isComposerOpen) return null;
 
   return (
     <>
@@ -340,45 +348,10 @@ export default function NotificationDrawer({
             )}
           </div>
 
-          {/* Action buttons on header: + Create Message, Maximize toggle, and Close */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="comm-btn-create-msg"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleOpenComposer();
-              }}
-              title="Create new institutional announcement or message"
-            >
-              <Plus size={15} />
-              <span>Create Message</span>
             </button>
 
             <button
               type="button"
-              className="apna-notif-close-btn"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsExpanded(prev => !prev);
-              }}
-              aria-label={isExpanded ? 'Collapse studio' : 'Expand to studio workspace'}
-              title={isExpanded ? 'Collapse to standard drawer' : 'Expand to Full-width Studio Workspace'}
-            >
-              {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            </button>
-
-            <button
-              type="button"
-              className="apna-notif-close-btn"
-              onClick={onClose}
-              aria-label="Close notifications drawer"
-              title="Close Drawer (Esc)"
-            >
-              <X size={18} />
-            </button>
           </div>
         </div>
 
@@ -732,28 +705,6 @@ export default function NotificationDrawer({
       </aside>
 
       {/* =========================================================================
-          MESSAGE COMPOSER MODAL
-         ========================================================================= */}
-      {isComposerOpen && (
-        <MessageComposerModal
-          isOpen={isComposerOpen}
-          onClose={() => {
-            setIsComposerOpen(false);
-            setComposerDraft(null);
-            setComposerPreAttachment(null);
-          }}
-          account={account}
-          initialDraft={composerDraft}
-          preAttachedFile={composerPreAttachment}
-          onMessageSent={(newMsg) => {
-            showToast(`Announcement "${newMsg?.title || 'Notice'}" dispatched successfully!`);
-            reloadNotifications();
-          }}
-        />
-      )}
-
-      {/* =========================================================================
-          NOTIFICATION DETAIL INSPECTION MODAL (Preserved from original)
          ========================================================================= */}
       {selectedNotif && (
         <div
@@ -816,6 +767,38 @@ export default function NotificationDrawer({
                 </div>
                 <div className="apna-ledger-dept">
                   {selectedNotif.senderDept || 'Office of Academic Affairs'} · Published {formatTimeAgo(selectedNotif.timestamp)}
+                </div>
+              </div>
+            </div>
+
+            {/* Cryptographic Connected Routing Ledger Box */}
+            <div className="apna-modal-delivery-ledger">
+              <div className="apna-ledger-section-title">
+                <Radio size={14} className="apna-live-pulse-dot" />
+                <span>Institutional Delivery Audit &amp; Connected Routing</span>
+              </div>
+              <div className="apna-ledger-grid">
+                <div className="apna-ledger-cell">
+                  <span className="ledger-label">CONNECTED SENDER (ORIGIN)</span>
+                  <strong className="ledger-val">{selectedNotif.connectedPerson || selectedNotif.senderName}</strong>
+                  <span className="ledger-sub">{selectedNotif.senderRole} · {selectedNotif.senderDept}</span>
+                </div>
+                <div className="apna-ledger-cell">
+                  <span className="ledger-label">CONNECTED AUDIENCE (DESTINATION)</span>
+                  <strong className="ledger-val">{selectedNotif.targetAudience || `${roleDisplay} Scope`}</strong>
+                  <span className="ledger-sub">{selectedNotif.deliveredCount ? `${selectedNotif.deliveredCount} Endpoints Reached` : 'Target Audience Verified'}</span>
+                </div>
+                <div className="apna-ledger-cell">
+                  <span className="ledger-label">DELIVERY PROTOCOL</span>
+                  <strong className="ledger-val" style={{ color: '#059669' }}>
+                    <ShieldCheck size={13} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Authenticated &amp; Delivered
+                  </strong>
+                  <span className="ledger-sub">{selectedNotif.verifiedAuditId || 'AUDIT-SECURE-2026'}</span>
+                </div>
+                <div className="apna-ledger-cell">
+                  <span className="ledger-label">DISPATCH TIMESTAMP</span>
+                  <strong className="ledger-val">{formatTimeAgo(selectedNotif.timestamp)}</strong>
+                  <span className="ledger-sub">{selectedNotif.timestamp ? new Date(selectedNotif.timestamp).toLocaleTimeString('en-IN') : 'Real-Time'}</span>
                 </div>
               </div>
             </div>
@@ -924,6 +907,27 @@ export default function NotificationDrawer({
                 >
                   {selectedNotif.unread ? 'Mark as Read' : 'Mark as Unread'}
                 </button>
+
+                <button
+                  type="button"
+                  className="apna-toggle-read-btn"
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#2563eb' }}
+                  onClick={() => {
+                    setComposeForm({
+                      title: `RE: ${selectedNotif.title}`,
+                      message: `Regarding previous notice: "${selectedNotif.title}"...\n\n`,
+                      category: selectedNotif.category || 'ACADEMIC',
+                      priority: 'IMPORTANT',
+                      targetScope: 'FACULTY',
+                      attachmentName: ''
+                    });
+                    setSelectedNotif(null);
+                    setIsComposeModalOpen(true);
+                  }}
+                >
+                  <Send size={13} />
+                  <span>Reply / Follow-up</span>
+                </button>
               </div>
 
               <div className="apna-modal-footer-right">
@@ -951,7 +955,6 @@ export default function NotificationDrawer({
         </div>
       )}
 
-      {/* Official Examination Circular Modal */}
       {showOfficialNoticeModal && (
         <OfficialCollegeNoticeModal
           notice={GIFT_MODULAR_TEST_2_NOTICE}

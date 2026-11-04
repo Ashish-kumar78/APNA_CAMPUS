@@ -25,9 +25,17 @@ import {
 export default function StudentMarksView({
   student,
   marksMap,
+  backendMarks = [],
+  backendMarksLoaded = false,
   onOpenAnalytics,
+  hideHero = false,
 }) {
-  const [selectedSemester, setSelectedSemester] = useState('sem5')
+  const [selectedSemester, setSelectedSemester] = useState(() => {
+    if (student?.semester && ['sem1', 'sem2', 'sem3', 'sem4', 'sem5'].includes(student.semester)) {
+      return student.semester
+    }
+    return 'sem4'
+  })
   const [selectedSubject, setSelectedSubject] = useState(null)
   const [selectedLabNumber, setSelectedLabNumber] = useState(1)
   const [selectedQuizKey, setSelectedQuizKey] = useState('q1')
@@ -45,7 +53,9 @@ export default function StudentMarksView({
 
   const getLabMarksOut60 = (labNum) => {
     if (!selectedSubject) return 52
-    const rawMark = selectedSubject.marksRecord?.lab || marksMap[selectedSubject.id]?.[student.id]?.lab
+    const rawMark = backendMarksLoaded
+      ? selectedSubject.marksRecord?.lab
+      : selectedSubject.marksRecord?.lab || marksMap[selectedSubject.id]?.[student.id]?.lab
     const base = rawMark !== undefined && rawMark !== '' && !isNaN(rawMark)
       ? Math.round(Number(rawMark) > 25 ? Number(rawMark) : (Number(rawMark) / 25) * 60)
       : 54
@@ -56,9 +66,45 @@ export default function StudentMarksView({
 
   // Compute student stats across selected semester subjects
   const subjectScores = currentSubjects.map((subject) => {
-    let sMarks = marksMap[subject.id]?.[student.id]
-    if (!sMarks || Object.keys(sMarks).length === 0) {
-      sMarks = getMockSemesterMarks(subject.id, student.id, selectedSemester)
+    let sMarks
+    if (backendMarksLoaded) {
+      const record = backendMarks.find((mark) => mark.subjectCode === subject.code)
+      sMarks = record
+        ? {
+            mod1: record.modular1,
+            mod2: record.modular2,
+            q1: record.quiz1,
+            q2: record.quiz2,
+            q3: record.quiz3,
+            q4: record.quiz4,
+            q5: record.quiz5,
+            q6: record.quiz6,
+            a1: record.assignment1,
+            a2: record.assignment2,
+            st1: record.surpriseTest1,
+            st2: record.surpriseTest2,
+            lab: Number(record.labWork || 0) * 6,
+          }
+        : {
+            mod1: '',
+            mod2: '',
+            q1: '',
+            q2: '',
+            q3: '',
+            q4: '',
+            q5: '',
+            q6: '',
+            a1: '',
+            a2: '',
+            st1: '',
+            st2: '',
+            lab: '',
+          }
+    } else {
+      sMarks = marksMap[subject.id]?.[student.id]
+      if (!sMarks || Object.keys(sMarks).length === 0) {
+        sMarks = getMockSemesterMarks(subject.id, student.id, selectedSemester)
+      }
     }
     const stats = computeStudentSubjectTotal(sMarks)
     return {
@@ -74,34 +120,36 @@ export default function StudentMarksView({
 
   return (
     <div className="mm-student-view">
-      {/* Student Welcome Hero Header */}
-      <div className="mm-student-hero">
-        <div className="mm-student-hero-content">
-          <div className="mm-student-avatar-lg">
-            {student.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+      {/* Student Welcome Hero Header (Only rendered when not embedded inside student profile) */}
+      {!hideHero && (
+        <div className="mm-student-hero">
+          <div className="mm-student-hero-content">
+            <div className="mm-student-avatar-lg">
+              {(student?.name || 'Student').trim().split(/\s+/).map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+            </div>
+            <div className="mm-student-hero-details">
+              <span className="mm-student-hero-eyebrow">
+                <Sparkles size={13} /> Student Performance Record · {currentSemOption.label}
+              </span>
+              <h2>{student?.name || 'Student'}</h2>
+              <p className="mm-student-hero-sub">
+                Roll No: <strong>{student?.rollNo || '—'}</strong> · Registration No: <strong>{student?.regNo || '—'}</strong> · Section: <strong>{student?.section || '—'}</strong>
+              </p>
+            </div>
           </div>
-          <div className="mm-student-hero-details">
-            <span className="mm-student-hero-eyebrow">
-              <Sparkles size={13} /> Student Performance Record · {currentSemOption.label}
-            </span>
-            <h2>{student.name}</h2>
-            <p className="mm-student-hero-sub">
-              Roll No: <strong>{student.rollNo}</strong> · Registration No: <strong>{student.regNo}</strong> · Section: <strong>{student.section}</strong>
-            </p>
-          </div>
-        </div>
 
-        <div className="mm-student-overall-badge">
-          <div className="mm-overall-score-circle">
-            <strong>{overallAvg}%</strong>
-            <small>Average</small>
-          </div>
-          <div className="mm-overall-copy">
-            <strong>Cumulative Internal</strong>
-            <span>{selectedSemester === 'sem5' ? 'Ongoing Semester' : 'Completed · Passed'}</span>
+          <div className="mm-student-overall-badge">
+            <div className="mm-overall-score-circle">
+              <strong>{overallAvg}%</strong>
+              <small>Average</small>
+            </div>
+            <div className="mm-overall-copy">
+              <strong>Cumulative Internal</strong>
+              <span>{selectedSemester === 'sem5' ? 'Ongoing Semester' : 'Completed · Passed'}</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 6 Subject Cards Grid (Requirement Section 5) */}
       <div className="mm-section-head">
@@ -110,7 +158,14 @@ export default function StudentMarksView({
           <p>Continuous internal evaluation across modular exams, quizzes, assignments, surprise tests, and lab.</p>
         </div>
 
-        <div className="mm-sem-dropdown-container">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          {hideHero && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px' }}>
+              <span style={{ fontSize: '0.8rem', color: '#1e40af', fontWeight: 600 }}>Cumulative Internal:</span>
+              <strong style={{ fontSize: '0.95rem', color: '#1d4ed8', fontWeight: 800 }}>{overallAvg}% Average</strong>
+            </div>
+          )}
+          <div className="mm-sem-dropdown-container">
           <label htmlFor="mm-sem-select" className="mm-sem-select-label">
             Semester:
           </label>
@@ -131,6 +186,7 @@ export default function StudentMarksView({
               ))}
             </select>
           </div>
+        </div>
         </div>
       </div>
 
@@ -278,7 +334,9 @@ export default function StudentMarksView({
                       const mark = selectedSubject.marksRecord?.[selectedQuizKey] !== undefined
                         ? selectedSubject.marksRecord[selectedQuizKey]
                         : marksMap[selectedSubject.id]?.[student.id]?.[selectedQuizKey]
-                      const val = mark !== '' && mark !== undefined ? mark : '9'
+                      const val = mark !== '' && mark !== undefined
+                        ? mark
+                        : backendMarksLoaded ? '—' : '9'
                       return (
                         <strong className="mm-row-val" style={{ fontSize: '15px', color: '#0f172a' }}>
                           {val} <small style={{ fontSize: '13px', color: '#64748b' }}>/ {quizConfig.maxMarks}</small>

@@ -599,6 +599,22 @@
   box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
 }
 
+.btn-action-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-action-icon:hover {
+  background: #fee2e2;
+}
+
 .btn-wizard-nav.submit:hover:not(:disabled) {
   background: linear-gradient(135deg, #047857 0%, #065f46 100%);
   transform: translateY(-1px);

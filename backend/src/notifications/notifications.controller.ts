@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   ForbiddenException,
+  InternalServerErrorException,
   Sse,
   MessageEvent,
   Req,
@@ -19,7 +20,7 @@ import { Observable } from 'rxjs';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { normalizeRole } from '../rbac/rbac';
+import { hasPermission, normalizeRole } from '../rbac/rbac';
 import { NotificationDispatchInput } from './notification-events';
 import * as jwt from 'jsonwebtoken';
 
@@ -59,6 +60,14 @@ export class NotificationsController {
       page,
       limit,
     });
+  }
+
+  @Get('summary')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get the current user notification summary' })
+  async getSummary(@CurrentUser() user: any) {
+    return this.notificationsService.getNotificationSummary(user);
   }
 
   @Get('unread-count')
@@ -111,25 +120,32 @@ export class NotificationsController {
     }
 
     if (!token) {
-      // In development / local testing without token, create demo user
-      const guestUser = { id: 'anonymous-guest', role: 'STUDENT', identifier: '01' };
-      return this.notificationsService.getRealtimeStream(guestUser);
+      throw new UnauthorizedException('Authentication is required for the notification stream.');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new InternalServerErrorException('JWT_SECRET is missing from backend configuration.');
     }
 
     try {
-      const secret = process.env.JWT_SECRET || '54eca25b55f4effea7c308deebbf95aa';
       const decoded = jwt.verify(token, secret) as any;
+      const id = decoded.sub || decoded.id;
+      const identifier = decoded.identifier || decoded.email;
+      if (!id || !decoded.role || !identifier) {
+        throw new UnauthorizedException('The notification stream token is missing required identity claims.');
+      }
       const user = {
-        id: decoded.sub || decoded.id,
-        role: decoded.role || 'STUDENT',
-        identifier: decoded.identifier || decoded.email || '01',
+        id,
+        role: decoded.role,
+        identifier,
         email: decoded.email,
         student: decoded.student,
       };
       return this.notificationsService.getRealtimeStream(user);
-    } catch {
-      const fallbackUser = { id: 'fallback-user', role: 'STUDENT', identifier: '01' };
-      return this.notificationsService.getRealtimeStream(fallbackUser);
+    } catch (error) {
+      if (error instanceof UnauthorizedException || error instanceof InternalServerErrorException) throw error;
+      throw new UnauthorizedException('The notification stream token is invalid or expired.');
     }
   }
 
@@ -143,32 +159,24 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Dispatch new cross-module notification to resolved recipients' })
   async dispatchNotification(@CurrentUser() user: any, @Body() body: NotificationDispatchInput) {
     const role = normalizeRole(user.role);
-    const authorizedRoles = [
-      'super_admin',
-      'principal',
-      'management',
-      'admin',
-      'exam_cell',
-      'hod',
-      'faculty',
-      'accounts',
-      'placement',
-      'hostel',
-      'warden',
-      'transport',
-      'admissions',
-    ];
-
-    if (!authorizedRoles.includes(role)) {
+    const authorizedRoles = ['super_admin', 'admin', 'principal', 'exam_cell', 'hod', 'faculty', 'accounts', 'admission'];
+    if (
+      !authorizedRoles.includes(role) &&
+      !hasPermission(role, 'notices.manage') &&
+      !hasPermission(role, 'notices.publish_college') &&
+      !hasPermission(role, 'notices.manage_department') &&
+      !hasPermission(role, 'notices.create_assigned') &&
+      !hasPermission(role, 'exams.circulars')
+    ) {
       throw new ForbiddenException(`Role ${user.role} is not authorized to dispatch notifications.`);
     }
 
     const payload: NotificationDispatchInput = {
       ...body,
-      senderId: body.senderId || user.id,
-      senderName: body.senderName || user.name || user.identifier,
-      senderRole: body.senderRole || user.role,
-      senderDept: body.senderDept || user.department,
+      senderId: user.id,
+      senderName: body.senderName || user.name || user.identifier || 'Authorized Official',
+      senderRole: body.senderRole || user.designation || user.role,
+      senderDept: body.senderDept || user.department || 'Autonomous Academic Directorate',
     };
 
     return this.notificationsService.dispatch(payload);
@@ -208,8 +216,11 @@ export class NotificationsController {
     if (!authorized.includes(role)) {
       throw new ForbiddenException(`Role ${user.role} is not authorized.`);
     }
-    const facultyName = user.name || user.identifier || 'Dr. S. Mohanty';
-    const data = await this.notificationsService.getFacultyNotifications(facultyName);
+    const data = await this.notificationsService.getFacultyNotifications({
+      id: user.id,
+      name: user.name,
+      identifier: user.identifier,
+    });
     return { success: true, count: data.length, data };
   }
 
@@ -219,14 +230,31 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Dynamically preview eligible student recipients based on faculty assignment criteria' })
   async previewRecipients(
     @CurrentUser() user: any,
-    @Body() body: { semester?: string; section?: string; subjectCode?: string; program?: string },
+    @Body() body: {
+      semester?: string;
+      section?: string;
+      subjectCode?: string;
+      program?: string;
+      department?: string;
+    },
   ) {
     const role = normalizeRole(user.role);
-    const authorized = ['faculty', 'hod', 'super_admin'];
-    if (!authorized.includes(role)) {
+    if (
+      !hasPermission(role, 'notices.create_assigned') &&
+      !hasPermission(role, 'notices.manage_department')
+    ) {
       throw new ForbiddenException(`Access denied.`);
     }
-    return this.notificationsService.previewRecipients(body);
+    if (role !== 'super_admin' && !user.department) {
+      throw new ForbiddenException('Your account does not have a department scope.');
+    }
+    return this.notificationsService.previewRecipients(
+      {
+        ...body,
+        department: role === 'super_admin' ? body.program || body.department : user.department,
+      },
+      user,
+    );
   }
 
   @Post('faculty')
@@ -235,8 +263,10 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Create and broadcast targeted academic notification to students' })
   async createNotification(@CurrentUser() user: any, @Body() body: any) {
     const role = normalizeRole(user.role);
-    const authorized = ['faculty', 'hod', 'super_admin'];
-    if (!authorized.includes(role)) {
+    if (
+      !hasPermission(role, 'notices.create_assigned') &&
+      !hasPermission(role, 'notices.manage_department')
+    ) {
       throw new ForbiddenException(`Access denied. Only authorized faculty or HOD can compose notifications.`);
     }
 
@@ -245,6 +275,8 @@ export class NotificationsController {
       name: user.name || user.identifier || 'Dr. S. Mohanty',
       designation: user.designation || 'Associate Professor',
       email: user.email || 's.mohanty@gift.edu.in',
+      department: user.department,
+      role: user.role,
     };
 
     return this.notificationsService.createNotification(facultyUser, body);
@@ -256,11 +288,13 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Cancel a scheduled notification before delivery' })
   async cancelNotification(@CurrentUser() user: any, @Param('id') id: string) {
     const role = normalizeRole(user.role);
-    const authorized = ['faculty', 'hod', 'super_admin'];
-    if (!authorized.includes(role)) {
+    if (
+      !hasPermission(role, 'notices.create_assigned') &&
+      !hasPermission(role, 'notices.manage_department')
+    ) {
       throw new ForbiddenException(`Access denied.`);
     }
-    return this.notificationsService.cancelNotification(id, user.name);
+    return this.notificationsService.cancelNotification(id, user.id);
   }
 
   @Get('student')
@@ -268,8 +302,10 @@ export class NotificationsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get notifications targeted to student academic cohort' })
   async getStudentNotifications(@CurrentUser() user: any) {
-    const studentRoll = user.student?.rollNumber || user.identifier || '01';
-    const data = await this.notificationsService.getStudentNotifications(studentRoll);
+    if (normalizeRole(user.role) !== 'student') {
+      throw new ForbiddenException('Only students can access the student notifications endpoint.');
+    }
+    const data = await this.notificationsService.getStudentNotifications(user);
     return { success: true, count: data.length, data };
   }
 
@@ -278,7 +314,9 @@ export class NotificationsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Mark academic notification as read' })
   async markNotificationRead(@CurrentUser() user: any, @Param('id') id: string) {
-    const studentRoll = user.student?.rollNumber || user.identifier || '01';
-    return this.notificationsService.markNotificationAsRead(id, studentRoll);
+    if (normalizeRole(user.role) !== 'student') {
+      throw new ForbiddenException('Only students can update student notification status.');
+    }
+    return this.notificationsService.markNotificationAsRead(id, user);
   }
 }

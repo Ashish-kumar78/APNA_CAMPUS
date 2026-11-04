@@ -1,5 +1,5 @@
 // src/marks/MarksManagementModule.jsx
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   BookOpen,
   Users,
@@ -40,9 +40,10 @@ import StudentMarksView from './StudentMarksView'
 import MarksAnalytics from './MarksAnalytics'
 import BulkMarksUploadModal from './BulkMarksUploadModal'
 import FacultyClassSelector from '../components/FacultyClassSelector.jsx'
+import { api } from '../services/api.js'
 import './MarksManagement.css'
 
-export default function MarksManagementModule({ initialRole = 'teacher', currentStudentId = 's-4', allowStudentView = false }) {
+export default function MarksManagementModule({ initialRole = 'teacher', currentStudentId = 's-4', allowStudentView = false, student, account }) {
   const isStudentOnly = initialRole === 'student'
 
   // Role Mode: 'teacher' | 'student'
@@ -73,6 +74,8 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
 
   // Continuous marks state (pre-populated across all students)
   const [marksMap, setMarksMap] = useState(() => generateInitialMarks(generateStudents('all', 'all', 'all')))
+  const [backendMarks, setBackendMarks] = useState(null)
+  const [backendMarksError, setBackendMarksError] = useState('')
   const [assessmentStatus, setAssessmentStatus] = useState(INITIAL_ASSESSMENT_STATUS)
 
   // Bulk Upload Modal state
@@ -80,6 +83,30 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
 
   // Toast notification state
   const [toast, setToast] = useState(null)
+
+  useEffect(() => {
+    if (!isStudentOnly) return undefined
+    let active = true
+    api.getStudentMarks()
+      .then((response) => {
+        if (!response?.success || !Array.isArray(response.data)) {
+          throw new Error(response?.message || 'The student marks response was invalid.')
+        }
+        if (active) {
+          setBackendMarks(response.data)
+          setBackendMarksError('')
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          setBackendMarks([])
+          setBackendMarksError(error.message || 'Could not load your marks.')
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [isStudentOnly])
 
   function showToast(message, type = 'success') {
     setToast({ message, type })
@@ -110,8 +137,21 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
 
   // Current active student for Student View
   const currentStudent = useMemo(() => {
-    return students.find((s) => s.id === currentStudentId) || students[0] || { name: 'Rakesh Das', id: 's-1' }
-  }, [students, currentStudentId])
+    const activeObj = student || account
+    if (activeObj && activeObj.name) {
+      const reg = activeObj.registrationNumber || activeObj.rollNumber || activeObj.identifier || '2401432255'
+      return {
+        id: activeObj.id || reg,
+        name: activeObj.name,
+        rollNo: activeObj.rollNumber || reg,
+        regNo: reg,
+        section: activeObj.section || activeObj.academicSection || 'A',
+        department: activeObj.department || activeObj.branch || 'Computer Science & Engineering',
+        semester: activeObj.semester ? `sem${String(activeObj.semester).replace(/\D/g, '')}` : 'sem4',
+      }
+    }
+    return students.find((s) => s.id === currentStudentId) || students[0] || { name: 'Student', id: 's-1', rollNo: '01', regNo: 'REG-001', section: 'A' }
+  }, [student, account, students, currentStudentId])
 
   // Compute Class Overview Stats (Requirement Section 1)
   const classStats = useMemo(() => {
@@ -187,17 +227,18 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
         </div>
       )}
 
-      {/* Top Application Bar with Role Mode Switcher */}
-      <div className="mm-top-role-bar">
-        <div className="mm-role-info">
-          <div className="mm-module-icon">
-            <Award size={20} />
+      {/* Top Application Bar with Role Mode Switcher - Only shown in Faculty/Staff view */}
+      {!isStudentOnly && (
+        <div className="mm-top-role-bar">
+          <div className="mm-role-info">
+            <div className="mm-module-icon">
+              <Award size={20} />
+            </div>
+            <div>
+              <h1 className="mm-module-title">Marks Management Module</h1>
+              <p className="mm-module-subtitle">Autonomous College Continuous Internal Assessment (CIA) & Grading Engine</p>
+            </div>
           </div>
-          <div>
-            <h1 className="mm-module-title">Marks Management Module</h1>
-            <p className="mm-module-subtitle">Autonomous College Continuous Internal Assessment (CIA) & Grading Engine</p>
-          </div>
-        </div>
 
         {/* Seamless Role View Switcher - Only visible to Teacher, HOD, Faculty, Admin (Hidden from Student) */}
         {!isStudentOnly && allowStudentView && (
@@ -225,8 +266,9 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
               <span>Student View ({currentStudent.name})</span>
             </button>
           </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Top Class-Selection Interface (Requirement 3, 4, 5) */}
       {activeRole === 'teacher' && (
@@ -375,16 +417,22 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
       {/* Sub-view Content Panels */}
       <div className="mm-module-content">
         {activeRole === 'student' ? (
-          <StudentMarksView
-            student={currentStudent}
-            marksMap={marksMap}
-            onOpenAnalytics={() => {
-              if (!isStudentOnly) {
-                setActiveRole('teacher')
-                setActiveView('analytics')
-              }
-            }}
-          />
+          <>
+            {backendMarksError && <p role="alert" style={{ color: '#b91c1c' }}>{backendMarksError}</p>}
+            <StudentMarksView
+              student={currentStudent}
+              marksMap={marksMap}
+              backendMarks={backendMarks || []}
+              backendMarksLoaded={backendMarks !== null}
+              hideHero={isStudentOnly}
+              onOpenAnalytics={() => {
+                if (!isStudentOnly) {
+                  setActiveRole('teacher')
+                  setActiveView('analytics')
+                }
+              }}
+            />
+          </>
         ) : activeView === 'overview' ? (
           <TeacherOverview
             subjects={SUBJECTS}

@@ -4,8 +4,7 @@ import AppHeader from './AppHeader.jsx';
 import AppSidebar from './AppSidebar.jsx';
 import BreadcrumbRow from './BreadcrumbRow.jsx';
 import PageHeader from './PageHeader.jsx';
-import NotificationDrawer from './NotificationDrawer.jsx';
-import { notificationsStore } from '../../services/notificationsStore.js';
+import InstitutionalNotificationDrawer from './InstitutionalNotificationDrawer.jsx';
 
 export default function AppLayout({
   account,
@@ -16,9 +15,8 @@ export default function AppLayout({
   activeTab = 'dashboard',
   onTabChange,
   onLogout,
-  unreadCount = 0,
-  onNotificationClick,
   breadcrumbs,
+  hideBreadcrumbs = false,
   pageTitle,
   pageSubtitle,
   pageActions = null,
@@ -39,28 +37,7 @@ export default function AppLayout({
 
   // Mobile drawer open state
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Global Notification Drawer state & Store synchronization for all roles
-  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
-  const [storeUnreadCount, setStoreUnreadCount] = useState(() => {
-    return account ? notificationsStore.getUnreadCount(account) : 0;
-  });
-
-  useEffect(() => {
-    if (!account) return;
-    const updateUnread = () => {
-      setStoreUnreadCount(notificationsStore.getUnreadCount(account));
-    };
-    updateUnread();
-    const unsubscribe = notificationsStore.subscribe(updateUnread);
-    return () => unsubscribe();
-  }, [account]);
-
-  useEffect(() => {
-    const handleOpenNotifs = () => setNotificationDrawerOpen(true);
-    window.addEventListener('open_notifications_drawer', handleOpenNotifs);
-    return () => window.removeEventListener('open_notifications_drawer', handleOpenNotifs);
-  }, []);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // Close mobile drawer on navigation / activeTab change
   useEffect(() => {
@@ -159,29 +136,29 @@ export default function AppLayout({
     !isDashboardTab &&
     Boolean(resolvedPageTitle || resolvedPageSubtitle || pageActions);
 
-  const effectiveUnreadCount = unreadCount !== undefined && unreadCount > 0 ? unreadCount : storeUnreadCount;
-  const handleBellClick = onNotificationClick || (() => setNotificationDrawerOpen(prev => !prev));
+  const shouldHideBreadcrumbs = hideBreadcrumbs || isDashboardTab;
 
   return (
-    <div className={`apna-app-layout ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+    <div className={`apna-app-layout ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'} ${shouldHideBreadcrumbs ? 'no-breadcrumbs' : ''}`}>
       {/* 1. Global Top Navigation Bar */}
       <AppHeader
         account={account}
         onToggleSidebar={handleToggleSidebar}
         sidebarOpen={sidebarOpen}
         onLogout={onLogout}
-        unreadCount={effectiveUnreadCount}
-        onNotificationClick={handleBellClick}
+        onOpenNotifications={() => setNotificationsOpen(true)}
         portalName={portalName}
       />
 
       {/* 2. Standardized Breadcrumb Row */}
-      <BreadcrumbRow
-        items={computedBreadcrumbs}
-        onNavigateHome={() => {
-          if (onTabChange) onTabChange(portalHomeTab);
-        }}
-      />
+      {!shouldHideBreadcrumbs && (
+        <BreadcrumbRow
+          items={computedBreadcrumbs}
+          onNavigateHome={() => {
+            if (onTabChange) onTabChange(portalHomeTab);
+          }}
+        />
+      )}
 
       {/* 3. Body: Left Sidebar + Main Content Area */}
       <div className="apna-layout-body">
@@ -189,6 +166,7 @@ export default function AppLayout({
         <AppSidebar
           portalName={portalName}
           portalSubtitle={portalSubtitle}
+          portalHomeTab={portalHomeTab}
           navSections={navSections}
           activeTab={activeTab}
           onTabChange={onTabChange}
@@ -210,17 +188,16 @@ export default function AppLayout({
             />
           )}
 
-          {/* Page / Dashboard Content */}
-          <div className="apna-page-content">
+          {/* Page / Dashboard Content with Smooth Route Transition */}
+          <div className="apna-page-content" key={activeTab}>
             {children}
           </div>
         </main>
       </div>
 
-      {/* Universal Institutional Notification Drawer for all roles */}
-      <NotificationDrawer
-        isOpen={notificationDrawerOpen}
-        onClose={() => setNotificationDrawerOpen(false)}
+      <InstitutionalNotificationDrawer
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
         account={account}
         onNavigateTab={onTabChange}
       />

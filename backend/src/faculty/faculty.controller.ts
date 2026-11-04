@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Post,
   Put,
@@ -174,7 +175,7 @@ export class FacultyController {
       throw new ForbiddenException('Access denied. Only course faculty can author quizzes.');
     }
 
-    const data = await this.facultyService.createOrUpdateQuiz(body);
+    const data = await this.facultyService.createOrUpdateQuiz(body, user);
     return { success: true, message: data.message, data: data.quiz };
   }
 
@@ -190,6 +191,18 @@ export class FacultyController {
 
     const data = await this.facultyService.publishQuiz(id);
     return { success: true, message: data.message, data };
+  }
+
+  @Delete('quizzes/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete an unpublished quiz with no student attempts' })
+  async deleteQuiz(@CurrentUser() user: any, @Param('id') id: string) {
+    const role = normalizeRole(user.role);
+    if (!['faculty', 'hod', 'super_admin'].includes(role)) {
+      throw new ForbiddenException('Access denied.');
+    }
+    return this.facultyService.deleteQuiz(id);
   }
 
   @Get('performance')
@@ -261,4 +274,3 @@ export class FacultyController {
     return res;
   }
 }
-

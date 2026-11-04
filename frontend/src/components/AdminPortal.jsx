@@ -63,6 +63,7 @@ import {
   Check,
   TrendingDown,
   Building,
+  DollarSign,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -81,6 +82,13 @@ import {
 } from 'recharts';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import AdminExecutiveDashboard from './AdminERP/AdminExecutiveDashboard.jsx';
+import AdminGovernanceConsole from './AdminERP/AdminGovernanceConsole.jsx';
+import AdminHumanResourcesConsole from './AdminERP/AdminHumanResourcesConsole.jsx';
+import AdminFinanceProcurementConsole from './AdminERP/AdminFinanceProcurementConsole.jsx';
+import AdminFacilitiesWorkOrdersConsole from './AdminERP/AdminFacilitiesWorkOrdersConsole.jsx';
+import AdminComplianceRiskConsole from './AdminERP/AdminComplianceRiskConsole.jsx';
+import AdminOfficialDocumentVault from './AdminERP/AdminOfficialDocumentVault.jsx';
 import './AdminPortal.css';
 import AdminCommunicationControl from './CampusConnect/AdminCommunicationControl.jsx';
 import AdminComplaintsConsole from './AdminComplaintsConsole.jsx';
@@ -1405,9 +1413,25 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const adminNavSections = [
     {
+      title: 'OVERVIEW',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: Home },
+      ]
+    },
+    {
+      title: 'EXECUTIVE GOVERNANCE & ERP',
+      items: [
+        { id: 'governance', label: 'Governance & Councils', icon: ShieldCheck },
+        { id: 'hr-workforce', label: 'Human Resources & Staff', icon: Users },
+        { id: 'finance-procurement', label: 'Finance & Procurement', icon: DollarSign },
+        { id: 'facilities-workorders', label: 'Facilities & Work Orders', icon: Wrench },
+        { id: 'compliance-risk', label: 'Compliance & Risk (CAPA)', icon: ShieldAlert },
+        { id: 'document-vault', label: 'Official Records & Vault', icon: FileText },
+      ]
+    },
+    {
       title: 'INSTITUTIONAL OVERVIEW',
       items: [
-        { id: 'dashboard', label: 'Executive Dashboard', icon: Layers },
         { id: 'institutional-analytics', label: 'Institutional Analytics', icon: BarChart2 },
         { id: 'report-generation', label: 'Compliance Reports', icon: FileSpreadsheet },
         { id: 'notification-center', label: 'Broadcast Feeds', icon: Bell },
@@ -1488,6 +1512,36 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
         return {
           title: 'Institutional Administration & Executive Command',
           subtitle: 'Holistic governance, enrollment monitoring, and autonomous college operations.'
+        };
+      case 'governance':
+        return {
+          title: 'Institutional Governance, Councils & Senate Ratifications',
+          subtitle: 'Governing Body, Academic Council, statutory resolutions, and circular broadcasts.'
+        };
+      case 'hr-workforce':
+        return {
+          title: 'Human Resources, Workforce & Employee Lifecycle',
+          subtitle: 'Unified faculty and staff directory, leave clearances, and talent recruitment pipeline.'
+        };
+      case 'finance-procurement':
+        return {
+          title: 'Institutional Finance, Budgets & Procurement ERP',
+          subtitle: 'Department budget allocations, purchase requisitions, PO issuance, and vendor 3-way matching.'
+        };
+      case 'facilities-workorders':
+        return {
+          title: 'Campus Facilities, Infrastructure & Work Orders',
+          subtitle: 'Building directory, maintenance work order dispatch, preventive routines, and safety NOCs.'
+        };
+      case 'compliance-risk':
+        return {
+          title: 'Statutory Compliance, Institutional Risk & CAPA',
+          subtitle: 'Accreditation compliance (AICTE, NAAC, UGC), risk mitigation register, and corrective action plans.'
+        };
+      case 'document-vault':
+        return {
+          title: 'Official Administrative Records & Document Vault',
+          subtitle: 'Controlled repository for statutory policies, council minutes, contracts, and accreditation evidence.'
         };
       case 'institutional-analytics':
         return {
@@ -1711,6 +1765,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
         onLogout={onLogout}
         pageTitle={adminHeading.title}
         pageSubtitle={adminHeading.subtitle}
+        hideBreadcrumbs={true}
       >
         <div className="admin-portal-content-wrap">
           {/* TAB: CAMPUS CONNECT ADMIN CONTROL */}
@@ -1732,19 +1787,53 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
             <ReportGenerationModule account={account} role="admin" />
           )}
 
-          {/* TAB 1: DASHBOARD */}
+          {/* TAB 1: EXECUTIVE ADMINISTRATION ERP DASHBOARD */}
           {activeTab === 'dashboard' && (
-            <RoleDashboardLanding
+            <AdminExecutiveDashboard
+              onNavigate={setActiveTab}
               account={account}
-              roleKey="admin"
-              onLogout={onLogout}
-              onSwitchRole={onSwitchRole}
-              onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-              onNavigateTab={(tabId) => {
-                if (tabId === 'verify') setActiveTab('documents');
-                else if (tabId === 'certificates') setActiveTab('students');
-                else if (tabId === 'requests') setActiveTab('ai-complaints');
-              }}
+            />
+          )}
+
+          {/* TAB: GOVERNANCE & STATUTORY COUNCILS */}
+          {activeTab === 'governance' && (
+            <AdminGovernanceConsole
+              account={account}
+            />
+          )}
+
+          {/* TAB: HUMAN RESOURCES & WORKFORCE */}
+          {activeTab === 'hr-workforce' && (
+            <AdminHumanResourcesConsole
+              account={account}
+            />
+          )}
+
+          {/* TAB: FINANCE & PROCUREMENT ERP */}
+          {activeTab === 'finance-procurement' && (
+            <AdminFinanceProcurementConsole
+              account={account}
+            />
+          )}
+
+          {/* TAB: FACILITIES & WORK ORDERS */}
+          {activeTab === 'facilities-workorders' && (
+            <AdminFacilitiesWorkOrdersConsole
+              account={account}
+            />
+          )}
+
+          {/* TAB: STATUTORY COMPLIANCE & RISK (CAPA) */}
+          {activeTab === 'compliance-risk' && (
+            <AdminComplianceRiskConsole
+              account={account}
+            />
+          )}
+
+          {/* TAB: OFFICIAL DOCUMENT ARCHIVE VAULT */}
+          {activeTab === 'document-vault' && (
+            <AdminOfficialDocumentVault
+              account={account}
             />
           )}
           {/* TAB 2: STUDENTS MANAGEMENT */}

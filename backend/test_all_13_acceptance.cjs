@@ -133,11 +133,12 @@ async function run() {
     headers: authHeaders
   });
   const eligibleCandidate = studentsListRes.body?.data?.students?.find(s => !s.hasActiveCard);
-  const targetCandidate = eligibleCandidate || { registrationNo: '04' };
+  const targetCandidate = eligibleCandidate || studentsListRes.body?.data?.students?.[0] || { registrationNo: '2401432265' };
+  const targetReg = targetCandidate.registrationNo || targetCandidate.rollNumber || targetCandidate.studentId || '2401432265';
   const targetStudentRes = await request({
     hostname: 'localhost',
     port: 4000,
-    path: `/api/internship/students/${targetCandidate.registrationNo}`,
+    path: `/api/internship/students/${targetReg}`,
     method: 'GET',
     headers: authHeaders
   });

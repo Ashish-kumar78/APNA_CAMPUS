@@ -1,0 +1,746 @@
+.institution-notif-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+}
+
+.institution-notif-backdrop,
+.institution-notif-detail-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.institution-notif-panel {
+  position: absolute;
+  inset: 0 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  width: min(580px, 100vw);
+  background: #f8fafc;
+  box-shadow: -16px 0 48px rgba(15, 23, 42, 0.18);
+  animation: institution-notif-slide-in 180ms ease-out;
+}
+
+.institution-notif-layer.is-center .institution-notif-panel {
+  inset: 3vh 4vw;
+  width: auto;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.institution-notif-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.institution-notif-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.institution-notif-heading-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.institution-notif-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.institution-notif-heading p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.institution-notif-icon-btn {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  color: #475569;
+  background: #fff;
+  cursor: pointer;
+}
+
+.institution-notif-icon-btn:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.institution-notif-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px 20px;
+}
+
+.institution-notif-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.institution-notif-summary strong {
+  color: #0f172a;
+  font-size: 1.15rem;
+}
+
+.institution-notif-summary span {
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.institution-notif-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 20px 12px;
+}
+
+.institution-notif-actions button,
+.institution-notif-state button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  color: #334155;
+  background: #fff;
+  font-size: 0.76rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.institution-notif-actions button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.institution-notif-actions .institution-notif-view-all {
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.institution-notif-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 20px 12px;
+  padding: 0 11px;
+  min-height: 40px;
+  border: 1px solid #dbe3ee;
+  border-radius: 9px;
+  color: #64748b;
+  background: #fff;
+}
+
+.institution-notif-search:focus-within {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.institution-notif-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #0f172a;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.institution-notif-search button {
+  display: grid;
+  padding: 4px;
+  border: 0;
+  color: #64748b;
+  background: transparent;
+  cursor: pointer;
+}
+
+.institution-notif-filters {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 0 20px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  scrollbar-width: thin;
+}
+
+.institution-notif-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 31px;
+  flex: 0 0 auto;
+  padding: 0 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  color: #475569;
+  background: #fff;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.institution-notif-filters button.active {
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  background: #eff6ff;
+  font-weight: 700;
+}
+
+.institution-notif-filters button span {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  color: #1e40af;
+  background: #dbeafe;
+  text-align: center;
+  font-size: 0.65rem;
+}
+
+.institution-notif-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 20px;
+}
+
+.institution-notif-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 12px;
+  margin-bottom: 10px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease,
+              background-color 0.2s ease;
+  will-change: transform;
+}
+
+.institution-notif-card:hover {
+  transform: translateY(-2px);
+  border-color: #93c5fd;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.institution-notif-card:active {
+  transform: translateY(0) scale(0.99);
+  transition-duration: 0.06s !important;
+}
+
+.institution-notif-card.unread {
+  border-color: #bfdbfe;
+  box-shadow: inset 3px 0 #3b82f6, 0 1px 3px rgba(37, 99, 235, 0.05);
+}
+
+.institution-notif-card.unread:hover {
+  box-shadow: inset 3px 0 #2563eb, 0 8px 24px rgba(37, 99, 235, 0.12);
+}
+
+.institution-notif-category {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 5px;
+  color: #1d4ed8;
+  font-size: 0.67rem;
+  font-weight: 750;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.institution-notif-category.examination { color: #a16207; }
+.institution-notif-category.academic,
+.institution-notif-category.assignment { color: #1d4ed8; }
+.institution-notif-category.admission { color: #7e22ce; }
+.institution-notif-category.placement { color: #15803d; }
+.institution-notif-category.fees { color: #0f766e; }
+.institution-notif-category.hostel { color: #c2410c; }
+.institution-notif-category.transport { color: #0e7490; }
+.institution-notif-category.system,
+.institution-notif-category.security { color: #475569; }
+
+.institution-notif-priority {
+  justify-self: end;
+  color: #b91c1c;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.institution-notif-card-content {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.institution-notif-card-content strong {
+  color: #0f172a;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.institution-notif-card-content span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #475569;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.institution-notif-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.institution-notif-attachment,
+.institution-notif-detail-attachment {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #475569;
+  font-size: 0.73rem;
+}
+
+.institution-notif-attachment span {
+  overflow: hidden;
+  flex: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.institution-notif-attachment a {
+  display: inline-flex;
+  color: #2563eb;
+}
+
+.institution-notif-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-top: 1px solid #e2e8f0;
+  color: #64748b;
+  background: #fff;
+  font-size: 0.73rem;
+}
+
+.institution-notif-pagination div {
+  display: flex;
+  gap: 6px;
+}
+
+.institution-notif-pagination button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #334155;
+  background: #fff;
+  cursor: pointer;
+}
+
+.institution-notif-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.institution-notif-state {
+  display: flex;
+  min-height: 200px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #64748b;
+  text-align: center;
+}
+
+.institution-notif-state strong {
+  color: #334155;
+  font-size: 0.88rem;
+}
+
+.institution-notif-state p {
+  max-width: 320px;
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.institution-notif-state.error { color: #b91c1c; }
+
+.institution-notif-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.institution-notif-loading span:not(.sr-only) {
+  display: block;
+  height: 92px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #fff 25%, #f1f5f9 50%, #fff 75%);
+  background-size: 200% 100%;
+  animation: institution-notif-shimmer 1.2s ease-in-out infinite;
+}
+
+.institution-notif-detail-backdrop {
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.institution-notif-detail {
+  width: min(620px, 100%);
+  max-height: min(80vh, 760px);
+  overflow-y: auto;
+  padding: 22px;
+  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+}
+
+.institution-notif-detail > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.institution-notif-detail h2 {
+  margin: 10px 0 0;
+  color: #0f172a;
+  font-size: 1.2rem;
+  line-height: 1.35;
+}
+
+.institution-notif-detail-byline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 16px 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 0.76rem;
+}
+
+.institution-notif-detail-byline strong { color: #334155; }
+
+.institution-notif-detail-message {
+  color: #334155;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.institution-notif-detail-attachment {
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.institution-notif-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 9px 13px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: #2563eb;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@keyframes institution-notif-slide-in {
+  from { transform: translateX(14px); opacity: 0.7; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes institution-notif-shimmer {
+  to { background-position: -200% 0; }
+}
+
+@media (max-width: 640px) {
+  .institution-notif-panel,
+  .institution-notif-layer.is-center .institution-notif-panel {
+    inset: 0;
+    width: 100vw;
+    border-radius: 0;
+  }
+
+  .institution-notif-header { padding: 14px 16px; }
+  .institution-notif-summary { gap: 7px; padding: 11px 14px; }
+  .institution-notif-summary > div { padding: 9px 10px; }
+  .institution-notif-actions { padding-right: 14px; padding-left: 14px; }
+  .institution-notif-search { margin-right: 14px; margin-left: 14px; }
+  .institution-notif-filters { padding-right: 14px; padding-left: 14px; }
+  .institution-notif-list { padding-right: 14px; padding-left: 14px; }
+  .institution-notif-pagination { padding-right: 14px; padding-left: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .institution-notif-panel,
+  .institution-notif-loading span:not(.sr-only) {
+    animation: none;
+  }
+}
+
+
+/* ============================================================ */
+/* OFFICIAL EXAMINATION & CAMPUS BULLETINS SPOTLIGHT SECTION    */
+/* ============================================================ */
+.institution-exam-bulletins {
+  margin: 12px 20px 8px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid #bfdbfe;
+  background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
+  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.05);
+}
+
+.institution-exam-bulletins-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.institution-exam-bulletins-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.institution-exam-bulletins-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.institution-exam-bulletins-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.institution-exam-bulletins-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.institution-exam-bulletins-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.institution-exam-bulletins-view-all {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 0.74rem;
+  font-weight: 650;
+  padding: 3px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.institution-exam-bulletins-view-all:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.institution-exam-bulletins-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.institution-exam-bulletin-card {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease,
+              background-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  will-change: transform;
+}
+
+.institution-exam-bulletin-card:hover {
+  border-color: #60a5fa;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
+  transform: translateY(-3px) scale(1.01);
+}
+
+.institution-exam-bulletin-card:active {
+  transform: translateY(-1px) scale(0.99);
+  transition-duration: 0.06s !important;
+}
+
+.institution-exam-bulletin-card:hover .institution-exam-card-title {
+  color: #2563eb;
+}
+
+.institution-exam-bulletin-card:hover .institution-exam-card-read svg {
+  transform: translateX(4px);
+}
+
+.institution-exam-bulletin-card:hover .institution-exam-card-read {
+  color: #1d4ed8;
+}
+
+.institution-exam-card-tag {
+  font-size: 0.65rem;
+  font-weight: 750;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #ede9fe;
+  color: #6d28d9;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.institution-exam-card-date {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.institution-exam-card-title {
+  margin: 6px 0 4px;
+  font-size: 0.84rem;
+  font-weight: 650;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.institution-exam-card-snippet {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #64748b;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.institution-exam-card-foot {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.institution-exam-card-authority {
+  font-size: 0.7rem;
+  color: #0284c7;
+  font-weight: 600;
+}
+
+.institution-exam-card-read {
+  font-size: 0.72rem;
+  color: #2563eb;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}

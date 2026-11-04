@@ -14,10 +14,10 @@ export class CreateBonafideDto {
   @IsNotEmpty()
   purpose!: BonafidePurposeDtoEnum;
 
-  @ApiProperty({ description: 'Display title for the purpose', example: 'Summer Internship (SIP) Bonafide' })
+  @ApiPropertyOptional({ description: 'Display title for the purpose', example: 'Summer Internship (SIP) Bonafide' })
   @IsString()
-  @IsNotEmpty()
-  purposeTitle!: string;
+  @IsOptional()
+  purposeTitle?: string;
 
   @ApiPropertyOptional({ description: 'Academic Year', example: '2026-27' })
   @IsString()

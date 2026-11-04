@@ -25,7 +25,7 @@ import {
   FileSpreadsheet, RefreshCw, Search, Filter, AlertTriangle,
   FileText, Check, ArrowRight, CornerDownLeft, Info,
   Plus, CheckCircle2, ShieldCheck, Target, Server, HardHat,
-  FileBadge, Wrench, Sparkles, Clock, AlertOctagon, MessageSquare
+  FileBadge, Wrench, Sparkles, Clock, AlertOctagon, MessageSquare, Home
 } from 'lucide-react';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import api from '../services/api.js';
@@ -638,10 +638,14 @@ export default function ManagementPortal({ account, onLogout, onSwitchRole }) {
 
   const managementNavSections = [
     {
+      title: 'OVERVIEW',
+      items: [
+        { id: 'executive', label: 'Dashboard', icon: Home },
+      ]
+    },
+    {
       title: 'STRATEGIC OVERSIGHT',
       items: [
-        { id: 'executive', label: 'Executive Overview', icon: PieChart },
-        { id: 'dashboard', label: 'Executive Workspace', icon: Target },
         { id: 'departments', label: 'Department Analytics', icon: Building },
         { id: 'financials', label: 'Fee & Finance', icon: DollarSign },
         { id: 'budget', label: 'Institutional Budget', icon: Layers },

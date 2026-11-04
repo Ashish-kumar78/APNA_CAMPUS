@@ -583,17 +583,24 @@
   gap: 8px;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(0, 132, 255, 0.35);
-  transition: all 0.18s ease;
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.15s ease,
+              box-shadow 0.15s ease;
+  user-select: none;
+  touch-action: manipulation;
+  will-change: transform;
 }
 
 .erp-primary-btn:hover:not(:disabled) {
   background: #0077ee;
   box-shadow: 0 6px 20px rgba(0, 132, 255, 0.45);
-  transform: translateY(-1px);
+  transform: translateY(-1.5px);
 }
 
 .erp-primary-btn:active:not(:disabled) {
-  transform: translateY(0);
+  transform: scale(0.975) translateY(1px);
+  filter: brightness(0.95);
+  transition-duration: 0.05s !important;
 }
 
 .erp-primary-btn:disabled {
@@ -717,7 +724,13 @@
 .erp-cat-card.active {
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
   border-color: var(--cat-color);
-  transform: translateY(-1px);
+  transform: translateY(-1.5px);
+}
+
+.erp-cat-card:active {
+  transform: scale(0.97) translateY(1px);
+  filter: brightness(0.96);
+  transition-duration: 0.05s !important;
 }
 
 .erp-cat-top {
@@ -827,6 +840,13 @@
   border-color: #0077c8;
   background: #f0f9ff;
   color: #0077c8;
+  transform: translateY(-1px);
+}
+
+.erp-drawer-role-pill:active {
+  transform: scale(0.96) translateY(1px);
+  filter: brightness(0.96);
+  transition-duration: 0.05s !important;
 }
 
 /* Footer */
@@ -942,6 +962,37 @@
     max-width: 440px;
     padding: 24px 20px;
     margin: 0 auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .erp-hero-panel {
+    padding: 18px 16px 4px;
+  }
+  .erp-feature-indicators,
+  .erp-stats-row {
+    display: none;
+  }
+  .erp-hero-body {
+    padding: 0;
+  }
+  .erp-hero-title {
+    font-size: 1.55rem;
+    margin-bottom: 6px;
+  }
+  .erp-hero-pills-row {
+    margin-bottom: 8px;
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+  .erp-login-section {
+    padding: 10px 12px 32px;
+  }
+  .erp-login-card {
+    width: 100%;
+    max-width: 100%;
+    padding: 20px 14px;
+    border-radius: 18px;
   }
 }
 

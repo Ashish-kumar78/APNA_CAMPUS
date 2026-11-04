@@ -31,6 +31,7 @@ import {
   Info
 } from 'lucide-react';
 import { saveStudent, getAllStudents, setActiveStudent, addStudentDocument } from '../services/studentStore.js';
+import { admissionsStore } from './AdmissionsModules/admissionsStore.js';
 import { canteenStore } from '../services/canteenStore.js';
 import { api } from '../services/api.js';
 import { getAllHostels } from '../services/hostelAttendanceStore.js';
@@ -664,9 +665,31 @@ export default function RegisterStudentWizard({
         console.warn('Backend admission sync fallback:', apiErr.message);
       }
 
-      // 2. Save to central studentStore
+      // 2. Save to central studentStore & sync into admissionsStore
       const savedStudent = saveStudent(studentPayload);
       setActiveStudent(savedStudent.id);
+
+      try {
+        admissionsStore.addApplicant({
+          id: savedStudent.id,
+          name: savedStudent.name,
+          email: savedStudent.email,
+          phone: savedStudent.phone,
+          appliedCourse: savedStudent.program || savedStudent.department,
+          programmeName: savedStudent.program || savedStudent.department,
+          academicSession: savedStudent.academicYear || '2026-2027',
+          admissionStatus: 'Enrolled',
+          docVerificationStatus: 'Verified',
+          eligibilityStatus: 'Eligible',
+          tenthMarks: formData.tenthMarks ? Number(formData.tenthMarks) : undefined,
+          twelfthMarks: formData.twelfthMarks ? Number(formData.twelfthMarks) : undefined,
+          entranceExam: formData.entranceExam || '',
+          entranceRank: formData.entranceRank ? Number(formData.entranceRank) : undefined,
+          assignedStaff: 'Ms. Sasmita Mohapatra',
+        });
+      } catch (storeErr) {
+        console.warn('Admissions store sync notice:', storeErr?.message);
+      }
 
       // 3. Save all uploaded documents into student repository
       if (formData.documentsList && formData.documentsList.length > 0) {

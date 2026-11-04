@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory, NotificationEventType, NotificationPriority } from '../notifications/notification-events';
@@ -959,98 +960,158 @@ export class FacultyService {
    * Quizzes Management
    */
   async getQuizzes(subjectCode?: string, section?: string) {
-    return [
-      {
-        id: 'QZ-001',
-        title: 'Data Structures – Quiz 1',
-        subject: 'Data Structures',
-        subjectCode: 'CS501',
-        section: 'Section A',
-        date: '2026-10-08',
-        time: 30,
-        totalMarks: 10,
-        status: 'Completed',
-        attempts: 32,
-        averageScore: 8.4,
-        highestScore: 10,
-        createdAt: '2026-10-05',
-        questionsCount: 10
+    const quizzes = await this.prisma.facultyQuiz.findMany({
+      where: {
+        ...(subjectCode ? { subjectCode } : {}),
+        ...(section ? { section } : {}),
       },
-      {
-        id: 'QZ-002',
-        title: 'Operating Systems – Quiz 1 (Processes & Threads)',
-        subject: 'Operating Systems',
-        subjectCode: 'CS502',
-        section: 'Section A',
-        date: '2026-10-10',
-        time: 25,
-        totalMarks: 10,
-        status: 'Scheduled',
-        attempts: 0,
-        averageScore: 0,
-        highestScore: 0,
-        createdAt: '2026-10-05',
-        questionsCount: 10
-      },
-      {
-        id: 'QZ-003',
-        title: 'Data Structures – Quiz 2 (Trees & Graphs)',
-        subject: 'Data Structures',
-        subjectCode: 'CS501',
-        section: 'Section B',
-        date: '2026-10-12',
-        time: 20,
-        totalMarks: 10,
-        status: 'Scheduled',
-        attempts: 0,
-        averageScore: 0,
-        highestScore: 0,
-        createdAt: '2026-10-05',
-        questionsCount: 10
-      },
-      {
-        id: 'QZ-004',
-        title: 'Operating Systems – Quiz 2 (Memory Management)',
-        subject: 'Operating Systems',
-        subjectCode: 'CS502',
-        section: 'Section A',
-        date: '2026-10-15',
-        time: 30,
-        totalMarks: 10,
-        status: 'Live',
-        attempts: 34,
-        averageScore: 7.9,
-        highestScore: 10,
-        createdAt: '2026-10-04',
-        questionsCount: 10
-      }
-    ];
+      include: { submissions: { select: { score: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return quizzes.map((quiz) => {
+      const scores = quiz.submissions.map((submission) => submission.score);
+      return {
+        ...quiz,
+        time: quiz.duration,
+        attempts: scores.length,
+        averageScore: scores.length
+          ? Number((scores.reduce((total, score) => total + score, 0) / scores.length).toFixed(1))
+          : 0,
+        highestScore: scores.length ? Math.max(...scores) : 0,
+        questionsCount: Array.isArray(quiz.questions) ? quiz.questions.length : 0,
+      };
+    });
   }
 
-  async createOrUpdateQuiz(quiz: any) {
+  async createOrUpdateQuiz(quiz: any, user?: any) {
     if (!quiz.title || !quiz.subject) {
       throw new BadRequestException('Quiz title and subject are required');
     }
+    if (!Array.isArray(quiz.questions) || quiz.questions.length === 0) {
+      throw new BadRequestException('Add at least one complete question before saving the quiz.');
+    }
+
+    const questions = quiz.questions.map((question: any, index: number) => {
+      const options = Array.isArray(question.options)
+        ? question.options.map((option: unknown) => String(option).trim())
+        : [];
+      const correctIndex = Number(question.correctIndex ?? question.correct);
+      if (
+        !String(question.question || '').trim() ||
+        options.length < 2 ||
+        options.some((option: string) => !option) ||
+        !Number.isInteger(correctIndex) ||
+        correctIndex < 0 ||
+        correctIndex >= options.length
+      ) {
+        throw new BadRequestException(`Question ${index + 1} is incomplete or has an invalid answer.`);
+      }
+      return {
+        id: String(question.id ?? index + 1),
+        question: String(question.question).trim(),
+        options,
+        correctIndex,
+      };
+    });
+
+    const subjectCode =
+      String(quiz.subjectCode || '').trim() ||
+      (/operating systems/i.test(quiz.subject) ? 'CS502' : 'CS501');
+    const section = String(quiz.section || 'Section A');
+    const semester = String(quiz.semester || 'Semester 5');
+    const occupied = await this.prisma.facultyQuiz.findMany({
+      where: {
+        subjectCode,
+        section,
+        semester,
+        ...(quiz.id ? { id: { not: String(quiz.id) } } : {}),
+      },
+      select: { assessmentSlot: true },
+    });
+    const requestedSlot = Number(quiz.assessmentSlot);
+    const hasRequestedSlot = quiz.assessmentSlot !== undefined &&
+      quiz.assessmentSlot !== null &&
+      quiz.assessmentSlot !== '';
+    if (hasRequestedSlot && (!Number.isInteger(requestedSlot) || requestedSlot < 1 || requestedSlot > 6)) {
+      throw new BadRequestException('Quiz assessment slot must be between 1 and 6.');
+    }
+    const assessmentSlot = hasRequestedSlot
+      ? requestedSlot
+      : [1, 2, 3, 4, 5, 6].find((slot) => !occupied.some((item) => item.assessmentSlot === slot));
+    if (!assessmentSlot) {
+      throw new BadRequestException('This subject already has six quiz assessment slots.');
+    }
+    if (occupied.some((item) => item.assessmentSlot === assessmentSlot)) {
+      throw new BadRequestException(`Quiz assessment slot ${assessmentSlot} is already assigned for this subject.`);
+    }
+
+    const duration = Number(quiz.duration ?? quiz.time ?? 30);
+    if (!Number.isInteger(duration) || duration < 1) {
+      throw new BadRequestException('Quiz duration must be a positive whole number of minutes.');
+    }
+    const totalMarks = Number(quiz.totalMarks || 10);
+    if (!Number.isFinite(totalMarks) || totalMarks <= 0) {
+      throw new BadRequestException('Quiz total marks must be greater than zero.');
+    }
+
+    const quizData = {
+      title: String(quiz.title).trim(),
+      subject: String(quiz.subject).trim(),
+      subjectCode,
+      section,
+      semester,
+      date: quiz.date ? String(quiz.date) : null,
+      duration,
+      totalMarks,
+      assessmentSlot,
+      status: String(quiz.status || 'Draft'),
+      questions,
+      createdBy: user?.name || user?.identifier || null,
+    };
+
+    const quizId = String(quiz.id || `QZ-${randomUUID()}`);
+    const savedQuiz = await this.prisma.facultyQuiz.upsert({
+      where: { id: quizId },
+      update: quizData,
+      create: {
+        id: quizId,
+        ...quizData,
+      },
+    });
     return {
       success: true,
-      quiz: {
-        ...quiz,
-        id: quiz.id || `QZ-${String(Date.now()).slice(-4)}`,
-        status: quiz.status || 'Scheduled',
-        attempts: quiz.attempts || 0,
-        createdAt: quiz.createdAt || new Date().toISOString().split('T')[0]
-      },
+      quiz: savedQuiz,
       message: `Quiz "${quiz.title}" saved successfully.`
     };
   }
 
   async publishQuiz(quizId: string) {
+    const existing = await this.prisma.facultyQuiz.findUnique({ where: { id: quizId } });
+    if (!existing) throw new NotFoundException('Quiz not found.');
+    const updated = await this.prisma.facultyQuiz.update({
+      where: { id: quizId },
+      data: { status: 'Live' },
+    });
     return {
       success: true,
       id: quizId,
-      status: 'Live',
+      status: updated.status,
       message: `Quiz ${quizId} is now live for student attempts.`
     };
+  }
+
+  async deleteQuiz(quizId: string) {
+    const quiz = await this.prisma.facultyQuiz.findUnique({
+      where: { id: quizId },
+      include: { _count: { select: { submissions: true } } },
+    });
+    if (!quiz) throw new NotFoundException('Quiz not found.');
+    if (quiz._count.submissions > 0) {
+      throw new BadRequestException('A quiz with student submissions cannot be deleted.');
+    }
+    await this.prisma.facultyQuiz.delete({ where: { id: quizId } });
+    return { success: true, message: 'Quiz deleted successfully.' };
   }
 
   /**

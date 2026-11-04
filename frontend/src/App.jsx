@@ -59,6 +59,8 @@ import DigitalAnswerSheetEvaluationSystem from './components/DigitalEvaluation/D
 import PublicTimetable from './components/PublicTimetable.jsx'
 import IdCardVerificationView from './components/InternshipCell/IdCardVerificationView.jsx'
 import ApnaCampusSymbol from './components/Branding/ApnaCampusSymbol.jsx'
+import ComprehensiveAdmissionApplicationModal from './components/AdmissionsModules/ComprehensiveAdmissionApplicationModal.jsx'
+import PublicApplicationTrackingModal from './components/AdmissionsModules/PublicApplicationTrackingModal.jsx'
 import { api } from './services/api.js'
 import { getActiveStudent, setActiveStudent, findStudentByQuery } from './services/studentStore.js'
 import { getTimeGreeting, getGreetingDisplayName } from './utils/timeGreeting.js'
@@ -406,8 +408,8 @@ const demoCategories = [
 ]
 
 function App() {
-  const [identifier, setIdentifier] = useState('2305201001')
-  const [password, setPassword] = useState('gift123')
+  const [identifier, setIdentifier] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [account, setAccount] = useState(null)
@@ -425,6 +427,8 @@ function App() {
   const [activationModalOpen, setActivationModalOpen] = useState(false)
   const [activationTokenInput, setActivationTokenInput] = useState('')
   const [showPublicTimetable, setShowPublicTimetable] = useState(false)
+  const [showPublicApplyModal, setShowPublicApplyModal] = useState(false)
+  const [showPublicTrackModal, setShowPublicTrackModal] = useState(false)
   const [verificationToken, setVerificationToken] = useState('')
 
   const adminRoleCredentials = {
@@ -543,19 +547,31 @@ function App() {
     async function handleLogin(event) {
     if (event) event.preventDefault()
     clearUrlHash()
+
     try {
       localStorage.removeItem('apna_sidebar_open')
       localStorage.removeItem('apna_sidebar_collapsed')
     } catch {}
+
     setError('')
     setAutoFillNotice('')
     setResetRequested(false)
+
+    if (!identifier.trim() || !password) {
+      setError('Enter your College ID and password.')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      const res = await api.login(identifier, password)
+      const res = await api.login(identifier.trim(), password)
       if (res && res.success && res.user) {
         clearSessionDismissal(resolveUserId(res.user));
+        if (res.accessToken) {
+          localStorage.setItem('collegeflow_token', res.accessToken)
+        }
+        localStorage.setItem('collegeflow_user', JSON.stringify(res.user))
         setAccount(res.user);
         return
       } else {
@@ -606,7 +622,7 @@ function App() {
     }
   }
 
-    async function handleQuickLogin(roleKey) {
+  async function handleQuickLogin(roleKey) {
     clearUrlHash()
     try {
       localStorage.removeItem('apna_sidebar_open')
@@ -671,8 +687,8 @@ function App() {
       localStorage.removeItem('apna_sidebar_collapsed')
     } catch {}
     setAccount(null)
-    setIdentifier('2305201001')
-    setPassword('gift123')
+    setIdentifier('')
+    setPassword('')
     setError('')
     setAutoFillNotice('')
     setResetRequested(false)
@@ -760,7 +776,9 @@ function App() {
               }}
             />
           )}
-          {portal}
+          <div key={account?.identity || account?.role || 'portal'} className="campus-page-enter">
+            {portal}
+          </div>
         </ErrorBoundary>
       )
     }
@@ -1043,18 +1061,6 @@ function App() {
                 )}
               </button>
 
-              {/* New user / Activate account link */}
-              <div className="erp-sublink-row">
-                <span className="erp-sublink-text">New user?</span>
-                <button
-                  type="button"
-                  className="erp-highlight-link"
-                  onClick={() => { setActivationModalOpen(true); setActivationTokenInput(''); }}
-                >
-                  Activate Account
-                </button>
-              </div>
-
               {/* Section Divider */}
               <div className="erp-section-divider">
                 <span>OR</span>
@@ -1160,6 +1166,22 @@ function App() {
           }}
         />
       )}
+
+      {/* Public Online Admission Application Wizard */}
+      <ComprehensiveAdmissionApplicationModal
+        isOpen={showPublicApplyModal}
+        onClose={() => setShowPublicApplyModal(false)}
+        isStaffMode={false}
+        onSuccess={(appData) => {
+          setShowPublicApplyModal(false)
+        }}
+      />
+
+      {/* Public Application Tracking Modal */}
+      <PublicApplicationTrackingModal
+        isOpen={showPublicTrackModal}
+        onClose={() => setShowPublicTrackModal(false)}
+      />
     </>
   )
 }

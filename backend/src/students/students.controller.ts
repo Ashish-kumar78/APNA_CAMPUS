@@ -50,6 +50,10 @@ export class StudentsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get logged-in student full profile' })
   async getProfile(@CurrentUser() user: any) {
+    if (normalizeRole(user.role) !== 'student') {
+      throw new ForbiddenException('Only students can access their personal profile.');
+    }
+
     const identifier = user.student?.id || user.student?.rollNumber || user.identifier || user.id;
     const student = await this.studentsService.getProfile(identifier);
     return { success: true, data: student };
@@ -63,8 +67,12 @@ export class StudentsController {
     @CurrentUser() user: any,
     @Body() body: { campus: string; city: string; confirmed: boolean },
   ) {
+    if (normalizeRole(user.role) !== 'student') {
+      throw new ForbiddenException('Only students can save a campus transfer preference.');
+    }
+
     const student = await this.studentsService.saveTransferPreference(
-      user.student?.id || user.identifier || '01',
+      user.student?.id || user.identifier,
       body.campus,
       body.city,
     );

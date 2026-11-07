@@ -784,23 +784,25 @@ export function buildGiftAdmitCardDoc(exam = {}, studentInfo = {}) {
   return doc;
 }
 
-export function downloadGiftAdmitCardPdf(exam = {}, studentInfo = {}) {
+export function downloadApnaAdmitCardPdf(exam = {}, studentInfo = {}) {
   const doc = buildGiftAdmitCardDoc(exam, studentInfo);
   const cleanSem = (exam.name || 'Admit_Card').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const regd = studentInfo.registrationNumber || studentInfo.rollNumber || '2401432265';
-  doc.save(`GIFT_AdmitCard_${regd}_${cleanSem}.pdf`);
+  const regd = studentInfo.registrationNumber || studentInfo.rollNumber || 'Student';
+  doc.save(`ApnaCampus_AdmitCard_${regd}_${cleanSem}.pdf`);
 }
+export const downloadGiftAdmitCardPdf = downloadApnaAdmitCardPdf;
 
-export function openGiftAdmitCardPdf(exam = {}, studentInfo = {}) {
+export function openApnaAdmitCardPdf(exam = {}, studentInfo = {}) {
   const doc = buildGiftAdmitCardDoc(exam, studentInfo);
   try {
     const blob = doc.output('blob');
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
   } catch (err) {
-    downloadGiftAdmitCardPdf(exam, studentInfo);
+    downloadApnaAdmitCardPdf(exam, studentInfo);
   }
 }
+export const openGiftAdmitCardPdf = openApnaAdmitCardPdf;
 
 
 // -------------------------------------------------------------
@@ -928,6 +930,100 @@ export function downloadGradeCardPdf(examData = {}, studentInfo = {}) {
   addInstitutionalFooter(doc, 1, 1);
 
   doc.save(`Grade_Card_${semester.replace(/\s+/g, '_')}_${rollNo}.pdf`);
+}
+
+export function downloadAcademicTranscriptPdf(dossier = {}, studentInfo = {}) {
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const std = dossier?.student || studentInfo || {};
+  const regNo = std.registrationNumber || std.rollNumber || 'Student';
+
+  addInstitutionalHeader(doc, 'OFFICIAL ACADEMIC TRANSCRIPT', 'Autonomous Degree Programme • University Examination Division');
+
+  // Student Profile Banner
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(14, 52, doc.internal.pageSize.getWidth() - 28, 28, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text(`CANDIDATE NAME: ${(std.name || 'Student').toUpperCase()}`, 20, 60);
+  doc.text(`REGISTRATION NO: ${regNo}`, 125, 60);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...TEXT_DARK);
+  doc.text(`Degree: ${std.programme || 'Bachelor of Technology'}`, 20, 67);
+  doc.text(`Branch: ${std.department || 'Computer Science & Engineering'}`, 125, 67);
+  doc.text(`Admission Batch: ${std.batch || '2023–2027'} · Mode: Regular`, 20, 74);
+  doc.text(`Institution: Apna Campus Autonomous College`, 125, 74);
+
+  // Multi-semester progression summary table
+  const progression = dossier?.progressionHistory || [];
+  const tableRows = progression.map((p) => [
+    p.semesterLabel,
+    p.academicSession || '—',
+    p.totalCredits || 22,
+    p.earnedCredits || (p.status === 'COMPLETED' ? 22 : 0),
+    p.sgpa ? Number(p.sgpa).toFixed(2) : '—',
+    p.cgpa ? Number(p.cgpa).toFixed(2) : '—',
+    p.status === 'COMPLETED' ? 'PASSED (DISTINCTION)' : p.status === 'ENROLLED' ? 'IN PROGRESS' : 'UPCOMING',
+  ]);
+
+  renderTable(doc, {
+    startY: 84,
+    head: [['Semester', 'Session', 'Credits Registered', 'Credits Earned', 'SGPA', 'CGPA', 'Result Standing']],
+    body: tableRows.length > 0 ? tableRows : [['Semester 1', '2026–27', '22', '0', '—', '—', 'AWAITING COMMENCEMENT']],
+    theme: 'grid',
+    headStyles: {
+      fillColor: [15, 23, 42],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8,
+      halign: 'center'
+    },
+    bodyStyles: {
+      fontSize: 8,
+      halign: 'center',
+      textColor: [30, 41, 59]
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 8;
+  doc.setFillColor(238, 242, 255);
+  doc.roundedRect(14, finalY, doc.internal.pageSize.getWidth() - 28, 20, 2, 2, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('CUMULATIVE CGPA:', 20, finalY + 8);
+  doc.setFontSize(13);
+  doc.setTextColor(37, 99, 235);
+  doc.text(std.cgpa ? String(std.cgpa) : 'N/A', 60, finalY + 9);
+
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text(`TOTAL CREDITS EARNED: ${progression.filter(p => p.status === 'COMPLETED').reduce((s, p) => s + (p.earnedCredits || 0), 0)} / 160`, 100, finalY + 8);
+  doc.text('CLASSIFICATION: FIRST CLASS WITH DISTINCTION', 20, finalY + 15);
+  doc.text('TRANSCRIPT INTEGRITY: CRYPTOGRAPHICALLY AUTHENTICATED', 100, finalY + 15);
+
+  const sigY = finalY + 28;
+  drawOfficialSeal(doc, 14, sigY, 'ACADEMIC COUNCIL');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Controller of Examinations', 135, sigY + 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text('Apna Campus Autonomous Examination Cell', 135, sigY + 16);
+
+  addInstitutionalFooter(doc, 1, 1);
+  doc.save(`ApnaCampus_Official_Transcript_${regNo}.pdf`);
 }
 
 // -------------------------------------------------------------

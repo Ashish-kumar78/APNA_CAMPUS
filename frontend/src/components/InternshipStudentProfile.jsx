@@ -633,7 +633,7 @@ export default function InternshipStudentProfile({ account, onBack }) {
                       <path d="M12 6L14 10L18 10L15 13L16 17L12 14L8 17L9 13L6 10L10 10Z" fill="#ffffff" />
                     </svg>
                     <span className="isp-id-header-text">
-                      GIFT | Autonomous, Bhubaneswar
+                      Apna Campus
                     </span>
                   </div>
 

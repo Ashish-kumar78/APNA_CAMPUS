@@ -228,6 +228,14 @@ export const api = {
     return request(`/academics/subjects?${query}`);
   },
   getTimetable: () => request('/academics/timetable'),
+  getStudentAcademicDossier: (studentId) =>
+    request(`/academics/student/dossier${studentId ? `?studentId=${encodeURIComponent(studentId)}` : ''}`),
+  markNoteHelpful: (id) =>
+    request(`/academics/notes/${id}/helpful`, { method: 'POST' }),
+  submitNoteRequest: (data) =>
+    request('/academics/notes/request', { method: 'POST', body: JSON.stringify(data) }),
+  applySupplementary: (data) =>
+    request('/academics/supplementary/apply', { method: 'POST', body: JSON.stringify(data) }),
 
   // 5. Fees & Accounts
   getFeeStatement: (rollNumber = '01') => request(`/fees/statement?rollNumber=${rollNumber}`),

@@ -105,7 +105,23 @@ export default function StudentMarksView({
     } else {
       sMarks = marksMap[subject.id]?.[student.id]
       if (!sMarks || Object.keys(sMarks).length === 0) {
-        sMarks = getMockSemesterMarks(subject.id, student.id, selectedSemester)
+        sMarks = hideHero
+          ? {
+              mod1: '',
+              mod2: '',
+              q1: '',
+              q2: '',
+              q3: '',
+              q4: '',
+              q5: '',
+              q6: '',
+              a1: '',
+              a2: '',
+              st1: '',
+              st2: '',
+              lab: '',
+            }
+          : getMockSemesterMarks(subject.id, student.id, selectedSemester)
       }
     }
     const stats = computeStudentSubjectTotal(sMarks)

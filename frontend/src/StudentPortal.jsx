@@ -1074,14 +1074,7 @@ function StudentPortal({ account, onLogout }) {
                 {/* 2nd Image: 2x2 Stats Grid placed on RIGHT SIDE - Content covering the whole box */}
                 <section className="dash-stats-2x2" aria-label="Semester snapshot">
                   {/* Card 1: Enrolled Courses */}
-                  <article
-                    className="dash-stat tone-blue"
-                    role="button"
-                    tabIndex={0}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => handleStudentTabChange('academics')}
-                    title="Open Academics & Enrolled Courses"
-                  >
+                  <article className="dash-stat tone-blue">
                     {(() => {
                       const sem = studentAccount?.currentSemester || studentAccount?.semester || 'Semester 1';
                       const semLabel = String(sem).startsWith('Semester') ? sem : `Semester ${sem}`;
@@ -1130,14 +1123,7 @@ function StudentPortal({ account, onLogout }) {
                   </article>
 
                   {/* Card 2: Attendance */}
-                  <article
-                    className="dash-stat tone-green"
-                    role="button"
-                    tabIndex={0}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => handleStudentTabChange('attendance')}
-                    title="Open Attendance Record"
-                  >
+                  <article className="dash-stat tone-green">
                     {(() => {
                       const hasAtt = Boolean(
                         studentAccount?.hasAttendanceRecords ||
@@ -1189,14 +1175,7 @@ function StudentPortal({ account, onLogout }) {
                   </article>
 
                   {/* Card 3: Academic CGPA & Performance Trend Graph */}
-                  <article
-                    className="dash-stat tone-violet"
-                    role="button"
-                    tabIndex={0}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => handleStudentTabChange('academics')}
-                    title="Open Detailed Academic Performance & Semester Transcripts"
-                  >
+                  <article className="dash-stat tone-violet">
                     {(() => {
                       const hasAtt = Boolean(
                         studentAccount?.hasAttendanceRecords ||
@@ -1351,57 +1330,67 @@ function StudentPortal({ account, onLogout }) {
                   </article>
 
                   {/* Card 4: Fees Details (Replaces Next Holiday) */}
-                  <article
-                    className="dash-stat tone-amber dash-stat-fees-card"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleStudentTabChange('fees')}
-                    title="Open Detailed Fee Breakdown & Payment Receipts"
-                  >
+                  <article className="dash-stat tone-amber dash-stat-fees-card">
                     <div className="fees-card-header">
                       <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>₹</span>
                       <span>Fees Details</span>
                     </div>
 
                     <div className="fees-card-body">
-                      {/* Cyan Banner: Total Fees till Date */}
-                      <div className="fees-banner-row tone-cyan">
-                        <div className="fees-amount">
-                          {studentAccount?.totalFeesFormatted || '₹3,22,600.00'}
-                        </div>
-                        <div className="fees-label">
-                          Total Fees till Date
-                        </div>
-                        <span className="fees-watermark" aria-hidden="true">
-                          ₹
-                        </span>
-                      </div>
+                      {(() => {
+                        const hasFeeData = Boolean(
+                          studentAccount?.totalFees !== undefined ||
+                          studentAccount?.paidFees !== undefined ||
+                          studentAccount?.dueFees !== undefined ||
+                          studentAccount?.totalFeesFormatted
+                        );
+                        const totalFeesText = studentAccount?.totalFeesFormatted || (studentAccount?.totalFees !== undefined ? `₹${Number(studentAccount.totalFees).toLocaleString('en-IN')}` : (hasFeeData ? '₹0.00' : 'N/A'));
+                        const paidFeesText = studentAccount?.paidFeesFormatted || (studentAccount?.paidFees !== undefined ? `₹${Number(studentAccount.paidFees).toLocaleString('en-IN')}` : (hasFeeData ? '₹0.00' : 'N/A'));
+                        const dueFeesText = studentAccount?.dueFeesFormatted || (studentAccount?.dueFees !== undefined ? `₹${Number(studentAccount.dueFees).toLocaleString('en-IN')}` : (hasFeeData ? '₹0.00' : 'N/A'));
 
-                      {/* Amber Banner: Total Paid by You till Date */}
-                      <div className="fees-banner-row tone-amber">
-                        <div className="fees-amount">
-                          {studentAccount?.paidFeesFormatted || '₹1,94,680.00'}
-                        </div>
-                        <div className="fees-label">
-                          Total Paid by You till Date
-                        </div>
-                        <span className="fees-watermark" aria-hidden="true">
-                          ₹
-                        </span>
-                      </div>
+                        return (
+                          <>
+                            {/* Cyan Banner: Total Fees till Date */}
+                            <div className="fees-banner-row tone-cyan">
+                              <div className="fees-amount">
+                                {totalFeesText}
+                              </div>
+                              <div className="fees-label">
+                                Total Fees till Date
+                              </div>
+                              <span className="fees-watermark" aria-hidden="true">
+                                ₹
+                              </span>
+                            </div>
 
-                      {/* Red Banner: Total Dues */}
-                      <div className="fees-banner-row tone-red">
-                        <div className="fees-amount">
-                          {studentAccount?.dueFeesFormatted || '₹1,27,920.00'}
-                        </div>
-                        <div className="fees-label">
-                          Total Dues
-                        </div>
-                        <span className="fees-watermark" aria-hidden="true">
-                          ₹
-                        </span>
-                      </div>
+                            {/* Amber Banner: Total Paid by You till Date */}
+                            <div className="fees-banner-row tone-amber">
+                              <div className="fees-amount">
+                                {paidFeesText}
+                              </div>
+                              <div className="fees-label">
+                                Total Paid by You till Date
+                              </div>
+                              <span className="fees-watermark" aria-hidden="true">
+                                ₹
+                              </span>
+                            </div>
+
+                            {/* Red Banner: Total Dues */}
+                            <div className="fees-banner-row tone-red">
+                              <div className="fees-amount">
+                                {dueFeesText}
+                              </div>
+                              <div className="fees-label">
+                                Total Dues
+                              </div>
+                              <span className="fees-watermark" aria-hidden="true">
+                                ₹
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </article>
                 </section>

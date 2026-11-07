@@ -262,7 +262,8 @@ export default function FeesPage({ account }) {
   }, [])
 
   const loadFeeStatement = async () => {
-    const data = await feesApi.getFeeStatement('2305201001')
+    const roll = account?.rollNumber || account?.studentId || account?.registrationNumber
+    const data = roll ? await feesApi.getFeeStatement(roll) : null
     if (data && data.paymentHistory) {
       setProofHistory(data.paymentHistory)
     }

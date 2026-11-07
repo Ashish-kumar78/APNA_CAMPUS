@@ -1640,7 +1640,8 @@
 }
 
 /* ── Section 6: Subject Details Breakdown Modal ── */
-.mm-modal-backdrop {
+.mm-modal-backdrop,
+.mm-root-shell.mm-modal-backdrop {
   position: fixed !important;
   inset: 0 !important;
   top: 0 !important;
@@ -1650,14 +1651,17 @@
   width: 100vw !important;
   height: 100vh !important;
   background: rgba(15, 23, 42, 0.65) !important;
-  backdrop-filter: blur(5px) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   z-index: 999999 !important;
-  padding: 20px !important;
+  padding: 24px !important;
   box-sizing: border-box !important;
   overflow-y: auto !important;
+  margin: 0 !important;
+  gap: 0 !important;
 }
 
 .mm-modal-window {
@@ -1667,10 +1671,11 @@
   border: 1px solid #e2e8f0;
   width: 100%;
   max-width: 740px;
-  max-height: 88vh;
+  max-height: min(88vh, 840px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin: auto !important;
   animation: mm-modal-pop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

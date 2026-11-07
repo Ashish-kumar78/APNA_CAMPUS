@@ -360,9 +360,9 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
   return (
     <section className="student-profile-page sp-modern" id="student-profile" ref={profileRootRef}>
       <div className="profile-breadcrumb">
-        <button type="button" onClick={onBack}>Home</button>
-        <span>/</span><span>Student</span><span>/</span><span>Manage Students</span><span>/</span>
-        <strong>{account?.name || 'Student'}</strong>
+        <button type="button" onClick={onBack}>Dashboard</button>
+        <span>/</span><span>Student Profile</span><span>/</span>
+        <strong>{account?.name || student?.name || 'My Record'}</strong>
       </div>
 
       <div className="profile-title-row">

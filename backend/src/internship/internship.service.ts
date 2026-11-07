@@ -273,7 +273,7 @@ export class InternshipService {
 
     return {
       provisionalCardNumber,
-      institutionName: 'GIFT | Autonomous, Bhubaneswar',
+      institutionName: 'Apna Campus',
       subTitle: 'INTERNSHIP STUDENT ID CARD',
       studentName: studentInfo.name,
       registrationNo: studentInfo.registrationNo,
@@ -771,7 +771,7 @@ export class InternshipService {
 
     // Header Title
     doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8.5);
-    doc.text('GIFT | Autonomous, Bhubaneswar', 22, 9);
+    doc.text('Apna Campus', 22, 9);
     doc.font('Helvetica').fontSize(5.5).fillColor('#93c5fd');
     doc.text('APNA CAMPUS · INTERNSHIP CELL', 22, 19);
 

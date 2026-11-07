@@ -1,27 +1,11 @@
 import React from 'react'
-import { ShieldAlert, ArrowLeft } from 'lucide-react'
+import { ShieldAlert } from 'lucide-react'
 import GrievanceRedressalSection from '../components/GrievanceRedressalSection.jsx'
 import './FeedbackPage.css'
 
-export default function GrievanceRedressalPage({ account, onBack }) {
+export default function GrievanceRedressalPage({ account }) {
   return (
     <div className="feedback-page-shell">
-      <div className="feedback-breadcrumb-bar">
-        <button
-          type="button"
-          className="feedback-back-btn"
-          onClick={() => {
-            if (onBack) onBack()
-            else window.location.hash = 'dashboard'
-          }}
-        >
-          <ArrowLeft size={14} /> Back to Dashboard
-        </button>
-        <span className="feedback-breadcrumb-path">
-          <span>🏠</span> / <strong>Grievance Redressal</strong>
-        </span>
-      </div>
-
       <header className="feedback-top-card grievance-hero-card">
         <div className="feedback-top-main">
           <div className="feedback-badge-pill grievance-badge-pill">

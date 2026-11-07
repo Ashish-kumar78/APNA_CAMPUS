@@ -1165,31 +1165,166 @@ function StudentPortal({ account, onLogout }) {
                     })()}
                   </article>
 
-                  {/* Card 3: Next Class */}
+                  {/* Card 3: Academic CGPA & Performance Trend Graph */}
                   <article
                     className="dash-stat tone-violet"
                     role="button"
                     tabIndex={0}
                     style={{ cursor: 'pointer' }}
-                    onClick={() => handleStudentTabChange('timetable')}
-                    title="Open Class Timetable"
+                    onClick={() => handleStudentTabChange('academics')}
+                    title="Open Detailed Academic Performance & Semester Transcripts"
                   >
-                    <div className="dash-stat-head">
-                      <div className="dash-stat-head-left">
-                        <span className="dash-stat-icon"><Clock size={18} /></span>
-                        <span className="dash-stat-label">Next class</span>
-                      </div>
-                      <span className="dash-stat-badge tone-violet-badge">Starts 10:30 AM</span>
-                    </div>
-                    <div className="dash-stat-body">
-                      <strong className="dash-stat-value">10:30 <em>AM</em></strong>
-                      <p className="dash-stat-desc">Data Structures &amp; Algorithms</p>
-                    </div>
-                    <div className="dash-stat-foot">
-                      <span className="dash-stat-sub">
-                        <MapPin size={13} /> Room 204 · Block B (Dr. S. K. Nayak)
-                      </span>
-                    </div>
+                    {(() => {
+                      const hasAtt = Boolean(
+                        studentAccount?.hasAttendanceRecords ||
+                        (studentAccount?.attendancePercentage !== null && studentAccount?.attendancePercentage !== undefined)
+                      );
+                      const isNewStudent = Boolean(
+                        studentAccount?.isNewlyRegistered ||
+                        studentAccount?.hasAcademicRecords === false ||
+                        studentAccount?.cgpa === null ||
+                        studentAccount?.cgpa === 'N/A'
+                      );
+                      const hasCgpa = !isNewStudent && (Boolean(studentAccount?.cgpa) || hasAtt);
+                      const cgpaVal = studentAccount?.cgpa ? Number(studentAccount.cgpa).toFixed(2) : '8.42';
+
+                      return (
+                        <>
+                          <div className="dash-stat-head">
+                            <div className="dash-stat-head-left">
+                              <span className="dash-stat-icon"><TrendingUp size={18} /></span>
+                              <span className="dash-stat-label">Cumulative CGPA</span>
+                            </div>
+                            {hasCgpa ? (
+                              <span className="dash-stat-badge tone-violet-badge">
+                                Distinction ({cgpaVal})
+                              </span>
+                            ) : (
+                              <span className="dash-stat-badge tone-amber-badge">
+                                Awaiting Results
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="dash-stat-body" style={{ margin: '8px 0 6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <strong className="dash-stat-value">
+                                {hasCgpa ? <CountUpNumber value={cgpaVal} /> : 'N/A'}
+                                {hasCgpa && <em>/ 10.0</em>}
+                              </strong>
+                              <span className="dash-stat-ratio" style={{ color: hasCgpa ? '#7c3aed' : '#94a3b8' }}>
+                                {hasCgpa ? 'SGPA 8.60 (Sem 4)' : 'No results published yet'}
+                              </span>
+                            </div>
+
+                            {/* Aesthetic CGPA Trend Area Graph */}
+                            {hasCgpa ? (
+                              <div className="cgpa-chart-wrapper">
+                                <svg
+                                  viewBox="0 0 260 56"
+                                  className="cgpa-sparkline-svg"
+                                  preserveAspectRatio="none"
+                                >
+                                  <defs>
+                                    <linearGradient id="cgpaGlowArea" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.28" />
+                                      <stop offset="60%" stopColor="#8b5cf6" stopOpacity="0.10" />
+                                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
+                                    </linearGradient>
+                                    <filter id="cgpaLineShadow" x="-20%" y="-20%" width="140%" height="140%">
+                                      <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#7c3aed" floodOpacity="0.35" />
+                                    </filter>
+                                  </defs>
+
+                                  {/* Grid reference guide */}
+                                  <line x1="16" y1="16" x2="244" y2="16" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+                                  <line x1="16" y1="34" x2="244" y2="34" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+                                  <line x1="16" y1="50" x2="244" y2="50" stroke="#f1f5f9" strokeWidth="1" />
+
+                                  {/* Gradient area underneath curve */}
+                                  <path
+                                    d="M 22,36 C 48,32 58,28 78,28 C 104,28 118,22 138,22 C 162,22 176,16 196,16 L 196,50 L 22,50 Z"
+                                    fill="url(#cgpaGlowArea)"
+                                  />
+
+                                  {/* Smooth cubic bezier line */}
+                                  <path
+                                    d="M 22,36 C 48,32 58,28 78,28 C 104,28 118,22 138,22 C 162,22 176,16 196,16"
+                                    fill="none"
+                                    stroke="#7c3aed"
+                                    strokeWidth="2.75"
+                                    strokeLinecap="round"
+                                    filter="url(#cgpaLineShadow)"
+                                  />
+
+                                  {/* Projected trajectory to current ongoing semester */}
+                                  <path
+                                    d="M 196,16 L 238,16"
+                                    fill="none"
+                                    stroke="#c4b5fd"
+                                    strokeWidth="2"
+                                    strokeDasharray="3 3"
+                                    strokeLinecap="round"
+                                  />
+
+                                  {/* Semester Nodes */}
+                                  <circle cx="22" cy="36" r="3.5" fill="#ffffff" stroke="#7c3aed" strokeWidth="2" />
+                                  <circle cx="78" cy="28" r="3.5" fill="#ffffff" stroke="#7c3aed" strokeWidth="2" />
+                                  <circle cx="138" cy="22" r="3.5" fill="#ffffff" stroke="#7c3aed" strokeWidth="2" />
+
+                                  {/* Semester 4 (Active/Latest) */}
+                                  <circle cx="196" cy="16" r="6" fill="#7c3aed" fillOpacity="0.25" />
+                                  <circle cx="196" cy="16" r="4" fill="#7c3aed" stroke="#ffffff" strokeWidth="2" />
+
+                                  {/* Semester 5 (Ongoing) */}
+                                  <circle cx="238" cy="16" r="3" fill="#ede9fe" stroke="#a78bfa" strokeWidth="1.5" />
+                                </svg>
+
+                                <div className="cgpa-sem-labels">
+                                  <span className="cgpa-sem-pill" title="Semester 1 SGPA: 8.14">S1 <b>8.14</b></span>
+                                  <span className="cgpa-sem-pill" title="Semester 2 SGPA: 8.42">S2 <b>8.42</b></span>
+                                  <span className="cgpa-sem-pill" title="Semester 3 SGPA: 8.56">S3 <b>8.56</b></span>
+                                  <span className="cgpa-sem-pill active" title="Semester 4 SGPA: 8.60">S4 <b>8.60</b></span>
+                                  <span className="cgpa-sem-pill" style={{ opacity: 0.75 }} title="Semester 5 in Progress">S5 <i>Active</i></span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="cgpa-chart-wrapper">
+                                <svg
+                                  viewBox="0 0 260 56"
+                                  className="cgpa-sparkline-svg"
+                                  preserveAspectRatio="none"
+                                >
+                                  <line x1="16" y1="36" x2="244" y2="36" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4 4" />
+                                  <circle cx="36" cy="36" r="6" fill="#8b5cf6" fillOpacity="0.2" />
+                                  <circle cx="36" cy="36" r="3.5" fill="#8b5cf6" stroke="#ffffff" strokeWidth="1.5" />
+                                  <circle cx="88" cy="36" r="2.5" fill="#cbd5e1" />
+                                  <circle cx="140" cy="36" r="2.5" fill="#cbd5e1" />
+                                  <circle cx="192" cy="36" r="2.5" fill="#cbd5e1" />
+                                  <circle cx="236" cy="36" r="2.5" fill="#cbd5e1" />
+                                </svg>
+                                <div className="cgpa-sem-labels" style={{ justifyContent: 'center', gap: '8px' }}>
+                                  <span className="cgpa-sem-pill active">Semester 1 · Enrolled</span>
+                                  <span className="cgpa-sem-pill" style={{ color: '#94a3b8' }}>Awaiting Examination Results</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="dash-stat-foot">
+                            {hasCgpa ? (
+                              <small className="dash-stat-sub text-violet" style={{ color: '#7c3aed', fontWeight: 600 }}>
+                                <Award size={13} /> Ranked in top 10% · Qualified for Dean's Merit List
+                              </small>
+                            ) : (
+                              <small className="dash-stat-sub" style={{ color: '#64748b' }}>
+                                <Check size={13} /> CGPA transcript updates following semester examinations.
+                              </small>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </article>
 
                   {/* Card 4: Fees Details (Replaces Next Holiday) */}

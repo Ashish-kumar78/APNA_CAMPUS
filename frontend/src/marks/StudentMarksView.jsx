@@ -1,5 +1,6 @@
 // src/marks/StudentMarksView.jsx
 import React, { useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   BookOpen,
   Award,
@@ -248,8 +249,8 @@ export default function StudentMarksView({
       </div>
 
       {/* Subject Details Modal / Breakdown (Requirement Section 6) */}
-      {selectedSubject && (
-        <div className="mm-modal-backdrop" onClick={() => setSelectedSubject(null)}>
+      {selectedSubject && typeof document !== 'undefined' && createPortal(
+        <div className="mm-modal-backdrop" onClick={() => setSelectedSubject(null)} style={{ zIndex: 999999 }}>
           <div
             className="mm-modal-window mm-subject-details-modal"
             onClick={(e) => e.stopPropagation()}
@@ -456,7 +457,8 @@ export default function StudentMarksView({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

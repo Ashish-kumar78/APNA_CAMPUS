@@ -1,5 +1,6 @@
 // src/marks/BulkMarksUploadModal.jsx
 import React, { useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Upload,
   FileSpreadsheet,
@@ -84,8 +85,8 @@ export default function BulkMarksUploadModal({
     }, 700)
   }
 
-  return (
-    <div className="mm-modal-backdrop" onClick={onClose}>
+  const modalContent = (
+    <div className="mm-modal-backdrop" onClick={onClose} style={{ zIndex: 999999 }}>
       <div
         className="mm-modal-window mm-upload-modal"
         onClick={(e) => e.stopPropagation()}
@@ -261,5 +262,9 @@ export default function BulkMarksUploadModal({
         </div>
       </div>
     </div>
-  )
+  );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }

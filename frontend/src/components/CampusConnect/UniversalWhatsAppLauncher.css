@@ -5,16 +5,16 @@
   bottom: 86px;
   right: 24px;
   z-index: 9998;
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #25d366, #128c7e);
+  background: linear-gradient(135deg, #4f46e5, #0ea5e9);
   color: #ffffff;
   border: 2px solid rgba(255, 255, 255, 0.45);
   border-radius: 50%;
-  box-shadow: 0 10px 25px -4px rgba(18, 140, 126, 0.55), 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 25px -4px rgba(79, 70, 229, 0.55), 0 4px 12px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
@@ -22,8 +22,8 @@
 
 .universal-wa-trigger-btn:hover {
   transform: translateY(-3px) scale(1.08);
-  box-shadow: 0 16px 32px -4px rgba(18, 140, 126, 0.7), 0 6px 16px rgba(0, 0, 0, 0.25);
-  background: linear-gradient(135deg, #2ae06d, #0f9b8a);
+  box-shadow: 0 16px 32px -4px rgba(79, 70, 229, 0.7), 0 6px 16px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(135deg, #4338ca, #0284c7);
 }
 
 .universal-wa-trigger-btn:active {
@@ -83,8 +83,8 @@
 }
 
 .universal-wa-drawer {
-  width: 520px;
-  max-width: 95vw;
+  width: min(880px, 96vw);
+  max-width: 96vw;
   height: 100vh;
   background: #ffffff;
   box-shadow: -10px 0 35px rgba(0, 0, 0, 0.25);

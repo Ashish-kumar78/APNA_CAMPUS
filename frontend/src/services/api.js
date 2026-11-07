@@ -11,7 +11,17 @@ export const API_BASE_URL = rawBase.replace(/\/+$/, '');
 
 function getAuthHeader() {
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('collegeflow_token') : null;
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  let userRole = null;
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const u = JSON.parse(localStorage.getItem('collegeflow_user') || '{}');
+      userRole = u?.role || u?.roleKey || null;
+    } catch {}
+  }
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(userRole ? { 'x-user-role': userRole, 'x-demo-role': userRole } : {}),
+  };
 }
 
 async function request(endpoint, options = {}) {
@@ -75,10 +85,11 @@ async function request(endpoint, options = {}) {
   } catch (error) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError' || error.message?.includes('aborted') || error.message?.includes('abort')) {
-      console.warn(`API call to ${cleanEndpoint} timed out after ${timeoutMs}ms (offline resilience active).`);
-      const timeoutErr = new Error(`Request timed out after ${timeoutMs}ms`);
+      console.warn(`API call to ${cleanEndpoint} cancelled / aborted (offline fallback active).`);
+      const timeoutErr = new Error(`Request cancelled`);
       timeoutErr.name = 'AbortError';
       timeoutErr.isTimeout = true;
+      timeoutErr.isAborted = true;
       throw timeoutErr;
     } else {
       console.warn(`API call to ${cleanEndpoint} failed:`, error.message);
@@ -123,6 +134,7 @@ export const api = {
   },
 
   getProfile: () => request('/students/profile'),
+  getStudentAttendance: () => request('/students/attendance'),
 
   getClassNotes: (filters = {}) => {
     const query = new URLSearchParams(filters).toString();
@@ -806,7 +818,7 @@ export const api = {
     }),
 
 
-  // 7. Canteen
+  // 7. Canteen & Mess Operations Directorate
   getCanteenMenu: () => request('/canteen/menu'),
   addFoodItem: (payload) =>
     request('/canteen/menu', {
@@ -830,6 +842,63 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ amount, rollNumber }),
     }),
+  getCanteenHostellers: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/canteen/hostellers${q ? `?${q}` : ''}`);
+  },
+  getCanteenHostelFeeStatus: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/canteen/hostellers/fee-status${q ? `?${q}` : ''}`);
+  },
+  getCanteenBiometricStudents: (query = '') =>
+    request(`/canteen/biometric/students${query ? `?query=${encodeURIComponent(query)}` : ''}`),
+  registerCanteenBiometric: (payload) =>
+    request('/canteen/biometric/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  toggleCanteenBiometricStatus: (payload) =>
+    request('/canteen/biometric/status', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  getCanteenBiometricDevices: () => request('/canteen/biometric/devices'),
+  getCanteenBiometricLogs: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/canteen/biometric/logs${q ? `?${q}` : ''}`);
+  },
+  verifyCanteenMealAccess: (payload) =>
+    request('/canteen/meals/verify', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getCanteenMealAttendance: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/canteen/meals/attendance${q ? `?${q}` : ''}`);
+  },
+  getCanteenDailyMealSummary: (dateStr) =>
+    request(`/canteen/meals/daily-summary${dateStr ? `?date=${encodeURIComponent(dateStr)}` : ''}`),
+  getCanteenAbsentStudents: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/canteen/meals/absent-students${q ? `?${q}` : ''}`);
+  },
+  getCanteenDailyFoodConsumption: (dateStr) =>
+    request(`/canteen/food-consumption/daily${dateStr ? `?date=${encodeURIComponent(dateStr)}` : ''}`),
+  logCanteenFoodConsumption: (payload) =>
+    request('/canteen/food-consumption', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getCanteenInventory: (category = 'All') =>
+    request(`/canteen/inventory?category=${encodeURIComponent(category)}`),
+  recordCanteenInventoryTransaction: (payload) =>
+    request('/canteen/inventory/transaction', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getCanteenDailyReport: (dateStr) =>
+    request(`/canteen/reports/daily${dateStr ? `?date=${encodeURIComponent(dateStr)}` : ''}`),
+  getCanteenFinancialReport: () => request('/canteen/reports/financial'),
 
   // 8. CMS (Notices, Holidays, Blogs, Feedback)
   getNotices: (search = '', tag = '') =>
@@ -1590,6 +1659,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ confirmToken }),
     }),
+  getHostelFeeOverview: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/fees/hostel-overview${q ? `?${q}` : ''}`);
+  },
 
   // 22. Faculty Portal Academic Operations
   getFacultyDashboard: () => request('/faculty/dashboard'),
@@ -2481,6 +2554,18 @@ export const api = {
   getUnreadNotificationsCount: () => request('/notifications/unread-count'),
   markNotificationRead: (id) =>
     request(`/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' }),
+  acknowledgeNotification: (id) =>
+    request(`/notifications/${encodeURIComponent(id)}/acknowledge`, { method: 'POST' }),
+  togglePinNotification: (id, isPinned) =>
+    request(`/notifications/${encodeURIComponent(id)}/pin`, { method: 'POST', body: JSON.stringify({ isPinned }) }),
+  getNotificationAnalytics: (id) =>
+    request(`/notifications/${encodeURIComponent(id)}/analytics`),
+  estimateNotificationRecipients: (target) =>
+    request('/notifications/estimate-recipients', { method: 'POST', body: JSON.stringify(target) }),
+  publishInstitutionalNotice: (payload) =>
+    request('/notifications/publish', { method: 'POST', body: JSON.stringify(payload) }),
+  withdrawNotification: (id) =>
+    request(`/notifications/${encodeURIComponent(id)}/withdraw`, { method: 'POST' }),
   markAllNotificationsRead: (filter = {}) =>
     request('/notifications/mark-all-read', { method: 'POST', body: JSON.stringify(filter) }),
   clearReadNotifications: () => request('/notifications/clear-read', { method: 'POST' }),

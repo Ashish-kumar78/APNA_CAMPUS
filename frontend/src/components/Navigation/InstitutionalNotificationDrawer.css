@@ -26,10 +26,78 @@
 }
 
 .institution-notif-layer.is-center .institution-notif-panel {
-  inset: 3vh 4vw;
-  width: auto;
-  border-radius: 16px;
+  inset: 2vh 2vw;
+  width: min(1360px, 96vw);
+  height: 96vh;
+  margin: 0 auto;
+  border-radius: 18px;
   overflow: hidden;
+  box-shadow: 0 25px 70px -15px rgba(15, 23, 42, 0.4);
+}
+
+.institution-notif-fullcenter-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.institution-notif-fullcenter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.institution-notif-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.institution-notif-back-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.institution-notif-fullcenter-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.institution-notif-board-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.institution-notif-board-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
 }
 
 .institution-notif-header {
@@ -197,7 +265,12 @@
   overflow-x: auto;
   padding: 0 20px 12px;
   border-bottom: 1px solid #e2e8f0;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.institution-notif-filters::-webkit-scrollbar {
+  display: none;
 }
 
 .institution-notif-filters button {
@@ -641,8 +714,8 @@
 }
 
 .institution-exam-bulletins-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 

@@ -53,13 +53,21 @@ const universityResults = [
   },
 ]
 
-export default function ExaminationPage() {
+export default function ExaminationPage({ account }) {
   const [activeTab, setActiveTab] = useState('schedule')
   const [selectedSemester, setSelectedSemester] = useState(0)
   const [detailOpen, setDetailOpen] = useState(false)
   const [showModularNotice, setShowModularNotice] = useState(false)
 
-  const sem = universityResults[selectedSemester]
+  // Authentic student data check: Only students with verified published results see university grade cards
+  const studentResults = Array.isArray(account?.universityResults) ? account.universityResults : []
+  const hasPublishedResults = studentResults.length > 0
+  const sem = hasPublishedResults ? studentResults[selectedSemester] : null
+
+  const studentName = account?.name || 'Student'
+  const studentRoll = account?.registrationNumber || account?.rollNumber || account?.studentId || '—'
+  const cgpaValue = account?.cgpa != null ? account.cgpa : 'N/A'
+  const clearedSemesters = hasPublishedResults ? studentResults.filter(s => s.result === 'Passed' || s.result === 'PASSED').length : 0
 
   return (
     <div className="examination-page">
@@ -70,9 +78,9 @@ export default function ExaminationPage() {
           <p className="examination-caption">Internal schedules, university results and grade cards.</p>
         </div>
         <div className="exam-cgpa-strip">
-          <div className="exam-stat"><strong>8.42</strong><small>CGPA</small></div>
-          <div className="exam-stat"><strong>4 / 4</strong><small>Semesters Cleared</small></div>
-          <div className="exam-stat"><strong>0</strong><small>Back Papers</small></div>
+          <div className="exam-stat"><strong>{cgpaValue}</strong><small>CGPA</small></div>
+          <div className="exam-stat"><strong>{hasPublishedResults ? `${clearedSemesters} / ${studentResults.length}` : '0 / 0'}</strong><small>Semesters Cleared</small></div>
+          <div className="exam-stat"><strong>{account?.backlogs != null ? account.backlogs : 0}</strong><small>Back Papers</small></div>
         </div>
       </div>
 

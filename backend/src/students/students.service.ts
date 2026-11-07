@@ -57,6 +57,8 @@ export class StudentsService {
         enrollments: {
           orderBy: { enrolledAt: 'asc' },
         },
+        attendanceRecords: true,
+        marks: true,
       },
     });
 
@@ -64,7 +66,74 @@ export class StudentsService {
       throw new NotFoundException('Student profile not found.');
     }
 
-    return student;
+    // Authentic attendance calculation: count only genuine attendance sessions
+    const attRecords = student.attendanceRecords || [];
+    const totalHeld = attRecords.reduce((sum, r) => sum + (r.held || 0), 0);
+    const totalAttended = attRecords.reduce((sum, r) => sum + (r.attended || 0), 0);
+    const hasAttendance = attRecords.length > 0 && totalHeld > 0;
+    const attendancePercentage = hasAttendance ? Math.round((totalAttended / totalHeld) * 100) : null;
+
+    // Authentic academic marks & CGPA: only if actual assessment records exist
+    const studentMarks = student.marks || [];
+    const hasMarks = studentMarks.length > 0 && studentMarks.some((m) => (m.totalMarks || 0) > 0 || (m.finalWeightage || 0) > 0);
+
+    return {
+      ...student,
+      attendance: hasAttendance ? attendancePercentage : null,
+      attendancePercentage: hasAttendance ? attendancePercentage : null,
+      classesHeld: hasAttendance ? totalHeld : null,
+      classesAttended: hasAttendance ? totalAttended : null,
+      classesMissed: hasAttendance ? (totalHeld - totalAttended) : null,
+      hasAttendanceRecords: hasAttendance,
+      cgpa: hasMarks ? student.cgpa : null,
+      hasAcademicMarks: hasMarks,
+    };
+  }
+
+  async getStudentAttendance(studentIdOrRoll: string) {
+    const student = await this.prisma.student.findFirst({
+      where: {
+        OR: [
+          { id: studentIdOrRoll },
+          { userId: studentIdOrRoll },
+          { rollNumber: studentIdOrRoll },
+          { studentId: studentIdOrRoll },
+        ],
+      },
+      include: {
+        attendanceRecords: true,
+      },
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student profile not found.');
+    }
+
+    const records = student.attendanceRecords || [];
+    const totalHeld = records.reduce((sum, r) => sum + (r.held || 0), 0);
+    const totalAttended = records.reduce((sum, r) => sum + (r.attended || 0), 0);
+    const hasAttendance = records.length > 0 && totalHeld > 0;
+    const attendancePercentage = hasAttendance ? Math.round((totalAttended / totalHeld) * 100) : null;
+
+    return {
+      success: true,
+      data: {
+        hasAttendance,
+        records: records.map((r) => ({
+          code: r.subjectCode,
+          name: r.subjectName,
+          faculty: r.faculty,
+          type: r.type,
+          held: r.held,
+          attended: r.attended,
+          percentage: r.held > 0 ? Math.round((r.attended / r.held) * 100) : null,
+        })),
+        totalHeld: hasAttendance ? totalHeld : 0,
+        totalAttended: hasAttendance ? totalAttended : 0,
+        totalMissed: hasAttendance ? Math.max(0, totalHeld - totalAttended) : 0,
+        attendancePercentage,
+      },
+    };
   }
 
   async updateProfile(id: string, data: any) {

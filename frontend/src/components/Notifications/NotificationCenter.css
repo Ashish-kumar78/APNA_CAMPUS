@@ -1,0 +1,928 @@
+/* Centralized Institutional Notification Center CSS */
+/* Enterprise-grade Academic ERP Styling matching Reference UI */
+
+.nc-root {
+  min-height: 100%;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: inherit;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+/* 1. Top Navbar / Breadcrumb Row */
+.nc-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.nc-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.nc-breadcrumbs span.active {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.nc-topbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nc-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.nc-search-input-wrap svg {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.nc-search-input {
+  width: 280px;
+  padding: 8px 65px 8px 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.nc-search-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.nc-kbd-shortcut {
+  position: absolute;
+  right: 10px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.nc-bell-btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nc-bell-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.nc-bell-badge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+}
+
+.nc-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 4px 12px 4px 6px;
+  border-radius: 20px;
+}
+
+.nc-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #4338ca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.nc-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.nc-user-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.nc-user-role {
+  font-size: 0.7rem;
+  color: #64748b;
+  line-height: 1.1;
+}
+
+/* 2. Notification Center Header */
+.nc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.nc-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.nc-header-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #ede9fe;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.12);
+}
+
+.nc-header-title {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.nc-header-subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.nc-create-notice-btn {
+  background: #6366f1;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.28);
+  transition: all 0.2s ease;
+}
+
+.nc-create-notice-btn:hover {
+  background: #4f46e5;
+  transform: translateY(-1px);
+}
+
+/* 3. Soft Pastel Statistics Cards Grid */
+.nc-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.nc-stat-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.nc-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+}
+
+.nc-stat-card.active {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px #6366f1;
+}
+
+.nc-stat-card.card-blue {
+  background: linear-gradient(135deg, #ffffff 60%, #eff6ff 100%);
+  border-color: #e0f2fe;
+}
+
+.nc-stat-card.card-purple {
+  background: linear-gradient(135deg, #ffffff 60%, #faf5ff 100%);
+  border-color: #f3e8ff;
+}
+
+.nc-stat-card.card-red {
+  background: linear-gradient(135deg, #ffffff 60%, #fff1f2 100%);
+  border-color: #ffe4e6;
+}
+
+.nc-stat-card.card-green {
+  background: linear-gradient(135deg, #ffffff 60%, #f0fdf4 100%);
+  border-color: #dcfce7;
+}
+
+.nc-stat-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nc-stat-card.card-blue .nc-stat-icon-wrap {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.nc-stat-card.card-purple .nc-stat-icon-wrap {
+  background: #f3e8ff;
+  color: #9333ea;
+}
+
+.nc-stat-card.card-red .nc-stat-icon-wrap {
+  background: #ffe4e6;
+  color: #e11d48;
+}
+
+.nc-stat-card.card-green .nc-stat-icon-wrap {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.nc-stat-number {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.nc-stat-label {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* 4. Navigation Tabs & Mark All as Read */
+.nc-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 1.25rem;
+}
+
+.nc-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.nc-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 10px 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.15s ease;
+}
+
+.nc-tab-btn:hover {
+  color: #0f172a;
+}
+
+.nc-tab-btn.active {
+  color: #6366f1;
+  font-weight: 800;
+}
+
+.nc-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #6366f1;
+  border-radius: 2px;
+}
+
+.nc-mark-read-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #6366f1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.nc-mark-read-btn:hover {
+  background: #ede9fe;
+}
+
+/* 5. Filter Chips Carousel */
+.nc-chips-carousel-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.nc-chips-carousel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+  padding: 4px 0;
+}
+
+.nc-chips-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.nc-chip {
+  white-space: nowrap;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.nc-chip:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.nc-chip.active {
+  background: #6366f1;
+  color: #ffffff;
+  border-color: #6366f1;
+  font-weight: 700;
+}
+
+.nc-chip.chip-unread {
+  background: #f3e8ff;
+  color: #7e22ce;
+  border-color: #e9d5ff;
+}
+
+.nc-chip.chip-urgent {
+  background: #ffe4e6;
+  color: #e11d48;
+  border-color: #fecdd3;
+}
+
+.nc-chip.chip-important {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.nc-chip-nav-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.nc-chip-nav-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* 6. Main 2-Column Layout (Feed + Right Filter Panel) */
+.nc-main-layout {
+  display: grid;
+  grid-template-columns: 1fr 310px;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+/* Feed Column */
+.nc-feed-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Individual Notice Card (Reference Image Design) */
+.nc-card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  border-left-width: 5px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  gap: 16px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.nc-card:hover {
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+  border-color: #cbd5e1;
+}
+
+.nc-card.urgent {
+  border-left-color: #ef4444;
+}
+
+.nc-card.important {
+  border-left-color: #f59e0b;
+}
+
+.nc-card.general {
+  border-left-color: #3b82f6;
+}
+
+.nc-card-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nc-card.urgent .nc-card-icon-box {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.nc-card.important .nc-card-icon-box {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.nc-card.general .nc-card-icon-box {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.nc-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.nc-card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.nc-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nc-badge-priority {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nc-badge-priority.urgent {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.nc-badge-priority.important {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.nc-badge-priority.general {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.nc-badge-category {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.nc-badge-new {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.nc-pin-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.nc-pin-btn:hover {
+  color: #0f172a;
+}
+
+.nc-pin-btn.pinned {
+  color: #059669;
+}
+
+.nc-card-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.nc-card-title:hover {
+  color: #6366f1;
+}
+
+.nc-card-desc {
+  font-size: 0.84rem;
+  color: #475569;
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+
+.nc-card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.nc-card-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.nc-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.nc-card-expires-badge {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.nc-card-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nc-attachment-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  color: #334155;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nc-attachment-chip:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.nc-view-notice-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #6366f1;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.nc-view-notice-btn:hover {
+  background: #ede9fe;
+  border-color: #c7d2fe;
+}
+
+/* 7. Right Filter Panel (Reference UI) */
+.nc-filter-panel {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 1.25rem;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+
+.nc-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.nc-filter-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.nc-clear-all-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #6366f1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.nc-clear-all-btn:hover {
+  text-decoration: underline;
+}
+
+.nc-filter-section {
+  margin-bottom: 1.25rem;
+}
+
+.nc-filter-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.nc-filter-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nc-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+
+.nc-checkbox-label input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: #6366f1;
+  cursor: pointer;
+}
+
+.nc-filter-show-more {
+  background: transparent;
+  border: none;
+  color: #6366f1;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.nc-date-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.nc-date-input-wrap input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #334155;
+  background: #ffffff;
+}
+
+/* Notice Lifecycle Callout Card (Reference UI) */
+.nc-lifecycle-card {
+  background: #f0fdfa;
+  border: 1px solid #ccfbf1;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 1.25rem;
+}
+
+.nc-lifecycle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.nc-lifecycle-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #0f766e;
+}
+
+.nc-lifecycle-text {
+  font-size: 0.74rem;
+  color: #115e59;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Empty State */
+.nc-empty-state {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px dashed #cbd5e1;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #64748b;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1024px) {
+  .nc-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .nc-main-layout {
+    grid-template-columns: 1fr;
+  }
+  .nc-filter-panel {
+    display: none; /* Can be opened as drawer on tablet/mobile */
+  }
+}
+
+@media (max-width: 640px) {
+  .nc-root {
+    padding: 1rem;
+  }
+  .nc-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .nc-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .nc-create-notice-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .nc-search-input {
+    width: 100%;
+  }
+  .nc-topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nc-topbar-controls {
+    justify-content: space-between;
+  }
+  .nc-card {
+    flex-direction: column;
+    padding: 1rem;
+  }
+  .nc-card-meta-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .nc-card-meta-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

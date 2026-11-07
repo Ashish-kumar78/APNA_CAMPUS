@@ -418,5 +418,30 @@ export class FeesController {
     const data = await this.feesService.resetDemoData(confirmToken, user);
     return data;
   }
+
+  // =========================================================================
+  // 15. INSTITUTION-WIDE HOSTEL FEE OVERVIEW (ADMIN, SUPER ADMIN, ACCOUNTS)
+  // =========================================================================
+  @Get('hostel-overview')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Institution-wide Hostel Fee Overview for Admin, Super Admin, and Accounts' })
+  async getHostelFeeOverview(
+    @CurrentUser() user: any,
+    @Query('search') search?: string,
+    @Query('hostel') hostel?: string,
+    @Query('status') status?: string,
+  ) {
+    const role = normalizeRole(user?.role);
+    if (role === 'canteen') {
+      throw new ForbiddenException('Access denied: Canteen personnel do not have authorization to view student hostel fee records.');
+    }
+    const authorized = ['admin', 'super_admin', 'superadmin', 'accounts', 'principal', 'management', 'warden', 'hostel_admin'];
+    if (!authorized.includes(role)) {
+      throw new ForbiddenException('Access denied: Requires administrative or accounts clearance.');
+    }
+    const data = await this.feesService.getHostelFeeOverview(user, search, hostel, status);
+    return data;
+  }
 }
 

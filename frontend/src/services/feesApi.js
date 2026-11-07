@@ -462,6 +462,17 @@ export const feesApi = {
   resetFinanceDemoData: async (confirmToken) => {
     return api.resetFinanceDemoData(confirmToken);
   },
+
+  // 17. Institution-wide Hostel Fee Overview (Admin & Super Admin)
+  getHostelFeeOverview: async (params = {}) => {
+    try {
+      const res = await api.getHostelFeeOverview(params);
+      if (res && res.success) return res;
+    } catch (err) {
+      console.warn('Backend hostel fee overview fetch fallback:', err?.message || err);
+    }
+    return null;
+  },
 };
 export default feesApi;
 

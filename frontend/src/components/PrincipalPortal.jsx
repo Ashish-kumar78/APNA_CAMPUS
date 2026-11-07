@@ -65,6 +65,7 @@ import PrincipalGrievanceModule from './PrincipalModules/PrincipalGrievanceModul
 import PrincipalCalendarModule from './PrincipalModules/PrincipalCalendarModule.jsx';
 import PrincipalAuditModule from './PrincipalModules/PrincipalAuditModule.jsx';
 import BonafideReviewQueue from './Bonafide/BonafideReviewQueue.jsx';
+import NotificationCenter from './Notifications/NotificationCenter.jsx';
 import { PRINCIPAL_OFFICER, INITIAL_DEPARTMENTS, INITIAL_INSTITUTIONAL_EVENTS, INITIAL_AUDIT_LOGS } from './PrincipalModules/principalData.js';
 import '../DashboardHome.css';
 import './PrincipalPortal.css';
@@ -2227,217 +2228,16 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole, initi
   {/* ======================================================== */ }
   {
     activeTab === 'notices' && (
-      <div>
-        {/* Issue Circular Form */}
-        <div className="erp-panel" style={{ marginBottom: '1.5rem' }}>
-          <div className="erp-panel-header">
-            <div className="erp-panel-title">
-              <h3>Issue Official Principal Circular</h3>
-              <p>Direct broadcast to all student, faculty, and administrative dashboards</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleCreateNotice}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: 4 }}>
-                  Circular Heading / Subject *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Autumn Autonomous Exam Hall Optimization 2026..."
-                  value={newNotice.title}
-                  onChange={(e) => setNewNotice({ ...newNotice, title: e.target.value })}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    color: '#0f172a',
-                    fontSize: '0.88rem',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: 4 }}>
-                  Target Audience (Scope)
-                </label>
-                <select
-                  value={newNotice.scope}
-                  onChange={(e) => setNewNotice({ ...newNotice, scope: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    color: '#0f172a',
-                    fontSize: '0.88rem',
-                  }}
-                >
-                  <option value="College-wide">College-wide (All Students &amp; Staff)</option>
-                  <option value="All Faculty Only">All Faculty &amp; HODs Only</option>
-                  <option value="All Students Only">All Students Only</option>
-                  <option value="Final Year Students">Final Year Students Only</option>
-                  <option value="Department Specific">Department Heads &amp; Staff</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: 4 }}>
-                  Notice Priority
-                </label>
-                <select
-                  value={newNotice.priority}
-                  onChange={(e) => setNewNotice({ ...newNotice, priority: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    color: '#0f172a',
-                    fontSize: '0.88rem',
-                  }}
-                >
-                  <option value="Normal">Normal Priority</option>
-                  <option value="High">High Priority</option>
-                  <option value="Urgent">Urgent / Critical Notice</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: 4 }}>
-                Circular Message Content &amp; Instructions
-              </label>
-              <textarea
-                rows={3}
-                placeholder="Enter the full institutional announcement details, relevant dates, and compliance requirements..."
-                value={newNotice.content}
-                onChange={(e) => setNewNotice({ ...newNotice, content: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.65rem 0.85rem',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  color: '#0f172a',
-                  fontSize: '0.88rem',
-                  fontFamily: 'inherit',
-                }}
-              />
-            </div>
-
-            <button type="submit" className="erp-btn erp-btn-primary">
-              <Send size={15} /> Publish &amp; Broadcast Official Circular
-            </button>
-          </form>
-        </div>
-
-        {/* Clearance & Published Circulars Board */}
-        <div className="erp-panel">
-          <div className="erp-panel-header">
-            <div className="erp-panel-title">
-              <h3>Institutional Notice Clearance Board &amp; Archive</h3>
-              <p>Notices submitted by academic departments and exam cell awaiting clearance or published</p>
-            </div>
-            <div className="principal-search-input" style={{ width: '220px' }}>
-              <Search size={14} color="#64748b" />
-              <input
-                type="text"
-                placeholder="Search notices..."
-                value={circularSearch}
-                onChange={(e) => setCircularSearch(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="erp-table-responsive">
-            <table className="erp-table">
-              <thead>
-                <tr>
-                  <th>Circular Title</th>
-                  <th>Target Audience</th>
-                  <th>Initiating Department / Author</th>
-                  <th>Date</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCirculars.map((n) => (
-                  <tr key={n.id}>
-                    <td>
-                      <strong style={{ color: '#0f172a' }}>{n.title}</strong>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ID: {n.id}</div>
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          background: '#f1f5f9',
-                          color: '#1e293b',
-                          border: '1px solid #cbd5e1',
-                          padding: '3px 8px',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {n.scope}
-                      </span>
-                    </td>
-                    <td style={{ color: '#475569', fontWeight: 500 }}>{n.author}</td>
-                    <td style={{ fontSize: '0.8rem', color: '#475569' }}>{n.date}</td>
-                    <td>
-                      <span
-                        style={{
-                          fontSize: '0.74rem',
-                          fontWeight: 700,
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          background: n.priority === 'Urgent' ? '#fee2e2' : n.priority === 'High' ? '#fef3c7' : '#e0f2fe',
-                          color: n.priority === 'Urgent' ? '#dc2626' : n.priority === 'High' ? '#b45309' : '#0369a1',
-                        }}
-                      >
-                        {n.priority || 'Normal'}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          color: n.status?.includes('Approved') || n.status?.includes('Broadcasted') ? '#16a34a' : '#d97706',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {n.status}
-                      </span>
-                    </td>
-                    <td>
-                      {n.status?.includes('Pending') ? (
-                        <button
-                          className="erp-btn erp-btn-primary"
-                          style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
-                          onClick={() => handleApproveNotice(n.id)}
-                        >
-                          Approve &amp; Release
-                        </button>
-                      ) : (
-                        <span style={{ color: '#16a34a', fontSize: '0.8rem', fontWeight: 600 }}>
-                          Active on Portals
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <div style={{ marginTop: '-0.5rem' }}>
+        <NotificationCenter
+          currentUser={{
+            name: 'Dr. B. K. Sarap',
+            role: 'principal',
+            department: 'Principal Directorate',
+            roleLabel: 'Principal & Executive Head'
+          }}
+          onNavigateHome={() => setActiveTab('dashboard')}
+        />
       </div>
     )
   }

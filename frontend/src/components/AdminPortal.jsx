@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { AppLayout } from './Navigation';
+import NotificationCenter from './Notifications/NotificationCenter.jsx';
 import {
   Users,
   Bus,

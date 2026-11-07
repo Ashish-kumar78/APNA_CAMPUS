@@ -29,7 +29,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   TrendingUp,
-  Users
+  Users,
   Home,
 } from 'lucide-react';
 import './ScholarshipPortal.css';

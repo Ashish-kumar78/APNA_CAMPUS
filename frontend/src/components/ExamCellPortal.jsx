@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AppLayout } from './Navigation';
+import NotificationCenter from './Notifications/NotificationCenter.jsx';
 import {
   CalendarDays,
   CheckCircle2,

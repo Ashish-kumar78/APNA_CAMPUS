@@ -20,6 +20,7 @@ import {
 import { api } from '../../services/api.js';
 import { notificationsStore } from '../../services/notificationsStore.js';
 import { erpStore } from '../../services/erpStore.js';
+import NotificationCenter from '../Notifications/NotificationCenter.jsx';
 import './InstitutionalNotificationDrawer.css';
 
 const PAGE_SIZE = 12;
@@ -93,10 +94,17 @@ export default function InstitutionalNotificationDrawer({
   const [allNotifs, setAllNotifs] = useState([]);
   const [summary, setSummary] = useState({ total: 0, unread: 0, urgent: 0 });
   const [selected, setSelected] = useState(null);
-  const [isCenterOpen, setIsCenterOpen] = useState(false);
+  const [isCenterOpen, setIsCenterOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [refreshVersion, setRefreshVersion] = useState(0);
+
+  // Directly show the full Centralized Institutional Notice Board & Notification Center by default
+  useEffect(() => {
+    if (isOpen) {
+      setIsCenterOpen(true);
+    }
+  }, [isOpen]);
 
   const reload = useCallback(() => {
     setRefreshVersion((version) => version + 1);
@@ -144,10 +152,21 @@ export default function InstitutionalNotificationDrawer({
 
     // Build unified map
     const unifiedMap = new Map();
-    examCircs.forEach((c) => unifiedMap.set(c.id, c));
+    examCircs.forEach((c) => {
+      const title = (c.title || '').trim().toLowerCase();
+      const msg = (c.message || '').trim().toLowerCase();
+      if (title && title !== 'ascas' && title !== 'test' && title.length >= 3 && msg !== '----') {
+        unifiedMap.set(c.id, c);
+      }
+    });
+
     storeNotifs.forEach((n) => {
-      if (!unifiedMap.has(n.id)) {
-        unifiedMap.set(n.id, n);
+      const title = (n.title || '').trim().toLowerCase();
+      const msg = (n.message || '').trim().toLowerCase();
+      if (title && title !== 'ascas' && title !== 'test' && title.length >= 3 && msg !== '----') {
+        if (!unifiedMap.has(n.id)) {
+          unifiedMap.set(n.id, n);
+        }
       }
     });
 
@@ -170,11 +189,15 @@ export default function InstitutionalNotificationDrawer({
         if (!active) return;
         if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
           res.data.forEach((bn) => {
-            unifiedMap.set(bn.id, {
-              ...bn,
-              isExamNotice: bn.category === 'EXAMINATION' || bn.category === 'EXAM',
-              displayDate: formatShortDate(bn.timestamp),
-            });
+            const title = (bn.title || '').trim().toLowerCase();
+            const msg = (bn.message || '').trim().toLowerCase();
+            if (title && title !== 'ascas' && title !== 'test' && title.length >= 3 && msg !== '----') {
+              unifiedMap.set(bn.id, {
+                ...bn,
+                isExamNotice: bn.category === 'EXAMINATION' || bn.category === 'EXAM',
+                displayDate: formatShortDate(bn.timestamp),
+              });
+            }
           });
           const merged = Array.from(unifiedMap.values());
           setAllNotifs(merged);
@@ -330,50 +353,94 @@ export default function InstitutionalNotificationDrawer({
         aria-label="Close notifications"
       />
       <section
-        className="institution-notif-panel"
+        className={`institution-notif-panel ${isCenterOpen ? 'is-center-panel' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="institution-notif-title"
       >
-        {/* Header */}
-        <header className="institution-notif-header">
-          <div className="institution-notif-heading">
-            <span className="institution-notif-heading-icon"><BellRing size={18} /></span>
-            <div>
-              <h2 id="institution-notif-title">
-                {isCenterOpen ? 'Notification Center' : 'Institutional Notifications'}
-              </h2>
-              <p>{roleLabel} · {account?.program || account?.department || 'Apna Campus Autonomous Directorate'}</p>
+        {isCenterOpen ? (
+          <div className="institution-notif-fullcenter-container">
+            <header className="institution-notif-fullcenter-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="institution-notif-back-btn"
+                  onClick={() => setIsCenterOpen(false)}
+                >
+                  <ChevronLeft size={16} /> Back to Quick Drawer
+                </button>
+                <span style={{ color: '#cbd5e1' }}>|</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1e293b' }}>
+                  Centralized Institutional Notice Board &amp; Circular Management
+                </span>
+              </div>
+              <button
+                type="button"
+                className="institution-notif-icon-btn"
+                onClick={onClose}
+                aria-label="Close notifications"
+              >
+                <X size={19} />
+              </button>
+            </header>
+            <div className="institution-notif-fullcenter-body">
+              <NotificationCenter
+                currentUser={account}
+                onNavigateHome={() => {
+                  setIsCenterOpen(false);
+                  onClose();
+                }}
+              />
             </div>
           </div>
-          <button type="button" className="institution-notif-icon-btn" onClick={onClose} aria-label="Close notifications">
-            <X size={19} />
-          </button>
-        </header>
+        ) : (
+          <>
+            {/* Header */}
+            <header className="institution-notif-header">
+              <div className="institution-notif-heading">
+                <span className="institution-notif-heading-icon"><BellRing size={18} /></span>
+                <div>
+                  <h2 id="institution-notif-title">
+                    Institutional Notifications
+                  </h2>
+                  <p>{roleLabel} · {account?.program || account?.department || 'Apna Campus Autonomous Directorate'}</p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="institution-notif-board-btn"
+                  onClick={() => setIsCenterOpen(true)}
+                  title="Open Full Enterprise Notice Board"
+                >
+                  <Megaphone size={14} /> Full Notice Board ↗
+                </button>
+                <button type="button" className="institution-notif-icon-btn" onClick={onClose} aria-label="Close notifications">
+                  <X size={19} />
+                </button>
+              </div>
+            </header>
 
-        {/* Summary KPIs */}
-        <div className="institution-notif-summary" aria-label="Notification summary">
-          <div><strong>{summary.total}</strong><span>Total</span></div>
-          <div><strong>{summary.unread}</strong><span>Unread</span></div>
-          <div><strong>{summary.urgent}</strong><span>Urgent</span></div>
-        </div>
+            {/* Summary KPIs */}
+            <div className="institution-notif-summary" aria-label="Notification summary">
+              <div><strong>{summary.total}</strong><span>Total</span></div>
+              <div><strong>{summary.unread}</strong><span>Unread</span></div>
+              <div><strong>{summary.urgent}</strong><span>Urgent</span></div>
+            </div>
 
-        {/* Quick Actions */}
-        <div className="institution-notif-actions">
-          <button type="button" onClick={markAllRead} disabled={!summary.unread}>
-            <CheckCheck size={15} /> Mark all as read
-          </button>
-          {!isCenterOpen && (
-            <button type="button" className="institution-notif-view-all" onClick={() => setIsCenterOpen(true)}>
-              View all <ChevronRight size={15} />
-            </button>
-          )}
-          {isCenterOpen && (
-            <button type="button" className="institution-notif-view-all" onClick={() => setIsCenterOpen(false)}>
-              <ChevronLeft size={15} /> Back to drawer
-            </button>
-          )}
-        </div>
+            {/* Quick Actions */}
+            <div className="institution-notif-actions">
+              <button type="button" onClick={markAllRead} disabled={!summary.unread}>
+                <CheckCheck size={15} /> Mark all as read
+              </button>
+              <button
+                type="button"
+                className="institution-notif-view-all"
+                onClick={() => setIsCenterOpen(true)}
+              >
+                View full notice board <ChevronRight size={15} />
+              </button>
+            </div>
 
         {/* Search Input */}
         <label className="institution-notif-search">
@@ -520,6 +587,8 @@ export default function InstitutionalNotificationDrawer({
             </button>
           </div>
         </footer>
+          </>
+        )}
       </section>
 
       {/* DETAILED NOTICE MODAL VIEW */}

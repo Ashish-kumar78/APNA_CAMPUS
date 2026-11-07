@@ -46,6 +46,7 @@ import {
   CalendarCheck,
   MessageSquare,
   HelpCircle,
+  ArrowRight,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -362,11 +363,21 @@ export default function PrincipalDashboardView({ account, onNavigate }) {
               }}
             />
             <div className="pdb-profile-meta">
-              <h3 className="pdb-profile-name">Dr. Rajesh Kumar</h3>
+              <h3 className="pdb-profile-name">{account?.name || 'Dr. Rajesh Kumar'}</h3>
               <p className="pdb-profile-role">Principal &amp; Autonomous Campus Director</p>
               <p className="pdb-profile-role" style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Office of the Principal</p>
             </div>
-            <span className="pdb-profile-badge">● Active</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', marginLeft: 'auto' }}>
+              <span className="pdb-profile-badge">● Active</span>
+              <button
+                type="button"
+                className="fac-view-profile-btn"
+                onClick={() => onNavigate && onNavigate('profile')}
+                title="View full Principal official CMS profile"
+              >
+                View Profile <ArrowRight size={13} />
+              </button>
+            </div>
           </div>
 
           <div className="pdb-profile-tabs">

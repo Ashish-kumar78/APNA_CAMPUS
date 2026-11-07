@@ -767,9 +767,10 @@
 /* ---------- Generic card ---------- */
 .dash-card {
   background: #fff;
-  border: 1px solid var(--d-line);
-  border-radius: var(--d-radius);
-  box-shadow: var(--d-shadow);
+  border: 1px solid var(--d-line, #e2e8f0);
+  border-radius: var(--d-radius, 18px);
+  box-shadow: var(--d-shadow, 0 2px 10px rgba(15, 23, 42, 0.04));
+  overflow: hidden;
 }
 
 .dash-card-head {

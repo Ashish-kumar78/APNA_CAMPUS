@@ -13,6 +13,8 @@ export interface CalendarNoteRecord {
   title: string;
   description?: string;
   scheduledDate: string; // 'YYYY-MM-DD'
+  startTime?: string | null; // 'HH:mm'
+  endTime?: string | null; // 'HH:mm'
   status: 'PENDING' | 'COMPLETED';
   completedAt?: string | null;
   createdAt: string;
@@ -81,10 +83,25 @@ export class CalendarNotesService {
   }
 
   /**
-   * 1. Get notes for authenticated user, with optional date or month filtering
+   * Sort notes by scheduledDate, then startTime (notes without time at the end), then createdAt
    */
+  private sortNotes(notes: CalendarNoteRecord[]): CalendarNoteRecord[] {
+    return [...notes].sort((a, b) => {
+      const dateCmp = a.scheduledDate.localeCompare(b.scheduledDate);
+      if (dateCmp !== 0) return dateCmp;
+      if (a.startTime && b.startTime) {
+        const timeCmp = a.startTime.localeCompare(b.startTime);
+        if (timeCmp !== 0) return timeCmp;
+        if (a.endTime && b.endTime) return a.endTime.localeCompare(b.endTime);
+      }
+      if (a.startTime && !b.startTime) return -1;
+      if (!a.startTime && b.startTime) return 1;
+      return (a.createdAt || '').localeCompare(b.createdAt || '');
+    });
+  }
+
   /**
-   * Get single calendar note by ID with ownership verification
+   * 1. Get notes for authenticated user, with optional date or month filtering
    */
   async getNoteById(user: any, id: string): Promise<CalendarNoteRecord> {
     const userId = this.resolveUserId(user);
@@ -96,6 +113,8 @@ export class CalendarNotesService {
         }
         return {
           ...row,
+          startTime: row.startTime || null,
+          endTime: row.endTime || null,
           completedAt: row.completedAt ? row.completedAt.toISOString() : null,
           createdAt: row.createdAt ? row.createdAt.toISOString() : new Date().toISOString(),
           updatedAt: row.updatedAt ? row.updatedAt.toISOString() : new Date().toISOString(),
@@ -113,7 +132,7 @@ export class CalendarNotesService {
     return mem;
   }
 
-    async getNotes(user: any, filterDate?: string, filterMonth?: string): Promise<CalendarNoteRecord[]> {
+  async getNotes(user: any, filterDate?: string, filterMonth?: string): Promise<CalendarNoteRecord[]> {
     const userId = this.resolveUserId(user);
 
     try {
@@ -134,17 +153,22 @@ export class CalendarNotesService {
         for (const r of rows) {
           this.memoryStore.set(r.id, {
             ...r,
+            startTime: r.startTime || null,
+            endTime: r.endTime || null,
             completedAt: r.completedAt ? r.completedAt.toISOString() : null,
             createdAt: r.createdAt.toISOString(),
             updatedAt: r.updatedAt.toISOString(),
           });
         }
-        return rows.map((r: any) => ({
+        const mapped: CalendarNoteRecord[] = rows.map((r: any) => ({
           ...r,
+          startTime: r.startTime || null,
+          endTime: r.endTime || null,
           completedAt: r.completedAt ? r.completedAt.toISOString() : null,
           createdAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
           updatedAt: r.updatedAt ? r.updatedAt.toISOString() : new Date().toISOString(),
         }));
+        return this.sortNotes(mapped);
       }
     } catch (err: any) {
       this.logger.debug(`Prisma calendarNote query fallback: ${err?.message}`);
@@ -157,7 +181,7 @@ export class CalendarNotesService {
     } else if (filterMonth) {
       results = results.filter((n) => n.scheduledDate.startsWith(filterMonth));
     }
-    return results.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+    return this.sortNotes(results);
   }
 
   /**
@@ -180,12 +204,15 @@ export class CalendarNotesService {
       });
 
       if (rows) {
-        return rows.map((r: any) => ({
+        const mapped: CalendarNoteRecord[] = rows.map((r: any) => ({
           ...r,
+          startTime: r.startTime || null,
+          endTime: r.endTime || null,
           completedAt: r.completedAt ? r.completedAt.toISOString() : null,
           createdAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
           updatedAt: r.updatedAt ? r.updatedAt.toISOString() : new Date().toISOString(),
         }));
+        return this.sortNotes(mapped);
       }
     } catch (err: any) {
       this.logger.debug(`Prisma pending reminders query fallback: ${err?.message}`);
@@ -195,7 +222,7 @@ export class CalendarNotesService {
     const list = Array.from(this.memoryStore.values()).filter(
       (n) => n.userId === userId && n.status === 'PENDING' && n.scheduledDate <= todayStr,
     );
-    return list.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+    return this.sortNotes(list);
   }
 
   /**
@@ -205,8 +232,19 @@ export class CalendarNotesService {
     const userId = this.resolveUserId(user);
     const todayIST = this.getTodayIST();
     if (dto.scheduledDate < todayIST) {
-      throw new BadRequestException(`Cannot create notes for past dates (Scheduled: , Current IST: )`);
+      throw new BadRequestException(`Cannot create notes for past dates (Scheduled: ${dto.scheduledDate}, Current IST: ${todayIST})`);
     }
+
+    // Time validation if provided
+    const startTime = dto.startTime ? dto.startTime.trim() : null;
+    const endTime = dto.endTime ? dto.endTime.trim() : null;
+    if (endTime && !startTime) {
+      throw new BadRequestException('Please select a start time first.');
+    }
+    if (startTime && endTime && endTime <= startTime) {
+      throw new BadRequestException('End time must be after start time.');
+    }
+
     const id = `cn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const nowIso = new Date().toISOString();
 
@@ -219,6 +257,8 @@ export class CalendarNotesService {
       title: dto.title.trim(),
       description: dto.description ? dto.description.trim() : '',
       scheduledDate: dto.scheduledDate.trim(),
+      startTime,
+      endTime,
       status: 'PENDING',
       completedAt: null,
       createdAt: nowIso,
@@ -236,6 +276,8 @@ export class CalendarNotesService {
           title: record.title,
           description: record.description,
           scheduledDate: record.scheduledDate,
+          startTime: record.startTime,
+          endTime: record.endTime,
           status: 'PENDING',
         },
       });
@@ -244,6 +286,8 @@ export class CalendarNotesService {
         this.persistFallbackStore();
         return {
           ...created,
+          startTime: created.startTime || startTime,
+          endTime: created.endTime || endTime,
           completedAt: null,
           createdAt: created.createdAt ? created.createdAt.toISOString() : nowIso,
           updatedAt: created.updatedAt ? created.updatedAt.toISOString() : nowIso,
@@ -277,14 +321,26 @@ export class CalendarNotesService {
     if (dto.scheduledDate) {
       const todayIST = this.getTodayIST();
       if (dto.scheduledDate < todayIST) {
-        throw new BadRequestException(`Cannot update note to a past date (Scheduled: , Current IST: )`);
+        throw new BadRequestException(`Cannot update note to a past date (Scheduled: ${dto.scheduledDate}, Current IST: ${todayIST})`);
       }
+    }
+
+    const startTime = dto.startTime !== undefined ? (dto.startTime ? dto.startTime.trim() : null) : existing.startTime;
+    const endTime = dto.endTime !== undefined ? (dto.endTime ? dto.endTime.trim() : null) : existing.endTime;
+
+    if (endTime && !startTime) {
+      throw new BadRequestException('Please select a start time first.');
+    }
+    if (startTime && endTime && endTime <= startTime) {
+      throw new BadRequestException('End time must be after start time.');
     }
 
     const updatedData: Partial<CalendarNoteRecord> = {
       ...(dto.title !== undefined && { title: dto.title.trim() }),
       ...(dto.description !== undefined && { description: dto.description.trim() }),
       ...(dto.scheduledDate !== undefined && { scheduledDate: dto.scheduledDate.trim() }),
+      ...(dto.startTime !== undefined && { startTime }),
+      ...(dto.endTime !== undefined && { endTime }),
       updatedAt: new Date().toISOString(),
     };
 
@@ -299,6 +355,8 @@ export class CalendarNotesService {
         this.persistFallbackStore();
         return {
           ...res,
+          startTime: res.startTime || merged.startTime,
+          endTime: res.endTime || merged.endTime,
           completedAt: res.completedAt ? res.completedAt.toISOString() : null,
           createdAt: res.createdAt ? res.createdAt.toISOString() : existing.createdAt,
           updatedAt: res.updatedAt ? res.updatedAt.toISOString() : new Date().toISOString(),
@@ -406,6 +464,8 @@ export class CalendarNotesService {
       if (found) {
         return {
           ...found,
+          startTime: found.startTime || null,
+          endTime: found.endTime || null,
           completedAt: found.completedAt ? found.completedAt.toISOString() : null,
           createdAt: found.createdAt.toISOString(),
           updatedAt: found.updatedAt.toISOString(),

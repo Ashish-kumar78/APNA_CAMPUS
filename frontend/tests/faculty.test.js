@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { describe, expect, it } from 'vitest';
 
 // ── 1. COHORT SCOPING & ENROLLMENT RECONCILIATION ──
@@ -302,6 +304,29 @@ describe('CollegeFlow Enterprise Faculty Portal Test Suite', () => {
       const evalRes = evaluateQuizAttempt(mockQuestions, answers);
       expect(evalRes.score).toBe(2);
       expect(evalRes.percentage).toBeCloseTo(66.67, 1);
+    });
+  });
+  describe('8. Faculty Portal Dashboard Widgets Verification', () => {
+    it('verifies Attendance Overview donut and Academic Performance line chart are removed from FacultyPortal.jsx', () => {
+      
+      const resolveSrc = (rel) => {
+        if (fs.existsSync(path.resolve('src', rel))) return path.resolve('src', rel);
+        if (fs.existsSync(path.resolve('frontend/src', rel))) return path.resolve('frontend/src', rel);
+        return path.resolve(rel);
+      };
+      const facultyJsx = fs.readFileSync(resolveSrc('components/FacultyPortal.jsx'), 'utf8');
+      const facultyCss = fs.readFileSync(resolveSrc('components/FacultyPortal.css'), 'utf8');
+
+      expect(facultyJsx).not.toContain('fac-analytics-duo-row');
+      expect(facultyJsx).not.toContain('fac-donut-container');
+      expect(facultyJsx).not.toContain('fac-cgpa-peak-badge');
+      expect(facultyJsx).not.toContain('8.79 CGPA');
+      expect(facultyJsx).not.toContain('fac-attendance-card');
+      expect(facultyJsx).not.toContain('fac-academic-perf-card');
+
+      expect(facultyCss).not.toContain('.fac-analytics-duo-row');
+      expect(facultyCss).not.toContain('.fac-donut-container');
+      expect(facultyCss).not.toContain('.fac-cgpa-peak-badge');
     });
   });
 });

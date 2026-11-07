@@ -16,6 +16,7 @@ import {
   submitCalendarNote,
   subscribeToCalendarNotes,
   resolveUserId,
+  formatEventTimeRange,
 } from '../services/calendarNotesStore.js';
 
 // In-memory fallback set for session dismissal tracking
@@ -363,6 +364,11 @@ export default function CalendarReminderModal({ account }) {
                       >
                         <Calendar size={13} />
                         Scheduled: {formatDateDisplay(note.scheduledDate)}
+                        {formatEventTimeRange(note.startTime, note.endTime) && (
+                          <span style={{ color: '#2563eb', marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            • <Clock size={12} /> {formatEventTimeRange(note.startTime, note.endTime)}
+                          </span>
+                        )}
                       </span>
                     </div>
 

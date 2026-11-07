@@ -276,7 +276,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showUpdateConfirmModal, setShowUpdateConfirmModal] = useState(false);
   const [submittedSession, setSubmittedSession] = useState(null);
-  const [showViewAttendanceTable, setShowViewAttendanceTable] = useState(true);
+  const [showViewAttendanceTable, setShowViewAttendanceTable] = useState(false);
 
   // Past Sessions Log State
   const [pastSessions, setPastSessions] = useState([]);
@@ -587,7 +587,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     setSubmittedSession(sessionRecord);
     setIsSubmitted(true);
     setIsEditing(false);
-    setShowViewAttendanceTable(true);
+    setShowViewAttendanceTable(false);
 
     // Add to past sessions state
     setPastSessions(prev => [sessionRecord, ...prev.filter(s => s.id !== sessionRecord.id)]);
@@ -656,6 +656,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     setSubmittedSession(updatedRecord);
     setIsSubmitted(true);
     setIsEditing(false);
+    setShowViewAttendanceTable(false);
 
     setPastSessions(prev => [updatedRecord, ...prev.filter(s => s.id !== updatedRecord.id)]);
 
@@ -695,6 +696,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     }
     setIsEditing(false);
     setIsSubmitted(true);
+    setShowViewAttendanceTable(false);
     setAlertBanner(null);
   };
 
@@ -708,6 +710,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     setActivityType('Regular Class');
     setActivityDetails('');
     setAlertBanner(null);
+    setShowViewAttendanceTable(true);
   };
 
   // Load a past session into view
@@ -727,6 +730,7 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
     setSubmittedSession(sess);
     setIsSubmitted(true);
     setIsEditing(false);
+    setShowViewAttendanceTable(false);
     setActiveModuleTab('register');
     setAlertBanner({
       type: 'info',

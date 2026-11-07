@@ -62,6 +62,7 @@ import ReportGenerationModule from './ReportGenerationModule.jsx';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import OfficialEmployeeProfile from './Profile/OfficialEmployeeProfile.jsx';
 import ExamRegistrationModule from './ExaminationCell/ExamRegistrationModule.jsx';
 import QuestionPaperVaultModule from './ExaminationCell/QuestionPaperVaultModule.jsx';
 import AnswerBookletTrackingModule from './ExaminationCell/AnswerBookletTrackingModule.jsx';
@@ -805,6 +806,16 @@ export default function ExamCellPortal({ account, onLogout, onSwitchRole }) {
           {/* =========================================================================
               TAB 0: CoE AUTONOMOUS EXAMINATION DASHBOARD
              ========================================================================= */}
+          {activeTab === 'profile' && (
+            <OfficialEmployeeProfile
+              account={account}
+              role="exam_cell"
+              roleTitle="Exam Cell Controller Official CMS Profile"
+              rolePerspective="Controller of Examinations (CoE)"
+              onBack={() => setActiveTab('dashboard')}
+            />
+          )}
+
           {activeTab === 'dashboard' && (
             <RoleDashboardLanding
               roleKey="exam_cell"

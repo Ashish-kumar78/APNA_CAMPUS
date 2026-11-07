@@ -567,14 +567,15 @@
 /* 2. Faculty Profile + 4 KPI Cards Row */
 .fac-profile-kpi-row {
   display: grid;
-  grid-template-columns: 360px 1fr;
+  grid-template-columns: minmax(min(100%, 25rem), 28.5rem) minmax(0, 1fr);
   gap: 1.25rem;
   align-items: stretch;
+  width: 100%;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
   .fac-profile-kpi-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -587,18 +588,23 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 100%;
 }
 
 .fac-profile-header {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 0.875rem;
   margin-bottom: 1rem;
+  min-width: 0;
 }
 
 .fac-avatar-wrap {
-  width: 60px;
-  height: 60px;
+  width: 3.75rem;
+  height: 3.75rem;
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid #bfdbfe;
@@ -621,7 +627,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.5rem;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .fac-profile-name {
@@ -629,16 +637,16 @@
   font-weight: 800;
   color: #0f172a;
   margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .fac-view-profile-btn {
   background: transparent;
   border: 1px solid #cbd5e1;
   border-radius: 999px;
-  padding: 3px 10px;
+  padding: 0.25rem 0.65rem;
   font-size: 0.72rem;
   font-weight: 600;
   color: #2563eb;
@@ -648,6 +656,7 @@
   gap: 4px;
   transition: all 0.15s ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .fac-view-profile-btn:hover {
@@ -660,24 +669,33 @@
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
   color: #2563eb;
-  padding: 2px 8px;
+  padding: 0.15rem 0.55rem;
   border-radius: 6px;
   font-size: 0.7rem;
   font-weight: 700;
-  margin-top: 4px;
+  margin-top: 0.25rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fac-profile-details-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
   padding-top: 0.85rem;
   border-top: 1px solid #f1f5f9;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .fac-profile-detail-item {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .fac-detail-label {
@@ -685,27 +703,46 @@
   font-weight: 600;
   color: #64748b;
   margin-bottom: 2px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .fac-detail-value {
   font-size: 0.82rem;
   font-weight: 700;
   color: #0f172a;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  line-height: 1.35;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.fac-detail-email {
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 /* 4 KPI Cards Grid */
 .fac-kpis-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1.1rem;
+  min-width: 0;
+  width: 100%;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .fac-kpis-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .fac-kpis-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -721,6 +758,8 @@
   transition: transform 0.18s ease, box-shadow 0.18s ease;
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .fac-kpi-card:hover {
@@ -873,128 +912,31 @@
   text-decoration: underline;
 }
 
-/* 4. Row 4: Analytics Duo (Attendance Overview & Academic Performance - NO Quick Actions) */
-.fac-analytics-duo-row {
+/* ── Unified 2-Column Equal-Height Dashboard Rows ───────────────────────── */
+.fac-dashboard-row-2col {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.25rem;
+  align-items: stretch;
+  margin-bottom: 1.25rem;
+  width: 100%;
 }
 
-@media (max-width: 960px) {
-  .fac-analytics-duo-row {
-    grid-template-columns: 1fr;
+@media (max-width: 1024px) {
+  .fac-dashboard-row-2col {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-.fac-donut-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  gap: 1rem;
-  flex: 1;
-  padding: 0.5rem 0;
-}
-
-.fac-donut-chart-wrap {
-  position: relative;
-  width: 190px;
-  height: 190px;
-  display: grid;
-  place-items: center;
-}
-
-.fac-donut-center-label {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.fac-dashboard-row-2col > .fac-card,
+.fac-dashboard-row-2col > .dash-card {
+  height: 100%;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-}
-
-.donut-big-val {
-  font-size: 1.8rem;
-  font-weight: 900;
-  color: #0f172a;
-  line-height: 1;
-}
-
-.donut-sub-lbl {
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: #64748b;
-  margin-top: 2px;
-}
-
-.fac-donut-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.fac-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.82rem;
-}
-
-.fac-legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.fac-legend-dot.bg-green { background: #10b981; }
-.fac-legend-dot.bg-yellow { background: #f59e0b; }
-.fac-legend-dot.bg-blue { background: #3b82f6; }
-
-.fac-legend-name {
-  font-weight: 600;
-  color: #475569;
-  min-width: 60px;
-}
-
-.fac-legend-pct {
-  font-weight: 800;
-  color: #0f172a;
-  margin-left: auto;
-}
-
-.fac-card-footer {
-  margin-top: auto;
-  padding-top: 0.75rem;
-  border-top: 1px solid #f1f5f9;
-  font-size: 0.78rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.fac-line-chart-wrap {
-  position: relative;
-  flex: 1;
-  min-height: 200px;
-}
-
-.fac-cgpa-peak-badge {
-  position: absolute;
-  top: 5px;
-  right: 22%;
-  background: #ffffff;
-  border: 1px solid #2563eb;
-  color: #2563eb;
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 2px 8px;
-  border-radius: 999px;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
-  z-index: 5;
-  pointer-events: none;
+  min-width: 0;
+  border-radius: 18px;
+  overflow: hidden;
 }
 
 /* 5. Row 5: Trio (Events, Activities, Courses) */
@@ -1496,4 +1438,50 @@
 .hol-sub {
   font-size: 0.68rem;
   color: #64748b;
+}
+
+
+/* ── Row 2 & Row 3 Responsive Card Inner Scrolls ───────────────────────── */
+.fac-courses-card .fac-courses-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 22rem;
+  scrollbar-width: thin;
+  padding: 2px;
+}
+
+.fac-schedule-table-card .fac-table-responsive {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 22rem;
+  flex: 1;
+  scrollbar-width: thin;
+}
+
+.fac-timeline-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 20rem;
+  scrollbar-width: thin;
+  padding-right: 4px;
+}
+
+.fac-activity-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 20rem;
+  scrollbar-width: thin;
+  padding-right: 4px;
+}
+
+.fac-calendar-widget-card {
+  height: 100% !important;
+  min-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
 }

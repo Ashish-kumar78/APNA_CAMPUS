@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   FileText,
   Save,
@@ -13,10 +13,8 @@ import {
   FlaskConical,
   BookOpen,
   Check,
-  ShieldAlert,
   GraduationCap
 } from 'lucide-react'
-import GrievanceRedressalSection from '../components/GrievanceRedressalSection.jsx'
 import './FeedbackPage.css'
 
 // ── Theory Questions (11 Evaluation Criteria - Exact Match to Image 1) ──
@@ -84,35 +82,7 @@ export const labRows = [
 // Numbers 1 to 10 for rating
 const ratingNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export default function FeedbackPage({ onBack, account, initialSection }) {
-  // Active Section: 'faculty-feedback' (Give Faculty Feedback) or 'grievance-redressal' (Grievance Redressal)
-  const [activeSection, setActiveSection] = useState(() => {
-    if (
-      initialSection === 'grievance' ||
-      (typeof window !== 'undefined' &&
-        (window.location.hash.includes('grievance') || window.location.hash.includes('complain')))
-    ) {
-      return 'grievance-redressal';
-    }
-    return 'faculty-feedback';
-  });
-
-  useEffect(() => {
-    if (
-      initialSection === 'grievance' ||
-      (typeof window !== 'undefined' &&
-        (window.location.hash.includes('grievance') || window.location.hash.includes('complain')))
-    ) {
-      setActiveSection('grievance-redressal');
-    } else if (
-      initialSection === 'feedback' ||
-      (typeof window !== 'undefined' &&
-        (window.location.hash === '#feedback' || window.location.hash === '#appraisal'))
-    ) {
-      setActiveSection('faculty-feedback');
-    }
-  }, [initialSection]);
-
+export default function FeedbackPage({ onBack, account }) {
   // Initialize theory ratings from localStorage or default all to 1 (Student must change)
   const [theoryRatings, setTheoryRatings] = useState(() => {
     try {
@@ -261,53 +231,15 @@ export default function FeedbackPage({ onBack, account, initialSection }) {
         </div>
       )}
 
-      {/* ── Main Top Section Navigation (Two Separate Sections) ── */}
-      <div className="feedback-section-tabs-bar" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeSection === 'faculty-feedback'}
-          className={`feedback-main-tab ${activeSection === 'faculty-feedback' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveSection('faculty-feedback');
-            window.location.hash = 'feedback';
-          }}
-        >
-          <GraduationCap size={18} />
-          <span>Give Faculty Feedback</span>
-          <span className="tab-pill-badge">29 Subjects</span>
-        </button>
-
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeSection === 'grievance-redressal'}
-          className={`feedback-main-tab feedback-main-tab-grievance ${activeSection === 'grievance-redressal' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveSection('grievance-redressal');
-            window.location.hash = 'grievance-redressal';
-          }}
-        >
-          <ShieldAlert size={18} />
-          <span>Grievance Redressal</span>
-          <span className="tab-pill-badge grievance-badge">Complaints Cell</span>
-        </button>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          SECTION 1: GIVE FACULTY FEEDBACK ONLY (When 1st tab is selected)
-          ───────────────────────────────────────────────────────────── */}
-      {activeSection === 'faculty-feedback' && (
-        <>
-          {/* Top Header Card */}
-          <header className="feedback-top-card">
-            <div className="feedback-top-main">
-              <div className="feedback-badge-pill">
-                <Sparkles size={13} />
-                <span>OFFICIAL FACULTY APPRAISAL · 2026-2027</span>
-              </div>
-              <h1>Student Feedback & Teacher Appraisal</h1>
-              <p className="feedback-top-desc">
+      {/* Top Header Card */}
+      <header className="feedback-top-card">
+        <div className="feedback-top-main">
+          <div className="feedback-badge-pill">
+            <Sparkles size={13} />
+            <span>OFFICIAL FACULTY APPRAISAL · 2026-2027</span>
+          </div>
+          <h1>Student Feedback & Teacher Appraisal</h1>
+          <p className="feedback-top-desc">
                 Provide transparent, anonymous feedback about each teacher for Theory and Laboratory/Practical subjects.
                 Ratings range from <strong>1 (Lowest / Default)</strong> to <strong>10 (Highest / Excellent)</strong>.
                 By default, all ratings are set to <strong>1</strong> and need to be evaluated and changed by the student.
@@ -543,38 +475,13 @@ export default function FeedbackPage({ onBack, account, initialSection }) {
       </section>
 
       {/* Confidentiality Footer Note */}
-          <footer className="feedback-confidential-note">
-            <Info size={15} color="#2563eb" />
-            <span>
-              <strong>Confidentiality Notice:</strong> All responses submitted are completely anonymous and encrypted.
-              Evaluations are aggregated at the end of the semester to assist faculty development and enhance academic quality.
-            </span>
-          </footer>
-        </>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          SECTION 2: GRIEVANCE REDRESSAL ONLY (When 2nd tab is selected)
-          ───────────────────────────────────────────────────────────── */}
-      {activeSection === 'grievance-redressal' && (
-        <>
-          <header className="feedback-top-card grievance-hero-card">
-            <div className="feedback-top-main">
-              <div className="feedback-badge-pill grievance-badge-pill">
-                <ShieldAlert size={13} />
-                <span>OFFICIAL STUDENT GRIEVANCE & REDRESSAL CELL · AICTE/UGC COMPLIANT</span>
-              </div>
-              <h1>Grievance Redressal Portal</h1>
-              <p className="feedback-top-desc">
-                Lodge grievances, hostel concerns, academic issues, examination delays, or fee queries directly to the Autonomous Grievance Committee.
-                Track investigation progress, review resolutions, and download formal PDF/Excel records.
-              </p>
-            </div>
-          </header>
-
-          <GrievanceRedressalSection studentAccount={account} />
-        </>
-      )}
+      <footer className="feedback-confidential-note">
+        <Info size={15} color="#2563eb" />
+        <span>
+          <strong>Confidentiality Notice:</strong> All responses submitted are completely anonymous and encrypted.
+          Evaluations are aggregated at the end of the semester to assist faculty development and enhance academic quality.
+        </span>
+      </footer>
     </div>
   )
 }

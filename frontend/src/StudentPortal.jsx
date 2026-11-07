@@ -51,6 +51,7 @@ import StudentProfile from './StudentProfile.jsx'
 import AcademicsPage from './pages/AcademicsPage.jsx'
 import ExaminationPage from './pages/ExaminationPage.jsx'
 import FeedbackPage from './pages/FeedbackPage.jsx'
+import GrievanceRedressalPage from './pages/GrievanceRedressalPage.jsx'
 import InternshipPage from './pages/InternshipPage.jsx'
 import ErrorBoundary from './components/Common/ErrorBoundary.jsx'
 import LibraryPage from './pages/LibraryPage.jsx'
@@ -148,7 +149,7 @@ const studentNavSections = [
   {
     title: 'SUPPORT',
     items: [
-      { label: 'Anonymous Complaints', icon: ShieldCheck, page: 'anonymous-complaints' },
+      { label: 'Grievance Redressal', icon: ShieldCheck, page: 'grievance-redressal' },
       { label: 'Feedback/Appraisal/Survey', icon: ChatBubbleIcon, page: 'feedback' },
     ]
   },
@@ -373,7 +374,10 @@ function StudentPortal({ account, onLogout }) {
       if (profilePageTabMap[hash]) {
         return { page: 'profile', link: 'View Profile', tab: profilePageTabMap[hash], quickView: '' };
       }
-      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal' || hash === 'grievance' || hash === 'grievance-redressal') {
+      if (hash === 'grievance' || hash === 'grievance-redressal') {
+        return { page: 'grievance-redressal', link: 'Grievance Redressal', tab: '', quickView: '' };
+      }
+      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal') {
         return { page: 'feedback', link: 'Feedback/Appraisal/Survey', tab: '', quickView: '' };
       }
       if (hash === 'scholarship' || hash === 'apply-scholarship') {
@@ -467,7 +471,14 @@ function StudentPortal({ account, onLogout }) {
         setProfileQuickView('');
         return;
       }
-      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal' || hash === 'grievance' || hash === 'grievance-redressal') {
+      if (hash === 'grievance' || hash === 'grievance-redressal') {
+        setActivePage('grievance-redressal');
+        setActiveLink('Grievance Redressal');
+        setProfileTab('');
+        setProfileQuickView('');
+        return;
+      }
+      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal') {
         setActivePage('feedback');
         setActiveLink('Feedback/Appraisal/Survey');
         setProfileTab('');
@@ -776,6 +787,8 @@ function StudentPortal({ account, onLogout }) {
     if (activePage === 'dashboard') return { title: 'Dashboard', subtitle: `Welcome back, ${studentAccount?.name?.split(' ')[0] || 'Student'}` };
     if (activePage === 'profile') return { title: 'Student Profile', subtitle: 'Personal & academic details' };
     if (activePage === 'my-admission') return { title: 'My Admission Dossier', subtitle: 'Provisional Offer, Verification Status & Enrollment Letter' };
+    if (activePage === 'grievance-redressal') return { title: 'Grievance Redressal', subtitle: 'Official Student Grievance & Redressal Cell · AICTE/UGC Compliant' };
+    if (activePage === 'feedback') return { title: 'Feedback / Appraisal', subtitle: 'Transparent & Anonymous Faculty Evaluation' };
     const match = navigation.find(n => n.page === activePage);
     return { title: match?.label || activeLink || 'Student Portal', subtitle: '' };
   }, [activePage, activeLink, studentAccount]);
@@ -954,6 +967,16 @@ function StudentPortal({ account, onLogout }) {
                 <BonafidePage account={studentAccount} />
               )}
               {activePage === 'placement' && <PlacementPage />}
+              {activePage === 'grievance-redressal' && (
+                <GrievanceRedressalPage
+                  account={studentAccount}
+                  onBack={() => {
+                    setActivePage('dashboard')
+                    setActiveLink('Dashboard')
+                    window.location.hash = 'dashboard'
+                  }}
+                />
+              )}
               {activePage === 'feedback' && (
                 <FeedbackPage
                   account={studentAccount}

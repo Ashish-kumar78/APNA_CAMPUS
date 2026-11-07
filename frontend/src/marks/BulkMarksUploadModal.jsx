@@ -86,7 +86,7 @@ export default function BulkMarksUploadModal({
   }
 
   const modalContent = (
-    <div className="mm-modal-backdrop" onClick={onClose} style={{ zIndex: 999999 }}>
+    <div className="mm-root-shell mm-modal-backdrop" onClick={onClose} style={{ zIndex: 999999 }}>
       <div
         className="mm-modal-window mm-upload-modal"
         onClick={(e) => e.stopPropagation()}

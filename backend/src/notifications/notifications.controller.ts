@@ -49,6 +49,7 @@ export class NotificationsController {
     @Query('priority') priority?: string,
     @Query('unreadOnly') unreadOnly?: string,
     @Query('search') search?: string,
+    @Query('tab') tab?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
@@ -57,6 +58,7 @@ export class NotificationsController {
       priority,
       unreadOnly,
       search,
+      tab,
       page,
       limit,
     });
@@ -85,6 +87,54 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Mark specific notification as read for current user' })
   async markAsRead(@CurrentUser() user: any, @Param('id') id: string) {
     return this.notificationsService.markAsRead(user, id);
+  }
+
+  @Post(':id/acknowledge')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Acknowledge an official institutional notification' })
+  async acknowledgeNotice(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.notificationsService.acknowledgeNotice(user, id);
+  }
+
+  @Post(':id/pin')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Toggle pinned status for an institutional notification' })
+  async togglePin(@CurrentUser() user: any, @Param('id') id: string, @Body() body: { isPinned?: boolean }) {
+    return this.notificationsService.togglePin(user, id, body?.isPinned);
+  }
+
+  @Get(':id/analytics')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get publisher delivery, read and acknowledgement analytics for a notice' })
+  async getNoticeAnalytics(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.notificationsService.getNoticeAnalytics(id, user);
+  }
+
+  @Post('estimate-recipients')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Estimate recipient count for dynamic audience targeting rules' })
+  async estimateRecipients(@CurrentUser() user: any, @Body() body: any) {
+    return this.notificationsService.estimateAudience(body, user);
+  }
+
+  @Post('publish')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Publish official institutional announcement with audience targeting' })
+  async publishInstitutionalNotice(@CurrentUser() user: any, @Body() body: any) {
+    return this.notificationsService.publishInstitutionalNotice(user, body);
+  }
+
+  @Post(':id/withdraw')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Withdraw an active institutional notice' })
+  async withdrawNotice(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.notificationsService.withdrawNotice(id, user);
   }
 
   @Post('mark-all-read')

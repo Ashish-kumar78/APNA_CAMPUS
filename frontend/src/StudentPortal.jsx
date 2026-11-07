@@ -337,6 +337,9 @@ function StudentPortal({ account, onLogout }) {
       .catch((error) => {
         console.warn('Student profile live sync note:', error?.message)
         // Silently preserve existing account props; do not display abort/transient error banners
+        if (active && error?.name !== 'AbortError' && !error?.message?.toLowerCase().includes('abort') && !account?.name) {
+          setProfileError(error.message || 'Could not load your student profile.')
+        }
       })
     return () => {
       active = false
@@ -849,7 +852,7 @@ function StudentPortal({ account, onLogout }) {
         pageSubtitle={studentHeading.subtitle}
       >
         <div className="campus-os-body">
-          {profileError && (
+          {profileError && !profileError.toLowerCase().includes('abort') && (
             <p role="alert" style={{ margin: '0 0 12px', padding: 10, borderRadius: 8, background: '#fff1f2', color: '#b91c1c' }}>
               {profileError}
             </p>
@@ -920,7 +923,7 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'cleanliness-complaints' && <StudentHostelPage defaultTab="cleanliness" account={studentAccount || account} />}
               {activePage === 'fees' && <FeesPage account={studentAccount || account} />}
               {activePage === 'canteen' && <CanteenPage account={studentAccount || account} />}
-              {activePage === 'attendance' && <AttendancePage />}
+              {activePage === 'attendance' && <AttendancePage account={studentAccount || account} />}
               {activePage === 'academics' && <AcademicsPage account={studentAccount} />}
               {activePage === 'timetable' && (
                 <TimetablePage
@@ -931,7 +934,16 @@ function StudentPortal({ account, onLogout }) {
                   }}
                 />
               )}
-              {activePage === 'notices' && <NoticesPage />}
+              {activePage === 'notices' && (
+                <NoticesPage
+                  account={studentAccount || account}
+                  onNavigateHome={() => {
+                    setActivePage('dashboard');
+                    setActiveLink('Dashboard');
+                    window.location.hash = 'dashboard';
+                  }}
+                />
+              )}
               {activePage === 'idcard' && <IDCardPage />}
               {activePage === 'library' && <LibraryPage />}
               {activePage === 'scholarship' && <ScholarshipPage account={studentAccount} />}
@@ -1048,8 +1060,13 @@ function StudentPortal({ account, onLogout }) {
                     title="Open Academics & Enrolled Courses"
                   >
                     {(() => {
-                      const sem = studentAccount?.currentSemester || studentAccount?.semester || 5;
+                      const sem = studentAccount?.currentSemester || studentAccount?.semester || 'Semester 1';
                       const semLabel = String(sem).startsWith('Semester') ? sem : `Semester ${sem}`;
+                      const coursesCount = Array.isArray(studentAccount?.enrollments) && studentAccount.enrollments.length > 0
+                        ? studentAccount.enrollments.length
+                        : Array.isArray(studentAccount?.enrolledSubjects) && studentAccount.enrolledSubjects.length > 0
+                        ? studentAccount.enrolledSubjects.length
+                        : null;
                       return (
                         <>
                           <div className="dash-stat-head">
@@ -1060,17 +1077,33 @@ function StudentPortal({ account, onLogout }) {
                             <span className="dash-stat-badge tone-blue-badge">{semLabel}</span>
                           </div>
                           <div className="dash-stat-body">
-                            <strong className="dash-stat-value"><CountUpNumber value={studentAccount?.enrolledSubjects ? String(studentAccount.enrolledSubjects.length).padStart(2, '0') : '06'} /></strong>
-                            <p className="dash-stat-desc">{semLabel} · 22 total credits</p>
+                            <strong className="dash-stat-value">
+                              {coursesCount !== null ? (
+                                <CountUpNumber value={String(coursesCount).padStart(2, '0')} />
+                              ) : (
+                                'N/A'
+                              )}
+                            </strong>
+                            <p className="dash-stat-desc">
+                              {coursesCount !== null
+                                ? `${semLabel} · ${coursesCount * 3 + 4} total credits`
+                                : `${semLabel} · Awaiting course allocation`}
+                            </p>
+                          </div>
+                          <div className="dash-stat-foot">
+                            {coursesCount !== null ? (
+                              <>
+                                <span className="dash-stat-pill">Core Theory</span>
+                                <span className="dash-stat-pill">Practical Labs</span>
+                                <span className="dash-stat-pill tone-green-pill">Registered</span>
+                              </>
+                            ) : (
+                              <span className="dash-stat-pill tone-amber-pill">Awaiting Enrollment</span>
+                            )}
                           </div>
                         </>
                       );
                     })()}
-                    <div className="dash-stat-foot">
-                      <span className="dash-stat-pill">4 Core Theory</span>
-                      <span className="dash-stat-pill">2 Practical Labs</span>
-                      <span className="dash-stat-pill tone-green-pill">Registered</span>
-                    </div>
                   </article>
 
                   {/* Card 2: Attendance */}
@@ -1082,27 +1115,54 @@ function StudentPortal({ account, onLogout }) {
                     onClick={() => handleStudentTabChange('attendance')}
                     title="Open Attendance Record"
                   >
-                    <div className="dash-stat-head">
-                      <div className="dash-stat-head-left">
-                        <span className="dash-stat-icon"><CheckCircle2 size={18} /></span>
-                        <span className="dash-stat-label">Attendance</span>
-                      </div>
-                      <span className="dash-stat-badge tone-green-badge">Eligible</span>
-                    </div>
-                    <div className="dash-stat-body">
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <strong className="dash-stat-value"><CountUpNumber value="92%" /></strong>
-                        <span className="dash-stat-ratio">138 / 150 Lectures</span>
-                      </div>
-                      <div className="dash-progress" aria-hidden="true">
-                        <i style={{ width: '92%' }} />
-                      </div>
-                    </div>
-                    <div className="dash-stat-foot">
-                      <small className="dash-stat-sub text-green">
-                        <Check size={13} /> 17% above required 75% examination threshold
-                      </small>
-                    </div>
+                    {(() => {
+                      const hasAtt = Boolean(
+                        studentAccount?.hasAttendanceRecords ||
+                        (studentAccount?.attendancePercentage !== null && studentAccount?.attendancePercentage !== undefined)
+                      );
+                      const pct = hasAtt ? Number(studentAccount.attendancePercentage) : null;
+                      const held = studentAccount?.classesHeld;
+                      const attended = studentAccount?.classesAttended;
+                      const isEligible = pct !== null && pct >= 75;
+
+                      return (
+                        <>
+                          <div className="dash-stat-head">
+                            <div className="dash-stat-head-left">
+                              <span className="dash-stat-icon"><CheckCircle2 size={18} /></span>
+                              <span className="dash-stat-label">Attendance</span>
+                            </div>
+                            <span className={`dash-stat-badge ${hasAtt ? (isEligible ? 'tone-green-badge' : 'tone-amber-badge') : 'tone-amber-badge'}`}>
+                              {hasAtt ? (isEligible ? 'Eligible' : 'Shortage') : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="dash-stat-body">
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
+                              <strong className="dash-stat-value">
+                                {hasAtt ? <CountUpNumber value={`${pct}%`} /> : 'N/A'}
+                              </strong>
+                              <span className="dash-stat-ratio" style={{ color: hasAtt ? undefined : '#94a3b8' }}>
+                                {hasAtt && held ? `${attended} / ${held} Lectures` : 'No attendance records yet'}
+                              </span>
+                            </div>
+                            <div className="dash-progress" aria-hidden="true">
+                              <i style={{ width: hasAtt ? `${pct}%` : '0%', background: hasAtt ? undefined : '#cbd5e1' }} />
+                            </div>
+                          </div>
+                          <div className="dash-stat-foot">
+                            {hasAtt ? (
+                              <small className={`dash-stat-sub ${isEligible ? 'text-green' : 'text-amber'}`}>
+                                <Check size={13} /> {isEligible ? `${pct - 75}% above required 75% examination threshold` : `${75 - pct}% below required 75% threshold`}
+                              </small>
+                            ) : (
+                              <small className="dash-stat-sub" style={{ color: '#64748b' }}>
+                                <Check size={13} /> Your attendance records will appear after your classes begin.
+                              </small>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </article>
 
                   {/* Card 3: Next Class */}
@@ -1132,33 +1192,58 @@ function StudentPortal({ account, onLogout }) {
                     </div>
                   </article>
 
-                  {/* Card 4: Next Holiday */}
+                  {/* Card 4: Fees Details (Replaces Next Holiday) */}
                   <article
-                    className="dash-stat tone-amber"
+                    className="dash-stat tone-amber dash-stat-fees-card"
                     role="button"
                     tabIndex={0}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => {
-                      const el = document.getElementById('holidays');
-                      if (el) el.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    title="View Holiday Schedule"
+                    onClick={() => handleStudentTabChange('fees')}
+                    title="Open Detailed Fee Breakdown & Payment Receipts"
                   >
-                    <div className="dash-stat-head">
-                      <div className="dash-stat-head-left">
-                        <span className="dash-stat-icon"><PartyPopper size={18} /></span>
-                        <span className="dash-stat-label">Next holiday</span>
+                    <div className="fees-card-header">
+                      <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>₹</span>
+                      <span>Fees Details</span>
+                    </div>
+
+                    <div className="fees-card-body">
+                      {/* Cyan Banner: Total Fees till Date */}
+                      <div className="fees-banner-row tone-cyan">
+                        <div className="fees-amount">
+                          {studentAccount?.totalFeesFormatted || '₹3,22,600.00'}
+                        </div>
+                        <div className="fees-label">
+                          Total Fees till Date
+                        </div>
+                        <span className="fees-watermark" aria-hidden="true">
+                          ₹
+                        </span>
                       </div>
-                      <span className="dash-stat-badge tone-amber-badge">Govt Gazetted</span>
-                    </div>
-                    <div className="dash-stat-body">
-                      <strong className="dash-stat-value">{nextHoliday ? (nextHoliday.daysLeft === 0 ? 'Today' : nextHoliday.daysLeft === 1 ? 'Tomorrow' : `${nextHoliday.daysLeft} days`) : '5 days'}</strong>
-                      <p className="dash-stat-desc">{nextHoliday ? nextHoliday.name : 'Mahalaya'}</p>
-                    </div>
-                    <div className="dash-stat-foot">
-                      <span className="dash-stat-sub">
-                        {nextHoliday?.date ? nextHoliday.date.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : 'Sat, 10 Oct, 2026'} · Campus closed
-                      </span>
+
+                      {/* Amber Banner: Total Paid by You till Date */}
+                      <div className="fees-banner-row tone-amber">
+                        <div className="fees-amount">
+                          {studentAccount?.paidFeesFormatted || '₹1,94,680.00'}
+                        </div>
+                        <div className="fees-label">
+                          Total Paid by You till Date
+                        </div>
+                        <span className="fees-watermark" aria-hidden="true">
+                          ₹
+                        </span>
+                      </div>
+
+                      {/* Red Banner: Total Dues */}
+                      <div className="fees-banner-row tone-red">
+                        <div className="fees-amount">
+                          {studentAccount?.dueFeesFormatted || '₹1,27,920.00'}
+                        </div>
+                        <div className="fees-label">
+                          Total Dues
+                        </div>
+                        <span className="fees-watermark" aria-hidden="true">
+                          ₹
+                        </span>
+                      </div>
                     </div>
                   </article>
                 </section>

@@ -1,5 +1,6 @@
 // Central Store & State Engine for Biometric-Based Canteen Food Management System
 // APNA CAMPUS ERP — Canteen Directorate
+import { api } from './api.js';
 
 const CANTEEN_STORAGE_PREFIX = 'apna_canteen_v2_';
 
@@ -1314,6 +1315,70 @@ class CanteenStore {
     this.settings = this._load('settings', initialCanteenSettings);
     this.auditLogs = this._load('audit_logs', []);
     this.attendanceRecords = this._load('attendance_records', []);
+
+    // Reconcile with NestJS backend Canteen APIs asynchronously
+    if (typeof window !== 'undefined') {
+      setTimeout(() => this.syncFromBackend(), 100);
+    }
+  }
+
+  async syncFromBackend() {
+    try {
+      // 1. Sync Menu & Special Dishes from database
+      const menuRes = await api.getCanteenMenu();
+      if (menuRes && Array.isArray(menuRes) && menuRes.length > 0) {
+        this.specialDishes = menuRes.map(m => ({
+          id: m.id,
+          name: m.name,
+          category: m.category,
+          price: m.price,
+          isAvailable: m.isAvailable !== false,
+          prepTime: m.prepTime || '15 mins',
+          calories: m.calories || '350 kcal',
+          type: m.category?.toLowerCase().includes('veg') && !m.category?.toLowerCase().includes('non') ? 'Veg' : 'Non-Veg',
+          description: `${m.name} freshly prepared in campus kitchen.`,
+          cutoffTime: '11:00 AM'
+        }));
+        this._save('special_dishes', this.specialDishes);
+      }
+
+      // 2. Sync Canteen Orders from database
+      const ordersRes = await api.getCanteenOrders();
+      if (ordersRes && Array.isArray(ordersRes) && ordersRes.length > 0) {
+        const mappedOrders = ordersRes.map(o => ({
+          id: o.id || o.token,
+          studentId: o.studentId || o.rollNumber,
+          studentName: o.studentName,
+          dishName: Array.isArray(o.items) ? o.items.map(i => i.name).join(', ') : 'Special Order',
+          mealCategory: 'Lunch',
+          totalAdditionalCharge: o.totalAmount,
+          orderStatus: o.status || 'Confirmed',
+          paymentStatus: o.paymentMode ? 'Paid' : 'Pending',
+          orderDate: (o.orderedAt || o.createdAt || new Date().toISOString()).split('T')[0],
+          scheduledServingDate: (o.orderedAt || o.createdAt || new Date().toISOString()).split('T')[0],
+          quantity: 1,
+          pricePerItem: o.totalAmount
+        }));
+        this.specialTransactions = mappedOrders;
+        this._save('special_transactions', this.specialTransactions);
+      }
+
+      // 3. Sync Hostellers
+      const hostellersRes = await api.getCanteenHostellers();
+      if (hostellersRes && hostellersRes.data && Array.isArray(hostellersRes.data)) {
+        this.hostellers = hostellersRes.data;
+        this._save('hostellers', this.hostellers);
+      }
+
+      // 4. Sync Biometric Devices
+      const devicesRes = await api.getCanteenBiometricDevices();
+      if (devicesRes && devicesRes.data && Array.isArray(devicesRes.data)) {
+        this.biometricDevices = devicesRes.data;
+        this._save('biometric_devices', this.biometricDevices);
+      }
+    } catch (err) {
+      console.warn('[CanteenStore] Backend sync fallback to local store:', err?.message || err);
+    }
   }
 
   _load(key, fallback) {
@@ -1689,6 +1754,17 @@ class CanteenStore {
 
     this.specialTransactions = [newTrx, ...this.specialTransactions];
     this._save('special_transactions', this.specialTransactions);
+
+    // Asynchronously persist to backend PostgreSQL via Prisma
+    api.placeCanteenOrder({
+      studentId: String(studentId),
+      studentName: student.name,
+      rollNumber: String(studentId),
+      items: [{ id: dish.id, name: dish.name, price: dish.price, quantity: Number(quantity) }],
+      totalAmount: totalCharge,
+      paymentMode: 'Student Ledger'
+    }).catch(e => console.warn('[CanteenStore] Backend order sync notice:', e?.message || e));
+
     return { success: true, transaction: newTrx };
   }
 
@@ -2023,6 +2099,13 @@ class CanteenStore {
     this.hostellers = this.hostellers.map(h => h.studentId === student.studentId ? student : h);
     this._save('hostellers', this.hostellers);
 
+    // Call backend endpoint to persist biometric mapping
+    api.registerCanteenBiometric({
+      studentId,
+      biometricId,
+      deviceId
+    }).catch(e => console.warn('[CanteenStore] Backend biometric register sync notice:', e?.message || e));
+
     this.logAudit({
       actor: actorName,
       actorRole: 'supervisor',
@@ -2200,6 +2283,16 @@ class CanteenStore {
 
     this.attendanceRecords = [newRecord, ...this.attendanceRecords];
     this._save('attendance_records', this.attendanceRecords);
+
+    // Call backend endpoint for PostgreSQL persistence
+    api.verifyCanteenMealAccess({
+      studentId: student.studentId,
+      biometricId: student.biometricId,
+      mealType,
+      terminalId,
+      isManual,
+      manualReason
+    }).catch(e => console.warn('[CanteenStore] Backend meal verification notice:', e?.message || e));
 
     // Update terminal scans count
     const dev = this.biometricDevices.find(d => d.deviceId === terminalId);

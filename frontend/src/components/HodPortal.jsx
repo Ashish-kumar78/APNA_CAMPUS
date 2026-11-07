@@ -72,6 +72,7 @@ import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswe
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import HodGrievanceMonitoringModule from './HodGrievanceMonitoringModule.jsx';
+import NotificationCenter from './Notifications/NotificationCenter.jsx';
 import { complaintsApi } from '../services/complaintsApi.js';
 import { notificationsApi } from '../services/notificationsApi.js';
 import DirectParentNoticeModal from './Common/DirectParentNoticeModal.jsx';
@@ -423,7 +424,7 @@ export default function HodPortal({ account, onLogout }) {
   const [facultyOversightTab, setFacultyOversightTab] = useState('profile'); // 'profile', 'grievances', 'marks', 'announcements'
 
   // Department Notifications & Announcements state
-  const [notifSubTab, setNotifSubTab] = useState('composer'); // 'composer' or 'faculty_broadcasts'
+  const [notifSubTab, setNotifSubTab] = useState('institutional'); // 'composer' or 'faculty_broadcasts'
   const [notifForm, setNotifForm] = useState({
     title: '',
     message: '',
@@ -1160,7 +1161,15 @@ export default function HodPortal({ account, onLogout }) {
                   <h2>Department Announcements &amp; Faculty Broadcasts Oversight</h2>
                   <p>Publish authoritative departmental notices to students and monitor academic communications dispatched by faculty members.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className={`hod-tab-nav-pill ${notifSubTab === 'institutional' ? 'active' : ''}`}
+                    onClick={() => setNotifSubTab('institutional')}
+                  >
+                    <Bell size={15} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                    Institutional Notice Board
+                  </button>
                   <button
                     type="button"
                     className={`hod-tab-nav-pill ${notifSubTab === 'composer' ? 'active' : ''}`}
@@ -1179,6 +1188,20 @@ export default function HodPortal({ account, onLogout }) {
                   </button>
                 </div>
               </div>
+
+              {notifSubTab === 'institutional' && (
+                <div style={{ marginTop: '1rem' }}>
+                  <NotificationCenter
+                    currentUser={account || {
+                      name: 'Dr. P. K. Pattnaik',
+                      role: 'hod',
+                      department: account?.department || 'Computer Science & Engineering',
+                      roleLabel: 'Head of Department'
+                    }}
+                    onNavigateHome={() => setActiveTab('dashboard')}
+                  />
+                </div>
+              )}
 
               {notifSubTab === 'composer' && (
                 <div className="hod-broadcast-container">

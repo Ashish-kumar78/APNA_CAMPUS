@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, X, Maximize2, Minimize2 } from 'lucide-react';
-import CampusConnect from './CampusConnect.jsx';
+import { MessageCircle, X, Maximize2, Minimize2 } from 'lucide-react';
+import SomeshChatInterface from './SomeshChatInterface.jsx';
 import { campusConnectStore } from '../../services/campusConnectStore.js';
 import './UniversalWhatsAppLauncher.css';
 
@@ -28,17 +28,17 @@ export default function UniversalWhatsAppLauncher({ account, hideTrigger = false
 
   return (
     <>
-      {/* Floating WhatsApp Action Button - Round Circular Shape */}
+      {/* Floating Action Button - Modern Round Chat Trigger */}
       {!isOpen && !hideTrigger && (
         <button
           type="button"
           className="universal-wa-trigger-btn"
           onClick={() => setIsOpen(true)}
-          title="Campus WhatsApp • Click to view"
-          aria-label="Open Apna Campus WhatsApp"
+          title="Campus Chat Hub • Click to chat"
+          aria-label="Open Apna Campus Chat"
         >
           <div className="wa-icon-glow">
-            <MessageSquare size={24} color="#ffffff" />
+            <MessageCircle size={24} color="#ffffff" />
           </div>
           {unreadCount > 0 && (
             <span className="wa-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
@@ -46,46 +46,21 @@ export default function UniversalWhatsAppLauncher({ account, hideTrigger = false
         </button>
       )}
 
-      {/* Slide-out WhatsApp Drawer / Modal */}
+      {/* Slide-out / Modal Chat Interface */}
       {isOpen && (
         <div className="universal-wa-overlay" onClick={() => setIsOpen(false)}>
           <div
             className={`universal-wa-drawer ${isMaximized ? 'maximized' : ''}`}
             onClick={(e) => e.stopPropagation()}
+            style={{ padding: 0, overflow: 'hidden' }}
           >
-            {/* Drawer Top Header Bar */}
-            <div className="universal-wa-header">
-              <div className="universal-wa-header-brand">
-                <img src="/logo.png" alt="Apna Campus Logo" className="universal-wa-logo" />
-                <div>
-                  <h4>Campus Connect</h4>
-                  <p>College WhatsApp • Live Academic Hub</p>
-                </div>
-              </div>
-
-              <div className="universal-wa-header-controls">
-                <button
-                  type="button"
-                  className="universal-wa-ctrl-btn"
-                  onClick={() => setIsMaximized((prev) => !prev)}
-                  title={isMaximized ? 'Restore Drawer' : 'Maximize Window'}
-                >
-                  {isMaximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                </button>
-                <button
-                  type="button"
-                  className="universal-wa-ctrl-btn close-btn"
-                  onClick={() => setIsOpen(false)}
-                  title="Close WhatsApp Drawer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Embedded WhatsApp Hub */}
-            <div className="universal-wa-body">
-              <CampusConnect account={account} isDrawerMode={!isMaximized} />
+            {/* Embedded Somesh Chat Interface */}
+            <div className="universal-wa-body" style={{ height: '100%', width: '100%' }}>
+              <SomeshChatInterface
+                account={account}
+                isDrawerMode={!isMaximized}
+                onClose={() => setIsOpen(false)}
+              />
             </div>
           </div>
         </div>

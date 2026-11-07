@@ -27,7 +27,11 @@ export class MarksController {
       targetRoll = studentRoll;
     }
 
-    const data = await this.marksService.getStudentMarks(targetRoll || '01');
+    if (!targetRoll) {
+      return { success: true, count: 0, data: [] };
+    }
+
+    const data = await this.marksService.getStudentMarks(targetRoll);
     return { success: true, count: data.length, data };
   }
 

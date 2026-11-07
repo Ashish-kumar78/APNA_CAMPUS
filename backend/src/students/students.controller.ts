@@ -59,6 +59,19 @@ export class StudentsController {
     return { success: true, data: student };
   }
 
+  @Get('attendance')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get logged-in student authentic attendance records & statistics' })
+  async getAttendance(@CurrentUser() user: any) {
+    if (normalizeRole(user.role) !== 'student') {
+      throw new ForbiddenException('Only students can access their personal attendance.');
+    }
+
+    const identifier = user.student?.id || user.student?.rollNumber || user.identifier || user.id;
+    return this.studentsService.getStudentAttendance(identifier);
+  }
+
   @Post('transfer-preference')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

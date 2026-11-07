@@ -36,6 +36,7 @@ import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import FacultyClassSelector from './FacultyClassSelector.jsx';
 import FacultyComplaintsModule from './FacultyComplaintsModule.jsx';
 import FacultyNotificationsModule from './FacultyNotificationsModule.jsx';
+import NotificationCenter from './Notifications/NotificationCenter.jsx';
 import FacultyNoteSharingModule from './Notes/FacultyNoteSharingModule.jsx';
 import DirectParentNoticeModal from './Common/DirectParentNoticeModal.jsx';
 import Student360DossierModal from './Common/Student360DossierModal.jsx';
@@ -243,6 +244,7 @@ export default function FacultyPortal({ account, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const greeting = useTimeGreeting();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [facultyNotifMode, setFacultyNotifMode] = useState('board'); // 'board' or 'broadcast'
   const [selectedSubject, setSelectedSubject] = useState('Data Structures');
   const [allStudents, setAllStudents] = useState(() => getAllStudents());
   const [studentSearch, setStudentSearch] = useState('');
@@ -1105,7 +1107,82 @@ export default function FacultyPortal({ account, onLogout }) {
           {/* NOTIFICATIONS TAB */}
           {activeTab === 'notifications' && (
             <div style={{ marginBottom: '24px' }}>
-              <FacultyNotificationsModule account={account} />
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                marginBottom: '1rem',
+                padding: '0.75rem 1rem',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Bell size={18} style={{ color: '#4f46e5' }} />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: '#0f172a' }}>
+                      Faculty Notice Board & Institutional Bulletins
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
+                      Official campus circulars, departmental directives, and class announcements
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '3px', borderRadius: '8px', gap: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setFacultyNotifMode('board')}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      background: facultyNotifMode === 'board' ? '#4f46e5' : 'transparent',
+                      color: facultyNotifMode === 'board' ? '#ffffff' : '#475569',
+                      boxShadow: facultyNotifMode === 'board' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    Institutional Notice Board
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFacultyNotifMode('broadcast')}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      background: facultyNotifMode === 'broadcast' ? '#4f46e5' : 'transparent',
+                      color: facultyNotifMode === 'broadcast' ? '#ffffff' : '#475569',
+                      boxShadow: facultyNotifMode === 'broadcast' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    Class Announcements Outbox
+                  </button>
+                </div>
+              </div>
+
+              {facultyNotifMode === 'board' ? (
+                <NotificationCenter
+                  currentUser={account || {
+                    name: 'Faculty Member',
+                    role: 'faculty',
+                    department: account?.department || 'Academic Department',
+                    roleLabel: 'Faculty Member'
+                  }}
+                  onNavigateHome={() => setActiveTab('dashboard')}
+                />
+              ) : (
+                <FacultyNotificationsModule account={account} />
+              )}
             </div>
           )}
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AppLayout } from './Navigation';
+import NotificationCenter from './Notifications/NotificationCenter.jsx';
 import {
   Layers,
   GraduationCap,
@@ -455,6 +456,12 @@ export default function AccountsPortal({ account, onLogout }) {
       ]
     },
     {
+      title: 'COMMUNICATION & NOTICES',
+      items: [
+        { id: 'financial_notices', label: 'Financial Notices & Circulars', icon: MessageSquare }
+      ]
+    },
+    {
       title: 'I. FINANCE CONFIGURATION',
       items: [
         { id: 'cfg_academic_year', label: 'Institutional Profile & Periods', icon: Calendar },
@@ -613,6 +620,20 @@ export default function AccountsPortal({ account, onLogout }) {
       <div className="accounts-content-root">
       <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
         {/* Section A: Dashboard */}
+        {activeTab === 'financial_notices' && (
+          <div style={{ marginTop: '-0.5rem' }}>
+            <NotificationCenter
+              currentUser={account || {
+                name: 'Finance Directorate',
+                role: 'accounts',
+                department: 'Finance & Accounts Directorate',
+                roleLabel: 'Bursar & Accounts Officer'
+              }}
+              onNavigateHome={() => setActiveTab('dashboard')}
+            />
+          </div>
+        )}
+
         {activeTab === 'dashboard' && (
           <AccountsDashboardTab
             feeStructures={feeStructures}

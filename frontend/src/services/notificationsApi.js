@@ -59,5 +59,17 @@ export const notificationsApi = {
 
   markAsRead: (id) => api.markNotificationRead(id),
 
+  acknowledgeNotification: (id) => api.acknowledgeNotification(id),
+
+  togglePin: (id, isPinned) => api.togglePinNotification(id, isPinned),
+
+  estimateRecipients: (target) => api.estimateNotificationRecipients(target),
+
+  publishNotice: (payload) => api.publishInstitutionalNotice(payload),
+
+  getNoticeAnalytics: (id) => api.getNotificationAnalytics(id),
+
+  withdrawNotice: (id) => api.withdrawNotification(id),
+
   markAllAsRead: () => api.markAllNotificationsRead(),
 };

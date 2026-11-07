@@ -11,13 +11,18 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       let demoRole = req?.headers?.['x-demo-role'] || req?.headers?.['x-user-role'];
       if (!demoRole) {
         if (
+          path.includes('/admission') ||
+          path.includes('/applicant')
+        ) {
+          demoRole = 'admissions';
+        } else if (
           path.includes('/wardens') ||
           path.includes('/complexes') ||
           path.includes('/permissions') ||
           path.includes('/admin') ||
           path.includes('/rules')
         ) {
-          demoRole = 'hostel_admin';
+          demoRole = 'admin';
         } else if (
           path.includes('/attendance') ||
           path.includes('/roster') ||
@@ -32,11 +37,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
           demoRole = 'student';
         }
       }
+      const isAdm = demoRole === 'admissions' || demoRole === 'admission';
       return {
-        id: demoRole === 'student' ? 'usr-student-01' : (demoRole === 'hostel' ? 'WRD-101' : 'usr-admin-01'),
+        id: isAdm ? 'ADM-OFF-01' : (demoRole === 'student' ? 'usr-student-01' : (demoRole === 'hostel' ? 'WRD-101' : 'usr-admin-01')),
         role: demoRole,
-        name: demoRole === 'student' ? 'Rakesh Das' : (demoRole === 'hostel' ? 'Mr. Rajesh Jena' : 'Hostel Administrator'),
-        identifier: demoRole === 'student' ? '01' : 'WRD-101',
+        name: isAdm ? 'Ms. Sasmita Mohapatra' : (demoRole === 'student' ? 'Rakesh Das' : (demoRole === 'hostel' ? 'Mr. Rajesh Jena' : 'Institutional Administrator')),
+        identifier: isAdm ? 'ADM-OFF-01' : (demoRole === 'student' ? '01' : 'WRD-101'),
         student: {
           id: 'std-01',
           name: 'Rakesh Das',

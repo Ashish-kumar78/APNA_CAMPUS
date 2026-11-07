@@ -897,7 +897,6 @@ button.apna-breadcrumb-item:active {
   height: calc(100dvh - var(--topbar-height));
   min-height: calc(100vh - var(--topbar-height));
 }
-}
 
 .apna-main-workspace::-webkit-scrollbar {
   width: 6px;

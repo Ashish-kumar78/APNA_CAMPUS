@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   User,
@@ -168,8 +169,8 @@ export default function UpdateStudentAdmissionModal({
 
   const isEnrolled = applicant.admissionStatus === 'Enrolled';
 
-  return (
-    <div className="adm-modal-backdrop" onClick={onClose} style={{ zIndex: 1100 }}>
+  const modalContent = (
+    <div className="adm-modal-backdrop" onClick={onClose} style={{ zIndex: 999999 }}>
       <div
         className="adm-modal-card"
         style={{ maxWidth: '820px', width: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
@@ -666,5 +667,9 @@ export default function UpdateStudentAdmissionModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }
 

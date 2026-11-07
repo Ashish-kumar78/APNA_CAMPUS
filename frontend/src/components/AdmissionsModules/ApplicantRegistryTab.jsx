@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Search,
   Filter,
@@ -463,8 +464,8 @@ export default function ApplicantRegistryTab({
       </div>
 
       {/* APPLICANT DETAILS FLYOUT / DRAWER MODAL */}
-      {selectedApplicant && (
-        <div className="adm-modal-backdrop" onClick={() => setSelectedApplicant(null)}>
+      {selectedApplicant && typeof document !== 'undefined' && createPortal(
+        <div className="adm-modal-backdrop" onClick={() => setSelectedApplicant(null)} style={{ zIndex: 999999 }}>
           <div
             className="adm-modal-card"
             style={{ maxWidth: '840px' }}
@@ -872,12 +873,13 @@ export default function ApplicantRegistryTab({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* QUICK EDIT APPLICANT MODAL */}
-      {editingApplicant && (
-        <div className="adm-modal-backdrop" onClick={() => setEditingApplicant(null)}>
+      {editingApplicant && typeof document !== 'undefined' && createPortal(
+        <div className="adm-modal-backdrop" onClick={() => setEditingApplicant(null)} style={{ zIndex: 999999 }}>
           <div className="adm-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="adm-modal-header">
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
@@ -1043,7 +1045,8 @@ export default function ApplicantRegistryTab({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

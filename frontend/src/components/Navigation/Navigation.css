@@ -829,8 +829,7 @@ button.apna-breadcrumb-item:active {
 
 .apna-page-content {
   width: 100%;
-  animation: campusSlideUpFade 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity;
+  animation: campusFadeIn 0.2s ease-out;
 }
 
 /* On Desktop when sidebar is open, reserve sidebar width */

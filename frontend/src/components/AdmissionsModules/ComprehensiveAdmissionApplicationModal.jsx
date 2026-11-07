@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   User,
@@ -676,8 +677,8 @@ Status: ENROLLED (Active)`;
     }
   };
 
-  return (
-    <div className="adm-modal-backdrop" onClick={onClose} style={{ zIndex: 99998 }}>
+  const modalContent = (
+    <div className="adm-modal-backdrop" onClick={onClose} style={{ zIndex: 999999 }}>
       <div
         className="adm-modal-card"
         onClick={(e) => e.stopPropagation()}
@@ -2223,5 +2224,9 @@ Status: ENROLLED (Active)`;
       )}
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { AppLayout } from './Navigation';
 import {
   AlertTriangle,
@@ -29,7 +29,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   TrendingUp,
-  Users
+  Users,
   Home,
 } from 'lucide-react';
 import './ScholarshipPortal.css';

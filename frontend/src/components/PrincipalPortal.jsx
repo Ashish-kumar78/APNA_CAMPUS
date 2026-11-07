@@ -65,6 +65,7 @@ import PrincipalGrievanceModule from './PrincipalModules/PrincipalGrievanceModul
 import PrincipalCalendarModule from './PrincipalModules/PrincipalCalendarModule.jsx';
 import PrincipalAuditModule from './PrincipalModules/PrincipalAuditModule.jsx';
 import BonafideReviewQueue from './Bonafide/BonafideReviewQueue.jsx';
+import OfficialEmployeeProfile from './Profile/OfficialEmployeeProfile.jsx';
 import { PRINCIPAL_OFFICER, INITIAL_DEPARTMENTS, INITIAL_INSTITUTIONAL_EVENTS, INITIAL_AUDIT_LOGS } from './PrincipalModules/principalData.js';
 import '../DashboardHome.css';
 import './PrincipalPortal.css';
@@ -947,6 +948,19 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole, initi
         <div className="principal-portal-content-wrap">
           <div className="erp-content-body">
 
+  {/* TAB: PRINCIPAL OFFICIAL CMS PROFILE */}
+  {
+    activeTab === 'profile' && (
+      <OfficialEmployeeProfile
+        account={account}
+        role="principal"
+        roleTitle="Principal Official CMS Profile"
+        rolePerspective="Principal & Campus Director"
+        onBack={() => setActiveTab('dashboard')}
+      />
+    )
+  }
+
   {/* ======================================================== */ }
   {/* TAB 0: EXECUTIVE PRINCIPAL DASHBOARD (HIGH FIDELITY) */ }
   {/* ======================================================== */ }
@@ -955,6 +969,7 @@ export default function PrincipalPortal({ account, onLogout, onSwitchRole, initi
       <PrincipalDashboardView
         account={account}
         onNavigate={(tabId) => {
+          if (tabId === 'profile') { setActiveTab('profile'); return; }
           if (tabId === 'academic' || tabId === 'departments') setActiveTab('departments');
           else if (tabId === 'approvals' || tabId === 'leaves') setActiveTab('leaves');
           else if (tabId === 'reports') setActiveTab('report-generation');

@@ -4,11 +4,13 @@
    ============================================================================== */
 
 :root {
-  --topbar-height: 58px;
-  --breadcrumb-height: 38px;
-  --sidebar-width: 280px;
-  --sidebar-bg: #0b1830;
-  --sidebar-bg-dark: #071124;
+  --topbar-height: 3.75rem;
+  --breadcrumb-height: 2.5rem;
+  --sidebar-expanded-width: 17rem;
+  --sidebar-collapsed-width: 4.5rem;
+  --sidebar-width: var(--sidebar-expanded-width);
+  --sidebar-bg: #071124;
+  --sidebar-bg-dark: #0b1830;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-text: #94a3b8;
   --sidebar-text-hover: #ffffff;
@@ -20,14 +22,25 @@
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #64748b;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+}
+
+.apna-app-layout.sidebar-open {
+  --sidebar-width: var(--sidebar-expanded-width);
+}
+
+.apna-app-layout.sidebar-closed {
+  --sidebar-width: 0rem;
 }
 
 /* Master Layout Container */
 .apna-app-layout {
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   background: var(--content-bg);
   color: var(--text-primary);
@@ -35,6 +48,18 @@
   flex-direction: column;
   position: relative;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.campus-portal-wrapper {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: none !important;
+  filter: none !important;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -43,12 +68,13 @@
 .apna-topbar {
   position: fixed;
   top: 0;
-  left: 0;
+  left: var(--sidebar-width);
   right: 0;
   height: var(--topbar-height);
   background: var(--header-bg);
   border-bottom: 1px solid var(--border-color);
   z-index: 100;
+  transition: left 0.24s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -369,18 +395,15 @@
 }
 
 .apna-app-layout.no-breadcrumbs .apna-breadcrumb-bar {
-  display: none !important;
-}
-
-.apna-breadcrumb-bar {
   position: fixed;
   top: var(--topbar-height);
-  left: 0;
+  left: var(--sidebar-width);
   right: 0;
   height: var(--breadcrumb-height);
   background: #ffffff;
   border-bottom: 1px solid var(--border-color);
   z-index: 90;
+  transition: left 0.24s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   padding: 0 1.5rem;
@@ -452,43 +475,60 @@ button.apna-breadcrumb-item:active {
    ───────────────────────────────────────────────────────────── */
 .apna-layout-body {
   display: flex;
-  margin-top: calc(var(--topbar-height) + var(--breadcrumb-height));
-  min-height: calc(100vh - (var(--topbar-height) + var(--breadcrumb-height)));
   width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .apna-sidebar {
   position: fixed;
-  top: calc(var(--topbar-height) + var(--breadcrumb-height));
+  top: 0;
   left: 0;
   bottom: 0;
+  height: 100vh;
+  height: 100dvh;
   width: var(--sidebar-width);
   background: linear-gradient(180deg, #071124 0%, #0b1830 100%);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
-  overflow-y: auto;
-  overflow-x: hidden;
-  z-index: 80;
+  overflow: hidden;
+  z-index: 120;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  flex-shrink: 0;
+  overscroll-behavior: contain;
   transform: translateX(-100%);
   visibility: hidden;
   pointer-events: none;
   opacity: 0;
   transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.24s cubic-bezier(0.4, 0, 0.2, 1),
     opacity 0.2s ease,
     visibility 0.24s;
 }
 
 /* Open state on Desktop */
-.apna-app-layout.sidebar-open .apna-sidebar,
-.apna-sidebar.desktop-open {
-  transform: translateX(0);
-  visibility: visible;
-  pointer-events: auto;
-  opacity: 1;
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+@media (min-width: 1025px) {
+  .apna-app-layout.sidebar-open .apna-sidebar,
+  .apna-sidebar.desktop-open {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+
+  .apna-app-layout.sidebar-closed .apna-sidebar,
+  .apna-sidebar.desktop-closed {
+    transform: translateX(-100%);
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
+    box-shadow: none;
+  }
 }
 
 .apna-sidebar::-webkit-scrollbar {
@@ -502,13 +542,16 @@ button.apna-breadcrumb-item:active {
 
 /* Sidebar Top Identity Header */
 .apna-sidebar-header {
-  padding: 0.85rem 0.85rem 0.75rem;
+  height: var(--topbar-height);
+  min-height: var(--topbar-height);
+  padding: 0 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .apna-sidebar-brand-btn {
@@ -584,11 +627,17 @@ button.apna-breadcrumb-item:active {
 
 /* Navigation List */
 .apna-sidebar-nav {
-  padding: 12px 10px;
-  flex: 1;
+  padding: 0.75rem 0.625rem;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 .apna-sidebar-section {
@@ -818,26 +867,47 @@ button.apna-breadcrumb-item:active {
 .apna-main-workspace {
   flex: 1;
   min-width: 0;
-  margin-left: 0;
-  width: 100%;
+  margin-left: var(--sidebar-width);
+  margin-top: calc(var(--topbar-height) + var(--breadcrumb-height));
+  height: calc(100vh - (var(--topbar-height) + var(--breadcrumb-height)));
+  height: calc(100dvh - (var(--topbar-height) + var(--breadcrumb-height)));
+  min-height: calc(100vh - (var(--topbar-height) + var(--breadcrumb-height)));
+  width: calc(100% - var(--sidebar-width));
   padding: 1.5rem 2rem 3rem;
   background: var(--content-bg);
   box-sizing: border-box;
-  transition: margin-left 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: margin-left 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
 }
 
-.apna-page-content {
-  width: 100%;
-  animation: campusSlideUpFade 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity;
+.apna-app-layout.no-breadcrumbs .apna-main-workspace {
+  margin-top: var(--topbar-height);
+  height: calc(100vh - var(--topbar-height));
+  height: calc(100dvh - var(--topbar-height));
+  min-height: calc(100vh - var(--topbar-height));
 }
 
-/* On Desktop when sidebar is open, reserve sidebar width */
-@media (min-width: 1025px) {
-  .apna-app-layout.sidebar-open .apna-main-workspace {
-    margin-left: var(--sidebar-width);
-  }
+.apna-main-workspace::-webkit-scrollbar {
+  width: 6px;
+}
+
+.apna-main-workspace::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.apna-main-workspace::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 4px;
+}
+
+.apna-main-workspace::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
 }
 
 .apna-page-header {
@@ -875,10 +945,20 @@ button.apna-breadcrumb-item:active {
    6. RESPONSIVE MOBILE DRAWER (<= 1024px)
    ───────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
+  .apna-topbar {
+    left: 0 !important;
+  }
+
+  .apna-breadcrumb-bar {
+    left: 0 !important;
+  }
+
   .apna-sidebar {
     top: 0;
     bottom: 0;
-    width: 280px !important;
+    height: 100vh;
+    height: 100dvh;
+    width: min(85vw, 18rem) !important;
     z-index: 1000;
     transform: translateX(-100%);
     visibility: hidden;
@@ -900,7 +980,20 @@ button.apna-breadcrumb-item:active {
 
   .apna-main-workspace {
     margin-left: 0 !important;
+    width: 100% !important;
     padding: 1rem 1rem 2.5rem;
+    height: calc(100vh - (var(--topbar-height) + var(--breadcrumb-height)));
+    height: calc(100dvh - (var(--topbar-height) + var(--breadcrumb-height)));
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .apna-app-layout.no-breadcrumbs .apna-main-workspace {
+    margin-top: var(--topbar-height);
+    height: calc(100vh - var(--topbar-height));
+    height: calc(100dvh - var(--topbar-height));
   }
 
   .apna-sidebar-backdrop {

@@ -1,16 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip as RechartsTooltip,
-  CartesianGrid
-} from 'recharts';
 import { AppLayout } from './Navigation';
 import {
   BookOpen, Users, GraduationCap, Layers, BarChart2, FileText,
@@ -23,6 +11,8 @@ import {
   ChevronRight, ChevronLeft, PartyPopper, MapPin, Megaphone,
   Check, CalendarDays, ShieldAlert, TrendingUp, TrendingDown, Settings as SettingsIcon, Bell, Home
 } from 'lucide-react';
+import CalendarWidget from './CalendarWidget.jsx';
+import HolidayListWidget from './HolidayListWidget.jsx';
 import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
 import './FacultyPortal.css';
 import '../DashboardHome.css';
@@ -49,6 +39,7 @@ import FacultyNotificationsModule from './FacultyNotificationsModule.jsx';
 import FacultyNoteSharingModule from './Notes/FacultyNoteSharingModule.jsx';
 import DirectParentNoticeModal from './Common/DirectParentNoticeModal.jsx';
 import Student360DossierModal from './Common/Student360DossierModal.jsx';
+import OfficialEmployeeProfile from './Profile/OfficialEmployeeProfile.jsx';
 import { getStudentComprehensiveDetails, dispatchParentNotice } from '../services/parentNoticeService.js';
 
 // CSV Export Helper
@@ -485,8 +476,6 @@ export default function FacultyPortal({ account, onLogout }) {
   }, [facultyAssignments, selectedAssignmentId]);
 
   const [isConsolidatedScope, setIsConsolidatedScope] = useState(false);
-  const [attendancePeriodFilter, setAttendancePeriodFilter] = useState('This Month');
-  const [academicPerfSemesterFilter, setAcademicPerfSemesterFilter] = useState('Current Semester');
   const [facultyLeaveBalance, setFacultyLeaveBalance] = useState({ cl: 8, el: 15, ml: 10 });
   const [facultyLeavesList, setFacultyLeavesList] = useState([
     { id: 'FL-2026-01', type: 'Casual Leave (CL)', from: '12 Oct 2026', to: '13 Oct 2026', days: 2, reason: 'Family Function / Personal', status: 'Approved', approvedBy: 'Dr. P. K. Pattnaik (HOD)' },
@@ -950,7 +939,6 @@ export default function FacultyPortal({ account, onLogout }) {
         { id: 'timetable', label: 'My Timetable', icon: Calendar },
         { id: 'subjects', label: 'My Subjects', icon: BookOpen },
         { id: 'students', label: `My Students (${scopedStudents.length || 150})`, icon: GraduationCap },
-        { id: 'take-attendance', label: 'Take Attendance', icon: ClipboardCheck },
       ]
     },
     {
@@ -984,6 +972,7 @@ export default function FacultyPortal({ account, onLogout }) {
     {
       title: 'PERSONAL',
       items: [
+        { id: 'profile', label: 'Faculty Official Profile', icon: UserCheck },
         { id: 'leave-management', label: 'Leave Management', icon: CalendarDays },
         { id: 'settings', label: 'Settings', icon: SettingsIcon },
         { id: 'help-support', label: 'Help & Support', icon: HelpCircle },
@@ -993,6 +982,16 @@ export default function FacultyPortal({ account, onLogout }) {
 
   const getFacultyHeading = () => {
     switch (activeTab) {
+      case 'profile':
+        return {
+          title: 'Faculty Official CMS Profile',
+          subtitle: 'Comprehensive autonomous faculty service book, credentials dossier, and administrative profile.',
+          breadcrumbs: [
+            { label: 'Campus Home', tab: 'dashboard' },
+            { label: 'Personal', tab: 'profile' },
+            { label: 'Official Profile', active: true }
+          ]
+        };
       case 'assignments':
         return {
           title: 'Assignment Management & Continuous Evaluation',
@@ -1142,6 +1141,17 @@ export default function FacultyPortal({ account, onLogout }) {
             </div>
           )}
 
+          {/* FACULTY OFFICIAL CMS PROFILE */}
+          {activeTab === 'profile' && (
+            <OfficialEmployeeProfile
+              account={account}
+              role="faculty"
+              roleTitle="Faculty Official CMS Profile"
+              rolePerspective="Faculty Member / Assistant Professor"
+              onBack={() => setActiveTab('dashboard')}
+            />
+          )}
+
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
             <div className="fac-dash-wrapper">
@@ -1189,8 +1199,8 @@ export default function FacultyPortal({ account, onLogout }) {
                         <button
                           type="button"
                           className="fac-view-profile-btn"
-                          onClick={() => setActiveTab('subjects')}
-                          title="View full faculty profile and teaching portfolio"
+                          onClick={() => setActiveTab('profile')}
+                          title="View full faculty official CMS profile"
                         >
                           View Profile <ArrowRight size={13} />
                         </button>
@@ -1216,7 +1226,7 @@ export default function FacultyPortal({ account, onLogout }) {
                     </div>
                     <div className="fac-profile-detail-item">
                       <span className="fac-detail-label">Email</span>
-                      <span className="fac-detail-value" title={account?.email || 's.mohanty@apnacampus.edu.in'}>
+                      <span className="fac-detail-value fac-detail-email" title={account?.email || 's.mohanty@apnacampus.edu.in'}>
                         {account?.email || 's.mohanty@apnacampus.edu.in'}
                       </span>
                     </div>
@@ -1339,247 +1349,10 @@ export default function FacultyPortal({ account, onLogout }) {
                 </div>
               </div>
 
-              {/* 3. Row 4: Analytics Duo (Attendance Overview & Academic Performance - NO QUICK ACTIONS) */}
-              <div className="fac-analytics-duo-row">
-                {/* Card 1: Attendance Overview */}
-                <div className="fac-card fac-attendance-card">
-                  <div className="fac-card-header">
-                    <div className="fac-card-title-wrap">
-                      <BarChart2 size={18} className="fac-card-title-icon text-blue" />
-                      <h3 className="fac-card-title">Attendance Overview</h3>
-                    </div>
-                    <div className="fac-card-controls">
-                      <select
-                        className="fac-card-select"
-                        value={attendancePeriodFilter}
-                        onChange={e => setAttendancePeriodFilter(e.target.value)}
-                      >
-                        <option value="This Week">This Week</option>
-                        <option value="This Month">This Month</option>
-                        <option value="This Semester">This Semester</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="fac-donut-container">
-                    <div className="fac-donut-chart-wrap">
-                      <ResponsiveContainer width="100%" height={210}>
-                        <PieChart>
-                          <Pie
-                            data={[
-                              { name: 'Present', value: 92, fill: '#10b981' },
-                              { name: 'Absent', value: 6, fill: '#f59e0b' },
-                              { name: 'Leave', value: 2, fill: '#3b82f6' }
-                            ]}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={65}
-                            outerRadius={88}
-                            paddingAngle={3}
-                            dataKey="value"
-                            stroke="#ffffff"
-                            strokeWidth={2}
-                          >
-                            <Cell fill="#10b981" />
-                            <Cell fill="#f59e0b" />
-                            <Cell fill="#3b82f6" />
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="fac-donut-center-label">
-                        <span className="donut-big-val">92%</span>
-                        <span className="donut-sub-lbl">Overall</span>
-                      </div>
-                    </div>
-
-                    <div className="fac-donut-legend">
-                      <div className="fac-legend-item">
-                        <span className="fac-legend-dot bg-green" />
-                        <span className="fac-legend-name">Present</span>
-                        <span className="fac-legend-pct">92%</span>
-                      </div>
-                      <div className="fac-legend-item">
-                        <span className="fac-legend-dot bg-yellow" />
-                        <span className="fac-legend-name">Absent</span>
-                        <span className="fac-legend-pct">6%</span>
-                      </div>
-                      <div className="fac-legend-item">
-                        <span className="fac-legend-dot bg-blue" />
-                        <span className="fac-legend-name">Leave</span>
-                        <span className="fac-legend-pct">2%</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="fac-card-footer text-green">
-                    <TrendingUp size={14} /> +2% compared to last month
-                  </div>
-                </div>
-
-                {/* Card 2: Academic Performance */}
-                <div className="fac-card fac-performance-card">
-                  <div className="fac-card-header">
-                    <div className="fac-card-title-wrap">
-                      <Layers size={18} className="fac-card-title-icon text-blue" />
-                      <h3 className="fac-card-title">Academic Performance</h3>
-                    </div>
-                    <div className="fac-card-controls">
-                      <select
-                        className="fac-card-select"
-                        value={academicPerfSemesterFilter}
-                        onChange={e => setAcademicPerfSemesterFilter(e.target.value)}
-                      >
-                        <option value="Current Semester">Current Semester</option>
-                        <option value="All Semesters">All Semesters</option>
-                        <option value="Autumn 2026">Autumn 2026</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="fac-line-chart-wrap" style={{ position: 'relative' }}>
-                    <div className="fac-cgpa-peak-badge">
-                      8.79 CGPA
-                    </div>
-                    <ResponsiveContainer width="100%" height={210}>
-                      <LineChart
-                        data={[
-                          { sem: 'Sem 1', score: 50, cgpa: '7.20' },
-                          { sem: 'Sem 2', score: 62, cgpa: '7.85' },
-                          { sem: 'Sem 3', score: 75, cgpa: '8.40' },
-                          { sem: 'Sem 4', score: 88, cgpa: '8.79' },
-                          { sem: 'Sem 5', score: 89, cgpa: '8.82' }
-                        ]}
-                        margin={{ top: 25, right: 20, left: -15, bottom: 0 }}
-                      >
-                        <CartesianGrid stroke="#f1f5f9" vertical={false} />
-                        <XAxis dataKey="sem" stroke="#94a3b8" fontSize={12} tickLine={false} />
-                        <YAxis stroke="#94a3b8" fontSize={11} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickLine={false} />
-                        <RechartsTooltip
-                          formatter={(value, name, item) => [`${item.payload.cgpa} CGPA (${value}% Avg)`, 'Performance']}
-                          contentStyle={{ background: '#0f172a', color: '#fff', borderRadius: '8px', border: 'none', fontSize: '0.8rem' }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="score"
-                          stroke="#2563eb"
-                          strokeWidth={3}
-                          dot={{ r: 4.5, fill: '#2563eb', stroke: '#ffffff', strokeWidth: 2 }}
-                          activeDot={{ r: 6.5, fill: '#1d4ed8', stroke: '#ffffff', strokeWidth: 2 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              {/* 4. Row 5: Upcoming Events, Recent Activities, My Courses (3 Columns) */}
-              <div className="fac-trio-row">
-                {/* Col 1: Upcoming Events & Deadlines */}
-                <div className="fac-card">
-                  <div className="fac-card-header">
-                    <div className="fac-card-title-wrap">
-                      <CalendarDays size={18} className="fac-card-title-icon text-blue" />
-                      <h3 className="fac-card-title">Upcoming Events &amp; Deadlines</h3>
-                    </div>
-                    <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('timetable')}>
-                      View All →
-                    </button>
-                  </div>
-                  <div className="fac-timeline-list">
-                    <div className="fac-timeline-item">
-                      <div className="fac-timeline-date">
-                        <strong className="tl-day">28</strong>
-                        <span className="tl-mo">Oct</span>
-                      </div>
-                      <div className="fac-timeline-content">
-                        <div className="tl-title">Internal Test - Data Structures</div>
-                        <div className="tl-sub">10:00 AM - 12:00 PM</div>
-                      </div>
-                      <span className="fac-tag-badge tag-exam">Exam</span>
-                    </div>
-
-                    <div className="fac-timeline-item">
-                      <div className="fac-timeline-date">
-                        <strong className="tl-day">30</strong>
-                        <span className="tl-mo">Oct</span>
-                      </div>
-                      <div className="fac-timeline-content">
-                        <div className="tl-title">Assignment Submission (AI/ML)</div>
-                        <div className="tl-sub">11:59 PM</div>
-                      </div>
-                      <span className="fac-tag-badge tag-assignment">Assignment</span>
-                    </div>
-
-                    <div className="fac-timeline-item">
-                      <div className="fac-timeline-date">
-                        <strong className="tl-day">02</strong>
-                        <span className="tl-mo">Nov</span>
-                      </div>
-                      <div className="fac-timeline-content">
-                        <div className="tl-title">Department Seminar</div>
-                        <div className="tl-sub">10:00 AM</div>
-                      </div>
-                      <span className="fac-tag-badge tag-event">Event</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Col 2: Recent Activities */}
-                <div className="fac-card">
-                  <div className="fac-card-header">
-                    <div className="fac-card-title-wrap">
-                      <Clock size={18} className="fac-card-title-icon text-blue" />
-                      <h3 className="fac-card-title">Recent Activities</h3>
-                    </div>
-                    <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('notifications')}>
-                      View All →
-                    </button>
-                  </div>
-                  <div className="fac-activity-list">
-                    <div className="fac-activity-item">
-                      <div className="fac-act-icon-wrap bg-amber-soft">
-                        🏆
-                      </div>
-                      <div className="fac-act-info">
-                        <div className="fac-act-desc">Marks uploaded for CSE-3B</div>
-                      </div>
-                      <span className="fac-act-time">2 hours ago</span>
-                    </div>
-
-                    <div className="fac-activity-item">
-                      <div className="fac-act-icon-wrap bg-green-soft">
-                        <CheckCircle2 size={16} className="text-green" />
-                      </div>
-                      <div className="fac-act-info">
-                        <div className="fac-act-desc">Attendance marked for CSE-3A</div>
-                      </div>
-                      <span className="fac-act-time">3 hours ago</span>
-                    </div>
-
-                    <div className="fac-activity-item">
-                      <div className="fac-act-icon-wrap bg-red-soft">
-                        <Megaphone size={16} className="text-red" />
-                      </div>
-                      <div className="fac-act-info">
-                        <div className="fac-act-desc">New notice: College Fest 2025</div>
-                      </div>
-                      <span className="fac-act-time">4 hours ago</span>
-                    </div>
-
-                    <div className="fac-activity-item">
-                      <div className="fac-act-icon-wrap bg-green-soft">
-                        ₹
-                      </div>
-                      <div className="fac-act-info">
-                        <div className="fac-act-desc">Fee payment received (₹12,000)</div>
-                      </div>
-                      <span className="fac-act-time">5 hours ago</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Col 3: My Courses */}
-                <div className="fac-card">
+              {/* ── ROW 1 (2 cards): My Courses | Today's Teaching & Assessment Schedule ── */}
+              <div className="fac-dashboard-row-2col">
+                {/* Card 1: My Courses */}
+                <div className="fac-card fac-courses-card">
                   <div className="fac-card-header">
                     <div className="fac-card-title-wrap">
                       <BookOpen size={18} className="fac-card-title-icon text-blue" />
@@ -1631,11 +1404,8 @@ export default function FacultyPortal({ account, onLogout }) {
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* 5. Row 6: Schedule Table, Calendar, Holidays (3 Columns) */}
-              <div className="fac-bottom-trio-row">
-                {/* Col 1: Today's Teaching & Assessment Schedule (Table) */}
+                {/* Card 2: Today's Teaching & Assessment Schedule */}
                 <div className="fac-card fac-schedule-table-card">
                   <div className="fac-card-header">
                     <div className="fac-card-title-wrap">
@@ -1721,111 +1491,121 @@ export default function FacultyPortal({ account, onLogout }) {
                     </table>
                   </div>
                 </div>
+              </div>
 
-                {/* Col 2: Academic Calendar */}
-                <div className="fac-card fac-calendar-card">
+              {/* ── ROW 2 (2 cards): Upcoming Events & Deadlines | Recent Activities ── */}
+              <div className="fac-dashboard-row-2col">
+                {/* Card 1: Upcoming Events & Deadlines */}
+                <div className="fac-card">
                   <div className="fac-card-header">
                     <div className="fac-card-title-wrap">
-                      <Calendar size={18} className="fac-card-title-icon text-blue" />
-                      <h3 className="fac-card-title">Academic Calendar</h3>
+                      <CalendarDays size={18} className="fac-card-title-icon text-blue" />
+                      <h3 className="fac-card-title">Upcoming Events &amp; Deadlines</h3>
                     </div>
-                    <div className="fac-cal-nav-buttons">
-                      <button type="button" onClick={() => updateMonth(-1)} aria-label="Previous month" className="cal-btn-arrow">
-                        <ChevronLeft size={14} />
-                      </button>
-                      <span className="cal-cur-month">{monthLabel}</span>
-                      <button type="button" onClick={() => updateMonth(1)} aria-label="Next month" className="cal-btn-arrow">
-                        <ChevronRight size={14} />
-                      </button>
-                      <button type="button" onClick={() => setCurrentMonth(new Date())} className="cal-btn-today">
-                        Today
-                      </button>
-                    </div>
+                    <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('timetable')}>
+                      View All →
+                    </button>
                   </div>
-                  <div className="fac-calendar-widget">
-                    <div className="fac-cal-weekdays">
-                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                        <span key={d} className="cal-weekday-hdr">{d}</span>
-                      ))}
+                  <div className="fac-timeline-list">
+                    <div className="fac-timeline-item">
+                      <div className="fac-timeline-date">
+                        <strong className="tl-day">28</strong>
+                        <span className="tl-mo">Oct</span>
+                      </div>
+                      <div className="fac-timeline-content">
+                        <div className="tl-title">Internal Test - Data Structures</div>
+                        <div className="tl-sub">10:00 AM - 12:00 PM</div>
+                      </div>
+                      <span className="fac-tag-badge tag-exam">Exam</span>
                     </div>
-                    <div className="fac-cal-days-grid">
-                      {calendarDays.map(({ key, day, inMonth, isToday, isSunday }) => {
-                        const holidayName = holidayMap[key];
-                        const isExam = day === 10 && inMonth;
-                        const isSpecialEvent = day === 21 && inMonth;
-                        const isDeadline = day === 14 && inMonth;
-                        const isAccentDay = day === 7 && inMonth;
-                        const isPurpleDay = day === 26 && inMonth;
 
-                        let dayClass = 'fac-cal-day';
-                        if (!inMonth) dayClass += ' is-other-month';
-                        if (isToday || isAccentDay) dayClass += ' is-today-highlight';
-                        if (isExam) dayClass += ' is-exam-day';
-                        if (isDeadline) dayClass += ' is-deadline-day';
-                        if (isSpecialEvent) dayClass += ' is-event-day';
-                        if (isPurpleDay) dayClass += ' is-purple-day';
+                    <div className="fac-timeline-item">
+                      <div className="fac-timeline-date">
+                        <strong className="tl-day">30</strong>
+                        <span className="tl-mo">Oct</span>
+                      </div>
+                      <div className="fac-timeline-content">
+                        <div className="tl-title">Assignment Submission (AI/ML)</div>
+                        <div className="tl-sub">11:59 PM</div>
+                      </div>
+                      <span className="fac-tag-badge tag-assignment">Assignment</span>
+                    </div>
 
-                        return (
-                          <div key={key} className={dayClass} title={holidayName || undefined}>
-                            <span className="day-number">{day}</span>
-                          </div>
-                        );
-                      })}
+                    <div className="fac-timeline-item">
+                      <div className="fac-timeline-date">
+                        <strong className="tl-day">02</strong>
+                        <span className="tl-mo">Nov</span>
+                      </div>
+                      <div className="fac-timeline-content">
+                        <div className="tl-title">Department Seminar</div>
+                        <div className="tl-sub">10:00 AM</div>
+                      </div>
+                      <span className="fac-tag-badge tag-event">Event</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Col 3: Holiday & Recess List */}
-                <div className="fac-card fac-holiday-card">
+                {/* Card 2: Recent Activities */}
+                <div className="fac-card">
                   <div className="fac-card-header">
                     <div className="fac-card-title-wrap">
-                      <PartyPopper size={18} className="fac-card-title-icon text-blue" />
-                      <h3 className="fac-card-title">Holiday &amp; Recess List</h3>
+                      <Clock size={18} className="fac-card-title-icon text-blue" />
+                      <h3 className="fac-card-title">Recent Activities</h3>
                     </div>
-                    <button type="button" className="fac-view-all-link" onClick={() => setHolidayView(v => v === 'all' ? 'upcoming' : 'all')}>
+                    <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('notifications')}>
                       View All →
                     </button>
                   </div>
-                  <div className="fac-holiday-list">
-                    <div className="fac-holiday-item">
-                      <div className="fac-hol-date">14 Oct 2025</div>
-                      <div className="fac-hol-info">
-                        <div className="hol-name">Makar Sankranti / Pongal</div>
-                        <div className="hol-sub">Holiday - All Departments</div>
+                  <div className="fac-activity-list">
+                    <div className="fac-activity-item">
+                      <div className="fac-act-icon-wrap bg-amber-soft">
+                        🏆
                       </div>
-                      <span className="fac-tag-badge tag-holiday">Holiday</span>
+                      <div className="fac-act-info">
+                        <div className="fac-act-desc">Marks uploaded for CSE-3B</div>
+                      </div>
+                      <span className="fac-act-time">2 hours ago</span>
                     </div>
 
-                    <div className="fac-holiday-item">
-                      <div className="fac-hol-date">23 Dec 2025</div>
-                      <div className="fac-hol-info">
-                        <div className="hol-name">Winter Break</div>
-                        <div className="hol-sub">College Closed</div>
+                    <div className="fac-activity-item">
+                      <div className="fac-act-icon-wrap bg-green-soft">
+                        <CheckCircle2 size={16} className="text-green" />
                       </div>
-                      <span className="fac-tag-badge tag-recess">Recess</span>
+                      <div className="fac-act-info">
+                        <div className="fac-act-desc">Attendance marked for CSE-3A</div>
+                      </div>
+                      <span className="fac-act-time">3 hours ago</span>
                     </div>
 
-                    <div className="fac-holiday-item">
-                      <div className="fac-hol-date">26 Jan 2026</div>
-                      <div className="fac-hol-info">
-                        <div className="hol-name">Republic Day</div>
-                        <div className="hol-sub">National Holiday</div>
+                    <div className="fac-activity-item">
+                      <div className="fac-act-icon-wrap bg-red-soft">
+                        <Megaphone size={16} className="text-red" />
                       </div>
-                      <span className="fac-tag-badge tag-holiday">Holiday</span>
+                      <div className="fac-act-info">
+                        <div className="fac-act-desc">New notice: College Fest 2025</div>
+                      </div>
+                      <span className="fac-act-time">4 hours ago</span>
                     </div>
 
-                    <div className="fac-holiday-item">
-                      <div className="fac-hol-date">14 Mar 2026</div>
-                      <div className="fac-hol-info">
-                        <div className="hol-name">Holi</div>
-                        <div className="hol-sub">Festival Holiday</div>
+                    <div className="fac-activity-item">
+                      <div className="fac-act-icon-wrap bg-green-soft">
+                        ₹
                       </div>
-                      <span className="fac-tag-badge tag-holiday">Holiday</span>
+                      <div className="fac-act-info">
+                        <div className="fac-act-desc">Fee payment received (₹12,000)</div>
+                      </div>
+                      <span className="fac-act-time">5 hours ago</span>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+
+              {/* ── ROW 3 (2 cards): Academic Calendar | Holiday & Recess List ── */}
+              <div className="fac-dashboard-row-2col">
+                <CalendarWidget account={account} className="fac-calendar-widget-card" />
+                <HolidayListWidget title="Holiday & Recess List" />
+              </div>
+</div>
           )}
 
           {/* TAB: ASSIGNMENTS (ASSESSMENT GROUP) */}

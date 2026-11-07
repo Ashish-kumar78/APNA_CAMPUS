@@ -31,6 +31,8 @@ import {
   Wrench,
 } from 'lucide-react'
 import './App.css'
+import AccessibilityPanel from './components/Accessibility/AccessibilityPanel.jsx'
+import ScreenReaderAnnouncer from './components/Accessibility/ScreenReaderAnnouncer.jsx'
 import StudentPortal from './StudentPortal.jsx'
 import AdminPortal from './components/AdminPortal.jsx'
 import HodPortal from './components/HodPortal.jsx'
@@ -776,7 +778,7 @@ function App() {
               }}
             />
           )}
-          <div key={account?.identity || account?.role || 'portal'} className="campus-page-enter">
+          <div key={account?.identity || account?.role || 'portal'} className="campus-portal-wrapper">
             {portal}
           </div>
         </ErrorBoundary>
@@ -787,6 +789,12 @@ function App() {
   // Otherwise render the Login Page first
   return (
     <>
+      {/* Skip to Login Card for Screen Readers and Keyboard Users */}
+      <a href="#main-login-card" className="skip-to-main-link">
+        Skip to login form
+      </a>
+      <ScreenReaderAnnouncer />
+      <AccessibilityPanel />
       <UniversalWhatsAppLauncher account={account} hideTrigger={true} />
       <ApnaAIChatbot account={account} hideTrigger={true} />
       <UnifiedFloatingAssistant account={account} />
@@ -910,7 +918,7 @@ function App() {
 
         {/* Right login panel: Clean White Floating Card */}
         <section className="erp-login-section" aria-label="Sign In">
-          <div className="erp-login-card">
+          <div className="erp-login-card" id="main-login-card">
             <div className="erp-card-brand-header" style={{ marginBottom: '18px' }}>
               <div>
                 <h2 className="erp-card-title">Welcome Back</h2>
@@ -920,6 +928,9 @@ function App() {
 
             <form className="erp-login-form" onSubmit={handleLogin} noValidate>
               <div className="erp-field-group">
+                <label htmlFor="identifier" className="sr-only">
+                  College ID or Registration Number
+                </label>
                 <div className="erp-input-wrapper">
                   <UserRound className="erp-input-icon" size={17} aria-hidden="true" />
                   <input
@@ -928,6 +939,9 @@ function App() {
                     type="text"
                     autoComplete="username"
                     placeholder="College ID / Registration Number"
+                    aria-label="College ID or Registration Number"
+                    aria-required="true"
+                    aria-invalid={Boolean(error)}
                     value={identifier}
                     onChange={(e) => { setIdentifier(e.target.value); setError(''); setAutoFillNotice(''); }}
                     disabled={isSubmitting}
@@ -937,6 +951,9 @@ function App() {
               </div>
 
               <div className="erp-field-group">
+                <label htmlFor="password" className="sr-only">
+                  Account Password
+                </label>
                 <div className="erp-input-wrapper">
                   <LockKeyhole className="erp-input-icon" size={17} aria-hidden="true" />
                   <input
@@ -945,6 +962,9 @@ function App() {
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     placeholder="Password"
+                    aria-label="Account Password"
+                    aria-required="true"
+                    aria-invalid={Boolean(error)}
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(''); setAutoFillNotice(''); }}
                     disabled={isSubmitting}

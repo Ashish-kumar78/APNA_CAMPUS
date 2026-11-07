@@ -16,6 +16,16 @@ export class CreateCalendarNoteDto {
   @IsNotEmpty()
   @IsString()
   scheduledDate!: string;
+
+  @ApiPropertyOptional({ description: 'Start time in HH:mm format' })
+  @IsOptional()
+  @IsString()
+  startTime?: string;
+
+  @ApiPropertyOptional({ description: 'End time in HH:mm format' })
+  @IsOptional()
+  @IsString()
+  endTime?: string;
 }
 
 export class UpdateCalendarNoteDto {
@@ -33,4 +43,14 @@ export class UpdateCalendarNoteDto {
   @IsOptional()
   @IsString()
   scheduledDate?: string;
+
+  @ApiPropertyOptional({ description: 'Start time in HH:mm format' })
+  @IsOptional()
+  @IsString()
+  startTime?: string;
+
+  @ApiPropertyOptional({ description: 'End time in HH:mm format' })
+  @IsOptional()
+  @IsString()
+  endTime?: string;
 }

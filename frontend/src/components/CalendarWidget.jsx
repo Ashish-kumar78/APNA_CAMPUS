@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CalendarDays,
   ChevronLeft,
@@ -19,7 +20,12 @@ import {
   updateCalendarNote,
   deleteCalendarNote,
   subscribeToCalendarNotes,
+  formatEventTimeRange,
+  sortNotesByTime,
 } from '../services/calendarNotesStore.js';
+
+// Configuration flag: whether start time is mandatory
+const REQUIRE_START_TIME = false;
 
 // Official 2026 Holidays preserved exactly from existing calendar design
 const OFFICIAL_HOLIDAYS_2026 = [
@@ -196,6 +202,265 @@ function createCalendarDays(month, todayDateStr) {
   });
 }
 
+const HOURS_12 = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+const MINUTES_5 = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+
+function parse24to12(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) {
+    return { hour: '', minute: '00', period: 'AM' };
+  }
+  const [hStr, mStr] = timeStr.split(':');
+  const h24 = parseInt(hStr, 10);
+  const m = mStr ? mStr.padStart(2, '0') : '00';
+  if (isNaN(h24)) return { hour: '', minute: '00', period: 'AM' };
+
+  if (h24 === 0) return { hour: '12', minute: m, period: 'AM' };
+  if (h24 === 12) return { hour: '12', minute: m, period: 'PM' };
+  if (h24 > 12) return { hour: String(h24 - 12).padStart(2, '0'), minute: m, period: 'PM' };
+  return { hour: String(h24).padStart(2, '0'), minute: m, period: 'AM' };
+}
+
+function format12to24(hour, minute, period) {
+  if (!hour) return '';
+  const h = parseInt(hour, 10);
+  const m = minute ? parseInt(minute, 10) : 0;
+  if (isNaN(h) || h < 1 || h > 12) return '';
+  const safeM = isNaN(m) || m < 0 || m > 59 ? 0 : m;
+
+  let h24 = h;
+  if (period === 'PM') {
+    h24 = h === 12 ? 12 : h + 12;
+  } else {
+    h24 = h === 12 ? 0 : h;
+  }
+  return `${String(h24).padStart(2, '0')}:${String(safeM).padStart(2, '0')}`;
+}
+
+function TimePicker12h({
+  id,
+  value,
+  onChange,
+  hasError,
+  label,
+  required,
+  optionalText,
+}) {
+  const parsed = useMemo(() => parse24to12(value), [value]);
+  const [selectedPeriod, setSelectedPeriod] = useState('AM');
+
+  useEffect(() => {
+    if (parsed.hour) {
+      setSelectedPeriod(parsed.period);
+    }
+  }, [parsed.hour, parsed.period]);
+
+  const currentPeriod = parsed.hour ? parsed.period : selectedPeriod;
+
+  const handleHourChange = (newHour) => {
+    if (!newHour) {
+      onChange('');
+      return;
+    }
+    const minute = parsed.minute || '00';
+    onChange(format12to24(newHour, minute, currentPeriod));
+  };
+
+  const handleMinuteChange = (newMinute) => {
+    const hour = parsed.hour || '09';
+    onChange(format12to24(hour, newMinute, currentPeriod));
+  };
+
+  const handlePeriodChange = (newPeriod) => {
+    setSelectedPeriod(newPeriod);
+    if (parsed.hour) {
+      onChange(format12to24(parsed.hour, parsed.minute, newPeriod));
+    }
+  };
+
+  const handleClear = () => {
+    onChange('');
+  };
+
+  const minuteOptions = useMemo(() => {
+    if (parsed.minute && !MINUTES_5.includes(parsed.minute)) {
+      return [...MINUTES_5, parsed.minute].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+    }
+    return MINUTES_5;
+  }, [parsed.minute]);
+
+  return (
+    <div style={{ minWidth: 0 }}>
+      <label
+        htmlFor={id}
+        style={{
+          display: 'block',
+          fontSize: '13px',
+          fontWeight: 600,
+          color: '#334155',
+          marginBottom: '6px',
+        }}
+      >
+        {label} {required && <span style={{ color: '#ef4444' }}>*</span>}
+        {optionalText && <span style={{ fontSize: '11.5px', fontWeight: 400, color: '#64748b' }}> {optionalText}</span>}
+      </label>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 6px',
+          borderRadius: '8px',
+          border: hasError ? '1px solid #ef4444' : '1px solid #cbd5e1',
+          backgroundColor: '#ffffff',
+          boxSizing: 'border-box',
+          minHeight: '40px',
+        }}
+      >
+        {/* Hour Select */}
+        <select
+          id={id}
+          value={parsed.hour}
+          onChange={(e) => handleHourChange(e.target.value)}
+          aria-label={`${label} Hour`}
+          style={{
+            border: 'none',
+            background: parsed.hour ? '#eff6ff' : '#f8fafc',
+            color: parsed.hour ? '#1e40af' : '#64748b',
+            borderRadius: '6px',
+            padding: '5px 4px',
+            fontSize: '13.5px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            outline: 'none',
+            flex: '1 1 0%',
+            textAlign: 'center',
+          }}
+        >
+          <option value="">--</option>
+          {HOURS_12.map((h) => (
+            <option key={h} value={h}>
+              {h}
+            </option>
+          ))}
+        </select>
+
+        <span style={{ fontWeight: 800, color: '#94a3b8', fontSize: '14px' }}>:</span>
+
+        {/* Minute Select */}
+        <select
+          value={parsed.hour ? parsed.minute : ''}
+          disabled={!parsed.hour}
+          onChange={(e) => handleMinuteChange(e.target.value)}
+          aria-label={`${label} Minute`}
+          style={{
+            border: 'none',
+            background: parsed.hour ? '#eff6ff' : '#f8fafc',
+            color: parsed.hour ? '#1e40af' : '#94a3b8',
+            borderRadius: '6px',
+            padding: '5px 4px',
+            fontSize: '13.5px',
+            fontWeight: 700,
+            cursor: parsed.hour ? 'pointer' : 'not-allowed',
+            outline: 'none',
+            flex: '1 1 0%',
+            textAlign: 'center',
+          }}
+        >
+          {!parsed.hour && <option value="">--</option>}
+          {minuteOptions.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+
+        {/* AM / PM Segmented Control */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            background: '#f1f5f9',
+            borderRadius: '6px',
+            padding: '2px',
+            gap: '2px',
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => handlePeriodChange('AM')}
+            style={{
+              border: 'none',
+              padding: '4px 7px',
+              fontSize: '11px',
+              fontWeight: 800,
+              borderRadius: '4px',
+              cursor: 'pointer',
+              backgroundColor: currentPeriod === 'AM' && parsed.hour ? '#2563eb' : (currentPeriod === 'AM' ? '#cbd5e1' : 'transparent'),
+              color: currentPeriod === 'AM' && parsed.hour ? '#ffffff' : (currentPeriod === 'AM' ? '#0f172a' : '#64748b'),
+              transition: 'all 0.15s ease',
+              lineHeight: 1,
+            }}
+          >
+            AM
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePeriodChange('PM')}
+            style={{
+              border: 'none',
+              padding: '4px 7px',
+              fontSize: '11px',
+              fontWeight: 800,
+              borderRadius: '4px',
+              cursor: 'pointer',
+              backgroundColor: currentPeriod === 'PM' && parsed.hour ? '#2563eb' : (currentPeriod === 'PM' ? '#cbd5e1' : 'transparent'),
+              color: currentPeriod === 'PM' && parsed.hour ? '#ffffff' : (currentPeriod === 'PM' ? '#0f172a' : '#64748b'),
+              transition: 'all 0.15s ease',
+              lineHeight: 1,
+            }}
+          >
+            PM
+          </button>
+        </div>
+
+        {/* Clear Time Button */}
+        {Boolean(parsed.hour) && (
+          <button
+            type="button"
+            title="Clear time"
+            onClick={handleClear}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              padding: '3px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+            }}
+          >
+            <X size={13} />
+          </button>
+        )}
+
+        {/* Hidden HTML5 time input for compatibility with native attributes and tests */}
+        <input
+          type="time"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function CalendarWidget({ account, className = '' }) {
   // Current date in Indian Standard Time (Asia/Kolkata)
   const [todayIST, setTodayIST] = useState(() => getTodayIST());
@@ -216,8 +481,22 @@ export default function CalendarWidget({ account, className = '' }) {
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formDate, setFormDate] = useState('');
+  const [formStartTime, setFormStartTime] = useState('');
+  const [formEndTime, setFormEndTime] = useState('');
   const [formError, setFormError] = useState('');
+  const [timeError, setTimeError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const resetForm = () => {
+    setEditingNote(null);
+    setFormTitle('');
+    setFormDescription('');
+    setFormDate('');
+    setFormStartTime('');
+    setFormEndTime('');
+    setFormError('');
+    setTimeError('');
+  };
 
   // Dynamic midnight update: checks every 30 seconds for IST midnight transition
   useEffect(() => {
@@ -232,6 +511,17 @@ export default function CalendarWidget({ account, className = '' }) {
     }, 30000);
     return () => clearInterval(timer);
   }, []);
+
+  // Lock background scroll when modal is active to keep popup centered in current viewport
+  useEffect(() => {
+    if (selectedDay || showAddModal) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [selectedDay, showAddModal]);
 
   // Load user notes
   const loadNotes = useCallback(async () => {
@@ -280,6 +570,9 @@ export default function CalendarWidget({ account, className = '' }) {
       }
       map[note.scheduledDate].push(note);
     }
+    Object.keys(map).forEach((d) => {
+      map[d] = sortNotesByTime(map[d]);
+    });
     return map;
   }, [userNotes]);
 
@@ -300,21 +593,20 @@ export default function CalendarWidget({ account, className = '' }) {
       alert('Note creation is disabled for past dates.');
       return;
     }
-    setEditingNote(null);
-    setFormTitle('');
-    setFormDescription('');
+    resetForm();
     setFormDate(targetDate);
-    setFormError('');
     setShowAddModal(true);
   };
 
   // Open Edit Note Modal
   const handleOpenEditNote = (note) => {
+    resetForm();
     setEditingNote(note);
-    setFormTitle(note.title);
+    setFormTitle(note.title || '');
     setFormDescription(note.description || '');
-    setFormDate(note.scheduledDate);
-    setFormError('');
+    setFormDate(note.scheduledDate || '');
+    setFormStartTime(note.startTime || '');
+    setFormEndTime(note.endTime || '');
     setShowAddModal(true);
   };
 
@@ -329,6 +621,11 @@ export default function CalendarWidget({ account, className = '' }) {
     e.preventDefault();
     const titleTrimmed = formTitle.trim();
     const dateTrimmed = formDate.trim();
+    const sTime = formStartTime ? formStartTime.trim() : null;
+    const eTime = formEndTime ? formEndTime.trim() : null;
+
+    setFormError('');
+    setTimeError('');
 
     if (!titleTrimmed) {
       setFormError('Title is required');
@@ -343,16 +640,28 @@ export default function CalendarWidget({ account, className = '' }) {
       return;
     }
 
+    if (REQUIRE_START_TIME && !sTime) {
+      setTimeError('Please select a start time.');
+      return;
+    }
+
+    if (eTime && !sTime) {
+      setTimeError('Please select a start time first.');
+      return;
+    }
+
+    if (sTime && eTime && eTime <= sTime) {
+      setTimeError('End time must be after start time.');
+      return;
+    }
+
     // Capture editing info before closing modal
     const editing = editingNote;
     const descTrimmed = formDescription.trim();
 
     // 0ms INSTANT MODAL CLOSE: Do not block user on network latency
     setShowAddModal(false);
-    setFormTitle('');
-    setFormDescription('');
-    setFormError('');
-    setEditingNote(null);
+    resetForm();
 
     // Save and sync in background
     try {
@@ -361,12 +670,16 @@ export default function CalendarWidget({ account, className = '' }) {
           title: titleTrimmed,
           description: descTrimmed,
           scheduledDate: dateTrimmed,
+          startTime: sTime,
+          endTime: eTime,
         });
       } else {
         await createCalendarNote(account, {
           title: titleTrimmed,
           description: descTrimmed,
           scheduledDate: dateTrimmed,
+          startTime: sTime,
+          endTime: eTime,
         });
       }
       await loadNotes();
@@ -407,7 +720,7 @@ export default function CalendarWidget({ account, className = '' }) {
           EXACT PRESERVED CALENDAR CARD UI
           Matches original layout, colors, dimensions, and typography
           ========================================================== */}
-      <section className={`dash-card dash-calendar ${className}`} id="calendar">
+      <section className={`dash-card dash-calendar ${className}`} id="calendar" style={{ borderRadius: '18px', overflow: 'hidden' }}>
         <header className="dash-card-head">
           <h3>
             <span className="dash-head-icon tone-blue">
@@ -573,7 +886,7 @@ export default function CalendarWidget({ account, className = '' }) {
           DATE NOTES MANAGEMENT MODAL / DRAWER
           Shown when user clicks any date on the calendar
           ========================================================== */}
-      {selectedDay && (
+      {selectedDay && typeof document !== 'undefined' && createPortal(
         <div
           style={{
             position: 'fixed',
@@ -723,6 +1036,27 @@ export default function CalendarWidget({ account, className = '' }) {
                           <h4 style={{ margin: 0, fontSize: '14.5px', fontWeight: 700, color: '#0f172a' }}>
                             {note.title}
                           </h4>
+                          {formatEventTimeRange(note.startTime, note.endTime) && (
+                            <div
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                marginTop: '4px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: '#2563eb',
+                                backgroundColor: '#eff6ff',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                width: 'fit-content',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <Clock size={12} />
+                              <span>{formatEventTimeRange(note.startTime, note.endTime)}</span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Action buttons: Edit & Delete */}
@@ -838,7 +1172,8 @@ export default function CalendarWidget({ account, className = '' }) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ==========================================================
@@ -849,7 +1184,7 @@ export default function CalendarWidget({ account, className = '' }) {
           3. Selected Date – Auto-populated, min = todayIST
           4. Instant 0ms Save
           ========================================================== */}
-      {showAddModal && (
+      {showAddModal && typeof document !== 'undefined' && createPortal(
         <div
           style={{
             position: 'fixed',
@@ -867,11 +1202,14 @@ export default function CalendarWidget({ account, className = '' }) {
           <div
             style={{
               width: '100%',
-              maxWidth: '460px',
+              maxWidth: '480px',
               backgroundColor: '#ffffff',
               borderRadius: '16px',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
               overflow: 'hidden',
+              maxHeight: '90dvh',
+              display: 'flex',
+              flexDirection: 'column',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -889,7 +1227,10 @@ export default function CalendarWidget({ account, className = '' }) {
               </h3>
               <button
                 type="button"
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  resetForm();
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -902,7 +1243,7 @@ export default function CalendarWidget({ account, className = '' }) {
               </button>
             </div>
 
-            <form onSubmit={handleSaveNote} style={{ padding: '20px 22px' }}>
+            <form onSubmit={handleSaveNote} style={{ padding: '20px 22px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
               {formError && (
                 <div
                   style={{
@@ -985,6 +1326,61 @@ export default function CalendarWidget({ account, className = '' }) {
                 />
               </div>
 
+              {/* Row: [ Start Time ]   [ End Time (Optional) ] */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                  gap: '12px',
+                  marginBottom: '16px',
+                }}
+              >
+                {/* Start Time */}
+                <TimePicker12h
+                  id="cal-start-time"
+                  value={formStartTime}
+                  onChange={(val) => {
+                    setFormStartTime(val);
+                    if (timeError) setTimeError('');
+                  }}
+                  hasError={Boolean(timeError && (!formStartTime && formEndTime))}
+                  label="Start Time"
+                  required={REQUIRE_START_TIME}
+                />
+
+                {/* End Time (Optional) */}
+                <TimePicker12h
+                  id="cal-end-time"
+                  value={formEndTime}
+                  onChange={(val) => {
+                    setFormEndTime(val);
+                    if (timeError) setTimeError('');
+                  }}
+                  hasError={Boolean(timeError)}
+                  label="End Time"
+                  optionalText="(Optional)"
+                />
+              </div>
+
+              {/* Inline Time Validation Error */}
+              {timeError && (
+                <div
+                  style={{
+                    marginTop: '-10px',
+                    marginBottom: '14px',
+                    fontSize: '12px',
+                    color: '#ef4444',
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <AlertCircle size={13} />
+                  <span>{timeError}</span>
+                </div>
+              )}
+
               {/* 3. Selected Date (Pre-populated, restricts past dates) */}
               <div style={{ marginBottom: '20px' }}>
                 <label
@@ -1020,7 +1416,10 @@ export default function CalendarWidget({ account, className = '' }) {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    setShowAddModal(false);
+                    resetForm();
+                  }}
                   style={{
                     padding: '9px 16px',
                     backgroundColor: 'transparent',
@@ -1054,7 +1453,8 @@ export default function CalendarWidget({ account, className = '' }) {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

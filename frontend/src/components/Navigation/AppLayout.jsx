@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './Navigation.css';
 import AppHeader from './AppHeader.jsx';
+import Sidebar from './Sidebar.jsx';
 import AppSidebar from './AppSidebar.jsx';
+import { getMenuConfigForRole } from '../../config/menuConfig/index.js';
 import BreadcrumbRow from './BreadcrumbRow.jsx';
 import PageHeader from './PageHeader.jsx';
 import InstitutionalNotificationDrawer from './InstitutionalNotificationDrawer.jsx';
+import AccessibilityPanel from '../Accessibility/AccessibilityPanel.jsx';
+import ScreenReaderAnnouncer from '../Accessibility/ScreenReaderAnnouncer.jsx';
+import { useAccessibility } from '../../context/AccessibilityContext.jsx';
 
 export default function AppLayout({
   account,
@@ -38,10 +43,18 @@ export default function AppLayout({
   // Mobile drawer open state
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const mainWorkspaceRef = React.useRef(null);
 
-  // Close mobile drawer on navigation / activeTab change
+  // Close mobile drawer on navigation / activeTab change & reset workspace scroll
   useEffect(() => {
     setMobileOpen(false);
+    if (mainWorkspaceRef.current) {
+      try {
+        mainWorkspaceRef.current.scrollTo({ top: 0, behavior: 'instant' });
+      } catch {
+        mainWorkspaceRef.current.scrollTop = 0;
+      }
+    }
   }, [activeTab]);
 
   // Toggle sidebar on desktop, drawer on mobile
@@ -84,14 +97,39 @@ export default function AppLayout({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Resolve navSections: use explicit props if supplied, or fallback to role-driven menuConfig
+  const effectiveNavSections = useMemo(() => {
+    if (navSections && navSections.length > 0) return navSections;
+    return getMenuConfigForRole(account?.role, { account });
+  }, [navSections, account]);
+
   // Compute active item metadata for breadcrumbs and page titles
   const allNavItems = useMemo(() => {
-    return navSections.flatMap(sec => sec.items || []);
-  }, [navSections]);
+    return effectiveNavSections.flatMap(sec => sec.items || []);
+  }, [effectiveNavSections]);
 
   const activeNavItem = useMemo(() => {
     return allNavItems.find(item => item.id === activeTab || item.page === activeTab) || null;
   }, [allNavItems, activeTab]);
+
+  // Voice Navigation listener: match spoken requests to navigation tabs
+  useEffect(() => {
+    const handleVoiceNav = (e) => {
+      const target = e.detail?.targetTab;
+      if (!target || !onTabChange) return;
+
+      const matched = allNavItems.find(
+        item => item.id === target || item.id.toLowerCase().includes(target.toLowerCase())
+      );
+      if (matched) {
+        onTabChange(matched.id);
+      } else {
+        onTabChange(target);
+      }
+    };
+    window.addEventListener('apna_campus_voice_navigate', handleVoiceNav);
+    return () => window.removeEventListener('apna_campus_voice_navigate', handleVoiceNav);
+  }, [allNavItems, onTabChange]);
 
   // Compute Breadcrumb items
   const computedBreadcrumbs = useMemo(() => {
@@ -140,6 +178,17 @@ export default function AppLayout({
 
   return (
     <div className={`apna-app-layout ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'} ${shouldHideBreadcrumbs ? 'no-breadcrumbs' : ''}`}>
+      {/* Skip to Main Content Link for Keyboard and Screen Reader Accessibility */}
+      <a href="#main-content" className="skip-to-main-link">
+        Skip to main content
+      </a>
+
+      {/* Screen Reader Live Region Announcer */}
+      <ScreenReaderAnnouncer />
+
+      {/* Centralized Accessibility Panel */}
+      <AccessibilityPanel />
+
       {/* 1. Global Top Navigation Bar */}
       <AppHeader
         account={account}
@@ -147,6 +196,7 @@ export default function AppLayout({
         sidebarOpen={sidebarOpen}
         onLogout={onLogout}
         onOpenNotifications={() => setNotificationsOpen(true)}
+        onViewProfile={() => onTabChange && onTabChange('profile')}
         portalName={portalName}
       />
 
@@ -162,12 +212,12 @@ export default function AppLayout({
 
       {/* 3. Body: Left Sidebar + Main Content Area */}
       <div className="apna-layout-body">
-        {/* Reusable Left Sidebar */}
-        <AppSidebar
+        {/* Fixed Left Sidebar */}
+        <Sidebar
           portalName={portalName}
           portalSubtitle={portalSubtitle}
           portalHomeTab={portalHomeTab}
-          navSections={navSections}
+          navSections={effectiveNavSections}
           activeTab={activeTab}
           onTabChange={onTabChange}
           sidebarOpen={sidebarOpen}
@@ -178,7 +228,7 @@ export default function AppLayout({
         />
 
         {/* Main Workspace */}
-        <main className="apna-main-workspace" role="main" id="main-content">
+        <main ref={mainWorkspaceRef} className="apna-main-workspace" role="main" id="main-content">
           {/* Standardized Page Heading Area (only for secondary pages, avoiding duplicate dashboard titles) */}
           {shouldRenderPageHeader && (
             <PageHeader

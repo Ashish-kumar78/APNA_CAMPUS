@@ -10,6 +10,57 @@ import { api } from './api.js';
 const EVENT_NAME = 'bput_calendar_notes_updated';
 
 /**
+ * Format 24-hour time string ("HH:mm") into 12-hour format ("h:mm AM/PM")
+ */
+export function formatTime12h(timeStr) {
+  if (!timeStr) return '';
+  const [hStr, mStr] = String(timeStr).split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (isNaN(h) || isNaN(m)) return String(timeStr);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 || 12;
+  const minuteFormatted = String(m).padStart(2, '0');
+  return `${hour12}:${minuteFormatted} ${ampm}`;
+}
+
+/**
+ * Format start and end time into human-readable event time range:
+ * - Both times: "10:00 AM - 11:30 AM"
+ * - Only start: "10:00 AM"
+ * - No time: ""
+ */
+export function formatEventTimeRange(startTime, endTime) {
+  const s = startTime ? formatTime12h(startTime) : '';
+  const e = endTime ? formatTime12h(endTime) : '';
+  if (s && e) {
+    return `${s} - ${e}`;
+  }
+  if (s) {
+    return s;
+  }
+  return '';
+}
+
+/**
+ * Sort notes by scheduledDate, then startTime (notes without time at the end), then createdAt
+ */
+export function sortNotesByTime(notesList = []) {
+  return [...notesList].sort((a, b) => {
+    const dateCmp = (a.scheduledDate || '').localeCompare(b.scheduledDate || '');
+    if (dateCmp !== 0) return dateCmp;
+    if (a.startTime && b.startTime) {
+      const timeCmp = a.startTime.localeCompare(b.startTime);
+      if (timeCmp !== 0) return timeCmp;
+      if (a.endTime && b.endTime) return a.endTime.localeCompare(b.endTime);
+    }
+    if (a.startTime && !b.startTime) return -1;
+    if (!a.startTime && b.startTime) return 1;
+    return (a.createdAt || '').localeCompare(b.createdAt || '');
+  });
+}
+
+/**
  * Returns today's date formatted as YYYY-MM-DD in Asia/Kolkata (IST) timezone,
  * along with numeric breakdown and Date object.
  */
@@ -107,7 +158,7 @@ export async function getCalendarNotes(account, filterDate = null) {
       const noteMap = new Map();
       localNotes.forEach(n => noteMap.set(n.id, n));
       res.notes.forEach(n => noteMap.set(n.id, n));
-      const merged = Array.from(noteMap.values()).sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+      const merged = sortNotesByTime(Array.from(noteMap.values()));
       saveLocalNotesForUser(account, merged);
       return filterDate ? merged.filter(n => n.scheduledDate === filterDate) : merged;
     }
@@ -115,26 +166,24 @@ export async function getCalendarNotes(account, filterDate = null) {
     // Offline / fallback to local cache
   }
 
-  return filterDate ? localNotes.filter(n => n.scheduledDate === filterDate) : localNotes;
+  const sortedLocal = sortNotesByTime(localNotes);
+  return filterDate ? sortedLocal.filter(n => n.scheduledDate === filterDate) : sortedLocal;
 }
 
 /**
  * 2. Get pending mandatory reminders for today and previous overdue dates
- * Logic:
- * - scheduledDate <= currentDate (in IST)
- * - status === 'PENDING'
- * - Ordered by scheduledDate ascending (oldest first)
  */
 export async function getPendingCalendarReminders(account, currentDate = null) {
   const todayStr = currentDate || getTodayIST().dateStr;
   const localNotes = getLocalNotesForUser(account);
-  const localPending = localNotes.filter(n => n.status === 'PENDING' && n.scheduledDate <= todayStr)
-    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+  const localPending = sortNotesByTime(
+    localNotes.filter(n => n.status === 'PENDING' && n.scheduledDate <= todayStr)
+  );
 
   try {
     const res = await api.getPendingCalendarReminders({ currentDate: todayStr });
     if (res?.success && Array.isArray(res.reminders)) {
-      return res.reminders;
+      return sortNotesByTime(res.reminders);
     }
   } catch (err) {
     // Backend unreachable, rely on local pending
@@ -147,7 +196,7 @@ export async function getPendingCalendarReminders(account, currentDate = null) {
  * 3. Create a new personal calendar note (Instant Optimistic Save)
  * Rejects past dates in IST.
  */
-export async function createCalendarNote(account, { title, description = '', scheduledDate }) {
+export async function createCalendarNote(account, { title, description = '', scheduledDate, startTime = null, endTime = null }) {
   if (!title || !scheduledDate) {
     throw new Error('Title and Scheduled Date are required');
   }
@@ -155,6 +204,16 @@ export async function createCalendarNote(account, { title, description = '', sch
   const todayStr = getTodayIST().dateStr;
   if (scheduledDate < todayStr) {
     throw new Error(`Cannot schedule notes for past dates (Selected: ${scheduledDate}, Today: ${todayStr})`);
+  }
+
+  const sTime = startTime ? String(startTime).trim() : null;
+  const eTime = endTime ? String(endTime).trim() : null;
+
+  if (eTime && !sTime) {
+    throw new Error('Please select a start time first.');
+  }
+  if (sTime && eTime && eTime <= sTime) {
+    throw new Error('End time must be after start time.');
   }
 
   const userId = resolveUserId(account);
@@ -167,6 +226,8 @@ export async function createCalendarNote(account, { title, description = '', sch
     title: String(title).trim(),
     description: String(description || '').trim(),
     scheduledDate: String(scheduledDate).trim(),
+    startTime: sTime,
+    endTime: eTime,
     status: 'PENDING',
     completedAt: null,
     createdAt: new Date().toISOString(),
@@ -176,20 +237,22 @@ export async function createCalendarNote(account, { title, description = '', sch
   // Instant local save & broadcast for 0ms UI latency
   const notes = getLocalNotesForUser(account);
   notes.push(newNote);
-  saveLocalNotesForUser(account, notes);
+  saveLocalNotesForUser(account, sortNotesByTime(notes));
 
   // Background sync to backend (non-blocking)
   api.createCalendarNote({
     title: newNote.title,
     description: newNote.description,
     scheduledDate: newNote.scheduledDate,
+    startTime: newNote.startTime,
+    endTime: newNote.endTime,
   }).then((res) => {
     if (res?.success && res.note) {
       const currentList = getLocalNotesForUser(account);
       const idx = currentList.findIndex(n => n.id === newNote.id);
       if (idx !== -1) {
         currentList[idx] = { ...currentList[idx], ...res.note };
-        saveLocalNotesForUser(account, currentList);
+        saveLocalNotesForUser(account, sortNotesByTime(currentList));
       }
     }
   }).catch((err) => {
@@ -200,7 +263,7 @@ export async function createCalendarNote(account, { title, description = '', sch
 }
 
 /**
- * 4. Update an existing calendar note (title, description, scheduledDate)
+ * 4. Update an existing calendar note (title, description, scheduledDate, startTime, endTime)
  */
 export async function updateCalendarNote(account, noteId, updates) {
   const notes = getLocalNotesForUser(account);
@@ -217,22 +280,40 @@ export async function updateCalendarNote(account, noteId, updates) {
     }
   }
 
+  const sTime = updates.startTime !== undefined
+    ? (updates.startTime ? String(updates.startTime).trim() : null)
+    : notes[idx].startTime;
+  const eTime = updates.endTime !== undefined
+    ? (updates.endTime ? String(updates.endTime).trim() : null)
+    : notes[idx].endTime;
+
+  if (eTime && !sTime) {
+    throw new Error('Please select a start time first.');
+  }
+  if (sTime && eTime && eTime <= sTime) {
+    throw new Error('End time must be after start time.');
+  }
+
   const updatedNote = {
     ...notes[idx],
     ...(updates.title !== undefined && { title: String(updates.title).trim() }),
     ...(updates.description !== undefined && { description: String(updates.description).trim() }),
     ...(updates.scheduledDate !== undefined && { scheduledDate: String(updates.scheduledDate).trim() }),
+    ...(updates.startTime !== undefined && { startTime: sTime }),
+    ...(updates.endTime !== undefined && { endTime: eTime }),
     updatedAt: new Date().toISOString(),
   };
 
   notes[idx] = updatedNote;
-  saveLocalNotesForUser(account, notes);
+  saveLocalNotesForUser(account, sortNotesByTime(notes));
 
   // Background sync to backend
   api.updateCalendarNote(noteId, {
     title: updatedNote.title,
     description: updatedNote.description,
     scheduledDate: updatedNote.scheduledDate,
+    startTime: updatedNote.startTime,
+    endTime: updatedNote.endTime,
   }).catch((err) => {
     console.debug('Background backend sync for updateCalendarNote fallback:', err?.message);
   });
@@ -242,9 +323,6 @@ export async function updateCalendarNote(account, noteId, updates) {
 
 /**
  * 5. Submit Note (marks as COMPLETED)
- * - Sets status = 'COMPLETED'
- * - Permanently removes from pending reminders
- * - Preserves in calendar history
  */
 export async function submitCalendarNote(account, noteId) {
   const notes = getLocalNotesForUser(account);

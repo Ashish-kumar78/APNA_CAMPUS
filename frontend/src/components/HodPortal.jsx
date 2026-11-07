@@ -50,6 +50,8 @@ import {
   Radio,
   Home
 } from 'lucide-react';
+import CalendarWidget from './CalendarWidget.jsx';
+import HolidayListWidget from './HolidayListWidget.jsx';
 import TakeAttendanceModule from './Attendance/TakeAttendanceModule.jsx';
 import { AppLayout } from './Navigation';
 import '../DashboardHome.css';
@@ -74,6 +76,7 @@ import { complaintsApi } from '../services/complaintsApi.js';
 import { notificationsApi } from '../services/notificationsApi.js';
 import DirectParentNoticeModal from './Common/DirectParentNoticeModal.jsx';
 import Student360DossierModal from './Common/Student360DossierModal.jsx';
+import OfficialEmployeeProfile from './Profile/OfficialEmployeeProfile.jsx';
 import { getStudentComprehensiveDetails, dispatchParentNotice } from '../services/parentNoticeService.js';
 
 const holidays = [
@@ -1488,6 +1491,17 @@ export default function HodPortal({ account, onLogout }) {
             </div>
           )}
 
+          {/* TAB: HOD OFFICIAL CMS PROFILE */}
+          {activeTab === 'profile' && (
+            <OfficialEmployeeProfile
+              account={account}
+              role="hod"
+              roleTitle="HOD Official CMS Profile"
+              rolePerspective="Department Head (HOD)"
+              onBack={() => setActiveTab('dashboard')}
+            />
+          )}
+
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
             <div className="dash">
@@ -1521,8 +1535,18 @@ export default function HodPortal({ account, onLogout }) {
                     <div className="dash-passport-photo-frame" title="Dr. P. K. Pattnaik Official Photograph">
                       <img src="/passport_photo_male.svg" alt={account?.name || 'HOD'} className="dash-passport-img" />
                     </div>
-                    <div>
-                      <strong>{account?.name || 'Dr. P. K. Pattnaik'}</strong>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <strong>{account?.name || 'Dr. P. K. Pattnaik'}</strong>
+                        <button
+                          type="button"
+                          className="fac-view-profile-btn"
+                          onClick={() => setActiveTab('profile')}
+                          title="View full HOD official CMS profile"
+                        >
+                          View Profile <ArrowRight size={13} />
+                        </button>
+                      </div>
                       <small>{account?.identity || 'HOD-CSE-001'} · Professor &amp; Head of Department</small>
                     </div>
                     <span className="dash-status"><i /> Active</span>
@@ -1537,13 +1561,24 @@ export default function HodPortal({ account, onLogout }) {
                     <DetailRow label="Email ID" value={account?.email || 'hod.cse@apnacampus.edu.in'} />
                     <DetailRow label="Mobile No." value={account?.phone || '+91 94370 55102'} />
                   </dl>
-                  <button
-                    className="dash-btn dash-btn-primary dash-info-btn"
-                    type="button"
-                    onClick={() => setActiveTab('faculty')}
-                  >
-                    View Department Faculty Directory <ChevronRight size={15} />
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                    <button
+                      className="dash-btn dash-btn-primary dash-info-btn"
+                      type="button"
+                      style={{ justifyContent: 'center', margin: 0 }}
+                      onClick={() => setActiveTab('profile')}
+                    >
+                      View HOD Official CMS Profile <ArrowRight size={15} />
+                    </button>
+                    <button
+                      className="dash-btn dash-btn-outline dash-info-btn"
+                      type="button"
+                      style={{ justifyContent: 'center', margin: 0 }}
+                      onClick={() => setActiveTab('faculty')}
+                    >
+                      View Department Faculty Directory <ChevronRight size={15} />
+                    </button>
+                  </div>
                 </aside>
 
                 {/* 2x2 Stats Grid on Right */}
@@ -2082,6 +2117,12 @@ export default function HodPortal({ account, onLogout }) {
                   </div>
                 </div>
               </div>
+
+              {/* Department Academic Calendar & Holiday List Duo */}
+              <div className="dash-grid-duo" style={{ marginTop: '1.25rem' }}>
+                <CalendarWidget account={account} />
+                <HolidayListWidget title="Academic Holiday List" />
+              </div>
             </div>
           )}
 
@@ -2221,6 +2262,12 @@ export default function HodPortal({ account, onLogout }) {
                   </div>
                 </div>
                 <MarksManagementModule initialRole="teacher" />
+              </div>
+
+              {/* Department Academic Calendar & Holiday List Duo */}
+              <div className="dash-grid-duo" style={{ marginTop: '1.25rem' }}>
+                <CalendarWidget account={account} />
+                <HolidayListWidget title="Academic Holiday List" />
               </div>
             </div>
           )}
@@ -3090,6 +3137,12 @@ export default function HodPortal({ account, onLogout }) {
                   </tbody>
                 </table>
               </div>
+
+              {/* Department Academic Calendar & Holiday List Duo */}
+              <div className="dash-grid-duo" style={{ marginTop: '1.25rem' }}>
+                <CalendarWidget account={account} />
+                <HolidayListWidget title="Academic Holiday List" />
+              </div>
             </div>
           )}
 
@@ -3153,6 +3206,12 @@ export default function HodPortal({ account, onLogout }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Department Academic Calendar & Holiday List Duo */}
+              <div className="dash-grid-duo" style={{ marginTop: '1.25rem' }}>
+                <CalendarWidget account={account} />
+                <HolidayListWidget title="Academic Holiday List" />
               </div>
             </div>
           )}
@@ -3293,6 +3352,12 @@ export default function HodPortal({ account, onLogout }) {
                     </tbody>
                   </table>
                 </div>
+              </div>
+
+              {/* Department Academic Calendar & Holiday List Duo */}
+              <div className="dash-grid-duo" style={{ marginTop: '1.25rem' }}>
+                <CalendarWidget account={account} />
+                <HolidayListWidget title="Academic Holiday List" />
               </div>
             </div>
           )}

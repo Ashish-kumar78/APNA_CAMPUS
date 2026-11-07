@@ -4,9 +4,12 @@ import {
   LogOut,
   ChevronDown,
   Bell,
+  Sliders,
+  User,
 } from 'lucide-react';
 import { api } from '../../services/api.js';
 import { notificationsStore } from '../../services/notificationsStore.js';
+import { useAccessibility } from '../../context/AccessibilityContext.jsx';
 
 export default function AppHeader({
   account,
@@ -16,11 +19,18 @@ export default function AppHeader({
   unreadCount: propUnreadCount,
   onNotificationClick,
   onOpenNotifications,
+  onViewProfile,
   portalName = 'Apna Campus',
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(propUnreadCount || 0);
   const menuRef = useRef(null);
+
+  let openPanel = () => {};
+  try {
+    const acc = useAccessibility();
+    openPanel = acc.openPanel;
+  } catch (_) {}
 
   const handleOpenNotifs = onNotificationClick || onOpenNotifications;
 
@@ -130,6 +140,17 @@ export default function AppHeader({
 
       {/* Right: Notification Bell 🔔 + User Profile Pill */}
       <div className="apna-topbar-right" ref={menuRef}>
+        {/* Accessibility Assistive Controls (Alt+A) */}
+        <button
+          type="button"
+          className="apna-topbar-icon-btn apna-accessibility-trigger"
+          onClick={openPanel}
+          title="Accessibility Controls (Alt+A)"
+          aria-label="Open Accessibility & Assistive Controls (Alt+A)"
+        >
+          <Sliders size={18} />
+        </button>
+
         <button
           type="button"
           className={`apna-topbar-icon-btn apna-notification-trigger ${unreadCount > 0 ? 'has-unread' : ''}`}
@@ -181,6 +202,21 @@ export default function AppHeader({
               <strong>{displayName}</strong>
               <small>{displayDept}</small>
             </div>
+            {onViewProfile && (
+              <button
+                type="button"
+                className="apna-user-menu-item"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  onViewProfile();
+                }}
+                role="menuitem"
+                title="View full official profile"
+              >
+                <User size={16} />
+                <span>View Profile</span>
+              </button>
+            )}
             {onLogout && (
               <button
                 type="button"

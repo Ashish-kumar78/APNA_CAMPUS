@@ -77,7 +77,23 @@ export function applyPreferencesToDOM(prefs) {
   const docEl = document.documentElement;
   const body = document.body;
 
-  // 1. Standard Light Theme
+  // Check if user has an accessibility theme setting
+  try {
+    const acc = localStorage.getItem('apna_accessibility_settings');
+    if (acc) {
+      const parsed = JSON.parse(acc);
+      if (parsed.theme === 'dark' || (parsed.theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        docEl.setAttribute('data-theme', 'dark');
+        docEl.classList.add('dark');
+        if (body) body.classList.add('dark-theme');
+        docEl.setAttribute('lang', 'en');
+        applyLanguageToDOM('en');
+        return;
+      }
+    }
+  } catch (_) {}
+
+  // 1. Standard Light Theme fallback
   docEl.setAttribute('data-theme', 'light');
   docEl.classList.remove('dark-mode', 'dark');
   if (body) {

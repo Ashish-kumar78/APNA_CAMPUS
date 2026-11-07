@@ -281,7 +281,22 @@ select:focus-visible {
 }
 
 /* Page, View & Tab Entry Animation */
-.campus-page-enter,
+.campus-portal-wrapper {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: none !important;
+  filter: none !important;
+}
+
+.campus-page-enter {
+  animation: campusFadeIn 0.2s ease-out;
+  transform: none !important;
+}
+
 .apna-main-content,
 .portal-main,
 .student-portal-main,
@@ -1373,12 +1388,16 @@ input[type="submit"]:focus-visible {
   font-size: 12px !important;
   font-weight: 700 !important;
   color: #475569 !important;
+  min-width: 0;
 }
 
 .student-detail-row dd {
   font-size: 13px !important;
   font-weight: 600 !important;
   color: #0f172a !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .student-profile-name {
@@ -1944,6 +1963,8 @@ html[data-theme="dark"] .dash-info,
 html[data-theme="dark"] .portal-card,
 html[data-theme="dark"] .portal-panel,
 html[data-theme="dark"] .fac-card,
+html[data-theme="dark"] .fac-profile-card,
+html[data-theme="dark"] .fac-kpi-card,
 html[data-theme="dark"] .admin-card,
 html[data-theme="dark"] .hostel-card,
 html[data-theme="dark"] .hostel-kpi-card,
@@ -1961,6 +1982,8 @@ html.dark-mode .dash-info,
 html.dark-mode .portal-card,
 html.dark-mode .portal-panel,
 html.dark-mode .fac-card,
+html.dark-mode .fac-profile-card,
+html.dark-mode .fac-kpi-card,
 html.dark-mode .admin-card,
 html.dark-mode .hostel-card,
 html.dark-mode .hostel-kpi-card,
@@ -2000,8 +2023,19 @@ html.dark-mode .dash-stat-desc {
 }
 
 html[data-theme="dark"] .dash-stat-value,
-html.dark-mode .dash-stat-value {
+html.dark-mode .dash-stat-value,
+html[data-theme="dark"] .fac-profile-name,
+html.dark-mode .fac-profile-name,
+html[data-theme="dark"] .fac-detail-value,
+html.dark-mode .fac-detail-value,
+html[data-theme="dark"] .fac-kpi-number,
+html.dark-mode .fac-kpi-number {
   color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .fac-detail-label,
+html.dark-mode .fac-detail-label {
+  color: #94a3b8 !important;
 }
 
 /* 4. Tables and Grids across all Roles */
@@ -2331,6 +2365,13 @@ body,
   box-sizing: border-box;
 }
 
+html:has(.apna-app-layout),
+body:has(.apna-app-layout) {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 *,
 *::before,
 *::after {
@@ -2604,3 +2645,291 @@ table {
 }
 
 
+
+/* ==========================================================================
+   APNA CAMPUS — CENTRALIZED ACCESSIBILITY & WCAG 2.2 AA DESIGN SYSTEM
+   ========================================================================== */
+
+/* ── 1. Text Display Scaling ────────────────────────────────────────────── */
+:root {
+  --app-font-size: 16px;
+}
+
+html {
+  font-size: var(--app-font-size, 16px);
+}
+
+html.font-size-small,
+html[data-font-size="small"],
+html[data-scale="small"] {
+  --app-font-size: 14px;
+  font-size: 14px !important;
+}
+
+html.font-size-normal,
+html[data-font-size="normal"],
+html[data-scale="normal"] {
+  --app-font-size: 16px;
+  font-size: 16px !important;
+}
+
+html.font-size-large,
+html[data-font-size="large"],
+html[data-scale="large"] {
+  --app-font-size: 18px;
+  font-size: 18px !important;
+}
+
+html.font-size-xlarge,
+html[data-font-size="xlarge"],
+html[data-scale="xlarge"] {
+  --app-font-size: 20px;
+  font-size: 20px !important;
+}
+
+/* ── 2. Screen Reader Utilities & Skip Links ────────────────────────────── */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.skip-to-main-link {
+  position: fixed !important;
+  top: -120px !important;
+  left: 1.25rem !important;
+  z-index: 9999999 !important;
+  padding: 0.75rem 1.25rem !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  border-radius: 8px !important;
+  text-decoration: none !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+  transition: top 0.2s ease !important;
+  border: 2px solid #ffffff !important;
+}
+
+.skip-to-main-link:focus,
+.skip-to-main-link:focus-visible {
+  top: 1.25rem !important;
+  outline: 3px solid #ffbf00 !important;
+  outline-offset: 3px !important;
+}
+
+/* ── 3. Visible Focus Indicators (WCAG 2.2 Success Criterion 2.4.7 & 2.4.11) ─ */
+*:focus-visible {
+  outline: 2.5px solid #2563eb !important;
+  outline-offset: 2px !important;
+}
+
+/* ── 4. Reduced Motion (WCAG 2.2 Success Criterion 2.3.3) ─────────────────── */
+html.reduced-motion *,
+html.reduced-motion *::before,
+html.reduced-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ── 5. Dark Mode Design Tokens & Adjustments ───────────────────────────── */
+html.dark,
+[data-theme='dark'] {
+  --color-background: #0b1329;
+  --color-surface: #111d38;
+  --color-surface-hover: #19274a;
+  --color-border: #1e3158;
+  --color-border-subtle: #172647;
+  --color-border-strong: #2a4374;
+
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-inverse: #0f172a;
+
+  --surface-bg: #0b1329;
+  --surface-card: #111d38;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  background-color: #0b1329 !important;
+  color: #f8fafc !important;
+}
+
+html.dark body,
+body.dark-theme {
+  background-color: #0b1329 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .apna-main-workspace,
+html.dark .apna-layout,
+html.dark .apna-page-content {
+  background-color: #0b1329 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .apna-topbar,
+html.dark .apna-header {
+  background-color: #111d38 !important;
+  border-bottom-color: #1e3158 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .dash-card,
+html.dark .apna-card,
+html.dark .card,
+html.dark .overview-card,
+html.dark .role-dash-kpi-card,
+html.dark .modal-content,
+html.dark .dialog-content {
+  background-color: #111d38 !important;
+  border-color: #1e3158 !important;
+  color: #f8fafc !important;
+}
+
+html.dark table {
+  background-color: #111d38 !important;
+  color: #f8fafc !important;
+}
+
+html.dark table th {
+  background-color: #0e172e !important;
+  color: #cbd5e1 !important;
+  border-bottom-color: #1e3158 !important;
+}
+
+html.dark table td {
+  border-top-color: #1e3158 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0b1329 !important;
+  border-color: #2a4374 !important;
+  color: #f8fafc !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+html.dark *:focus-visible {
+  outline: 2.5px solid #60a5fa !important;
+}
+
+/* ── 6. High Contrast Mode (WCAG 2.2 AAA Target: Contrast >= 7:1) ────────── */
+html.high-contrast,
+[data-contrast='high'] {
+  --color-background: #000000;
+  --color-surface: #0a0a0a;
+  --color-surface-hover: #171717;
+  --color-border: #ffffff;
+  --color-border-subtle: #ffffff;
+  --color-border-strong: #ffffff;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #ffffff;
+  --color-text-muted: #e2e8f0;
+  --color-text-inverse: #000000;
+
+  --color-primary: #38bdf8;
+  --color-primary-hover: #7dd3fc;
+  --focus-ring: 0 0 0 3px #ffff00;
+
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast .apna-main-workspace,
+html.high-contrast .apna-layout,
+html.high-contrast .apna-page-content {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast .apna-topbar,
+html.high-contrast .apna-header {
+  background-color: #000000 !important;
+  border-bottom: 2px solid #ffffff !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast .dash-card,
+html.high-contrast .apna-card,
+html.high-contrast .card,
+html.high-contrast .overview-card,
+html.high-contrast .role-dash-kpi-card,
+html.high-contrast .modal-content,
+html.high-contrast .dialog-content {
+  background-color: #000000 !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html.high-contrast table {
+  background-color: #000000 !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast table th {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 1px solid #ffffff !important;
+  font-weight: 900 !important;
+}
+
+html.high-contrast table td {
+  border: 1px solid #ffffff !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast input,
+html.high-contrast select,
+html.high-contrast textarea {
+  background-color: #000000 !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast input:focus,
+html.high-contrast select:focus,
+html.high-contrast textarea:focus {
+  border-color: #ffff00 !important;
+}
+
+html.high-contrast button {
+  border: 2px solid #ffffff !important;
+}
+
+html.high-contrast *:focus-visible {
+  outline: 3.5px solid #ffff00 !important;
+  outline-offset: 3px !important;
+}
+
+/* Ensure dashboard cards, calendar widget, and holiday list have matching 18px 4-corner curve like .fac-card */
+.dash-card,
+.dash-calendar,
+.dash-holidays {
+  border-radius: 18px;
+  overflow: hidden;
+}

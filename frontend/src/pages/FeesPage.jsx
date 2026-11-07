@@ -6,7 +6,7 @@ import {
   Clock, 
   AlertCircle, 
   Receipt, 
-  DollarSign, 
+  IndianRupee, 
   ArrowUpRight,
   ShieldAlert,
   Wallet,
@@ -34,78 +34,17 @@ import './FeesPage.css'
 
 const COLLEGE_PAYMENT_QR_URL = '/college_payment_qr_placeholder.svg'
 
-export const yearlyFeeLedger = [
-  {
-    year: '1st Year',
-    session: 'Academic Session 2023–24',
-    semesters: 'Semester 1 & 2',
-    totalDue: 75000,
-    amountPaid: 75000,
-    outstanding: 0,
-    status: 'Cleared',
-    percent: '100%',
-    receiptsCount: 2,
-    details: 'Admission fee, 1st & 2nd semester academic packages, basic workshop & university registration'
-  },
-  {
-    year: '2nd Year',
-    session: 'Academic Session 2024–25',
-    semesters: 'Semester 3 & 4',
-    totalDue: 78400,
-    amountPaid: 78400,
-    outstanding: 0,
-    status: 'Cleared',
-    percent: '100%',
-    receiptsCount: 2,
-    details: 'Tuition fees, lab maintenance, university semester registration, development fee'
-  },
-  {
-    year: '3rd Year',
-    session: 'Academic Session 2025–26',
-    semesters: 'Semester 5 & 6',
-    totalDue: 82000,
-    amountPaid: 82000,
-    outstanding: 0,
-    status: 'Cleared',
-    percent: '100%',
-    receiptsCount: 2,
-    details: 'Specialization labs, cloud computing resources, mid-term & end-term examination fee'
-  },
-  {
-    year: '4th Year (Current)',
-    session: 'Academic Session 2026–27',
-    semesters: 'Semester 7 & 8',
-    totalDue: 89000,
-    amountPaid: 77000,
-    outstanding: 12000,
-    status: 'Pending: ₹12,000',
-    percent: '86.5%',
-    receiptsCount: 4,
-    details: 'Semester 7 tuition fee, library caution, university exams, hostel & mess charge (balance ₹12,000 due 30 Oct 2026)'
-  }
-];
+export const yearlyFeeLedger = [];
+export const feeHistory = [];
 
-export const feeHistory = [
-  { id: 'TXN-98421', term: 'Semester 7 (4th Year)', head: 'Tuition & Development Fee', amount: 48500, paid: 48500, status: 'Paid', date: '12 Aug 2026', mode: 'Net Banking (HDFC)' },
-  { id: 'TXN-98422', term: 'Semester 7 (4th Year)', head: 'Examination & University Reg.', amount: 3500, paid: 3500, status: 'Paid', date: '15 Aug 2026', mode: 'UPI' },
-  { id: 'TXN-98423', term: 'Semester 7 (4th Year)', head: 'Hostel & Mess Charges', amount: 32000, paid: 20000, due: 12000, status: 'Partial', date: '20 Aug 2026', mode: 'Credit Card' },
-  { id: 'TXN-98424', term: 'Semester 7 (4th Year)', head: 'Library & Laboratory Caution', amount: 5000, paid: 5000, status: 'Paid', date: '10 Aug 2026', mode: 'Challan' },
-  { id: 'TXN-87211', term: 'Semester 6 (3rd Year)', head: 'Full Semester Academic Package', amount: 41000, paid: 41000, status: 'Paid', date: '18 Jan 2026', mode: 'Net Banking' },
-  { id: 'TXN-76192', term: 'Semester 5 (3rd Year)', head: 'Full Semester Academic Package', amount: 41000, paid: 41000, status: 'Paid', date: '22 Jul 2025', mode: 'Net Banking' },
-  { id: 'TXN-24751', term: 'Semester 4 (2nd Year)', head: 'Tuition & Examination Fee', amount: 39200, paid: 39200, status: 'Paid', date: '12 Jan 2025', mode: 'UPI' },
-  { id: 'TXN-24103', term: 'Semester 3 (2nd Year)', head: 'Tuition & Development Fee', amount: 39200, paid: 39200, status: 'Paid', date: '10 Jul 2024', mode: 'Net Banking' },
-  { id: 'TXN-23842', term: 'Semester 2 (1st Year)', head: 'Tuition & Laboratory Fee', amount: 35000, paid: 35000, status: 'Paid', date: '15 Jan 2024', mode: 'Net Banking' },
-  { id: 'TXN-23011', term: 'Semester 1 (1st Year)', head: 'Admission & 1st Sem Tuition', amount: 40000, paid: 40000, status: 'Paid', date: '12 Aug 2023', mode: 'Online SBI' },
-];
-
-export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studentCourseBatch, studentSection }) {
+export function ApnaReceiptPaperView({ receipt, studentName, studentRoll, studentCourseBatch, studentSection }) {
   const r = receipt || {}
   const regd = r.rollNumber || r.registrationNumber || studentRoll || '2401432265'
   const name = (r.studentName || studentName || 'BISHNU PRASAD SAHOO').toUpperCase()
   const batch = r.courseBatch || studentCourseBatch || 'BTECH 2028-P'
   const sec = r.section || studentSection || 'CSE (AI) - Genius'
   const rawNo = r.receiptNo || r.referenceNumber || (r.id ? String(r.id).replace(/\D/g, '') || '128680' : '128680')
-  const recNo = String(rawNo).startsWith('GIFT/ACC') ? rawNo : `GIFT/ACC/${rawNo}`
+  const recNo = String(rawNo).startsWith('APNA/ACC') ? rawNo : `APNA/ACC/${String(rawNo).replace(/^GIFT\/ACC\//, '')}`
   const recDate = r.paymentDate || r.receiptDate || r.date || '27-07-2026'
   const amt = Number(r.amount || 20000)
   const mode = r.paymentMethod || r.mode || 'Bank Transfer'
@@ -146,13 +85,13 @@ export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studen
           <img src="/logo.png" alt="Apna Campus Logo" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
           <div>
             <div style={{ fontSize: '1.22rem', fontWeight: 800, color: '#000000', lineHeight: 1.2 }}>
-              Gandhi Institute for Technology (GIFT)
+              Apna Campus
             </div>
             <div style={{ fontSize: '1.02rem', fontWeight: 700, color: '#000000', marginTop: '2px' }}>
               (Autonomous)
             </div>
             <div style={{ fontSize: '0.82rem', color: '#333333', marginTop: '2px' }}>
-              At- Gramadiha, P.o- Gangapada
+              Autonomous Higher Education Directorate &bull; Accounts Department
             </div>
           </div>
         </div>
@@ -206,6 +145,8 @@ export function GiftReceiptPaperView({ receipt, studentName, studentRoll, studen
   )
 }
 
+export const GiftReceiptPaperView = ApnaReceiptPaperView;
+
 export default function FeesPage({ account }) {
   const studentName = account?.name || 'BISHNU PRASAD SAHOO'
   const studentRoll = account?.rollNumber || account?.registrationNumber || '2401432265'
@@ -251,21 +192,44 @@ export default function FeesPage({ account }) {
   const [formErrors, setFormErrors] = useState({})
   const [toastMessage, setToastMessage] = useState('')
 
-  // Overall calculations
-  const totalOverallPaid = yearlyFeeLedger.reduce((sum, item) => sum + item.amountPaid, 0)
-  const totalOverallDues = yearlyFeeLedger.reduce((sum, item) => sum + item.totalDue, 0)
-  const overallClearedPercent = ((totalOverallPaid / totalOverallDues) * 100).toFixed(1)
+  const [statementData, setStatementData] = useState(null)
+  const [invoices, setInvoices] = useState([])
+  const [allTransactions, setAllTransactions] = useState([])
+  const [ledgerRecords, setLedgerRecords] = useState([])
+  const [totalAnnualDues, setTotalAnnualDues] = useState(0)
+  const [totalPaidAmount, setTotalPaidAmount] = useState(0)
+  const [totalPendingBalance, setTotalPendingBalance] = useState(0)
 
-  // Load digital payment proof history
+  // Overall calculations dynamically from student account statement
+  const totalOverallPaid = totalPaidAmount
+  const totalOverallDues = totalAnnualDues
+  const overallClearedPercent = totalOverallDues > 0 
+    ? ((totalOverallPaid / totalOverallDues) * 100).toFixed(1)
+    : '100'
+
+  // Load digital payment proof history and authentic student fee statement
   useEffect(() => {
     loadFeeStatement()
-  }, [])
+  }, [account?.rollNumber, account?.studentId, account?.registrationNumber])
 
   const loadFeeStatement = async () => {
     const roll = account?.rollNumber || account?.studentId || account?.registrationNumber
-    const data = roll ? await feesApi.getFeeStatement(roll) : null
-    if (data && data.paymentHistory) {
-      setProofHistory(data.paymentHistory)
+    try {
+      const data = roll ? await feesApi.getFeeStatement(roll) : null
+      if (data) {
+        setStatementData(data)
+        if (data.paymentHistory) {
+          setProofHistory(data.paymentHistory)
+        }
+        setInvoices(data.feeHeads || [])
+        setAllTransactions(data.transactions || [])
+        setLedgerRecords(data.yearlyLedger || [])
+        setTotalAnnualDues(Number(data.totalAnnualDues) || 0)
+        setTotalPaidAmount(Number(data.paidAmount) || 0)
+        setTotalPendingBalance(Number(data.outstanding) || 0)
+      }
+    } catch (err) {
+      console.warn('Failed to load authentic fee statement:', err)
     }
   }
 
@@ -359,7 +323,7 @@ export default function FeesPage({ account }) {
     try {
       const res = await feesApi.uploadPaymentProof(payload)
       if (res && res.success) {
-        triggerToast('Payment receipt uploaded successfully! Generating GIFT Autonomous Fee Receipt...')
+        triggerToast('Payment receipt uploaded successfully! Generating Apna Campus Autonomous Fee Receipt...')
         await loadFeeStatement()
         setShowProofModal(false)
         resetProofForm()
@@ -402,7 +366,7 @@ export default function FeesPage({ account }) {
 
   const handleDownloadConsolidatedStatement = () => {
     downloadFeeReceiptPdf({
-      id: 'GIFT-CONS-FEE-2026',
+      id: 'APNA-CONS-FEE-2026',
       term: 'BTECH 2028-P (Consolidated Statement)',
       head: 'Tuition Fee Clearance Statement',
       amount: totalOverallDues,
@@ -437,10 +401,10 @@ export default function FeesPage({ account }) {
           <img src="/logo.png" alt="Apna Campus Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
           <div>
             <h1 className="fees-title" style={{ margin: 0, fontSize: '1.35rem', color: '#0f172a' }}>
-              Gandhi Institute for Technology (GIFT) <span style={{ fontSize: '1.02rem', color: '#0284c7' }}>(Autonomous)</span>
+              Apna Campus <span style={{ fontSize: '1.02rem', color: '#0284c7' }}>(Autonomous)</span>
             </h1>
             <p className="fees-subtitle" style={{ margin: '3px 0 0', color: '#64748b', fontSize: '0.84rem' }}>
-              At- Gramadiha, P.o- Gangapada &bull; Student Fee Receipts &amp; Accounts Portal
+              Student Fee Receipts &amp; Accounts Portal &bull; Apna Campus Autonomous University ERP
             </p>
           </div>
         </div>
@@ -466,9 +430,22 @@ export default function FeesPage({ account }) {
             <History size={16} />
             <span>1st Yr to Date Statement</span>
           </button>
-          <button className="btn-pay-now" onClick={() => setShowPayModal(true)}>
+          <button 
+            className="btn-pay-now" 
+            onClick={() => {
+              if (totalPendingBalance > 0) {
+                setShowPayModal(true)
+              } else {
+                setActiveTab('bank-qr')
+              }
+            }}
+          >
             <CreditCard size={18} />
-            <span>Pay Outstanding (₹12,000)</span>
+            <span>
+              {totalPendingBalance > 0 
+                ? `Pay Outstanding (₹${totalPendingBalance.toLocaleString('en-IN')})` 
+                : 'Pay College Fees'}
+            </span>
           </button>
         </div>
       </div>
@@ -499,11 +476,11 @@ export default function FeesPage({ account }) {
 
         {/* Card 2: Total College Fee */}
         <div className="fee-metric-card">
-          <div className="fee-metric-icon blue"><DollarSign size={24} /></div>
+          <div className="fee-metric-icon blue"><IndianRupee size={24} /></div>
           <div className="fee-metric-body">
             <h4>Total College Fee</h4>
-            <div className="fee-val">₹89,000</div>
-            <div className="fee-sub">Semester 7 · Session 2026–27</div>
+            <div className="fee-val">₹{totalOverallDues.toLocaleString('en-IN')}</div>
+            <div className="fee-sub">{account?.semester || 'Semester 1'} &bull; Session {account?.academicYear || '2026–27'}</div>
           </div>
         </div>
 
@@ -512,8 +489,8 @@ export default function FeesPage({ account }) {
           <div className="fee-metric-icon green"><CheckCircle2 size={24} /></div>
           <div className="fee-metric-body">
             <h4>Paid Amount</h4>
-            <div className="fee-val">₹77,000</div>
-            <div className="fee-sub">86.5% cleared</div>
+            <div className="fee-val">₹{totalOverallPaid.toLocaleString('en-IN')}</div>
+            <div className="fee-sub">{overallClearedPercent}% cleared</div>
           </div>
         </div>
 
@@ -522,8 +499,10 @@ export default function FeesPage({ account }) {
           <div className="fee-metric-icon amber"><Clock size={24} /></div>
           <div className="fee-metric-body">
             <h4>Pending Balance</h4>
-            <div className="fee-val" style={{ color: '#d97706' }}>₹12,000</div>
-            <div className="fee-sub">Due date: 30 Oct 2026</div>
+            <div className="fee-val" style={{ color: totalPendingBalance > 0 ? '#d97706' : '#10b981' }}>
+              ₹{totalPendingBalance.toLocaleString('en-IN')}
+            </div>
+            <div className="fee-sub">{totalPendingBalance > 0 ? 'Due date: 30 Oct 2026' : 'No overdue fees pending ✓'}</div>
           </div>
         </div>
       </div>
@@ -585,23 +564,21 @@ export default function FeesPage({ account }) {
                 </tr>
               </thead>
               <tbody>
-                {feeHistory
-                  .filter(item => item.term.includes('Semester 7'))
-                  .map((row) => (
+                {invoices.length > 0 ? (
+                  invoices.map((row) => (
                     <tr key={row.id}>
                       <td><strong style={{ fontFamily: 'monospace', color: '#2563eb' }}>{row.id}</strong></td>
-                      <td>{row.term}</td>
+                      <td>{row.term || account?.semester || 'Current Semester'}</td>
                       <td>{row.head}</td>
-                      <td><strong>₹{row.amount.toLocaleString('en-IN')}</strong></td>
-                      <td>₹{row.paid.toLocaleString('en-IN')}</td>
+                      <td><strong>₹{(row.assessed || row.amount || 0).toLocaleString('en-IN')}</strong></td>
+                      <td>₹{(row.paid || 0).toLocaleString('en-IN')}</td>
                       <td>
-                        <span className={`fee-badge ${row.status.toLowerCase()}`}>
-                          {row.status === 'Paid' && <CheckCircle2 size={12} />}
-                          {row.status === 'Partial' && <AlertCircle size={12} />}
-                          {row.status}
+                        <span className={`fee-badge ${(row.status || '').toLowerCase()}`}>
+                          {row.status === 'Cleared' || row.status === 'Paid' ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                          {row.status || 'Pending'}
                         </span>
                       </td>
-                      <td><small style={{ color: '#64748b' }}>{row.mode}</small></td>
+                      <td><small style={{ color: '#64748b' }}>{row.mode || 'Online Gateway'}</small></td>
                       <td>
                         <button className="btn-receipt" onClick={() => handleDownload(row.id)}>
                           <Download size={14} />
@@ -609,7 +586,18 @@ export default function FeesPage({ account }) {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '36px 20px', color: '#64748b' }}>
+                      <FileCheck size={36} style={{ color: '#94a3b8', margin: '0 auto 10px', display: 'block' }} />
+                      <strong style={{ fontSize: '0.96rem', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                        No Current Semester Invoices Pending
+                      </strong>
+                      <span>All academic dues for your current term are either cleared or not yet generated by the Accounts Directorate.</span>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -741,32 +729,44 @@ export default function FeesPage({ account }) {
                 </tr>
               </thead>
               <tbody>
-                {yearlyFeeLedger.map((row) => (
-                  <tr key={row.year} style={{ background: row.year.includes('Current') ? '#fffdfa' : '#ffffff' }}>
-                    <td><strong style={{ color: '#0f172a', fontWeight: 700 }}>{row.year}</strong></td>
-                    <td style={{ color: '#475569' }}>{row.session}</td>
-                    <td><span style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '3px 8px', borderRadius: '4px', color: '#334155', fontWeight: 600 }}>{row.semesters}</span></td>
-                    <td><strong>₹{row.totalDue.toLocaleString('en-IN')}</strong></td>
-                    <td style={{ color: '#059669', fontWeight: 700 }}>₹{row.amountPaid.toLocaleString('en-IN')}</td>
-                    <td style={{ color: row.outstanding > 0 ? '#d97706' : '#64748b', fontWeight: row.outstanding > 0 ? 700 : 500 }}>
-                      ₹{row.outstanding.toLocaleString('en-IN')}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '60px', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: row.percent, height: '100%', background: row.outstanding === 0 ? '#10b981' : '#f59e0b' }} />
+                {ledgerRecords.length > 0 ? (
+                  ledgerRecords.map((row) => (
+                    <tr key={row.year} style={{ background: row.year.includes('Current') ? '#fffdfa' : '#ffffff' }}>
+                      <td><strong style={{ color: '#0f172a', fontWeight: 700 }}>{row.year}</strong></td>
+                      <td style={{ color: '#475569' }}>{row.session}</td>
+                      <td><span style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '3px 8px', borderRadius: '4px', color: '#334155', fontWeight: 600 }}>{row.semesters}</span></td>
+                      <td><strong>₹{row.totalDue.toLocaleString('en-IN')}</strong></td>
+                      <td style={{ color: '#059669', fontWeight: 700 }}>₹{row.amountPaid.toLocaleString('en-IN')}</td>
+                      <td style={{ color: row.outstanding > 0 ? '#d97706' : '#64748b', fontWeight: row.outstanding > 0 ? 700 : 500 }}>
+                        ₹{row.outstanding.toLocaleString('en-IN')}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '60px', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: row.percent, height: '100%', background: row.outstanding === 0 ? '#10b981' : '#f59e0b' }} />
+                          </div>
+                          <span style={{ fontSize: '0.76rem', fontWeight: 600, color: '#475569' }}>{row.percent}</span>
                         </div>
-                        <span style={{ fontSize: '0.76rem', fontWeight: 600, color: '#475569' }}>{row.percent}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`fee-badge ${row.outstanding === 0 ? 'paid' : 'partial'}`}>
-                        {row.outstanding === 0 ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                        {row.status}
-                      </span>
+                      </td>
+                      <td>
+                        <span className={`fee-badge ${row.outstanding === 0 ? 'paid' : 'partial'}`}>
+                          {row.outstanding === 0 ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '36px 20px', color: '#64748b' }}>
+                      <Layers size={36} style={{ color: '#94a3b8', margin: '0 auto 10px', display: 'block' }} />
+                      <strong style={{ fontSize: '0.96rem', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                        No Multi-Year Ledger Records Yet
+                      </strong>
+                      <span>Multi-year cumulative fee statements will be compiled once term accounts are finalized.</span>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -796,29 +796,40 @@ export default function FeesPage({ account }) {
                 </tr>
               </thead>
               <tbody>
-                {feeHistory.map((row) => (
-                  <tr key={row.id}>
-                    <td><strong style={{ fontFamily: 'monospace', color: '#2563eb' }}>{row.id}</strong></td>
-                    <td>{row.term}</td>
-                    <td>{row.head}</td>
-                    <td><strong>₹{row.amount.toLocaleString('en-IN')}</strong></td>
-                    <td>₹{row.paid.toLocaleString('en-IN')}</td>
-                    <td>
-                      <span className={`fee-badge ${row.status.toLowerCase()}`}>
-                        {row.status === 'Paid' && <CheckCircle2 size={12} />}
-                        {row.status === 'Partial' && <AlertCircle size={12} />}
-                        {row.status}
-                      </span>
-                    </td>
-                    <td><small style={{ color: '#64748b' }}>{row.mode}</small></td>
-                    <td>
-                      <button className="btn-receipt" onClick={() => handleDownload(row.id)}>
-                        <Download size={14} />
-                        Receipt
-                      </button>
+                {allTransactions.length > 0 ? (
+                  allTransactions.map((row) => (
+                    <tr key={row.id}>
+                      <td><strong style={{ fontFamily: 'monospace', color: '#2563eb' }}>{row.id}</strong></td>
+                      <td>{row.term || row.semester || account?.semester || 'Semester 1'}</td>
+                      <td>{row.head}</td>
+                      <td><strong>₹{(row.amount || 0).toLocaleString('en-IN')}</strong></td>
+                      <td>₹{(row.paid ?? row.amount ?? 0).toLocaleString('en-IN')}</td>
+                      <td>
+                        <span className={`fee-badge ${(row.status || '').toLowerCase()}`}>
+                          {row.status === 'Paid' || row.status === 'Verified' ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                          {row.status || 'Verified'}
+                        </span>
+                      </td>
+                      <td><small style={{ color: '#64748b' }}>{row.mode || row.channel || 'Online'}</small></td>
+                      <td>
+                        <button className="btn-receipt" onClick={() => handleDownload(row.id)}>
+                          <Download size={14} />
+                          Receipt
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '36px 20px', color: '#64748b' }}>
+                      <History size={36} style={{ color: '#94a3b8', margin: '0 auto 10px', display: 'block' }} />
+                      <strong style={{ fontSize: '0.96rem', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                        No Historical Transactions Found
+                      </strong>
+                      <span>Transactions and verified payments will automatically populate here once recorded.</span>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -1157,7 +1168,7 @@ export default function FeesPage({ account }) {
                 </div>
               </form>
             ) : (
-              /* FEATURE 1 — STEP 3: OFFICIAL GIFT FEE RECEIPT PREVIEW BEFORE SUBMIT */
+              /* FEATURE 1 — STEP 3: OFFICIAL APNA CAMPUS FEE RECEIPT PREVIEW BEFORE SUBMIT */
               <div>
                 <div style={{ marginBottom: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -1165,11 +1176,11 @@ export default function FeesPage({ account }) {
                       <CheckCircle2 size={16} color="#16a34a" /> Official Fee Receipt Generation Preview
                     </h4>
                     <span style={{ fontSize: '0.74rem', color: '#0284c7', background: '#f0f9ff', padding: '2px 8px', borderRadius: '4px', border: '1px solid #bae6fd', fontWeight: 600 }}>
-                      Image 5 Standard &bull; GIFT Autonomous
+                      Official Accounts Standard &bull; Apna Campus Autonomous
                     </span>
                   </div>
 
-                  <GiftReceiptPaperView
+                  <ApnaReceiptPaperView
                     receipt={{
                       amount: formAmount,
                       paymentDate: formDate,
@@ -1217,7 +1228,7 @@ export default function FeesPage({ account }) {
                 </div>
 
                 <div style={{ background: '#eff6ff', padding: '10px 14px', borderRadius: '8px', fontSize: '0.78rem', color: '#1e40af', marginBottom: '14px', border: '1px solid #bfdbfe' }}>
-                  ℹ️ When submitted, the official <strong>GIFT Autonomous Fee Receipt (Student Copy) PDF</strong> matching Image 5 will be generated and ready for instant download and verification.
+                  ℹ️ When submitted, the official <strong>Apna Campus Autonomous Fee Receipt (Student Copy) PDF</strong> will be generated and ready for instant download and verification.
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -1264,7 +1275,7 @@ export default function FeesPage({ account }) {
         </div>
       )}
 
-      {/* MODAL 2: View Single Proof Details & GIFT Autonomous Money Receipt */}
+      {/* MODAL 2: View Single Proof Details & Apna Campus Autonomous Money Receipt */}
       {selectedProofView && (
         <div className="payment-modal-backdrop" onClick={() => setSelectedProofView(null)}>
           <div className="payment-modal" style={{ maxWidth: '680px' }} onClick={e => e.stopPropagation()}>
@@ -1273,7 +1284,7 @@ export default function FeesPage({ account }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Receipt size={18} color="#0284c7" />
-                GIFT Autonomous Money Receipt
+                Apna Campus Autonomous Money Receipt
               </h3>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button
@@ -1318,7 +1329,7 @@ export default function FeesPage({ account }) {
             </div>
 
             <div style={{ maxHeight: '65vh', overflowY: 'auto', marginBottom: '14px', paddingRight: '4px' }}>
-              <GiftReceiptPaperView
+              <ApnaReceiptPaperView
                 receipt={selectedProofView}
                 studentName={selectedProofView.studentName || studentName}
                 studentRoll={selectedProofView.rollNumber || studentRoll}
@@ -1357,13 +1368,13 @@ export default function FeesPage({ account }) {
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#14532d' }}>Payment Receipt Uploaded &amp; PDF Generated!</h3>
                 <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-                  Your official money receipt matching Gandhi Institute for Technology (GIFT) Autonomous format is ready.
+                  Your official money receipt matching Apna Campus Autonomous format is ready.
                 </p>
               </div>
             </div>
 
             <div style={{ maxHeight: '60vh', overflowY: 'auto', marginBottom: '14px', paddingRight: '4px' }}>
-              <GiftReceiptPaperView
+              <ApnaReceiptPaperView
                 receipt={recentlyGeneratedReceipt}
                 studentName={recentlyGeneratedReceipt.studentName || studentName}
                 studentRoll={recentlyGeneratedReceipt.rollNumber || studentRoll}
@@ -1440,23 +1451,30 @@ export default function FeesPage({ account }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '300px', overflowY: 'auto', paddingRight: '4px' }}>
-              {yearlyFeeLedger.map((y) => (
-                <div key={y.year} style={{ padding: '12px 14px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>{y.year}</strong>
-                    <span style={{ fontSize: '0.78rem', color: '#64748b', marginLeft: '8px' }}>({y.session})</span>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#475569' }}>{y.details}</p>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
-                    <div style={{ fontSize: '1rem', fontWeight: 800, color: y.outstanding === 0 ? '#059669' : '#d97706' }}>
-                      ₹{y.amountPaid.toLocaleString('en-IN')}
+              {ledgerRecords.length > 0 ? (
+                ledgerRecords.map((y) => (
+                  <div key={y.year} style={{ padding: '12px 14px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>{y.year}</strong>
+                      <span style={{ fontSize: '0.78rem', color: '#64748b', marginLeft: '8px' }}>({y.session})</span>
+                      <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#475569' }}>{y.details}</p>
                     </div>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: y.outstanding === 0 ? '#059669' : '#d97706' }}>
-                      {y.outstanding === 0 ? '✓ 100% Cleared' : '₹12,000 Pending'}
-                    </span>
+                    <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: y.outstanding === 0 ? '#059669' : '#d97706' }}>
+                        ₹{y.amountPaid.toLocaleString('en-IN')}
+                      </div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: y.outstanding === 0 ? '#059669' : '#d97706' }}>
+                        {y.outstanding === 0 ? '✓ 100% Cleared' : `₹${y.outstanding.toLocaleString('en-IN')} Pending`}
+                      </span>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div style={{ textAlign: 'center', padding: '24px 14px', color: '#64748b' }}>
+                  <Layers size={32} style={{ color: '#94a3b8', margin: '0 auto 8px', display: 'block' }} />
+                  <p style={{ margin: 0, fontSize: '0.88rem' }}>No multi-year ledger statements generated yet.</p>
                 </div>
-              ))}
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '18px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>

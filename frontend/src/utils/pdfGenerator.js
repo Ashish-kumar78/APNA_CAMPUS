@@ -405,14 +405,15 @@ export function buildGiftFeeReceiptDoc(receipt = {}, studentInfo = {}) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
   doc.setTextColor(0, 0, 0);
-  doc.text('Gandhi Institute for Technology (GIFT)', 46, 20);
+  doc.text('Apna Campus (Autonomous)', 46, 20);
 
-  doc.setFontSize(13);
-  doc.text('(Autonomous)', 46, 26);
+  doc.setFontSize(10);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Higher Education ERP Directorate • Student Fee & Accounts Section', 46, 27);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
-  doc.text('At- Gramadiha, P.o- Gangapada', 46, 32);
+  doc.setFontSize(9);
+  doc.text('Official University Money Receipt • Authenticated Electronic Record', 46, 33);
 
   // 3. Top dividing line
   doc.setDrawColor(0, 0, 0);
@@ -430,7 +431,7 @@ export function buildGiftFeeReceiptDoc(receipt = {}, studentInfo = {}) {
   const courseBatch = receipt.courseBatch || studentInfo.batch || 'BTECH 2028-P';
   const section = receipt.section || studentInfo.section || 'CSE (AI) - Genius';
 
-  const receiptNo = receipt.receiptNo || receipt.no || `GIFT/ACC/${receipt.id ? String(receipt.id).replace(/\D/g, '') || '128680' : '128680'}`;
+  const receiptNo = receipt.receiptNo || receipt.no || `APNA/ACC/${receipt.id ? String(receipt.id).replace(/\D/g, '') || '128680' : '128680'}`;
   const receiptDate = receipt.receiptDate || receipt.date || receipt.paymentDate || '27-07-2026';
 
   const amount = Number(receipt.amount || receipt.paid || 20000);
@@ -507,6 +508,10 @@ export function buildGiftFeeReceiptDoc(receipt = {}, studentInfo = {}) {
 export function buildFeeReceiptDoc(receipt = {}, studentInfo = {}) {
   return buildGiftFeeReceiptDoc(receipt, studentInfo);
 }
+
+export const buildApnaFeeReceiptDoc = buildGiftFeeReceiptDoc;
+export const downloadApnaFeeReceiptPdf = downloadFeeReceiptPdf;
+export const openApnaFeeReceiptPdf = openFeeReceiptPdf;
 
 export function downloadFeeReceiptPdf(receipt = {}, studentInfo = {}) {
   const { doc, receiptNo } = buildGiftFeeReceiptDoc(receipt, studentInfo);

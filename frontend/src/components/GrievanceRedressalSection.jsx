@@ -14,6 +14,7 @@ import {
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { api } from '../services/api.js';
 import './GrievanceRedressalSection.css';
 
 // ── Exact Nature of Grievance Options (From User Image 2) ──
@@ -168,6 +169,22 @@ export default function GrievanceRedressalSection({ studentAccount }) {
 
     const updated = [newGrievance, ...history];
     saveHistory(updated);
+
+    // Submit to backend complaints & grievance registry
+    try {
+      api.submitAnonymousComplaint({
+        category: nature,
+        title: `Grievance: ${nature}`,
+        description: description.trim(),
+        isAnonymous: false,
+        studentName: creatorName,
+        rollNumber: regNo,
+        earlierLodged,
+        attachmentName: attachment?.name || null,
+        ticketNumber: newGrievance.ticketNumber,
+      }).catch(() => {});
+    } catch {}
+
     handleReset();
     showAlert('success', 'Request for Grievance Redressal submitted successfully!');
 

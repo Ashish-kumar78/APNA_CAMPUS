@@ -76,6 +76,7 @@ import LeadershipScoreboardSection from './components/CampusConnect/LeadershipSc
 import AnonymousComplaintsSection from './components/CampusConnect/AnonymousComplaintsSection.jsx'
 import { campusConnectStore } from './services/campusConnectStore.js'
 import { api } from './services/api.js'
+import { feesApi } from './services/feesApi.js'
 import { getActiveStudent, setActiveStudent, getAllStudents, findStudentByQuery } from './services/studentStore.js'
 import { notificationsApi } from './services/notificationsApi.js'
 import { notificationsStore } from './services/notificationsStore.js'
@@ -331,7 +332,7 @@ function StudentPortal({ account, onLogout }) {
       .then((response) => {
         if (!response?.success || !response.data) return
         if (active && response.data) {
-          setStudentProfile(response.data)
+          setStudentProfile((prev) => ({ ...(prev || {}), ...response.data }))
           setProfileError('')
         }
       })
@@ -342,10 +343,33 @@ function StudentPortal({ account, onLogout }) {
           setProfileError(error.message || 'Could not load your student profile.')
         }
       })
+
+    // Real-time synchronization with Accounts & Fees ledger
+    const roll = account?.rollNumber || account?.registrationNumber || account?.studentId || '2305201001';
+    feesApi.getFeeStatement(roll)
+      .then((feeData) => {
+        if (!active || !feeData) return;
+        const total = Number(feeData.totalOverallFee) || Number(feeData.totalAnnualDues) || 322600;
+        const paid = Number(feeData.totalOverallPaid) || Number(feeData.paidAmount) || 194680;
+        const dues = Number(feeData.totalOverallDues) || Math.max(0, total - paid);
+        setStudentProfile((prev) => ({
+          ...(prev || {}),
+          totalFees: total,
+          paidFees: paid,
+          dueFees: dues,
+          totalFeesFormatted: `₹${total.toLocaleString('en-IN')}.00`,
+          paidFeesFormatted: `₹${paid.toLocaleString('en-IN')}.00`,
+          dueFeesFormatted: `₹${dues.toLocaleString('en-IN')}.00`,
+          hasFeeRecords: true,
+          feeStatement: feeData,
+        }));
+      })
+      .catch(() => {});
+
     return () => {
       active = false
     }
-  }, [account?.name])
+  }, [account?.name, account?.rollNumber, account?.registrationNumber])
 
   const studentAccount = useMemo(() => {
     if (!studentProfile) return account

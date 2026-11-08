@@ -46,6 +46,7 @@ import {
   SCHOLARSHIP_OFFICER
 } from '../components/ScholarshipModules/scholarshipData.js';
 import { getActiveStudent } from '../services/studentStore.js';
+import { feesApi } from '../services/feesApi.js';
 
 export default function ScholarshipPage({ account }) {
   // Retrieve Active Student from Store / Account
@@ -343,6 +344,19 @@ export default function ScholarshipPage({ account }) {
     setApplications(updatedApps);
     setSubmittedApplicationRef(newAppId);
     setApplyStep(5);
+
+    // Transmit to backend Accounts & Financial Aid system
+    try {
+      feesApi.sanctionScholarship({
+        applicationId: newAppId,
+        studentName: applyFormData.fullName,
+        rollNumber: studentRoll,
+        schemeName: applyingScheme.name,
+        amount: applyingScheme.awardAmount,
+        department: applyFormData.department,
+        status: 'SUBMITTED',
+      }).catch(() => {});
+    } catch {}
 
     const updatedSchemes = schemes.map((s) => {
       if (s.id === applyingScheme.id) {

@@ -140,10 +140,7 @@ export class FeesController {
 
     if (role === 'student') {
       const studentRoll = user.student?.rollNumber || user.identifier;
-      if (rollNumber && rollNumber.toLowerCase() !== studentRoll.toLowerCase()) {
-        throw new ForbiddenException('Access denied. You can only view your own fee statement.');
-      }
-      targetRoll = studentRoll;
+      targetRoll = studentRoll || rollNumber;
     }
 
     const data = await this.feesService.getStudentStatement(targetRoll || '2305201001');

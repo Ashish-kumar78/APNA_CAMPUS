@@ -1,4 +1,4 @@
-export type DataScope = 'OWN' | 'DEPARTMENT' | 'COLLEGE' | 'SYSTEM' | 'MODULE';
+export type DataScope = 'OWN' | 'DEPARTMENT' | 'COLLEGE' | 'SYSTEM' | 'MODULE' | 'HOSTEL';
 
 export interface RolePolicy {
   scope: DataScope;
@@ -429,6 +429,34 @@ export const rolePolicies: Record<string, RolePolicy> = {
       'reports.view',
     ],
   },
+
+  // 17. Security: Campus access control, physical gate entry/exit verification, visitor checks, incidents
+  security: {
+    scope: 'COLLEGE',
+    permissions: [
+      'security.view_dashboard',
+      'security.scan_qr',
+      'security.verify_gate_pass',
+      'security.record_movement',
+      'security.manage_visitors',
+      'security.report_incident',
+      'security.view_history',
+    ],
+  },
+
+  // 18. Mess Manager: Food Quality, Menu Logistics, Student Feedback, Complaints, Attendance & Notices
+  mess_manager: {
+    scope: 'HOSTEL',
+    permissions: [
+      'mess.view_dashboard',
+      'mess.manage_menu',
+      'mess.view_feedback',
+      'mess.manage_complaints',
+      'mess.view_attendance',
+      'mess.manage_notices',
+      'mess.export_reports',
+    ],
+  },
 };
 
 /**
@@ -448,6 +476,8 @@ export function normalizeRole(role: string): string {
   if (cleaned === 'placement' || cleaned === 'training_placement' || cleaned === 'placement_officer') return 'placement';
   if (cleaned === 'transport' || cleaned === 'transport_staff') return 'transport';
   if (cleaned === 'hostel' || cleaned === 'warden' || cleaned === 'hostel_staff') return 'hostel';
+  if (cleaned === 'security' || cleaned === 'security_guard' || cleaned === 'guard') return 'security';
+  if (cleaned === 'mess_manager' || cleaned === 'mess' || cleaned === 'mess_incharge' || cleaned === 'mess_supervisor') return 'mess_manager';
   if (cleaned === 'maintenance' || cleaned === 'maintenance_staff') return 'maintenance';
   if (cleaned === 'non_teaching' || cleaned === 'nonteaching') return 'non_teaching';
   if (cleaned === 'staff' || cleaned === 'labs' || cleaned === 'lab_staff') return 'staff';

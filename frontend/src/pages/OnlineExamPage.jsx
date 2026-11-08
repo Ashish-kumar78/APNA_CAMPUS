@@ -14,8 +14,9 @@ import {
 } from 'lucide-react'
 import './OnlineExamPage.css'
 import { api } from '../services/api.js'
+import { getOfflineStudentQuizzes } from '../services/studentQuizStore.js'
 
-export default function OnlineExamPage() {
+export default function OnlineExamPage({ account }) {
   const [availableTests, setAvailableTests] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -33,16 +34,28 @@ export default function OnlineExamPage() {
     let active = true
     api.getStudentQuizzes()
       .then((response) => {
-        if (!response?.success || !Array.isArray(response.data)) {
-          throw new Error(response?.message || 'The assigned quiz list was invalid.')
-        }
+        const tests = response?.data || response
         if (active) {
-          setAvailableTests(response.data)
-          setLoadError('')
+          if (Array.isArray(tests) && tests.length > 0) {
+            setAvailableTests(tests)
+            setLoadError('')
+          } else {
+            setAvailableTests(getOfflineStudentQuizzes())
+            setLoadError('')
+          }
         }
       })
       .catch((error) => {
-        if (active) setLoadError(error.message || 'Could not load assigned quizzes.')
+        console.warn('Student quizzes loading fallback:', error?.message)
+        if (active) {
+          const fallback = getOfflineStudentQuizzes()
+          if (fallback && fallback.length > 0) {
+            setAvailableTests(fallback)
+            setLoadError('')
+          } else {
+            setLoadError(error?.message || 'Could not load assigned quizzes.')
+          }
+        }
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -83,14 +96,15 @@ export default function OnlineExamPage() {
     setSubmitError('')
     try {
       const response = await api.submitStudentQuiz(selectedTest.id, answers)
-      if (!response?.success || !response.data) {
+      const resData = response?.data || response
+      if (!resData || resData.score === undefined) {
         throw new Error(response?.message || 'The quiz submission was not recorded.')
       }
-      setScore(response.data.score)
-      setAnswerReview(response.data.answerReview || [])
+      setScore(resData.score)
+      setAnswerReview(resData.answerReview || [])
       setAvailableTests((tests) => tests.map((test) => (
         test.id === selectedTest.id
-          ? { ...test, status: 'completed', score: response.data.score, maxScore: response.data.maxMarks }
+          ? { ...test, status: 'completed', score: resData.score, maxScore: resData.maxMarks || test.maxMarks }
           : test
       )))
       setView('result')

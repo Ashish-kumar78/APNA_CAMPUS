@@ -4,6 +4,7 @@
  */
 import { api } from './api.js';
 import { mockMessMenuWeekly } from '../components/hostel/hostelData.js';
+import { notificationsStore } from './notificationsStore.js';
 
 const STORAGE_KEY = 'apna_campus_hostel_food_feedback_v1';
 export const FOOD_FEEDBACK_UPDATED_EVENT = 'apna_campus_food_feedback_updated';
@@ -130,6 +131,126 @@ const seedInitialFeedback = () => [
     correctiveAction: null,
     createdAt: '2026-11-01T08:30:00Z',
     updatedAt: '2026-11-01T08:30:00Z'
+  },
+  {
+    id: 'ffb-005',
+    feedbackCode: 'FFB-2026-1005',
+    studentId: 'std-005',
+    studentName: 'Subhashree Sahoo',
+    rollNumber: '2305200005',
+    hostelId: 'hostel-b1',
+    hostelName: 'Gandhi Boys Residence',
+    mealDate: '2026-11-06',
+    mealType: 'Lunch',
+    foodItems: 'Steamed Rice, Yellow Dal, Seasonal Veg, Phulka, Papad',
+    qualityRating: 2,
+    tasteRating: 2,
+    temperatureRating: 2,
+    hygieneRating: 3,
+    quantity: 'Too Little',
+    overallRating: 2,
+    category: 'Food Quality',
+    comments: 'Chapatis were tough and cold; dal was overly watery with no seasoning.',
+    status: 'Under Review',
+    priority: 'High',
+    assignedWarden: 'Mr. Rajesh Jena',
+    internalNotes: 'Second report received regarding Thursday Lunch chapatis.',
+    response: null,
+    respondedBy: null,
+    respondedAt: null,
+    correctiveAction: null,
+    createdAt: '2026-11-06T13:40:00Z',
+    updatedAt: '2026-11-06T13:40:00Z'
+  },
+  {
+    id: 'ffb-006',
+    feedbackCode: 'FFB-2026-1006',
+    studentId: 'std-007',
+    studentName: 'Bikash Mohanty',
+    rollNumber: '2305200007',
+    hostelId: 'hostel-b1',
+    hostelName: 'Gandhi Boys Residence',
+    mealDate: '2026-11-06',
+    mealType: 'Lunch',
+    foodItems: 'Steamed Rice, Yellow Dal, Seasonal Veg, Phulka, Papad',
+    qualityRating: 1,
+    tasteRating: 1,
+    temperatureRating: 2,
+    hygieneRating: 2,
+    quantity: 'Appropriate',
+    overallRating: 1,
+    category: 'Food Quality',
+    comments: 'Chapatis were burnt and unchewable. Dal was salty and inedible.',
+    status: 'Pending',
+    priority: 'High',
+    assignedWarden: 'Mr. Rajesh Jena',
+    internalNotes: '',
+    response: null,
+    respondedBy: null,
+    respondedAt: null,
+    correctiveAction: null,
+    createdAt: '2026-11-06T14:05:00Z',
+    updatedAt: '2026-11-06T14:05:00Z'
+  },
+  {
+    id: 'ffb-007',
+    feedbackCode: 'FFB-2026-1007',
+    studentId: 'std-008',
+    studentName: 'Siddharth Jena',
+    rollNumber: '2305200008',
+    hostelId: 'hostel-g1',
+    hostelName: 'Sarojini Girls Residence',
+    mealDate: '2026-11-05',
+    mealType: 'Dinner',
+    foodItems: 'Phulka Chapati, Jeera Rice, Dal Tadka, Kadai Paneer',
+    qualityRating: 3,
+    tasteRating: 3,
+    temperatureRating: 4,
+    hygieneRating: 4,
+    quantity: 'Appropriate',
+    overallRating: 3,
+    category: 'Taste',
+    comments: 'Average meal, rice quality could be improved, but paneer was fine.',
+    status: 'Pending',
+    priority: 'Normal',
+    assignedWarden: 'Mrs. Nibedita Das',
+    internalNotes: '',
+    response: null,
+    respondedBy: null,
+    respondedAt: null,
+    correctiveAction: null,
+    createdAt: '2026-11-05T21:10:00Z',
+    updatedAt: '2026-11-05T21:10:00Z'
+  },
+  {
+    id: 'ffb-008',
+    feedbackCode: 'FFB-2026-1008',
+    studentId: 'std-009',
+    studentName: 'Smruti Ranjan',
+    rollNumber: '2305200009',
+    hostelId: 'hostel-b1',
+    hostelName: 'Gandhi Boys Residence',
+    mealDate: '2026-11-07',
+    mealType: 'Dinner',
+    foodItems: 'Phulka Chapati, Jeera Rice, Dal Makhani, Kadai Paneer, Gulab Jamun',
+    qualityRating: 5,
+    tasteRating: 5,
+    temperatureRating: 5,
+    hygieneRating: 5,
+    quantity: 'Appropriate',
+    overallRating: 5,
+    category: 'Taste',
+    comments: 'Excellent Gulab Jamun and hot phulkas! Great improvement.',
+    status: 'Resolved',
+    priority: 'Normal',
+    assignedWarden: 'Mr. Rajesh Jena',
+    internalNotes: 'Shared praise with night kitchen team.',
+    response: 'Thank you! The night kitchen team appreciates the encouragement.',
+    respondedBy: 'Mr. Rajesh Jena',
+    respondedAt: '2026-11-07T22:15:00Z',
+    correctiveAction: 'Maintained current dessert standard.',
+    createdAt: '2026-11-07T21:30:00Z',
+    updatedAt: '2026-11-07T22:15:00Z'
   }
 ];
 
@@ -240,7 +361,20 @@ export const getWeeklyMessMenu = () => {
 /**
  * Edit / Update food items for a specific day and meal
  */
-export const updateMealMenuItem = async ({ day, mealType, items, time, calories }) => {
+export const updateMealMenuItem = async ({
+  day,
+  mealType,
+  items,
+  time,
+  calories,
+  description,
+  isSpecial,
+  specialOccasion,
+  isAvailable,
+  unavailabilityReason,
+  lastUpdatedBy = 'Mr. Kailash Chandra Nayak',
+  notifyStudents = false,
+}) => {
   const currentWeekly = getWeeklyMessMenu();
   const validDay = day || 'Monday';
   const rawMeal = (mealType || 'breakfast').toLowerCase();
@@ -254,6 +388,13 @@ export const updateMealMenuItem = async ({ day, mealType, items, time, calories 
     items: (items !== undefined && items !== null ? String(items) : currentMeal.items || '').trim(),
     time: (time !== undefined && time !== null ? String(time) : currentMeal.time || '').trim(),
     calories: (calories !== undefined && calories !== null ? String(calories) : currentMeal.calories || '').trim(),
+    description: description !== undefined ? String(description).trim() : (currentMeal.description || ''),
+    isSpecial: isSpecial !== undefined ? Boolean(isSpecial) : Boolean(currentMeal.isSpecial),
+    specialOccasion: specialOccasion !== undefined ? String(specialOccasion).trim() : (currentMeal.specialOccasion || ''),
+    isAvailable: isAvailable !== undefined ? Boolean(isAvailable) : (currentMeal.isAvailable !== false),
+    unavailabilityReason: unavailabilityReason !== undefined ? String(unavailabilityReason).trim() : (currentMeal.unavailabilityReason || ''),
+    lastUpdatedBy: String(lastUpdatedBy || 'Mr. Kailash Chandra Nayak'),
+    lastUpdatedDate: new Date().toISOString(),
   };
 
   const updatedWeekly = {
@@ -283,6 +424,44 @@ export const updateMealMenuItem = async ({ day, mealType, items, time, calories 
     }
   }
 
+  // Automatic student notification if requested or meal marked unavailable or festive feast
+  if (notifyStudents || updatedMeal.isAvailable === false || updatedMeal.isSpecial) {
+    try {
+      const notifTitle = updatedMeal.isAvailable === false
+        ? `Mess Notice: ${validDay} ${mealKey.toUpperCase()} Unavailable`
+        : (updatedMeal.isSpecial
+          ? `Special Festive Meal: ${validDay} ${mealKey.toUpperCase()} (${updatedMeal.specialOccasion || 'Celebration Feast'})`
+          : `Mess Menu Update: ${validDay} ${mealKey.toUpperCase()}`);
+
+      const notifMessage = updatedMeal.isAvailable === false
+        ? `${validDay} ${mealKey} is marked unavailable: ${updatedMeal.unavailabilityReason || 'Operational maintenance'}. Alternate arrangements in place.`
+        : (updatedMeal.isSpecial
+          ? `Special celebration menu announced for ${validDay} ${mealKey}: ${updatedMeal.items}.`
+          : `Menu updated for ${validDay} ${mealKey}: ${updatedMeal.items}.`);
+
+      if (notificationsStore && typeof notificationsStore.sendNotification === 'function') {
+        notificationsStore.sendNotification(
+          {
+            id: `notif-menu-change-${validDay.toLowerCase()}-${mealKey}-${Date.now().toString().slice(-4)}`,
+            title: notifTitle,
+            message: notifMessage,
+            category: 'MESS',
+            priority: updatedMeal.isAvailable === false ? 'URGENT' : 'NORMAL',
+            senderName: lastUpdatedBy,
+            senderRole: 'Chief Mess Manager',
+            senderDept: 'Hostel Dining & Food Logistics',
+            targetAudience: 'All Hostel Residents',
+            actionTab: 'hostel',
+            actionLabel: 'View Updated Menu',
+          },
+          ['student', 'hostel']
+        );
+      }
+    } catch (err) {
+      console.warn('Failed to send menu change notification:', err.message);
+    }
+  }
+
   // Sync to backend asynchronously
   try {
     if (api && typeof api.updateDailyMessMenu === 'function') {
@@ -299,6 +478,168 @@ export const updateMealMenuItem = async ({ day, mealType, items, time, calories 
   }
 
   return updatedWeekly;
+};
+
+/**
+ * Publish the weekly mess menu college-wide with automated student notifications
+ */
+export const publishWeeklyMenu = ({ publishedBy = 'Mr. Kailash Chandra Nayak', targetHostels = 'All Hostels' } = {}) => {
+  const currentWeekly = getWeeklyMessMenu();
+  const timestamp = new Date().toISOString();
+
+  const pubMeta = {
+    isPublished: true,
+    lastPublishedAt: timestamp,
+    publishedBy,
+    targetHostels,
+  };
+
+  const storage = getStorage();
+  if (storage) {
+    try {
+      storage.setItem('apna_campus_mess_menu_pub_meta', JSON.stringify(pubMeta));
+    } catch (e) {}
+  }
+
+  // Dispatch automated notification to students without duplicate spam
+  try {
+    if (notificationsStore && typeof notificationsStore.sendNotification === 'function') {
+      notificationsStore.sendNotification(
+        {
+          id: `notif-menu-pub-${timestamp.slice(0, 10)}`, // Deduplicated per date
+          title: `Weekly Mess Menu Published (${targetHostels})`,
+          message: `Official rotational mess menu published by ${publishedBy}. Complete daily breakfast, lunch, snacks, and dinner schedules are live on your dashboard.`,
+          category: 'MESS',
+          priority: 'NORMAL',
+          senderName: publishedBy,
+          senderRole: 'Chief Mess Manager & Food Safety Officer',
+          senderDept: 'Hostel Dining & Food Logistics',
+          targetAudience: `${targetHostels} Residents`,
+          actionTab: 'hostel',
+          actionLabel: 'View Mess Menu',
+        },
+        ['student', 'hostel']
+      );
+    }
+  } catch (err) {
+    console.warn('Failed to dispatch menu publication notification:', err.message);
+  }
+
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    try {
+      window.dispatchEvent(new CustomEvent(MESS_MENU_UPDATED_EVENT, { detail: currentWeekly }));
+      window.dispatchEvent(new Event('storage'));
+    } catch (e) {}
+  }
+
+  return pubMeta;
+};
+
+/**
+ * Get current weekly menu publication metadata
+ */
+export const getMenuPublicationStatus = () => {
+  const storage = getStorage();
+  if (!storage) {
+    return {
+      isPublished: true,
+      lastPublishedAt: new Date().toISOString(),
+      publishedBy: 'Mr. Kailash Chandra Nayak',
+      targetHostels: 'All Hostels',
+    };
+  }
+  try {
+    const raw = storage.getItem('apna_campus_mess_menu_pub_meta');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {
+    isPublished: true,
+    lastPublishedAt: new Date().toISOString(),
+    publishedBy: 'Mr. Kailash Chandra Nayak',
+    targetHostels: 'All Hostels',
+  };
+};
+
+/**
+ * Copy / Duplicate previous week's verified menu rotation
+ */
+export const copyPreviousWeekMenu = ({ copiedBy = 'Mr. Kailash Chandra Nayak' } = {}) => {
+  const cloned = JSON.parse(JSON.stringify(mockMessMenuWeekly));
+  const timestamp = new Date().toISOString();
+
+  // Stamp each meal with copied metadata
+  Object.keys(cloned).forEach((day) => {
+    Object.keys(cloned[day]).forEach((mealKey) => {
+      cloned[day][mealKey].lastUpdatedBy = copiedBy;
+      cloned[day][mealKey].lastUpdatedDate = timestamp;
+      cloned[day][mealKey].isAvailable = true;
+    });
+  });
+
+  _memoryWeeklyMenu = cloned;
+  const storage = getStorage();
+  if (storage) {
+    try {
+      storage.setItem(MESS_MENU_STORAGE_KEY, JSON.stringify(cloned));
+    } catch (e) {}
+  }
+
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    try {
+      window.dispatchEvent(new CustomEvent(MESS_MENU_UPDATED_EVENT, { detail: cloned }));
+      window.dispatchEvent(new Event('storage'));
+    } catch (e) {}
+  }
+
+  return cloned;
+};
+
+/**
+ * Mark a meal available or unavailable
+ */
+export const markMealAvailability = async ({
+  day,
+  mealType,
+  isAvailable,
+  unavailabilityReason = '',
+  updatedBy = 'Mr. Kailash Chandra Nayak',
+}) => {
+  return await updateMealMenuItem({
+    day,
+    mealType,
+    isAvailable,
+    unavailabilityReason,
+    lastUpdatedBy: updatedBy,
+    notifyStudents: !isAvailable,
+  });
+};
+
+/**
+ * Add / Configure a Special Festival Meal
+ */
+export const addFestivalSpecialMeal = async ({
+  day,
+  mealType,
+  occasion,
+  items,
+  time,
+  calories,
+  description,
+  updatedBy = 'Mr. Kailash Chandra Nayak',
+}) => {
+  return await updateMealMenuItem({
+    day,
+    mealType,
+    items,
+    time,
+    calories,
+    description,
+    isSpecial: true,
+    specialOccasion: occasion || 'Festival Celebration Feast',
+    isAvailable: true,
+    lastUpdatedBy: updatedBy,
+    notifyStudents: true,
+  });
 };
 
 /**
@@ -677,6 +1018,110 @@ export const forwardFoodFeedbackToAdmin = async (id, forwardNote, authorName = '
 };
 
 /**
+ * Detect repeated food-quality defect clusters (< 3 stars for same meal & date)
+ */
+export const detectRepeatedMealDefects = (feedbackList = null) => {
+  const list = feedbackList || getLocalFoodFeedback();
+  const lowRated = list.filter(f => (Number(f.overallRating) || 0) < 3);
+
+  const groups = {};
+  lowRated.forEach(f => {
+    const key = `${f.mealDate}__${(f.mealType || '').toLowerCase()}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(f);
+  });
+
+  const clusters = [];
+  Object.keys(groups).forEach(key => {
+    const items = groups[key];
+    if (items.length >= 2) {
+      const first = items[0];
+      const sum = items.reduce((acc, curr) => acc + (Number(curr.overallRating) || 0), 0);
+      const avg = Number((sum / items.length).toFixed(1));
+      const affectedHostels = [...new Set(items.map(i => i.hostelName).filter(Boolean))];
+      clusters.push({
+        clusterKey: key,
+        mealDate: first.mealDate,
+        mealType: first.mealType,
+        count: items.length,
+        averageRating: avg,
+        category: first.category || 'Food Quality',
+        affectedHostels,
+        items,
+        sampleComments: items.map(i => ({
+          studentName: i.studentName,
+          rollNumber: i.rollNumber,
+          comment: i.comments,
+          rating: i.overallRating
+        })),
+        summary: `${items.length} students reported poor food quality / low rating (< 3★) for ${first.mealType} on ${first.mealDate}`
+      });
+    }
+  });
+
+  return clusters.sort((a, b) => b.count - a.count);
+};
+
+/**
+ * Mess Manager logs investigation, corrective kitchen action, and updates status
+ * Constraint: Does NOT automatically mark resolved on view; only when explicitly saved.
+ */
+export const recordFeedbackInvestigationAction = async ({
+  id,
+  correctiveAction = '',
+  response = '',
+  internalNotes = '',
+  status = 'Action Taken',
+  officerName = 'Mr. Kailash Chandra Nayak'
+}) => {
+  const current = getLocalFoodFeedback();
+  const timestamp = new Date().toISOString();
+  const formattedTime = timestamp.replace('T', ' ').substring(0, 16);
+
+  const updated = current.map(f => {
+    if (f.id === id || f.feedbackCode === id) {
+      const noteEntry = internalNotes?.trim()
+        ? `[${formattedTime} by ${officerName} (Investigation)]: ${internalNotes.trim()}`
+        : null;
+      const combinedNotes = noteEntry
+        ? (f.internalNotes ? `${f.internalNotes}\n${noteEntry}` : noteEntry)
+        : f.internalNotes;
+
+      return {
+        ...f,
+        status: status || f.status,
+        correctiveAction: correctiveAction?.trim() || f.correctiveAction || 'Kitchen inspection completed.',
+        response: response?.trim() || f.response || `Investigation recorded by ${officerName}. Action initiated.`,
+        respondedBy: officerName,
+        respondedAt: timestamp,
+        internalNotes: combinedNotes,
+        priority: status === 'Resolved' ? 'Normal' : f.priority,
+        updatedAt: timestamp
+      };
+    }
+    return f;
+  });
+
+  saveLocalFoodFeedback(updated);
+
+  // Background API sync
+  if (api.respondToFoodFeedback) {
+    api.respondToFoodFeedback(id, {
+      response: response || `Investigation recorded by ${officerName}. Action initiated.`,
+      correctiveAction: correctiveAction || 'Kitchen inspection completed.'
+    }).catch(err => console.warn('Backend respondToFoodFeedback fallback:', err.message));
+  }
+  if (api.updateFoodFeedbackStatus) {
+    api.updateFoodFeedbackStatus(id, {
+      status,
+      assignedWarden: officerName
+    }).catch(err => console.warn('Backend updateFoodFeedbackStatus fallback:', err.message));
+  }
+
+  return updated.find(f => f.id === id || f.feedbackCode === id);
+};
+
+/**
  * Calculate summary analytics
  */
 export const getFoodFeedbackAnalytics = async () => {
@@ -692,6 +1137,14 @@ export const getFoodFeedbackAnalytics = async () => {
   const avgRating = totalFeedback > 0 ? (list.reduce((acc, curr) => acc + curr.overallRating, 0) / totalFeedback).toFixed(1) : '4.5';
   const openIssues = list.filter(f => f.status !== 'Resolved').length;
   const resolvedIssues = list.filter(f => f.status === 'Resolved').length;
+
+  const starDistribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  list.forEach(f => {
+    const star = Math.min(5, Math.max(1, Math.round(Number(f.overallRating) || 5)));
+    starDistribution[star] = (starDistribution[star] || 0) + 1;
+  });
+  const lowRatedCount = list.filter(f => (Number(f.overallRating) || 0) < 3).length;
+  const repeatedDefects = detectRepeatedMealDefects(list);
 
   const meals = ['Breakfast', 'Lunch', 'Evening Snacks', 'Dinner'];
   const ratingsByMeal = {};
@@ -725,6 +1178,9 @@ export const getFoodFeedbackAnalytics = async () => {
   return {
     totalFeedback,
     averageRating: Number(avgRating),
+    starDistribution,
+    lowRatedCount,
+    repeatedDefects,
     openIssues,
     resolvedIssues,
     ratingsByMeal,

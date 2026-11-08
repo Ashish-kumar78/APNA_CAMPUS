@@ -28,6 +28,8 @@ enum Role {
   ADMISSIONS
   MAINTENANCE
   NON_TEACHING
+  SECURITY
+  MESS_MANAGER
 }
 
 enum AccountStatus {
@@ -631,16 +633,63 @@ model HostelComplaint {
 }
 
 model HostelVisitor {
-  id          String   @id @default(cuid())
-  visitorName String
-  relation    String
-  studentName String
-  rollNumber  String
-  inTime      String
-  outTime     String?  @default("Pending Sign-out")
-  passNumber  String   @unique
-  purpose     String
-  createdAt   DateTime @default(now())
+  id                     String    @id @default(cuid())
+  visitorName            String
+  relation               String
+  studentName            String
+  rollNumber             String
+  inTime                 String
+  outTime                String?   @default("Pending Sign-out")
+  passNumber             String    @unique
+  purpose                String
+  phone                  String?
+  idProofNumber          String?
+  badgeNumber            String?
+  verificationCode       String?
+  status                 String?   @default("Approved") // "Pre-Approved", "Checked In", "Checked Out"
+  preApprovedByStudentId String?
+  registeredByGuardId    String?
+  hostelName             String?
+  gateNumber             String?   @default("Gate 1")
+  checkInTime            DateTime?
+  checkOutTime           DateTime?
+  createdAt              DateTime  @default(now())
+
+  @@index([rollNumber])
+  @@index([verificationCode])
+  @@index([status])
+}
+
+model CampusGateMovement {
+  id             String    @id @default(cuid())
+  movementCode   String    @unique @default(cuid())
+  passId         String    // Reference to gate pass (e.g. GP-2026-1042 or WorkflowRequest.id)
+  rollNumber     String
+  studentName    String
+  department     String?
+  hostelName     String?
+  roomNumber     String?
+  direction      String    // "EXIT" or "ENTRY"
+  movementTime   DateTime  @default(now())
+  gateName       String    @default("Main Campus Gate 1")
+  guardId        String    @default("SEC-101")
+  guardName      String    @default("Dillip Kumar Pradhan")
+  status         String    @default("CONFIRMED") // "CONFIRMED" or "PROVISIONAL"
+  isLate         Boolean   @default(false)
+  lateDuration   String?   // e.g. "45 mins late"
+  remarks        String?
+  parentNotified Boolean   @default(true)
+  offlineSyncId  String?   @unique
+  syncedAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([rollNumber])
+  @@index([passId])
+  @@index([direction])
+  @@index([movementTime])
+  @@index([status])
+  @@map("campus_gate_movements")
 }
 
 model FoodFeedback {

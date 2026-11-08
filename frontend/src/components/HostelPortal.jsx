@@ -76,6 +76,7 @@ import {
   recordGatePassReturn
 } from '../services/gatePassStore.js';
 import { api } from '../services/api.js';
+import { getAllWardens } from '../services/wardenManagementStore.js';
 import { useTimeGreeting } from '../utils/timeGreeting.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import HandwrittenApplicationLetter from './HandwrittenApplicationLetter.jsx';
@@ -242,11 +243,38 @@ export default function HostelPortal({ account, onLogout }) {
 
   // Add Hostel Modal
   const [isAddHostelModalOpen, setIsAddHostelModalOpen] = useState(false);
+  const [availableWardens, setAvailableWardens] = useState(() => getAllWardens());
+
+  useEffect(() => {
+    const handleWardensUpdate = () => {
+      setAvailableWardens(getAllWardens());
+    };
+    window.addEventListener('bput_wardens_updated', handleWardensUpdate);
+    window.addEventListener('bput_warden_created', handleWardensUpdate);
+    window.addEventListener('bput_warden_status_changed', handleWardensUpdate);
+    window.addEventListener('bput_warden_duty_changed', handleWardensUpdate);
+    window.addEventListener('storage', handleWardensUpdate);
+    return () => {
+      window.removeEventListener('bput_wardens_updated', handleWardensUpdate);
+      window.removeEventListener('bput_warden_created', handleWardensUpdate);
+      window.removeEventListener('bput_warden_status_changed', handleWardensUpdate);
+      window.removeEventListener('bput_warden_duty_changed', handleWardensUpdate);
+      window.removeEventListener('storage', handleWardensUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isAddHostelModalOpen) {
+      setAvailableWardens(getAllWardens());
+    }
+  }, [isAddHostelModalOpen]);
+
   const [hostelForm, setHostelForm] = useState({
     name: '',
     type: 'Boys',
-    totalFloors: 3,
+    totalFloors: 2,
     totalRooms: 50,
+    bedsPerRoom: 3,
     totalBeds: 150,
     warden: '',
     contact: '+91 94370 00000',
@@ -949,16 +977,20 @@ export default function HostelPortal({ account, onLogout }) {
   // Add Hostel Complex Handler
   const handleAddHostelSubmit = (e) => {
     e.preventDefault();
+    const rooms = Number(hostelForm.totalRooms) || 50;
+    const bpr = Number(hostelForm.bedsPerRoom) || 3;
+    const beds = Number(hostelForm.totalBeds) || (rooms * bpr);
     const newHostel = {
       id: `hostel-${Date.now().toString().slice(-4)}`,
       name: hostelForm.name,
       type: hostelForm.type,
-      totalFloors: Number(hostelForm.totalFloors) || 3,
-      totalRooms: Number(hostelForm.totalRooms) || 50,
-      totalBeds: Number(hostelForm.totalBeds) || 150,
+      totalFloors: Number(hostelForm.totalFloors) || 2,
+      totalRooms: rooms,
+      bedsPerRoom: bpr,
+      totalBeds: beds,
       occupiedBeds: 0,
-      availableBeds: Number(hostelForm.totalBeds) || 150,
-      warden: hostelForm.warden,
+      availableBeds: beds,
+      warden: hostelForm.warden || (availableWardens[0]?.name || 'Resident Warden'),
       contact: hostelForm.contact
     };
     setHostels(prev => [...prev, newHostel]);
@@ -4770,9 +4802,19 @@ export default function HostelPortal({ account, onLogout }) {
                     <label>Total Rooms</label>
                     <input
                       type="number"
+                      min="1"
                       className="admin-form-input"
                       value={hostelForm.totalRooms}
-                      onChange={e => setHostelForm({ ...hostelForm, totalRooms: e.target.value })}
+                      onChange={e => {
+                        const roomsVal = e.target.value;
+                        const rooms = Number(roomsVal) || 0;
+                        const bpr = Number(hostelForm.bedsPerRoom) || 1;
+                        setHostelForm(prev => ({
+                          ...prev,
+                          totalRooms: roomsVal,
+                          totalBeds: rooms * bpr
+                        }));
+                      }}
                       required
                     />
                   </div>
@@ -4780,37 +4822,85 @@ export default function HostelPortal({ account, onLogout }) {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className="admin-form-group">
+                    <label>Beds in One Room (Sharing)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="admin-form-input"
+                      value={hostelForm.bedsPerRoom}
+                      onChange={e => {
+                        const bprVal = e.target.value;
+                        const bpr = Number(bprVal) || 0;
+                        const rooms = Number(hostelForm.totalRooms) || 0;
+                        setHostelForm(prev => ({
+                          ...prev,
+                          bedsPerRoom: bprVal,
+                          totalBeds: rooms * bpr
+                        }));
+                      }}
+                      placeholder="e.g. 3"
+                      required
+                    />
+                    <small style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                      Bed sharing per room
+                    </small>
+                  </div>
+                  <div className="admin-form-group">
                     <label>Approved Bed Capacity</label>
                     <input
                       type="number"
+                      min="1"
                       className="admin-form-input"
                       value={hostelForm.totalBeds}
                       onChange={e => setHostelForm({ ...hostelForm, totalBeds: e.target.value })}
                       required
                     />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Resident Warden Name</label>
-                    <input
-                      type="text"
-                      className="admin-form-input"
-                      value={hostelForm.warden}
-                      onChange={e => setHostelForm({ ...hostelForm, warden: e.target.value })}
-                      placeholder="e.g. Dr. A. K. Nayak"
-                      required
-                    />
+                    <small style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: 600, marginTop: '2px', display: 'block' }}>
+                      {Number(hostelForm.totalRooms) > 0 && Number(hostelForm.bedsPerRoom) > 0
+                        ? `✓ Auto: ${hostelForm.totalRooms} rooms × ${hostelForm.bedsPerRoom} beds = ${Number(hostelForm.totalRooms) * Number(hostelForm.bedsPerRoom)} beds`
+                        : 'Auto-calculated from rooms × beds per room'}
+                    </small>
                   </div>
                 </div>
 
-                <div className="admin-form-group">
-                  <label>Emergency Contact Phone</label>
-                  <input
-                    type="text"
-                    className="admin-form-input"
-                    value={hostelForm.contact}
-                    onChange={e => setHostelForm({ ...hostelForm, contact: e.target.value })}
-                    required
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="admin-form-group">
+                    <label>Resident Warden Name</label>
+                    <select
+                      className="admin-form-select"
+                      value={hostelForm.warden}
+                      onChange={e => {
+                        const selectedName = e.target.value;
+                        const matched = availableWardens.find(w => w.name === selectedName);
+                        setHostelForm(prev => ({
+                          ...prev,
+                          warden: selectedName,
+                          contact: matched?.phone || matched?.mobileNo || prev.contact
+                        }));
+                      }}
+                      required
+                    >
+                      <option value="">-- Choose Resident Warden --</option>
+                      {availableWardens.map(w => (
+                        <option key={w.id || w.name} value={w.name}>
+                          {w.name} ({w.id || 'Warden'}) — {w.designation || 'Resident Warden'} {w.hostelName ? `[${w.hostelName}]` : ''}
+                        </option>
+                      ))}
+                      {hostelForm.warden && !availableWardens.some(w => w.name === hostelForm.warden) && (
+                        <option value={hostelForm.warden}>{hostelForm.warden} (Custom)</option>
+                      )}
+                    </select>
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Emergency Contact Phone</label>
+                    <input
+                      type="text"
+                      className="admin-form-input"
+                      value={hostelForm.contact}
+                      onChange={e => setHostelForm({ ...hostelForm, contact: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
               </div>
               <div className="admin-modal-footer">
@@ -5247,6 +5337,24 @@ export default function HostelPortal({ account, onLogout }) {
                   <div style={{ marginTop: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#dcfce7', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}>
                     <QrCode size={14} /> Digital Biometric Exit Code Active at Campus Gates
                   </div>
+
+                  {/* Gate Security Checkpoint Telemetry */}
+                  {(selectedGatePassModal.actualExitTime || selectedGatePassModal.status === 'Exited Campus') && (
+                    <div style={{ marginTop: '0.75rem', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.75rem 1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', textAlign: 'left' }}>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Gate Security Exit Checkpoint</span>
+                        <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.88rem' }}>
+                          {selectedGatePassModal.actualExitTime || 'Verified by Gate Guard'}
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Gate Security Return Checkpoint</span>
+                        <div style={{ fontWeight: 800, color: selectedGatePassModal.actualReturnTime ? '#16a34a' : '#d97706', fontSize: '0.88rem' }}>
+                          {selectedGatePassModal.actualReturnTime || 'Currently Outside Campus'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '1.15rem' }}>

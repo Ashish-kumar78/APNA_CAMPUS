@@ -9,4 +9,12 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
+  build: {
+    minify: false,
+    sourcemap: false,
+    target: 'es2020',
+  },
+  esbuild: {
+    legalComments: 'none',
+  },
 })

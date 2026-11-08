@@ -277,7 +277,7 @@ export default function StudentHostelPage({ defaultTab = 'gate-pass', account })
             transition: 'all 0.2s ease'
           }}
         >
-          <Utensils size={17} /> Food Feedback
+          <Utensils size={17} /> Mess &amp; Food Menu
         </button>
 
         <button

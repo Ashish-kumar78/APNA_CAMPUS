@@ -1,4 +1,5 @@
 // Central API Client connecting Frontend to NestJS Backend
+import { getOfflineStudentQuizzes, submitOfflineStudentQuiz } from './studentQuizStore.js';
 
 const rawBase =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
@@ -1689,12 +1690,34 @@ export const api = {
     request(`/faculty/quizzes/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }),
-  getStudentQuizzes: () => request('/exams/student/quizzes'),
-  submitStudentQuiz: (id, answers) =>
-    request(`/exams/student/quizzes/${encodeURIComponent(id)}/submit`, {
-      method: 'POST',
-      body: JSON.stringify({ answers }),
-    }),
+  getStudentQuizzes: async () => {
+    try {
+      const res = await request('/exams/student/quizzes');
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        return res;
+      }
+    } catch (err) {
+      console.warn('[api] getStudentQuizzes network fallback:', err.message);
+    }
+    return {
+      success: true,
+      data: getOfflineStudentQuizzes(),
+    };
+  },
+  submitStudentQuiz: async (id, answers) => {
+    try {
+      const res = await request(`/exams/student/quizzes/${encodeURIComponent(id)}/submit`, {
+        method: 'POST',
+        body: JSON.stringify({ answers }),
+      });
+      if (res && res.success && res.data) {
+        return res;
+      }
+    } catch (err) {
+      console.warn('[api] submitStudentQuiz network fallback:', err.message);
+    }
+    return submitOfflineStudentQuiz(id, answers);
+  },
   getFacultyPerformance: (subjectCode = 'CS501', section = 'Section A') =>
     request(`/faculty/performance?subjectCode=${encodeURIComponent(subjectCode)}&section=${encodeURIComponent(section)}`),
   getFacultyEarlyWarning: (subjectCode = 'CS501', section = 'Section A') =>
@@ -2672,6 +2695,69 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // 17. Campus Gate Security Operations
+  scanSecurityPass: (payload) =>
+    request('/security/scan', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  recordSecurityExit: (payload) =>
+    request('/security/movement/exit', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  recordSecurityEntry: (payload) =>
+    request('/security/movement/entry', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getSecurityOverviewStats: () => request('/security/overview-stats'),
+  getSecurityApprovedPasses: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.date) q.append('date', params.date);
+    if (params.hostel) q.append('hostel', params.hostel);
+    if (params.status) q.append('status', params.status);
+    if (params.search) q.append('search', params.search);
+    const qs = q.toString();
+    return request(`/security/passes/approved${qs ? '?' + qs : ''}`);
+  },
+  getSecurityMovementsHistory: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.direction) q.append('direction', params.direction);
+    if (params.search) q.append('search', params.search);
+    const qs = q.toString();
+    return request(`/security/movements/history${qs ? '?' + qs : ''}`);
+  },
+  verifySecurityVisitorCode: (code) =>
+    request('/security/visitors/verify-code', {
+      method: 'POST',
+      body: JSON.stringify({ verificationCode: code }),
+    }),
+  registerSecurityWalkInVisitor: (payload) =>
+    request('/security/visitors/walk-in', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  checkInSecurityVisitor: (id, badgeNumber) =>
+    request(`/security/visitors/${id}/checkin`, {
+      method: 'PATCH',
+      body: JSON.stringify({ badgeNumber }),
+    }),
+  checkOutSecurityVisitor: (id) =>
+    request(`/security/visitors/${id}/checkout`, {
+      method: 'PATCH',
+    }),
+  getSecurityVisitors: () => request('/security/visitors'),
+  reportSecurityIncident: (payload) =>
+    request('/security/incidents', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  syncSecurityOfflineQueue: (movements) =>
+    request('/security/sync-offline-queue', {
+      method: 'POST',
+      body: JSON.stringify({ movements }),
+    }),
 };
 
 

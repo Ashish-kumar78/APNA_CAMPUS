@@ -168,8 +168,9 @@ export default function WardenManagementSection({ account, initialTab = 'directo
   const [addHostelForm, setAddHostelForm] = useState({
     name: '',
     type: 'Boys',
-    totalFloors: 3,
+    totalFloors: 2,
     totalRooms: 50,
+    bedsPerRoom: 3,
     totalBeds: 150,
     warden: '',
     contact: ''
@@ -2010,22 +2011,56 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                       min="1"
                       className="wm-form-input"
                       value={addHostelForm.totalRooms}
-                      onChange={e => setAddHostelForm({ ...addHostelForm, totalRooms: Number(e.target.value) || 1 })}
+                      onChange={e => {
+                        const roomsVal = Number(e.target.value) || 0;
+                        const bpr = Number(addHostelForm.bedsPerRoom) || 3;
+                        setAddHostelForm({
+                          ...addHostelForm,
+                          totalRooms: roomsVal,
+                          totalBeds: roomsVal * bpr
+                        });
+                      }}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="wm-form-label">Total Bed Capacity *</label>
+                    <label className="wm-form-label">Beds in One Room (Sharing) *</label>
                     <input
                       type="number"
                       min="1"
                       className="wm-form-input"
-                      value={addHostelForm.totalBeds}
-                      onChange={e => setAddHostelForm({ ...addHostelForm, totalBeds: Number(e.target.value) || 1 })}
+                      value={addHostelForm.bedsPerRoom}
+                      onChange={e => {
+                        const bprVal = Number(e.target.value) || 0;
+                        const rooms = Number(addHostelForm.totalRooms) || 0;
+                        setAddHostelForm({
+                          ...addHostelForm,
+                          bedsPerRoom: bprVal,
+                          totalBeds: rooms * bprVal
+                        });
+                      }}
+                      placeholder="e.g. 3"
                       required
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="wm-form-label">Total Bed Capacity *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="wm-form-input"
+                    value={addHostelForm.totalBeds}
+                    onChange={e => setAddHostelForm({ ...addHostelForm, totalBeds: Number(e.target.value) || 1 })}
+                    required
+                  />
+                  <small style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: 600, marginTop: '2px', display: 'block' }}>
+                    {Number(addHostelForm.totalRooms) > 0 && Number(addHostelForm.bedsPerRoom) > 0
+                      ? `✓ Auto-calculated: ${addHostelForm.totalRooms} rooms × ${addHostelForm.bedsPerRoom} beds = ${Number(addHostelForm.totalRooms) * Number(addHostelForm.bedsPerRoom)} beds`
+                      : 'Auto-calculates bed capacity'}
+                  </small>
                 </div>
 
                 <div>

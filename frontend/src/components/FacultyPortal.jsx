@@ -32,6 +32,7 @@ import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
+import PublicTimetable from './PublicTimetable.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import FacultyClassSelector from './FacultyClassSelector.jsx';
 import FacultyComplaintsModule from './FacultyComplaintsModule.jsx';
@@ -2586,7 +2587,7 @@ export default function FacultyPortal({ account, onLogout }) {
 
           {/* TAB: TEACHING TIMETABLE */}
           {activeTab === 'timetable' && (
-            <TimetableManager account={account} />
+            <PublicTimetable account={account} role="faculty" onClose={() => setActiveTab('dashboard')} />
           )}
 
           {/* TAB 5: CLASS PERFORMANCE & ANALYTICS */}

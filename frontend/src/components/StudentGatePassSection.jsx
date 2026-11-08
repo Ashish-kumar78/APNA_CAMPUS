@@ -970,6 +970,24 @@ export default function StudentGatePassSection({ student: propStudent }) {
                     {selectedDigitalPass.inDateTime ? selectedDigitalPass.inDateTime.replace('T', ' ') : 'N/A'}
                   </div>
                 </div>
+
+                {/* Gate Security Checkpoint Verification Timestamps */}
+                {(selectedDigitalPass.actualExitTime || selectedDigitalPass.actualReturnTime) && (
+                  <div style={{ gridColumn: '1 / -1', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '0.65rem 0.85rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.68rem', color: '#047857', textTransform: 'uppercase', fontWeight: 800 }}>Campus Gate Exit Recorded</span>
+                      <div style={{ fontWeight: 800, color: '#065f46', fontSize: '0.86rem' }}>
+                        {selectedDigitalPass.actualExitTime || 'Pending Exit Scan'}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.68rem', color: '#047857', textTransform: 'uppercase', fontWeight: 800 }}>Campus Gate Return Recorded</span>
+                      <div style={{ fontWeight: 800, color: '#065f46', fontSize: '0.86rem' }}>
+                        {selectedDigitalPass.actualReturnTime || (selectedDigitalPass.actualExitTime ? 'Outside Campus (Pending Return)' : 'Pending')}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Endorsements & Official Stamps */}

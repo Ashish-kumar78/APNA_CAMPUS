@@ -1,6 +1,7 @@
 import {
   Home,
   BookOpen,
+  Calendar,
   ClipboardList,
   Building2,
   LibraryBig,
@@ -26,6 +27,7 @@ export const getStudentMenuConfig = (context = {}) => [
     title: 'ACADEMICS',
     items: [
       { id: 'academics', page: 'academics', label: 'Academics', icon: BookOpen },
+      { id: 'timetable', page: 'timetable', label: 'Timetable', icon: Calendar },
       { id: 'online-exam', page: 'online-exam', label: 'Online Examination', icon: ClipboardList },
     ]
   },

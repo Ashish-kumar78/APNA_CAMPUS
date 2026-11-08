@@ -44,6 +44,22 @@ export const HINDI_DICTIONARY = {
   'Library Dashboard': 'पुस्तकालय डैशबोर्ड',
   'Transport Dashboard': 'परिवहन डैशबोर्ड',
   'Placement Dashboard': 'प्लेसमेंट डैशबोर्ड',
+  'Security Dashboard': 'सुरक्षा डैशबोर्ड',
+  'Campus Security': 'परिसर सुरक्षा',
+  'Gate Overview': 'गेट अवलोकन',
+  'QR Scanner & Roll Lookup': 'क्यूआर स्कैनर एवं रोल खोज',
+  'Approved Gate Passes': 'स्वीकृत गेट पास',
+  'Visitor Management': 'आगंतुक प्रबंधन',
+  'Movement History': 'आवागमन इतिहास',
+  'Security Alerts': 'सुरक्षा अलर्ट',
+  'Mess Manager': 'मेस प्रबंधक',
+  'Mess Management': 'मेस प्रबंधन',
+  'Mess Dashboard': 'मेस डैशबोर्ड',
+  'Weekly Menu': 'साप्ताहिक मेनू',
+  'Meal Feedback': 'भोजन प्रतिक्रिया',
+  'Complaints & Issues': 'शिकायतें एवं समस्याएं',
+  'Meal Count / Attendance': 'भोजन गणना / उपस्थिति',
+  'Mess Notices': 'मेस सूचनाएं',
   'Overview': 'अवलोकन',
 
   // Sidebar Menu Items
@@ -225,6 +241,17 @@ export const HINDI_DICTIONARY = {
   'Raise Indent': 'मांग पत्र बनाएं',
   'Quick Connect': 'त्वरित संपर्क',
   'Save Note / Schedule Task': 'नोट सहेजें / कार्य निर्धारित करें',
+
+  // Campus Security & Turnstile Access
+  'Students Currently Outside': 'परिसर से बाहर छात्र',
+  "Today's Gate Movements": 'आज के गेट आवागमन',
+  'Overdue / Late Returns': 'देर से वापसी / कर्फ्यू उल्लंघन',
+  'Active Visitors Inside': 'परिसर के अंदर सक्रिय आगंतुक',
+  'VERIFY & LOG CAMPUS EXIT': 'सत्यापित करें एवं परिसर निकास दर्ज करें',
+  'VERIFY & LOG CAMPUS ENTRY': 'सत्यापित करें एवं परिसर प्रवेश दर्ज करें',
+  'Saved, will sync': 'स्थानीय रूप से सहेजा गया (सिंक प्रतीक्षित)',
+  'Report Security Incident': 'सुरक्षा घटना रिपोर्ट करें',
+  'Turnstile Camera Scanner': 'टर्नस्टाइल कैमरा स्कैनर',
 
   // Calendar & Reminders
   'Calendar': 'कैलेंडर',

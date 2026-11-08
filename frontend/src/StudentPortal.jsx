@@ -6,6 +6,7 @@ import {
   GraduationCap,
   Bell,
   BookOpen,
+  Calendar,
   CalendarDays,
   Check,
   ChevronDown,
@@ -133,6 +134,7 @@ const studentNavSections = [
     title: 'ACADEMICS',
     items: [
       { label: 'Academics', icon: BookOpen, page: 'academics' },
+      { label: 'Timetable', icon: Calendar, page: 'timetable' },
       { label: 'Online Examination', icon: ClipboardList, page: 'online-exam' },
     ]
   },
@@ -140,6 +142,7 @@ const studentNavSections = [
     title: 'CAMPUS',
     items: [
       { label: 'Hostel Residence', icon: Building2, page: 'hostel' },
+      { label: 'Mess & Food Menu', icon: Utensils, page: 'food-feedback' },
       { label: 'Library', icon: LibraryBig, page: 'library' },
       { label: 'Self Development & Placement', icon: TrendingUp, page: 'placement' },
       { label: 'Internship', icon: Briefcase, page: 'internship' },
@@ -927,6 +930,7 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'academics' && <AcademicsPage account={studentAccount} />}
               {activePage === 'timetable' && (
                 <TimetablePage
+                  account={studentAccount || account}
                   onClose={() => {
                     setActivePage('dashboard')
                     setActiveLink('Dashboard')
@@ -1172,7 +1176,7 @@ function StudentPortal({ account, onLogout }) {
                     tabIndex={0}
                     style={{ cursor: 'pointer' }}
                     onClick={() => handleStudentTabChange('timetable')}
-                    title="Open Class Timetable"
+                    title="Open Smart Timetable"
                   >
                     <div className="dash-stat-head">
                       <div className="dash-stat-head-left">

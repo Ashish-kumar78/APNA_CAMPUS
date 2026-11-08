@@ -70,6 +70,7 @@ import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
+import PublicTimetable from './PublicTimetable.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import HodGrievanceMonitoringModule from './HodGrievanceMonitoringModule.jsx';
 import NotificationCenter from './Notifications/NotificationCenter.jsx';
@@ -3241,7 +3242,7 @@ export default function HodPortal({ account, onLogout }) {
 
           {/* TAB 6B: AUTOMATED TIMETABLE MANAGEMENT */}
           {activeTab === 'timetable' && (
-            <TimetableManager account={account} />
+            <PublicTimetable account={account} role="hod" onClose={() => setActiveTab('dashboard')} />
           )}
 
           {/* TAB 7: DEPARTMENT REPORTS */}

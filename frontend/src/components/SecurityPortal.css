@@ -1,0 +1,1006 @@
+/* ==========================================================================
+   APNA CAMPUS — CAMPUS SECURITY PORTAL STYLES
+   Institutional Executive Design System (Matching Hostel Admin Portal)
+   Clean White Cards, High-Contrast Typography, Mobile-First Responsiveness
+   ========================================================================== */
+
+/* Main Portal Wrapper inside AppLayout */
+.sec-portal-wrapper {
+  background-color: #f8fafc;
+  min-height: 100%;
+  color: #1e293b;
+  font-family: inherit;
+  padding: 1.25rem 1.5rem 2.5rem;
+  box-sizing: border-box;
+}
+
+.sec-dashboard-landing-container {
+  margin: 0 0 1.5rem 0;
+}
+
+/* Duty & Header Action Badges */
+.sec-duty-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #059669;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sec-duty-pulse {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  animation: sec-pulse-dot 1.8s infinite;
+}
+
+@keyframes sec-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.sec-online-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sec-online-pill.online {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.sec-online-pill.offline {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+}
+
+.sec-btn-sync {
+  background: #d97706;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.2);
+}
+
+.sec-btn-sync:hover:not(:disabled) {
+  background: #b45309;
+}
+
+.sec-btn-sync:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.sec-btn-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #ffffff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.sec-btn-switch:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+/* ==========================================================================
+   Executive Dashboard Header (Matching Hostel Admin Dashboard)
+   ========================================================================== */
+.sec-executive-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.sec-executive-title-group h1 {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.35rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.sec-executive-badge {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  background: #ede9fe;
+  color: #7c3aed;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid #ddd6fe;
+}
+
+.sec-executive-subtitle {
+  color: #64748b;
+  font-size: 0.88rem;
+  margin: 0;
+  max-width: 800px;
+  line-height: 1.5;
+}
+
+.sec-quick-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* Standard Action Buttons */
+.sec-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: #0284c7;
+  color: #ffffff;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.2);
+}
+
+.sec-btn-primary:hover:not(:disabled) {
+  background: #0369a1;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+}
+
+.sec-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sec-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  transition: all 0.15s ease-in-out;
+}
+
+.sec-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+
+.sec-btn-emerald {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+  transition: all 0.15s ease-in-out;
+}
+
+.sec-btn-emerald:hover:not(:disabled) {
+  background: #047857;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+  transform: translateY(-1px);
+}
+
+
+.sec-btn-emerald:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sec-btn-sky {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+  transition: all 0.15s ease-in-out;
+}
+
+.sec-btn-sky:hover:not(:disabled) {
+  background: #0369a1;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+  transform: translateY(-1px);
+}
+
+.sec-btn-sky:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sec-btn-rose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font-size: 0.825rem;
+  font-weight: 600;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.sec-btn-rose:hover {
+  background: #fecaca;
+  border-color: #fca5a5;
+}
+
+/* ==========================================================================
+   Filter & Toolbar Bar (Matching Hostel Admin Filter Bar)
+   ========================================================================== */
+.sec-filter-bar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.sec-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.sec-filter-select,
+.sec-input {
+  padding: 0.45rem 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.825rem;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Status Cards & Grid */
+.sec-filter-select:focus,
+.sec-input:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+/* ==========================================================================
+   Urgent Alerts & Offline Banners
+   ========================================================================== */
+.sec-alert-banner {
+  background: #fff1f2;
+  border: 1px solid #ffe4e6;
+  border-left: 4px solid #e11d48;
+  border-radius: 10px;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.sec-alert-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sec-alert-text strong {
+  color: #9f1239;
+  font-size: 0.88rem;
+  display: block;
+}
+
+.sec-alert-text span {
+  color: #be123c;
+  font-size: 0.8rem;
+}
+
+.sec-offline-banner {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.sec-offline-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #92400e;
+  font-size: 0.84rem;
+}
+
+.sec-offline-banner-left strong {
+  color: #78350f;
+  margin-right: 0.35rem;
+}
+
+.sec-provisional-note {
+  display: block;
+  font-size: 0.76rem;
+  color: #b45309;
+  margin-top: 0.15rem;
+}
+
+/* ==========================================================================
+   KPI Cards Grid (Matching Hostel Admin Dashboard had-kpi-grid)
+   ========================================================================== */
+.sec-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.sec-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.sec-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  border-color: #cbd5e1;
+}
+
+.sec-kpi-card-header,
+.sec-kpi-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.sec-kpi-label,
+.sec-kpi-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sec-kpi-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sec-kpi-icon.blue {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.sec-kpi-icon.emerald {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.sec-kpi-icon.amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.sec-kpi-icon.rose {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+}
+
+.sec-kpi-icon.purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+}
+
+.sec-kpi-icon.blue { background: #e0f2fe; color: #0284c7; }
+.sec-kpi-icon.emerald { background: #d1fae5; color: #059669; }
+.sec-kpi-icon.purple { background: #ede9fe; color: #7c3aed; }
+.sec-kpi-icon.amber { background: #fef3c7; color: #d97706; }
+.sec-kpi-icon.rose { background: #ffe4e6; color: #e11d48; }
+
+.sec-kpi-value,
+.sec-kpi-val {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+  line-height: 1.2;
+}
+
+.sec-kpi-subtext,
+.sec-kpi-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Progress bar inside KPI */
+.sec-progress-bar {
+  width: 100%;
+  height: 5px;
+  background: #f1f5f9;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.sec-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.sec-progress-fill.emerald { background: #10b981; }
+.sec-progress-fill.blue { background: #0284c7; }
+.sec-progress-fill.purple { background: #7c3aed; }
+.sec-progress-fill.amber { background: #f59e0b; }
+.sec-progress-fill.rose { background: #f43f5e; }
+
+/* ==========================================================================
+   Multi-Column Sections Grid (Matching had-sections-grid)
+   ========================================================================== */
+.sec-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.sec-col-12 { grid-column: span 12; }
+.sec-col-8 { grid-column: span 8; }
+.sec-col-7 { grid-column: span 7; }
+.sec-col-6 { grid-column: span 6; }
+.sec-col-5 { grid-column: span 5; }
+.sec-col-4 { grid-column: span 4; }
+
+/* Standard White Container Card */
+.sec-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.25rem;
+}
+
+.sec-card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sec-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sec-card-body {
+  padding: 1.25rem;
+}
+
+/* ==========================================================================
+   Institutional Data Tables
+   ========================================================================== */
+.sec-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+.sec-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+  text-align: left;
+}
+
+.sec-data-table th {
+  background: #f8fafc;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.sec-data-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.sec-data-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* Status Badges */
+.sec-badge {
+  display: inline-block;
+  padding: 0.22rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.sec-badge.pending { background: #fef3c7; color: #b45309; }
+.sec-badge.out { background: #e0f2fe; color: #0369a1; }
+.sec-badge.returned { background: #dcfce7; color: #15803d; }
+.sec-badge.late { background: #fee2e2; color: #b91c1c; }
+.sec-badge.purple { background: #ede9fe; color: #6d28d9; }
+
+.sec-post-badge {
+  background: #f1f5f9;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  display: inline-block;
+}
+
+/* ==========================================================================
+   QR Scanner & Camera Section
+   ========================================================================== */
+.sec-scanner-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+/* Dark high-contrast camera preview container */
+.sec-camera-box {
+  position: relative;
+  background-color: #0b1329; /* High-contrast base */
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #1e293b;
+}
+
+.sec-camera-video {
+  width: 100%;
+  height: 100%;
+  max-height: 360px;
+  object-fit: cover;
+}
+
+.sec-laser-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #38bdf8, #0284c7, transparent);
+  box-shadow: 0 0 10px #38bdf8;
+  animation: sec-laser-scan 2.2s infinite ease-in-out;
+}
+
+@keyframes sec-laser-scan {
+  0% { top: 5%; }
+  50% { top: 92%; }
+  100% { top: 5%; }
+}
+
+.sec-scanner-ctrls {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: center;
+}
+
+.sec-search-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sec-search-input-group .sec-input {
+  flex: 1;
+}
+
+.sec-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.sec-pill-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.sec-pill-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Verified Pass Result Card */
+.sec-pass-result-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  padding: 1.25rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.sec-pass-result-card.approved {
+  border-color: #10b981;
+}
+
+.sec-pass-result-card.exited {
+  border-color: #0284c7;
+}
+
+.sec-pass-result-card.blocked {
+  border-color: #e11d48;
+}
+
+.sec-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.sec-status-chip-lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sec-status-chip-lg.green {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.sec-status-chip-lg.blue {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.sec-status-chip-lg.amber {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.sec-status-chip-lg.red {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.sec-student-identity-block {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.sec-student-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background: #0284c7;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.sec-student-meta h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.1rem;
+  color: #0f172a;
+}
+
+.sec-student-meta p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.sec-pass-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  background: #f8fafc;
+  padding: 0.85rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.sec-info-item dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 0.15rem;
+}
+
+.sec-info-item dd {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.sec-parent-notice-box {
+  margin-top: 1rem;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  color: #065f46;
+  font-size: 0.82rem;
+}
+
+.sec-provisional-callout {
+  background: #fffbeb;
+  border: 1px dashed #f59e0b;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.82rem;
+  color: #92400e;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+/* Filters row inside sections */
+.sec-filters-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   Modals & Overlays
+   ========================================================================== */
+.sec-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.sec-modal-card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 520px;
+  width: 100%;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+/* High contrast text color rule */
+.sec-text-high-contrast {
+  color: #f8fafc;
+}
+
+/* ==========================================================================
+   Responsive Rules
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .sec-sections-grid {
+    grid-template-columns: 1fr;
+  }
+  .sec-col-12, .sec-col-8, .sec-col-7, .sec-col-6, .sec-col-5, .sec-col-4 {
+    grid-column: span 1;
+  }
+  .sec-scanner-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Simulated Parent Notification Notice */
+.sec-parent-notice-box {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.825rem;
+  color: #065f46;
+}
+
+/* Modal */
+.sec-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.sec-modal-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  max-width: 540px;
+  width: 100%;
+  padding: 1.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 640px) {
+  .sec-portal-wrapper {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .sec-pass-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sec-executive-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sec-quick-actions {
+    width: 100%;
+  }
+
+  .sec-quick-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .sec-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sec-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

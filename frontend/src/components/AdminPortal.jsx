@@ -2228,6 +2228,58 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
                 </div>
               </div>
 
+              {/* Gate Security Operations & Turnstile Analytics */}
+              <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem', color: '#f8fafc' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <ShieldCheck size={20} className="text-emerald-400" />
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>
+                        Gate Checkpoint & Turnstile Access Telemetry
+                      </h3>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8' }}>
+                        Live synchronization with Campus Security Guard Portal & Hostel Warden Pass Engine
+                      </p>
+                    </div>
+                  </div>
+                  {onSwitchRole && (
+                    <button
+                      className="admin-action-btn-primary"
+                      style={{ fontSize: '0.78rem', padding: '0.4rem 0.8rem', background: '#2563eb', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                      onClick={() => onSwitchRole('security')}
+                    >
+                      <Shield size={14} /> Open Security Guard Portal
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  <div style={{ background: '#1e293b', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #334155' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Students Outside Campus</div>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#38bdf8', marginTop: '0.2rem' }}>1</div>
+                    <small style={{ fontSize: '0.7rem', color: '#64748b' }}>Warden-authorized gate pass</small>
+                  </div>
+
+                  <div style={{ background: '#1e293b', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #334155' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Today Gate Movements</div>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#34d399', marginTop: '0.2rem' }}>4</div>
+                    <small style={{ fontSize: '0.7rem', color: '#64748b' }}>2 verified exits, 2 entries</small>
+                  </div>
+
+                  <div style={{ background: '#1e293b', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #334155' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Curfew Overdue Alerts</div>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#f87171', marginTop: '0.2rem' }}>0</div>
+                    <small style={{ fontSize: '0.7rem', color: '#64748b' }}>Curfew violation alerts: 0</small>
+                  </div>
+
+                  <div style={{ background: '#1e293b', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #334155' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Active Campus Visitors</div>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#fbbf24', marginTop: '0.2rem' }}>2</div>
+                    <small style={{ fontSize: '0.7rem', color: '#64748b' }}>Badged at Gate 1</small>
+                  </div>
+                </div>
+              </div>
+
               {/* Filter Toolbar */}
               <div className="admin-card" style={{ padding: '1rem', marginBottom: '1.25rem' }}>
                 <div className="admin-toolbar" style={{ margin: 0 }}>

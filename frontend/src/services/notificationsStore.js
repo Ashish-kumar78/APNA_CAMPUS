@@ -24,6 +24,8 @@ export const ALL_CAMPUS_ROLES = [
   'campus_operations',
   'canteen',
   'management',
+  'security',
+  'mess_manager',
   'super_admin'
 ];
 
@@ -32,6 +34,8 @@ export function normalizeRole(rawRole) {
   const r = String(rawRole).trim().toLowerCase().replace(/[\s-]/g, '_');
   if (r === 'all' || r === 'all_campus' || r === 'college_wide' || r === 'everyone') return 'all';
   if (r.includes('super')) return 'super_admin';
+  if (r.includes('mess')) return 'mess_manager';
+  if (r.includes('sec') || r.includes('guard')) return 'security';
   if (r.includes('exam') || r === 'coe') return 'exam_cell';
   if (r.includes('hod')) return 'hod';
   if (r.includes('fac') || r.includes('prof') || r.includes('teach')) return 'faculty';
@@ -44,7 +48,7 @@ export function normalizeRole(rawRole) {
   if (r.includes('trans')) return 'transport';
   if (r.includes('admis')) return 'admissions';
   if (r.includes('operat') || r.includes('estate') || r.includes('maint')) return 'campus_operations';
-  if (r.includes('cant') || r.includes('cafe') || r.includes('mess')) return 'canteen';
+  if (r.includes('cant') || r.includes('cafe')) return 'canteen';
   if (r.includes('staff')) return 'staff';
   if (r.includes('admin')) return 'admin';
   return 'student';
@@ -400,6 +404,37 @@ export const ROLE_DEFAULT_NOTIFICATIONS = {
       unread: false,
       actionTab: 'rbac',
       actionLabel: 'Inspect Active Sessions',
+    },
+  ],
+
+  security: [
+    {
+      id: 'notif-sec-701',
+      title: 'Hostel Resident Outstation Curfew Alert (09:30 PM Enforced)',
+      message: 'All gate security personnel are reminded that evening hostel curfews are strictly enforced at 09:30 PM. Overdue returns will trigger automated alerts to Warden & Proctor.',
+      category: 'SECURITY',
+      priority: 'URGENT',
+      senderName: 'Chief Security Officer',
+      senderRole: 'Head of Campus Security',
+      senderDept: 'Perimeter Access & Surveillance',
+      timestamp: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
+      unread: true,
+      actionTab: 'overview',
+      actionLabel: 'View Gate Monitor',
+    },
+    {
+      id: 'notif-sec-702',
+      title: 'Digital Gate Pass QR Scanner Integration Active',
+      message: 'Main Gate turnstiles are connected to the central hostel workflow engine. Student leaves verified by Wardens can be cleared by scanning student QR code.',
+      category: 'SYSTEM',
+      priority: 'NORMAL',
+      senderName: 'Campus IT Operations',
+      senderRole: 'Digital Campus Admin',
+      senderDept: 'IT Infrastructure',
+      timestamp: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+      unread: false,
+      actionTab: 'scanner',
+      actionLabel: 'Open QR Scanner',
     },
   ],
 

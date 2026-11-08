@@ -966,7 +966,7 @@ function StudentPortal({ account, onLogout }) {
               {(activePage === 'bonafide' || activePage === 'apply-bonafide') && (
                 <BonafidePage account={studentAccount} />
               )}
-              {activePage === 'placement' && <PlacementPage />}
+              {activePage === 'placement' && <PlacementPage account={studentAccount || account} />}
               {activePage === 'grievance-redressal' && (
                 <GrievanceRedressalPage
                   account={studentAccount}

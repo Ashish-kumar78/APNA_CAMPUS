@@ -1532,6 +1532,20 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
   evaluateDriveEligibility: (id) => request(`/placement/drives/${id}/evaluate`),
+  checkPlacementEligibility: (driveId, studentRoll) =>
+    request('/placement/check-eligibility', {
+      method: 'POST',
+      body: JSON.stringify({ driveId, studentRoll }),
+    }),
+  registerPlacementApplication: (payload) =>
+    request('/placement/applications/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getStudentPlacementApplications: (studentRoll) =>
+    request(`/placement/student/applications${studentRoll ? '?studentRoll=' + encodeURIComponent(studentRoll) : ''}`),
+  getStudentPlacementOffers: (studentRoll) =>
+    request(`/placement/student/offers${studentRoll ? '?studentRoll=' + encodeURIComponent(studentRoll) : ''}`),
   applyToPlacementDrive: (driveId, cgpa) =>
     request('/placement/apply', {
       method: 'POST',

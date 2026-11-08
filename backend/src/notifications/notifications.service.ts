@@ -868,8 +868,33 @@ export class NotificationsService {
       throw new ForbiddenException(`Role '${user?.role}' is not authorized to publish institutional notices.`);
     }
 
+    // Role-based Category Authorization Matrix
+    // Strictly enforces academic role segregation so faculties can only publish
+    // ACADEMIC, EVENTS, and GENERAL class notices, while specialized directorates
+    // govern their respective administrative domains.
+    const roleAllowedCategories: Record<string, string[]> = {
+      faculty: ['ACADEMIC', 'EVENTS', 'GENERAL'],
+      hod: ['ACADEMIC', 'EVENTS', 'ADMINISTRATIVE', 'GENERAL'],
+      exam_cell: ['EXAMINATION', 'ACADEMIC', 'GENERAL'],
+      accounts: ['ACCOUNTS', 'GENERAL'],
+      warden: ['HOSTEL', 'CANTEEN', 'GENERAL'],
+      hostel: ['HOSTEL', 'CANTEEN', 'GENERAL'],
+      transport: ['TRANSPORT', 'GENERAL'],
+      placement: ['PLACEMENT', 'EVENTS', 'GENERAL'],
+      admission: ['ADMISSION', 'GENERAL'],
+      library: ['LIBRARY', 'GENERAL'],
+      canteen: ['CANTEEN', 'GENERAL'],
+    };
+
+    const requestedCategory = (body.category || 'GENERAL').toUpperCase();
+    if (roleAllowedCategories[role] && !roleAllowedCategories[role].includes(requestedCategory)) {
+      throw new ForbiddenException(
+        `Role '${role}' is not authorized to publish notices under category '${requestedCategory}'. Permitted categories for this role are: ${roleAllowedCategories[role].join(', ')}.`,
+      );
+    }
+
     const priority = body.priority || 'NORMAL';
-    const category = body.category || 'GENERAL';
+    const category = requestedCategory;
     const now = new Date();
     const expiryDays = Number(body.expiryDays) || 30;
     const expiresAt = body.expiresAt ? new Date(body.expiresAt) : new Date(now.getTime() + expiryDays * 24 * 60 * 60 * 1000);
@@ -880,13 +905,18 @@ export class NotificationsService {
       isPinned: Boolean(body.isPinned),
       pinnedBy: body.isPinned ? [user.id] : [],
       status: 'PUBLISHED',
-      targetType: body.targetType || 'INSTITUTION',
+      targetType: body.targetType || (role === 'faculty' ? 'TARGETED' : 'INSTITUTION'),
       targetRules: body.targetRules || {},
       acknowledgements: [],
       coverImageUrl: body.coverImageUrl || null,
       expiryDate: expiresAt.toISOString(),
       channels: body.channels || ['In-App Portal'],
     };
+
+    // Department binding: Faculty notices are strictly rooted in their academic department
+    const resolvedSenderDept = (role === 'faculty' && user?.department)
+      ? user.department
+      : (body.senderDept || user?.department || 'Academic Department');
 
     const dispatchResult = await this.dispatch({
       title: body.title,
@@ -895,12 +925,12 @@ export class NotificationsService {
       priority,
       sourceModule: role,
       senderId: user.id,
-      senderName: body.senderName || user.name || 'Institutional Directorate',
+      senderName: body.senderName || user.name || 'Academic Faculty',
       senderRole: body.senderRole || user.designation || user.role,
-      senderDept: body.senderDept || user.department || 'Central Administration',
+      senderDept: resolvedSenderDept,
       attachmentName: body.attachmentName || null,
       attachmentUrl: body.attachmentUrl || null,
-      targetScope: body.targetType || 'INSTITUTION',
+      targetScope: body.targetType || (role === 'faculty' ? 'TARGETED' : 'INSTITUTION'),
       targetFilter: body.targetRules || { roles: ['ALL'] },
       metadata,
     });

@@ -1,5 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { DynamicQrService } from './dynamic-qr.service';
+import { GateAccessDecisionService } from './gate-access-decision.service';
 import {
   ScanGatePassDto,
   RecordMovementDto,
@@ -7,6 +9,11 @@ import {
   VerifyVisitorCodeDto,
   ReportSecurityIncidentDto,
   SyncOfflineQueueDto,
+  GenerateDynamicQrDto,
+  VerifyDynamicQrDto,
+  StudentMovementRequestDto,
+  InviteVisitorDto,
+  ShiftHandoverAckDto,
 } from './dto/security-movement.dto';
 
 export interface GatePassRecord {
@@ -123,13 +130,54 @@ export class SecurityService {
     },
   ];
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly dynamicQrService: DynamicQrService,
+    private readonly gateAccessDecisionService: GateAccessDecisionService,
+  ) {}
 
   // 1. SCAN QR CODE OR ROLL NUMBER LOOKUP
   async scanPass(dto: ScanGatePassDto) {
     const query = (dto.qrCode || dto.rollNumber || dto.passId || '').trim();
     if (!query) {
       throw new BadRequestException('Please provide a QR code string, Roll Number, or Gate Pass ID.');
+    }
+
+    // Intercept Dynamic 10-Second QR tokens (starts with ACQR.)
+    if (query.startsWith('ACQR.')) {
+      const qrResult: any = await this.verifyDynamicQr({
+        token: query,
+        gateName: 'Main Campus Gate 1',
+        direction: 'AUTO',
+      });
+      return {
+        found: true,
+        dynamicQr: true,
+        decision: qrResult.decision,
+        allowed: qrResult.allowed,
+        reason: qrResult.reason,
+        isOverdue: qrResult.isOverdue,
+        overdueText: qrResult.isOverdue ? `${qrResult.overdueMinutes} mins overdue` : null,
+        student: {
+          name: qrResult.person?.name || 'Verified Person',
+          rollNumber: qrResult.person?.identifier || 'N/A',
+          department: qrResult.person?.department || 'Engineering',
+          hostelName: qrResult.person?.hostelName || 'Sarojini Girls Residence (Hostel 1)',
+          roomNumber: qrResult.person?.roomNumber || 'Room 103',
+          gender: 'General',
+          phone: '+91 98610 23010',
+          parentPhone: '+91 94370 10001',
+          role: qrResult.person?.role,
+          campusStatus: qrResult.person?.currentCampusStatus,
+        },
+        pass: qrResult.permissionContext || {
+          id: 'DYN-QR-PASS',
+          passId: 'DYN-QR-PASS',
+          purposeType: qrResult.category,
+          destination: 'Campus Gate Checkpoint',
+          status: qrResult.allowed ? 'APPROVED' : 'DENIED',
+        },
+      };
     }
 
     let pass = await this.findGatePassByQuery(query);
@@ -985,5 +1033,705 @@ export class SecurityService {
     } catch {
       // Audit log silent fail-safe
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PART 2 & 3: CENTRALIZED 10-SECOND DYNAMIC QR CODE OPERATIONS
+  // ─────────────────────────────────────────────────────────────
+
+  async generateDynamicQr(dto: GenerateDynamicQrDto, authUser?: any) {
+    const userId = authUser?.id || dto.userId || 'usr-student-03';
+    const role = (dto.role || authUser?.role || 'STUDENT').toUpperCase();
+    const identityType = (dto.identityType || role).toUpperCase();
+    const identifier = dto.identifier || authUser?.identifier || authUser?.campusIdentity || '03';
+    const name = authUser?.name || (role === 'STUDENT' ? 'Sneha Mohanty' : 'Prof. Dillip Ray');
+    const department = authUser?.department || 'Computer Science & Engineering';
+
+    return this.dynamicQrService.generateToken({
+      id: userId,
+      role,
+      identityType,
+      identifier,
+      name,
+      department,
+      hostelName: 'Sarojini Girls Residence (Hostel 1)',
+      roomNumber: 'Room 103',
+    });
+  }
+
+  async verifyDynamicQr(dto: VerifyDynamicQrDto, guardUser?: any) {
+    const verification = await this.dynamicQrService.verifyToken(dto.token, dto.checkpointId);
+
+    if (!verification.valid || !verification.payload) {
+      // Log security alert for suspicious / expired / replay scan attempt
+      try {
+        if (verification.status === 'QR_EXPIRED' || verification.status === 'QR_ALREADY_USED' || verification.status === 'INVALID_QR') {
+          await this.reportIncident(
+            {
+              title: `Security Alert: ${verification.status} Attempt at Gate`,
+              category: 'Dynamic QR Integrity Breach',
+              severity: verification.status === 'QR_ALREADY_USED' ? 'high' : 'medium',
+              description: verification.message,
+              gateName: dto.gateName || 'Main Campus Gate 1',
+              affectedRollNumber: verification.payload?.identifier,
+              studentName: verification.payload?.name,
+            },
+            guardUser || { id: 'SEC-101', name: 'Dillip Kumar Pradhan' },
+          );
+        }
+      } catch {
+        // Incident log fail-safe
+      }
+
+      return {
+        allowed: false,
+        decision: (verification.status === 'QR_EXPIRED'
+          ? 'QR EXPIRED'
+          : verification.status === 'QR_ALREADY_USED'
+          ? 'QR ALREADY USED'
+          : 'INVALID QR') as any,
+        direction: (dto.direction === 'EXIT' ? 'EXIT' : 'ENTRY') as 'ENTRY' | 'EXIT',
+        category: 'ROUTINE_ACCESS' as const,
+        reason: verification.message,
+        isOverdue: false,
+        overdueMinutes: 0,
+        person: {
+          userId: verification.payload?.sub || 'unknown',
+          name: verification.payload?.name || 'Unverified Person',
+          identifier: verification.payload?.identifier || 'N/A',
+          role: verification.payload?.role || 'UNKNOWN',
+          identityType: verification.payload?.identityType || 'UNKNOWN',
+          department: verification.payload?.department || 'N/A',
+          hostelName: verification.payload?.hostelName,
+          roomNumber: verification.payload?.roomNumber,
+          accountActive: false,
+          currentCampusStatus: 'INSIDE_CAMPUS' as const,
+        },
+      };
+    }
+
+    const gateName = dto.gateName || 'Main Campus Gate 1';
+    const gateType = dto.gateType || (gateName.toLowerCase().includes('hostel') ? 'HOSTEL_GATE' : 'MAIN_CAMPUS');
+
+    // Run centralized access decision engine
+    const decision = await this.gateAccessDecisionService.evaluateAccess(verification.payload, {
+      checkpointId: dto.checkpointId,
+      gateName,
+      gateType,
+      direction: dto.direction,
+      guardId: guardUser?.id || 'SEC-101',
+      guardName: guardUser?.name || 'Dillip Kumar Pradhan',
+      remarks: dto.remarks,
+    });
+
+    // If movement is authorized, atomically record into CampusGateMovement
+    if (decision.allowed) {
+      const now = new Date();
+      const movementCode = `MOV-${now.getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+
+      const newMovement = {
+        id: `mov-${Date.now()}`,
+        movementCode,
+        passId: decision.permissionContext?.passId || 'ROUTINE-ACCESS-PASS',
+        rollNumber: decision.person.identifier,
+        studentName: decision.person.name,
+        department: decision.person.department || 'General',
+        hostelName: decision.person.hostelName || 'Sarojini Girls Residence (Hostel 1)',
+        roomNumber: decision.person.roomNumber || 'Room 103',
+        direction: decision.direction,
+        movementTime: now.toISOString(),
+        gateName,
+        checkpointType: gateType,
+        identityType: decision.person.identityType,
+        decisionStatus: decision.decision,
+        guardId: guardUser?.id || 'SEC-101',
+        guardName: guardUser?.name || 'Dillip Kumar Pradhan',
+        status: 'CONFIRMED',
+        isLate: decision.isOverdue,
+        lateDuration: decision.isOverdue ? `${decision.overdueMinutes} mins late` : null,
+        remarks: dto.remarks || decision.reason,
+        parentNotified: true,
+        createdAt: now.toISOString(),
+      };
+
+      SecurityService.memoryMovements.unshift(newMovement);
+
+      try {
+        if (this.prisma && this.prisma.campusGateMovement) {
+          await this.prisma.campusGateMovement.create({
+            data: {
+              movementCode,
+              passId: decision.permissionContext?.passId || 'ROUTINE-ACCESS-PASS',
+              rollNumber: decision.person.identifier,
+              studentName: decision.person.name,
+              department: decision.person.department || null,
+              hostelName: decision.person.hostelName || null,
+              roomNumber: decision.person.roomNumber || null,
+              direction: decision.direction,
+              movementTime: now,
+              gateName,
+              checkpointType: gateType,
+              identityType: decision.person.identityType,
+              decisionStatus: decision.decision,
+              guardId: guardUser?.id || 'SEC-101',
+              guardName: guardUser?.name || 'Dillip Kumar Pradhan',
+              status: 'CONFIRMED',
+              isLate: decision.isOverdue,
+              lateDuration: decision.isOverdue ? `${decision.overdueMinutes} mins late` : null,
+              remarks: dto.remarks || decision.reason,
+              parentNotified: true,
+            },
+          });
+        }
+      } catch (err: any) {
+        this.logger.debug(`Prisma movement record fallback: ${err?.message}`);
+      }
+
+      // If student is overdue, register into OverdueReturnRecord
+      if (decision.isOverdue) {
+        try {
+          if (this.prisma && this.prisma.overdueReturnRecord) {
+            await this.prisma.overdueReturnRecord.create({
+              data: {
+                studentRoll: decision.person.identifier,
+                studentName: decision.person.name,
+                hostelName: decision.person.hostelName,
+                roomNumber: decision.person.roomNumber,
+                destination: decision.permissionContext?.purpose || 'Off-campus departure',
+                expectedReturnTime: decision.expectedReturnTime ? new Date(decision.expectedReturnTime) : new Date(Date.now() - 3600000),
+                actualReturnTime: now,
+                overdueMinutes: decision.overdueMinutes,
+                status: 'APPROVED_LATE_RETURN',
+                wardenAlertSent: true,
+                resolutionNotes: `Late return recorded at ${gateName}. Automatic warden alert triggered.`,
+              },
+            });
+          }
+        } catch {
+          // Fallback
+        }
+      }
+
+      decision.movementRecord = newMovement;
+    }
+
+    return decision;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PART 6: STUDENT MOVEMENT REQUESTS & WARDEN APPROVAL WORKFLOW
+  // ─────────────────────────────────────────────────────────────
+
+  private static memoryStudentRequests: any[] = [
+    {
+      id: 'smr-1001',
+      requestCode: 'SMR-2026-1042',
+      studentId: 'usr-student-01',
+      studentRoll: '01',
+      studentName: 'Rakesh Das',
+      department: 'Computer Science & Engineering',
+      hostelName: 'Gandhi Boys Residence',
+      roomNumber: 'Room 204',
+      movementType: 'DAY_OUT',
+      reason: 'Technical Internship Examination & Interview',
+      destination: 'Infocity IT Park, Bhubaneswar',
+      outDateTime: new Date().toISOString(),
+      expectedInDateTime: new Date(Date.now() + 3600000 * 4).toISOString(),
+      status: 'APPROVED',
+      wardenId: 'WAR-101',
+      wardenName: 'Mr. Saroj Kumar Jena',
+      wardenRemarks: 'Approved for interview. Curfew strictly observed.',
+      parentApprovalRequired: true,
+      parentApproved: true,
+      createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    },
+    {
+      id: 'smr-1002',
+      requestCode: 'SMR-2026-1043',
+      studentId: 'usr-student-02',
+      studentRoll: '02',
+      studentName: 'Priya Patra',
+      department: 'Civil Engineering',
+      hostelName: 'Sarojini Girls Residence (Hostel 1)',
+      roomNumber: 'Room 102',
+      movementType: 'LEAVE',
+      reason: 'Sister Wedding Ceremony and Family Gathering',
+      destination: 'Cuttack Sadar, Odisha',
+      outDateTime: new Date(Date.now() + 86400000).toISOString(),
+      expectedInDateTime: new Date(Date.now() + 86400000 * 4).toISOString(),
+      status: 'PENDING',
+      wardenId: null,
+      wardenName: null,
+      parentApprovalRequired: true,
+      parentApproved: true,
+      createdAt: new Date().toISOString(),
+    },
+  ];
+
+  async createStudentMovementRequest(dto: StudentMovementRequestDto, studentUser?: any) {
+    const roll = studentUser?.identifier || studentUser?.campusIdentity || '03';
+    const name = studentUser?.name || 'Sneha Mohanty';
+    const requestCode = `SMR-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newReq = {
+      id: `smr-${Date.now()}`,
+      requestCode,
+      studentId: studentUser?.id || `usr-${roll}`,
+      studentRoll: roll,
+      studentName: name,
+      department: studentUser?.department || 'Computer Science & Engineering',
+      hostelName: 'Sarojini Girls Residence (Hostel 1)',
+      roomNumber: 'Room 103',
+      movementType: dto.movementType,
+      reason: dto.reason,
+      destination: dto.destination,
+      outDateTime: dto.outDateTime,
+      expectedInDateTime: dto.expectedInDateTime,
+      status: 'PENDING',
+      wardenId: null,
+      wardenName: null,
+      wardenRemarks: null,
+      parentApprovalRequired: dto.parentApprovalRequired ?? false,
+      parentApproved: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    SecurityService.memoryStudentRequests.unshift(newReq);
+
+    try {
+      if (this.prisma && this.prisma.studentMovementRequest) {
+        await this.prisma.studentMovementRequest.create({
+          data: {
+            requestCode,
+            studentId: newReq.studentId,
+            studentRoll: newReq.studentRoll,
+            studentName: newReq.studentName,
+            department: newReq.department,
+            hostelName: newReq.hostelName,
+            roomNumber: newReq.roomNumber,
+            movementType: dto.movementType,
+            reason: dto.reason,
+            destination: dto.destination,
+            outDateTime: new Date(dto.outDateTime),
+            expectedInDateTime: new Date(dto.expectedInDateTime),
+            status: 'PENDING',
+            parentApprovalRequired: dto.parentApprovalRequired ?? false,
+            parentApproved: true,
+          },
+        });
+      }
+    } catch {
+      // Fallback
+    }
+
+    return {
+      success: true,
+      message: 'Movement request submitted successfully. Routed to hostel warden for review.',
+      request: newReq,
+    };
+  }
+
+  async getMyMovementRequests(studentUser?: any) {
+    const roll = studentUser?.identifier || studentUser?.campusIdentity || '03';
+    try {
+      if (this.prisma && this.prisma.studentMovementRequest) {
+        const rows = await this.prisma.studentMovementRequest.findMany({
+          where: { studentRoll: roll },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (rows && rows.length > 0) return rows;
+      }
+    } catch {
+      // Fallback
+    }
+    return SecurityService.memoryStudentRequests.filter((r) => r.studentRoll === roll || r.studentRoll === '01' || r.studentRoll === '03');
+  }
+
+  async getPendingWardenRequests(wardenUser?: any) {
+    try {
+      if (this.prisma && this.prisma.studentMovementRequest) {
+        const rows = await this.prisma.studentMovementRequest.findMany({
+          where: { status: 'PENDING' },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (rows && rows.length > 0) return rows;
+      }
+    } catch {
+      // Fallback
+    }
+    return SecurityService.memoryStudentRequests.filter((r) => r.status === 'PENDING');
+  }
+
+  async approveMovementRequest(id: string, remarks?: string, wardenUser?: any) {
+    const wardenName = wardenUser?.name || 'Mr. Saroj Kumar Jena';
+    const wardenId = wardenUser?.id || 'WAR-101';
+
+    const req = SecurityService.memoryStudentRequests.find((r) => r.id === id || r.requestCode === id);
+    if (req) {
+      req.status = 'APPROVED';
+      req.wardenId = wardenId;
+      req.wardenName = wardenName;
+      req.wardenRemarks = remarks || 'Approved by hostel warden.';
+      req.updatedAt = new Date().toISOString();
+    }
+
+    try {
+      if (this.prisma && this.prisma.studentMovementRequest) {
+        await this.prisma.studentMovementRequest.updateMany({
+          where: { OR: [{ id }, { requestCode: id }] },
+          data: {
+            status: 'APPROVED',
+            wardenId,
+            wardenName,
+            wardenRemarks: remarks || 'Approved by hostel warden.',
+          },
+        });
+      }
+    } catch {
+      // Fallback
+    }
+
+    return {
+      success: true,
+      message: `Movement request ${id} approved by ${wardenName}. Visible immediately in Security Module.`,
+      request: req,
+    };
+  }
+
+  async rejectMovementRequest(id: string, remarks?: string, wardenUser?: any) {
+    const wardenName = wardenUser?.name || 'Mr. Saroj Kumar Jena';
+    const wardenId = wardenUser?.id || 'WAR-101';
+
+    const req = SecurityService.memoryStudentRequests.find((r) => r.id === id || r.requestCode === id);
+    if (req) {
+      req.status = 'REJECTED';
+      req.wardenId = wardenId;
+      req.wardenName = wardenName;
+      req.wardenRemarks = remarks || 'Rejected by hostel warden.';
+      req.updatedAt = new Date().toISOString();
+    }
+
+    try {
+      if (this.prisma && this.prisma.studentMovementRequest) {
+        await this.prisma.studentMovementRequest.updateMany({
+          where: { OR: [{ id }, { requestCode: id }] },
+          data: {
+            status: 'REJECTED',
+            wardenId,
+            wardenName,
+            wardenRemarks: remarks || 'Rejected by hostel warden.',
+          },
+        });
+      }
+    } catch {
+      // Fallback
+    }
+
+    return {
+      success: true,
+      message: `Movement request ${id} rejected by ${wardenName}.`,
+      request: req,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PART 7: OVERDUE RETURN MANAGEMENT
+  // ─────────────────────────────────────────────────────────────
+
+  private static memoryOverdueRecords: any[] = [
+    {
+      id: 'ovd-01',
+      studentRoll: '04',
+      studentName: 'Subhasish Dash',
+      hostelName: 'Gandhi Boys Residence',
+      roomNumber: 'Room 312',
+      destination: 'Library & City Study Center',
+      expectedReturnTime: new Date(Date.now() - 3600000 * 2.5).toISOString(),
+      actualReturnTime: null,
+      overdueMinutes: 150,
+      status: 'NEEDS_FOLLOW_UP',
+      wardenAlertSent: true,
+      resolutionNotes: 'Warden called student phone; student stated city bus delay. Follow-up pending at gate.',
+    },
+    {
+      id: 'ovd-02',
+      studentRoll: '06',
+      studentName: 'Ananya Mishra',
+      hostelName: 'Sarojini Girls Residence (Hostel 1)',
+      roomNumber: 'Room 205',
+      destination: 'Central Hospital Consultation',
+      expectedReturnTime: new Date(Date.now() - 3600000 * 1).toISOString(),
+      actualReturnTime: null,
+      overdueMinutes: 60,
+      status: 'APPROVED_LATE_RETURN',
+      wardenAlertSent: true,
+      resolutionNotes: 'Approved late return granted by Warden (prescription pickup delay).',
+    },
+  ];
+
+  async getOverdueReturns() {
+    try {
+      if (this.prisma && this.prisma.overdueReturnRecord) {
+        const rows = await this.prisma.overdueReturnRecord.findMany({
+          orderBy: { createdAt: 'desc' },
+        });
+        if (rows && rows.length > 0) return rows;
+      }
+    } catch {
+      // Fallback
+    }
+    return SecurityService.memoryOverdueRecords;
+  }
+
+  async resolveOverdueReturn(id: string, notes?: string, resolvedUser?: any) {
+    const resolver = resolvedUser?.name || 'Dillip Kumar Pradhan (Security Guard)';
+    const rec = SecurityService.memoryOverdueRecords.find((r) => r.id === id);
+    if (rec) {
+      rec.status = 'RESOLVED';
+      rec.resolutionNotes = notes || `Investigated and resolved by ${resolver}.`;
+      rec.actualReturnTime = new Date().toISOString();
+    }
+
+    try {
+      if (this.prisma && this.prisma.overdueReturnRecord) {
+        await this.prisma.overdueReturnRecord.updateMany({
+          where: { id },
+          data: {
+            status: 'RESOLVED',
+            resolutionNotes: notes || `Investigated and resolved by ${resolver}.`,
+            actualReturnTime: new Date(),
+            resolvedBy: resolver,
+            resolvedAt: new Date(),
+          },
+        });
+      }
+    } catch {
+      // Fallback
+    }
+
+    return {
+      success: true,
+      message: `Overdue return record ${id} successfully resolved.`,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PART 9: GATE CHECKPOINTS & HARDWARE STATUS
+  // ─────────────────────────────────────────────────────────────
+
+  async getGateCheckpoints() {
+    return [
+      {
+        id: 'GATE-01',
+        gateCode: 'MAIN-GATE-01',
+        name: 'Main Campus Gate 1 (Front Entrance)',
+        type: 'MAIN_CAMPUS',
+        assignedGuardId: 'SEC-101',
+        assignedGuardName: 'Dillip Kumar Pradhan',
+        currentShift: 'Morning Shift (06:00 - 14:00)',
+        isOnline: true,
+        allowsStudent: true,
+        allowsFaculty: true,
+        allowsStaff: true,
+        allowsVisitor: true,
+        allowsVehicle: true,
+        hardwareStatus: 'Turnstiles A & B (Optical Active)',
+        totalMovementsToday: 24,
+      },
+      {
+        id: 'GATE-02',
+        gateCode: 'HOSTEL-NORTH-GATE-02',
+        name: 'Hostel Quadrangle North Gate 2',
+        type: 'HOSTEL_GATE',
+        assignedGuardId: 'SEC-102',
+        assignedGuardName: 'Bikash Mohanty',
+        currentShift: 'Morning Shift (06:00 - 14:00)',
+        isOnline: true,
+        allowsStudent: true,
+        allowsFaculty: false,
+        allowsStaff: true,
+        allowsVisitor: true,
+        allowsVehicle: false,
+        hardwareStatus: 'RFID Pedestrian Barrier Active',
+        totalMovementsToday: 18,
+      },
+      {
+        id: 'GATE-03',
+        gateCode: 'SOUTH-SERVICE-GATE-03',
+        name: 'South Academic Service Gate 3',
+        type: 'ACADEMIC_BLOCK',
+        assignedGuardId: 'SEC-103',
+        assignedGuardName: 'Ramesh Nayak',
+        currentShift: 'Morning Shift (06:00 - 14:00)',
+        isOnline: true,
+        allowsStudent: true,
+        allowsFaculty: true,
+        allowsStaff: true,
+        allowsVisitor: false,
+        allowsVehicle: true,
+        hardwareStatus: 'Boom Barrier (Vehicular Active)',
+        totalMovementsToday: 8,
+      },
+      {
+        id: 'GATE-04',
+        gateCode: 'SPORTS-GATE-04',
+        name: 'Sports Complex Back Perimeter Gate 4',
+        type: 'PERIMETER',
+        assignedGuardId: 'SEC-104',
+        assignedGuardName: 'Santosh Kumar',
+        currentShift: 'Morning Shift (06:00 - 14:00)',
+        isOnline: true,
+        allowsStudent: false,
+        allowsFaculty: false,
+        allowsStaff: true,
+        allowsVisitor: false,
+        allowsVehicle: false,
+        hardwareStatus: 'Electromagnetic Padlock Secured',
+        totalMovementsToday: 0,
+      },
+    ];
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PART 8: PRE-REGISTERED & WALK-IN VISITOR MANAGEMENT
+  // ─────────────────────────────────────────────────────────────
+
+  async inviteVisitor(dto: InviteVisitorDto, hostUser?: any) {
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const passNumber = `PASS-V-${Math.floor(100 + Math.random() * 900)}`;
+
+    const newVisitor = {
+      id: `vis-${Date.now()}`,
+      visitorName: dto.visitorName,
+      relation: dto.relation,
+      studentName: hostUser?.name || 'Rakesh Das',
+      rollNumber: hostUser?.identifier || hostUser?.campusIdentity || '01',
+      inTime: 'Pending Arrival',
+      outTime: 'Pending Sign-out',
+      passNumber,
+      purpose: dto.purpose,
+      phone: dto.phone || '+91 94370 00000',
+      idProofNumber: 'Aadhaar: Verified on arrival',
+      badgeNumber: null,
+      verificationCode,
+      status: 'Pre-Approved',
+      gateNumber: 'Gate 1',
+      visitType: 'PRE_REGISTERED',
+      createdAt: new Date().toISOString(),
+    };
+
+    SecurityService.memoryPreApprovedVisitors.unshift(newVisitor);
+
+    try {
+      if (this.prisma && this.prisma.hostelVisitor) {
+        await this.prisma.hostelVisitor.create({
+          data: {
+            visitorName: dto.visitorName,
+            relation: dto.relation,
+            studentName: newVisitor.studentName,
+            rollNumber: newVisitor.rollNumber,
+            inTime: 'Pending Arrival',
+            passNumber,
+            purpose: dto.purpose,
+            phone: dto.phone || null,
+            verificationCode,
+            status: 'Pre-Approved',
+            visitType: 'PRE_REGISTERED',
+            hostType: hostUser?.role === 'STUDENT' ? 'STUDENT' : 'STAFF',
+            hostUserId: hostUser?.id || null,
+          },
+        });
+      }
+    } catch {
+      // Fallback
+    }
+
+    return {
+      success: true,
+      message: `Visitor invitation created. 6-digit access code is ${verificationCode}. Present this code to Security Guard at gate.`,
+      visitor: newVisitor,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PART 12: SHIFT HANDOVER AND DUTY MANAGEMENT
+  // ─────────────────────────────────────────────────────────────
+
+  private static memoryShiftHandovers: any[] = [
+    {
+      id: 'sh-01',
+      shiftCode: 'SH-2026-M-01',
+      gateName: 'Main Campus Gate 1',
+      outgoingGuardId: 'SEC-101',
+      outgoingGuardName: 'Dillip Kumar Pradhan',
+      incomingGuardId: 'SEC-102',
+      incomingGuardName: 'Bikash Mohanty',
+      shiftType: 'Morning Shift to Evening Shift',
+      gateCondition: 'Operational & Secure',
+      scannerCondition: 'Calibrated & Online',
+      pendingIncidentsCount: 0,
+      pendingVisitorsCount: 2,
+      unresolvedOverdueCount: 2,
+      equipmentStatus: 'All handheld thermal scanners, walkie-talkies, and turnstiles operational.',
+      handoverRemarks: 'Routine daytime operations concluded. Late returns flagged for follow-up.',
+      acknowledgedByIncoming: true,
+      acknowledgedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    },
+  ];
+
+  async acknowledgeShiftHandover(dto: ShiftHandoverAckDto, guardUser?: any) {
+    const handover = {
+      id: `sh-${Date.now()}`,
+      shiftCode: dto.shiftCode || `SH-${Date.now()}`,
+      gateName: 'Main Campus Gate 1',
+      outgoingGuardId: 'SEC-101',
+      outgoingGuardName: 'Dillip Kumar Pradhan',
+      incomingGuardId: dto.incomingGuardId || guardUser?.id || 'SEC-102',
+      incomingGuardName: dto.incomingGuardName || guardUser?.name || 'Bikash Mohanty',
+      shiftType: 'Shift Transition',
+      gateCondition: 'Operational & Secure',
+      scannerCondition: 'Calibrated & Online',
+      pendingIncidentsCount: 0,
+      pendingVisitorsCount: 2,
+      unresolvedOverdueCount: 1,
+      equipmentStatus: 'Handheld QR scanners and radios confirmed in working order.',
+      handoverRemarks: dto.remarks || 'Handover accepted and verified by incoming guard.',
+      acknowledgedByIncoming: true,
+      acknowledgedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+
+    SecurityService.memoryShiftHandovers.unshift(handover);
+
+    try {
+      if (this.prisma && this.prisma.shiftHandoverLog) {
+        await this.prisma.shiftHandoverLog.create({
+          data: {
+            shiftCode: handover.shiftCode,
+            gateName: handover.gateName,
+            outgoingGuardId: handover.outgoingGuardId,
+            outgoingGuardName: handover.outgoingGuardName,
+            incomingGuardId: handover.incomingGuardId,
+            incomingGuardName: handover.incomingGuardName,
+            shiftType: handover.shiftType,
+            gateCondition: handover.gateCondition,
+            scannerCondition: handover.scannerCondition,
+            equipmentStatus: handover.equipmentStatus,
+            handoverRemarks: handover.handoverRemarks,
+            acknowledgedByIncoming: true,
+          },
+        });
+      }
+    } catch {
+      // Fallback
+    }
+
+    return {
+      success: true,
+      message: `Shift handover ${handover.shiftCode} successfully acknowledged by ${handover.incomingGuardName}.`,
+      handover,
+    };
   }
 }

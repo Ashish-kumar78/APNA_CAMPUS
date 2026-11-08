@@ -43,7 +43,9 @@ import {
   Award,
   Maximize2,
   FileCheck,
+  QrCode,
 } from 'lucide-react'
+import UniversalDigitalIdModal from './components/Security/UniversalDigitalIdModal.jsx'
 import './StudentPortal.css'
 import './DashboardHome.css'
 import { CountUpNumber } from './utils/motion.jsx'
@@ -326,6 +328,7 @@ function StudentPortal({ account, onLogout }) {
   const [profileQuickView, setProfileQuickView] = useState('')
   const [studentProfile, setStudentProfile] = useState(null)
   const [profileError, setProfileError] = useState('')
+  const [digitalIdOpen, setDigitalIdOpen] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -1050,6 +1053,29 @@ function StudentPortal({ account, onLogout }) {
                     setProfileQuickView('');
                     window.location.hash = 'profile';
                   }}>View profile <ChevronRight size={15} /></button>
+                  <button
+                    className="dash-btn"
+                    type="button"
+                    style={{
+                      background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                      color: '#ffffff',
+                      marginTop: '0.45rem',
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      padding: '0.55rem',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      border: 'none',
+                    }}
+                    onClick={() => setDigitalIdOpen(true)}
+                  >
+                    <QrCode size={15} /> My Digital ID & Dynamic Pass
+                  </button>
                 </aside>
 
                 {/* 2nd Image: 2x2 Stats Grid placed on RIGHT SIDE - Content covering the whole box */}
@@ -1359,6 +1385,13 @@ function StudentPortal({ account, onLogout }) {
           </div>
         </div>
       )}
+
+      {/* Universal 10-Second Dynamic QR & Digital ID Modal */}
+      <UniversalDigitalIdModal
+        isOpen={digitalIdOpen}
+        onClose={() => setDigitalIdOpen(false)}
+        user={studentAccount}
+      />
     </div>
   )
 }

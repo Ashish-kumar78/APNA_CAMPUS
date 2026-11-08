@@ -67,6 +67,9 @@ import './RoleDashboardLanding.css';
 import { getGreetingDisplayName } from '../utils/timeGreeting.js';
 import { CountUpNumber } from '../utils/motion.jsx';
 import WardenEmployeeProfile from './hostel/WardenEmployeeProfile.jsx';
+import MessEmployeeProfile from './MessEmployeeProfile.jsx';
+import SecurityGuardEmployeeProfile from './SecurityGuardEmployeeProfile.jsx';
+import UniversalDigitalIdModal from './Security/UniversalDigitalIdModal.jsx';
 import { api } from '../services/api.js';
 import { getFoodFeedbackAnalytics } from '../services/hostelFoodStore.js';
 import { getAllMessComplaints } from '../services/messComplaintStore.js';
@@ -1241,7 +1244,6 @@ export const ROLE_CONFIGS = {
       c4: { icon: AlertTriangle, label: 'Open Complaints & Inquiries', badge: '3 Resolved', val: '03', desc: '1 Recipe deficiency under investigation', foot: 'Kitchen corrective action logs maintained' },
     },
     quickActions: [
-      { id: 'overview', label: 'Mess Operations Console', icon: Utensils },
       { id: 'menu', label: 'Manage Weekly Menu', icon: Calendar },
       { id: 'feedback', label: 'Meal Feedback & Ratings', icon: Star },
       { id: 'complaints', label: 'Complaints & Issues', icon: AlertTriangle },
@@ -1298,6 +1300,50 @@ export default function RoleDashboardLanding({
 
   // Warden Employee Profile toggle state (Matching 2nd Image when 'More info' clicked)
   const [showWardenProfile, setShowWardenProfile] = useState(false);
+  // Mess Manager Employee Profile toggle state (Matching 1st Image 'More info' clicked)
+  const [showMessProfile, setShowMessProfile] = useState(false);
+  // Security Guard Employee Profile toggle state (Matching Images 1 to 5 when 'View Post Profile' clicked)
+  const [showSecurityProfile, setShowSecurityProfile] = useState(false);
+  // Universal 10-Second Dynamic QR & Digital ID Modal state
+  const [digitalIdModalOpen, setDigitalIdModalOpen] = useState(false);
+
+  // Mess Manager avatar synchronization
+  const [messAvatar, setMessAvatar] = useState(() => {
+    try {
+      return localStorage.getItem('mess_manager_avatar') || null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const handleMessAvatar = () => {
+      try {
+        setMessAvatar(localStorage.getItem('mess_manager_avatar') || null);
+      } catch {}
+    };
+    window.addEventListener('mess_avatar_changed', handleMessAvatar);
+    return () => window.removeEventListener('mess_avatar_changed', handleMessAvatar);
+  }, []);
+
+  // Security Guard avatar synchronization
+  const [securityAvatar, setSecurityAvatar] = useState(() => {
+    try {
+      return localStorage.getItem('security_guard_avatar') || null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const handleSecurityAvatar = () => {
+      try {
+        setSecurityAvatar(localStorage.getItem('security_guard_avatar') || null);
+      } catch {}
+    };
+    window.addEventListener('security_guard_avatar_changed', handleSecurityAvatar);
+    return () => window.removeEventListener('security_guard_avatar_changed', handleSecurityAvatar);
+  }, []);
 
   // Current live time & date matching Student Dashboard
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -1586,6 +1632,34 @@ export default function RoleDashboardLanding({
     );
   }
 
+  // When mess manager requests Employee Profile (Matching Hostel Admin format)
+  if ((resolvedKey === 'mess_manager' || rawKey === 'mess_manager' || isMessRole) && showMessProfile) {
+    return (
+      <MessEmployeeProfile
+        account={account}
+        onBack={() => {
+          setShowMessProfile(false);
+          if (onNavigateTab) onNavigateTab('dashboard');
+          else if (onNavigate) onNavigate('dashboard');
+        }}
+      />
+    );
+  }
+
+  // When security guard requests Employee Profile (Matching Images 1 to 5)
+  if ((resolvedKey === 'security' || rawKey === 'security' || isSecurityRole) && showSecurityProfile) {
+    return (
+      <SecurityGuardEmployeeProfile
+        account={account}
+        onBack={() => {
+          setShowSecurityProfile(false);
+          if (onNavigateTab) onNavigateTab('dashboard');
+          else if (onNavigate) onNavigate('dashboard');
+        }}
+      />
+    );
+  }
+
   return (
     <div className="role-dash-wrapper dash">
       <div className="role-dash-container">
@@ -1640,6 +1714,10 @@ export default function RoleDashboardLanding({
                   const isHostelRole = resolvedKey === 'warden' || rawKey === 'hostel_admin' || account?.role === 'warden' || account?.role === 'hostel_admin' || account?.role === 'hostel';
                   const activePhoto = isHostelRole
                     ? (localStorage.getItem('hostel_officer_avatar') || '/candidate_photo_apna.png')
+                    : isMessRole
+                    ? (messAvatar || officer.photo || account?.photo || '/candidate_photo_apna.png')
+                    : isSecurityRole
+                    ? (securityAvatar || officer.photo || account?.photo || '/passport_photo_male.svg')
                     : (officer.photo || account?.photo);
                   return !photoError && activePhoto ? (
                     <img
@@ -1692,11 +1770,44 @@ export default function RoleDashboardLanding({
                       onNavigateTab('profile');
                     } else if (onNavigate) {
                       onNavigate('profile');
+                    } else {
+                      setShowSecurityProfile(true);
                     }
                   }}
-                  title="View Security Guard Profile & Post"
+                  title="View complete Security Guard Official CMS Profile"
                 >
-                  <span>View Post Profile</span>
+                  <span>More info</span>
+                  <ChevronRight size={15} />
+                </button>
+              </>
+            ) : isMessRole ? (
+              <>
+                <dl className="dash-info-list">
+                  <DetailRow label="Registration No." value={account?.identity || officer.id || 'MESS-101'} />
+                  <DetailRow label="Name" value={officerDisplayName || 'Mr. Kailash Chandra Nayak'} />
+                  <DetailRow label="Program" value={officer.designation || 'Chief Mess Manager & Dining Operations Head'} />
+                  <DetailRow label="Batch" value={officer.academicYear || '2026–2027'} />
+                  <DetailRow label="Department" value={officer.department || 'Campus Food Services & Student Dining Logistics'} />
+                  <DetailRow label="Section" value={officer.office || 'All Residential Complexes (Supervisory)'} />
+                  <DetailRow label="Email ID" value={officer.email || 'kailash.nayak@apnacampus.edu.in'} />
+                  <DetailRow label="Mobile No." value={officer.phone || '+91 94371 88204'} />
+                </dl>
+
+                <button
+                  className="dash-btn dash-btn-primary dash-info-btn"
+                  type="button"
+                  onClick={() => {
+                    if (onNavigateTab) {
+                      onNavigateTab('profile');
+                    } else if (onNavigate) {
+                      onNavigate('profile');
+                    } else {
+                      setShowMessProfile(true);
+                    }
+                  }}
+                  title="View complete Employee Profile"
+                >
+                  <span>More info</span>
                   <ChevronRight size={15} />
                 </button>
               </>
@@ -1836,6 +1947,30 @@ export default function RoleDashboardLanding({
                 </button>
               </>
             )}
+
+            <button
+              type="button"
+              className="dash-btn"
+              style={{
+                background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                color: '#ffffff',
+                marginTop: '0.5rem',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.4rem',
+                padding: '0.55rem',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                border: 'none',
+              }}
+              onClick={() => setDigitalIdModalOpen(true)}
+            >
+              <QrCode size={15} /> My Digital ID & 10s Dynamic Pass
+            </button>
           </aside>
 
           {/* RIGHT: 2x2 Stats Grid (Matching Student 2x2 Stats Grid) */}
@@ -1949,7 +2084,7 @@ export default function RoleDashboardLanding({
         {/* ==========================================================
             D. DASHBOARD OVERVIEW: Dual Cards Grid (Overview + Notices)
             ========================================================== */}
-        {config.roleKey !== 'warden' && config.roleKey !== 'hostel_admin' && (
+        {config.roleKey !== 'warden' && config.roleKey !== 'hostel_admin' && config.roleKey !== 'mess_manager' && !isMessRole && (
           <div className="dash-grid-duo">
             {/* Left Card: Operational Summary Table */}
             <section className="dash-card" aria-label="Operational Summary">
@@ -2318,6 +2453,20 @@ export default function RoleDashboardLanding({
           </div>
         </div>
       )}
+
+      {/* Universal 10-Second Dynamic QR & Digital ID Modal */}
+      <UniversalDigitalIdModal
+        isOpen={digitalIdModalOpen}
+        onClose={() => setDigitalIdModalOpen(false)}
+        user={{
+          id: officer.id || account?.id || 'emp-user',
+          name: officerDisplayName,
+          role: (resolvedKey || 'STAFF').toUpperCase(),
+          identityType: (resolvedKey || 'STAFF').toUpperCase(),
+          identifier: officer.id || account?.identity || 'SG-OD-4421',
+          department: officer.department || account?.department || 'Campus Security & Access Control',
+        }}
+      />
     </div>
   );
 }

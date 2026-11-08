@@ -47,6 +47,7 @@ import {
 import api from '../services/api.js';
 import { securityOfflineStore } from '../services/securityOfflineStore.js';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import SecurityGuardEmployeeProfile from './SecurityGuardEmployeeProfile.jsx';
 import './AdminPortal.css';
 import './SecurityPortal.css';
 
@@ -91,6 +92,9 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
   const gatePost = account?.detail?.includes('·')
     ? account.detail.split('·')[0]?.trim()
     : 'Main Campus Gate 1 (Front Entrance)';
+
+  const [selectedGate, setSelectedGate] = useState(gatePost);
+  const [overdueList, setOverdueList] = useState([]);
 
   // 1. STATS STATE
   const [stats, setStats] = useState({
@@ -153,6 +157,8 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
   const [historyList, setHistoryList] = useState([]);
   const [historyDirection, setHistoryDirection] = useState('ALL');
   const [historySearch, setHistorySearch] = useState('');
+  const [historyGateFilter, setHistoryGateFilter] = useState('ALL');
+  const [historyRoleFilter, setHistoryRoleFilter] = useState('ALL');
 
   // 6. INCIDENTS STATE
   const [alertsList, setAlertsList] = useState([
@@ -201,6 +207,7 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
     loadApprovedPasses();
     loadVisitors();
     loadMovementsHistory();
+    loadOverdueReturns();
   }, []);
 
   // Subscribe to offline queue changes and network status
@@ -278,6 +285,43 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
     }
   };
 
+  const loadOverdueReturns = async () => {
+    try {
+      const res = await api.getSecurityOverdueReturns();
+      const list = Array.isArray(res) ? res : res?.data || [];
+      if (list.length > 0) setOverdueList(list);
+    } catch {
+      setOverdueList([
+        {
+          id: 'ovd-01',
+          studentRoll: '04',
+          studentName: 'Subhasish Dash',
+          hostelName: 'Gandhi Boys Residence',
+          roomNumber: 'Room 312',
+          destination: 'Library & City Study Center',
+          expectedReturnTime: new Date(Date.now() - 3600000 * 2.5).toISOString(),
+          overdueMinutes: 150,
+          status: 'NEEDS_FOLLOW_UP',
+          wardenAlertSent: true,
+          resolutionNotes: 'Warden called student phone; student stated city bus delay. Follow-up pending at gate.',
+        },
+        {
+          id: 'ovd-02',
+          studentRoll: '06',
+          studentName: 'Ananya Mishra',
+          hostelName: 'Sarojini Girls Residence (Hostel 1)',
+          roomNumber: 'Room 205',
+          destination: 'Central Hospital Consultation',
+          expectedReturnTime: new Date(Date.now() - 3600000 * 1).toISOString(),
+          overdueMinutes: 60,
+          status: 'APPROVED_LATE_RETURN',
+          wardenAlertSent: true,
+          resolutionNotes: 'Approved late return granted by Warden (prescription pickup delay).',
+        },
+      ]);
+    }
+  };
+
   // Camera Handler
   useEffect(() => {
     let stream = null;
@@ -316,6 +360,70 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
     setScannedResult(null);
     setActionFeedback(null);
     setParentNotice(null);
+
+    const trimmedQuery = q.trim();
+
+    // 1. Dynamic 10-Second QR Token Scanner Workflow
+    if (trimmedQuery.startsWith('ACQR.')) {
+      try {
+        const res = await api.verifyDynamicQr({
+          token: trimmedQuery,
+          gateName: selectedGate || gatePost,
+          gateType: (selectedGate || gatePost).toLowerCase().includes('hostel') ? 'HOSTEL_GATE' : 'MAIN_CAMPUS',
+          direction: 'AUTO',
+        });
+        const data = res?.data || res;
+        if (data) {
+          setScannedResult({
+            valid: data.allowed,
+            decision: data.decision,
+            dynamicQr: true,
+            reason: data.reason,
+            isOverdue: data.isOverdue,
+            overdueText: data.isOverdue ? `${data.overdueMinutes} mins overdue` : null,
+            recommendedAction: data.allowed ? (data.direction === 'EXIT' ? 'EXIT' : 'ENTRY') : 'BLOCKED',
+            student: {
+              name: data.person?.name || 'Verified Member',
+              rollNumber: data.person?.identifier || 'N/A',
+              role: data.person?.role || 'STUDENT',
+              department: data.person?.department || 'General',
+              hostelName: data.person?.hostelName || 'Sarojini Girls Residence (Hostel 1)',
+              roomNumber: data.person?.roomNumber || 'Room 103',
+              phone: '+91 98610 23010',
+              parentPhone: '+91 94370 10001',
+              campusStatus: data.person?.currentCampusStatus,
+              accountActive: data.person?.accountActive !== false,
+            },
+            pass: data.permissionContext || {
+              passId: 'DYN-QR-PASS',
+              purposeType: data.category === 'ROUTINE_ACCESS' ? 'Routine Movement' : 'Approved Gate Pass',
+              destination: 'Campus Gate Checkpoint',
+              status: data.allowed ? 'APPROVED' : 'DENIED',
+            },
+          });
+
+          if (data.allowed) {
+            setActionFeedback({
+              success: true,
+              message: `${data.decision}: Movement automatically saved. Turnstiles unlocked.`,
+            });
+            loadOverviewStats();
+            loadMovementsHistory();
+          } else {
+            setActionFeedback({
+              success: false,
+              message: `${data.decision}: ${data.reason}`,
+            });
+          }
+          setScanLoading(false);
+          return;
+        }
+      } catch (err) {
+        setScanError(err.message || 'Dynamic QR verification failed.');
+        setScanLoading(false);
+        return;
+      }
+    }
 
     const checkOfflineFallback = () => {
       const trimmed = q.trim().toLowerCase();
@@ -665,6 +773,34 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
     exportToCsv(`Apna_Campus_Gate_Movements_${new Date().toISOString().slice(0, 10)}.csv`, dataToExport);
   };
 
+  const handleExportPdf = () => {
+    try {
+      import('jspdf').then((jsPDFModule) => {
+        const { jsPDF } = jsPDFModule;
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.text('Apna Campus - Gate Movement Audit Report', 14, 20);
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 14, 28);
+        doc.text(`Active Checkpoint: ${selectedGate || 'All Gates'}`, 14, 34);
+
+        let y = 46;
+        historyList.slice(0, 25).forEach((m, idx) => {
+          doc.text(
+            `${idx + 1}. [${m.direction}] ${m.studentName || 'Member'} (${m.rollNumber}) - ${m.gateName || 'Gate 1'} - ${new Date(m.movementTime || m.createdAt).toLocaleTimeString('en-US')}`,
+            14,
+            y
+          );
+          y += 8;
+        });
+
+        doc.save(`Gate_Movements_Audit_${Date.now()}.pdf`);
+      });
+    } catch {
+      window.print();
+    }
+  };
+
   // Shift Handover Note Submit
   const handleAddShiftNote = (e) => {
     e.preventDefault();
@@ -700,6 +836,12 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
           badge: passesList.length > 0 ? String(passesList.length) : undefined,
         },
         {
+          id: 'overdue',
+          label: 'Overdue Returns',
+          icon: Clock,
+          badge: overdueList.length > 0 ? String(overdueList.length) : undefined,
+        },
+        {
           id: 'visitors',
           label: 'Visitor Management',
           icon: Users,
@@ -720,12 +862,6 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
           badge: alertsList.length > 0 ? String(alertsList.length) : undefined,
         },
         { id: 'shift-notes', label: 'Shift Handover Notes', icon: FileText },
-      ],
-    },
-    {
-      title: 'SECURITY PERSONNEL',
-      items: [
-        { id: 'profile', label: 'Guard Profile & Post', icon: Shield },
       ],
     },
   ];
@@ -752,6 +888,11 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
         return {
           title: 'Approved Gate Passes Registry',
           subtitle: 'Warden-verified outpasses, approved curfew windows, and student destination oversight.',
+        };
+      case 'overdue':
+        return {
+          title: 'Overdue & Late Return Monitoring',
+          subtitle: 'Automated tracking of expired curfew passes, warden notifications, and investigation resolution.',
         };
       case 'visitors':
         return {
@@ -811,7 +952,7 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
             title={isOnline ? 'Campus network online' : 'Device offline'}
           >
             {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
-            <span>{isOnline ? 'Online' : 'Offline'}</span>
+            <span>{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
           </div>
           {offlineQueueCount > 0 && (
             <button
@@ -823,11 +964,6 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
               <CloudOff size={14} />
               <span>Saved, will sync ({offlineQueueCount})</span>
               <RefreshCw size={12} className={syncingQueue ? 'animate-spin' : ''} />
-            </button>
-          )}
-          {onSwitchRole && (
-            <button className="sec-btn-switch" onClick={() => onSwitchRole('admin')}>
-              <ArrowRightLeft size={14} /> Switch Role
             </button>
           )}
         </div>
@@ -1504,18 +1640,39 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
               </div>
 
               <div className="sec-card-body">
+                {/* Gate Checkpoint Selector */}
+                <div style={{ marginBottom: '1rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+                    Active Gate Checkpoint & Turnstile Hardware
+                  </label>
+                  <select
+                    value={selectedGate}
+                    onChange={(e) => setSelectedGate(e.target.value)}
+                    className="sec-input"
+                    style={{ width: '100%', fontWeight: 700, color: '#0f172a', background: '#ffffff' }}
+                  >
+                    <option value="Main Campus Gate 1 (Front Entrance)">Main Campus Gate 1 (Front Entrance) · Turnstiles A & B (Optical)</option>
+                    <option value="Hostel Quadrangle North Gate 2">Hostel Quadrangle North Gate 2 · RFID Pedestrian Barrier</option>
+                    <option value="South Academic Service Gate 3">South Academic Service Gate 3 · Vehicular Boom Barrier</option>
+                    <option value="Sports Complex Back Perimeter Gate 4">Sports Complex Back Perimeter Gate 4 · Electromagnetic Padlock</option>
+                  </select>
+                </div>
+
                 {/* Camera Preview */}
                 <div className="sec-camera-box">
                   {cameraActive ? (
                     <>
                       <video ref={videoRef} autoPlay playsInline className="sec-camera-video" />
                       <div className="sec-laser-line"></div>
+                      <div style={{ position: 'absolute', bottom: 10, left: 10, right: 10, background: 'rgba(15,23,42,0.8)', color: '#fff', padding: '4px 8px', borderRadius: 6, fontSize: '0.72rem', textAlign: 'center' }}>
+                        Live 10-Second Dynamic QR Optical Detection Active
+                      </div>
                     </>
                   ) : (
                     <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
                       <QrCode size={48} style={{ margin: '0 auto 0.75rem', color: '#64748b' }} />
                       <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>
-                        Camera inactive. Click "Start Camera" or use the manual search below.
+                        Camera inactive. Click "Start Camera" or select a dynamic scan simulation below.
                       </p>
                     </div>
                   )}
@@ -1532,16 +1689,71 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                   </div>
                 )}
 
-                {/* Manual Lookup Group */}
-                <div style={{ marginTop: '1.25rem' }}>
+                {/* Dynamic QR Live Optical Simulation Triggers */}
+                <div style={{ marginTop: '1rem', background: '#f0fdf4', padding: '0.75rem', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#166534', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <ShieldCheck size={14} color="#16a34a" /> 10-Second Dynamic QR Scanner Triggers:
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    <button
+                      className="sec-pill-btn"
+                      style={{ background: '#ffffff', borderColor: '#0284c7', color: '#0284c7', fontWeight: 600 }}
+                      onClick={() => {
+                        const t = dynamicQrService.generateLocalToken({ id: 'std-3', role: 'STUDENT', rollNumber: '03', name: 'Sneha Mohanty', department: 'Computer Science & Engineering' });
+                        setSearchQuery(t.token);
+                        handlePerformScan(t.token);
+                      }}
+                    >
+                      Student 10s QR (Sneha - Roll 03)
+                    </button>
+                    <button
+                      className="sec-pill-btn"
+                      style={{ background: '#ffffff', borderColor: '#10b981', color: '#059669', fontWeight: 600 }}
+                      onClick={() => {
+                        const t = dynamicQrService.generateLocalToken({ id: 'fac-1', role: 'FACULTY', identifier: 'FAC-101', name: 'Prof. Dillip Ray', department: 'Computer Science & Engineering' });
+                        setSearchQuery(t.token);
+                        handlePerformScan(t.token);
+                      }}
+                    >
+                      Faculty 10s QR (Prof. Dillip Ray)
+                    </button>
+                    <button
+                      className="sec-pill-btn"
+                      style={{ background: '#ffffff', borderColor: '#8b5cf6', color: '#7c3aed', fontWeight: 600 }}
+                      onClick={() => {
+                        const t = dynamicQrService.generateLocalToken({ id: 'staff-1', role: 'STAFF', identifier: 'STAFF-201', name: 'Kailash Nayak', department: 'Campus Dining Logistics' });
+                        setSearchQuery(t.token);
+                        handlePerformScan(t.token);
+                      }}
+                    >
+                      Staff 10s QR (Kailash Nayak)
+                    </button>
+                    <button
+                      className="sec-pill-btn"
+                      style={{ background: '#ffffff', borderColor: '#f43f5e', color: '#e11d48', fontWeight: 600 }}
+                      onClick={() => {
+                        const now = Date.now() - 25000;
+                        const p = { sub: 'usr-exp', role: 'STUDENT', identifier: '99', iat: now - 10000, exp: now, nonce: 'exp123' };
+                        const t = `ACQR.eyJhbGciOiJIUzI1NiJ9.${btoa(JSON.stringify(p))}.simulatedsig`;
+                        setSearchQuery(t);
+                        handlePerformScan(t);
+                      }}
+                    >
+                      Test Expired QR Token
+                    </button>
+                  </div>
+                </div>
+
+                {/* Manual Lookup Group (Fallback) */}
+                <div style={{ marginTop: '1rem' }}>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>
-                    Manual Roll Number, Pass ID, or QR String:
+                    Manual Roll Number, Pass ID, or Token String (Fallback):
                   </label>
                   <div className="sec-search-input-group">
                     <input
                       type="text"
                       className="sec-input"
-                      placeholder="e.g. 02 or GP-2026-1039"
+                      placeholder="e.g. 02, GP-2026-1039, or ACQR..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handlePerformScan()}
@@ -1558,15 +1770,15 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
 
                   {/* Sample Test Pills */}
                   <div className="sec-pills-row">
-                    <span style={{ fontSize: '0.74rem', color: '#64748b', alignSelf: 'center' }}>Test demo:</span>
+                    <span style={{ fontSize: '0.74rem', color: '#64748b', alignSelf: 'center' }}>Manual fallback:</span>
                     <button className="sec-pill-btn" onClick={() => { setSearchQuery('02'); handlePerformScan('02'); }}>
-                      Roll 02 (Priya Patra - Approved)
+                      Roll 02 (Priya Patra)
                     </button>
                     <button className="sec-pill-btn" onClick={() => { setSearchQuery('03'); handlePerformScan('03'); }}>
-                      Roll 03 (Sneha Mohanty - Returned)
+                      Roll 03 (Sneha Mohanty)
                     </button>
                     <button className="sec-pill-btn" onClick={() => { setSearchQuery('01'); handlePerformScan('01'); }}>
-                      Roll 01 (Rakesh Das - Pending)
+                      Roll 01 (Rakesh Das)
                     </button>
                   </div>
                 </div>
@@ -1615,36 +1827,91 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                     </div>
                   )}
 
-                  {/* Status Header */}
+                  {/* Status Header with Exact Decision Badges */}
                   <div className="sec-status-header">
-                    <span className={`sec-status-chip-lg ${scannedResult.recommendedAction === 'EXIT' ? 'green' : (scannedResult.recommendedAction === 'ENTRY' ? (scannedResult.isOverdue ? 'amber' : 'blue') : 'red')}`}>
-                      {scannedResult.recommendedAction === 'EXIT' && <CheckCircle2 size={16} />}
-                      {scannedResult.recommendedAction === 'ENTRY' && <ArrowRightLeft size={16} />}
-                      {scannedResult.recommendedAction === 'BLOCKED' && <XCircle size={16} />}
-                      {scannedResult.recommendedAction === 'EXIT' && 'APPROVED FOR CAMPUS EXIT'}
-                      {scannedResult.recommendedAction === 'ENTRY' && (scannedResult.isOverdue ? 'OVERDUE RETURN' : 'ACTIVE PASS — READY FOR RETURN')}
-                      {scannedResult.recommendedAction === 'BLOCKED' && 'EXIT / ENTRY BLOCKED'}
-                    </span>
+                    {scannedResult.decision ? (
+                      <span
+                        className={`sec-status-chip-lg ${
+                          scannedResult.decision === 'ENTRY APPROVED'
+                            ? 'green'
+                            : scannedResult.decision === 'EXIT RECORDED'
+                            ? 'blue'
+                            : scannedResult.decision === 'QR EXPIRED'
+                            ? 'amber'
+                            : scannedResult.decision === 'QR ALREADY USED'
+                            ? 'amber'
+                            : scannedResult.decision === 'APPROVAL REQUIRED'
+                            ? 'purple'
+                            : 'red'
+                        }`}
+                        style={{ fontWeight: 800, letterSpacing: '0.04em' }}
+                      >
+                        {scannedResult.valid ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                        {scannedResult.decision}
+                      </span>
+                    ) : (
+                      <span className={`sec-status-chip-lg ${scannedResult.recommendedAction === 'EXIT' ? 'green' : (scannedResult.recommendedAction === 'ENTRY' ? (scannedResult.isOverdue ? 'amber' : 'blue') : 'red')}`}>
+                        {scannedResult.recommendedAction === 'EXIT' && <CheckCircle2 size={16} />}
+                        {scannedResult.recommendedAction === 'ENTRY' && <ArrowRightLeft size={16} />}
+                        {scannedResult.recommendedAction === 'BLOCKED' && <XCircle size={16} />}
+                        {scannedResult.recommendedAction === 'EXIT' && 'APPROVED FOR CAMPUS EXIT'}
+                        {scannedResult.recommendedAction === 'ENTRY' && (scannedResult.isOverdue ? 'OVERDUE RETURN' : 'ACTIVE PASS — READY FOR RETURN')}
+                        {scannedResult.recommendedAction === 'BLOCKED' && 'EXIT / ENTRY BLOCKED'}
+                      </span>
+                    )}
                     <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                      Pass #{scannedResult.pass?.passId || 'N/A'}
+                      {scannedResult.dynamicQr ? '10-Sec Dynamic QR' : `Pass #${scannedResult.pass?.passId || 'N/A'}`}
                     </span>
                   </div>
 
-                  {/* Student Identity Block */}
+                  {/* Student / Faculty / Staff Identity Block */}
                   <div className="sec-student-identity-block">
                     <div className="sec-student-avatar">
                       {scannedResult.student.name.charAt(0)}
                     </div>
                     <div className="sec-student-meta">
-                      <h3>{scannedResult.student.name}</h3>
-                      <p>
-                        Roll No: <strong style={{ color: '#0f172a' }}>{scannedResult.student.rollNumber}</strong> · {scannedResult.student.department}
-                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h3 style={{ margin: 0 }}>{scannedResult.student.name}</h3>
+                        <span className="sec-badge" style={{ background: '#e0f2fe', color: '#0369a1', fontWeight: 700, fontSize: '0.7rem' }}>
+                          {scannedResult.student.role || 'STUDENT'}
+                        </span>
+                        <span className="sec-badge returned" style={{ fontSize: '0.7rem' }}>
+                          {scannedResult.student.accountActive !== false ? '● ACTIVE ACCOUNT' : '● SUSPENDED'}
+                        </span>
+                      </div>
                       <p style={{ marginTop: '0.2rem' }}>
-                        {scannedResult.student.hostelName} · {scannedResult.student.roomNumber}
+                        ID: <strong style={{ color: '#0f172a' }}>{scannedResult.student.rollNumber}</strong> · {scannedResult.student.department}
+                      </p>
+                      <p style={{ marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span>{scannedResult.student.hostelName || 'Main Campus'} · {scannedResult.student.roomNumber || 'Residence'}</span>
+                        <span style={{ color: '#64748b' }}>|</span>
+                        <span style={{ fontWeight: 600, color: scannedResult.student.campusStatus === 'OUTSIDE_CAMPUS' ? '#d97706' : '#059669' }}>
+                          {scannedResult.student.campusStatus === 'OUTSIDE_CAMPUS' ? 'Status: Outside Campus' : scannedResult.student.campusStatus === 'AT_HOSTEL' ? 'Status: At Hostel' : 'Status: Inside Campus'}
+                        </span>
                       </p>
                     </div>
                   </div>
+
+                  {/* Decision Reason Callout if not valid */}
+                  {scannedResult.reason && (
+                    <div
+                      style={{
+                        padding: '0.65rem 0.85rem',
+                        background: scannedResult.valid ? '#f0fdf4' : '#fff1f2',
+                        border: `1px solid ${scannedResult.valid ? '#bbf7d0' : '#fecdd3'}`,
+                        borderRadius: '8px',
+                        marginBottom: '1rem',
+                        fontSize: '0.8rem',
+                        color: scannedResult.valid ? '#166534' : '#9f1239',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      {scannedResult.valid ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                      <span><strong>Decision Context:</strong> {scannedResult.reason}</span>
+                    </div>
+                  )}
 
                   {/* Pass Details Info Grid */}
                   {scannedResult.pass && (
@@ -1897,7 +2164,145 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
           </div>
         )}
 
-                      {/* ── TAB 4: VISITOR MANAGEMENT ── */}
+        {/* ── TAB 3.5: OVERDUE & LATE RETURN MONITORING ── */}
+        {activeTab === 'overdue' && (
+          <div className="sec-card">
+            <div className="sec-card-header">
+              <h3 className="sec-card-title">
+                <Clock size={18} color="#e11d48" />
+                Overdue Student Movements & Curfew Breach Investigations
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  className="sec-btn-secondary"
+                  onClick={loadOverdueReturns}
+                >
+                  <RefreshCw size={13} /> Refresh Records
+                </button>
+              </div>
+            </div>
+
+            <div className="sec-card-body" style={{ padding: '1rem' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '1rem',
+                  marginBottom: '1.25rem',
+                }}
+              >
+                <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '10px', padding: '0.85rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#9f1239' }}>Active Overdue Breaches</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#e11d48', marginTop: '0.2rem' }}>
+                    {overdueList.filter((r) => r.status !== 'RESOLVED').length}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#be123c' }}>Awaiting hostel reporting</div>
+                </div>
+
+                <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '10px', padding: '0.85rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#92400e' }}>Approved Late Returns</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#d97706', marginTop: '0.2rem' }}>
+                    {overdueList.filter((r) => r.status === 'APPROVED_LATE_RETURN').length}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#b45309' }}>Warden permission granted</div>
+                </div>
+
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '0.85rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#166534' }}>Investigated & Resolved</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#16a34a', marginTop: '0.2rem' }}>
+                    {overdueList.filter((r) => r.status === 'RESOLVED').length}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#15803d' }}>Cases officially closed</div>
+                </div>
+              </div>
+
+              {/* Overdue Table */}
+              <div className="sec-table-container">
+                <table className="sec-data-table">
+                  <thead>
+                    <tr>
+                      <th>Student Roll & Name</th>
+                      <th>Hostel & Room</th>
+                      <th>Destination</th>
+                      <th>Expected Return</th>
+                      <th>Overdue Duration</th>
+                      <th>Status</th>
+                      <th>Resolution / Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overdueList.map((item) => (
+                      <tr key={item.id}>
+                        <td>
+                          <strong>{item.studentName}</strong>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Roll: {item.studentRoll}</div>
+                        </td>
+                        <td>
+                          <div>{item.hostelName || 'Gandhi Boys Residence'}</div>
+                          <small style={{ color: '#64748b' }}>{item.roomNumber || 'Room 312'}</small>
+                        </td>
+                        <td>{item.destination}</td>
+                        <td>
+                          <div style={{ color: '#e11d48', fontWeight: 600 }}>
+                            {item.expectedReturnTime ? new Date(item.expectedReturnTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Curfew Past'}
+                          </div>
+                        </td>
+                        <td>
+                          <span className="sec-badge late" style={{ fontWeight: 700 }}>
+                            {item.overdueMinutes} mins late
+                          </span>
+                        </td>
+                        <td>
+                          <span
+                            className={`sec-badge ${
+                              item.status === 'RESOLVED'
+                                ? 'returned'
+                                : item.status === 'APPROVED_LATE_RETURN'
+                                ? 'amber'
+                                : 'late'
+                            }`}
+                          >
+                            {item.status}
+                          </span>
+                        </td>
+                        <td>
+                          {item.status !== 'RESOLVED' ? (
+                            <button
+                              className="sec-btn-emerald"
+                              style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
+                              onClick={async () => {
+                                const note = window.prompt(
+                                  `Enter investigation note to resolve overdue return for ${item.studentName}:`,
+                                  'Student arrived safely at gate. Physical verification complete.'
+                                );
+                                if (note) {
+                                  try {
+                                    await api.resolveSecurityOverdueReturn(item.id, note);
+                                    loadOverdueReturns();
+                                    setActionFeedback({
+                                      success: true,
+                                      message: `Overdue case for ${item.studentName} resolved successfully.`,
+                                    });
+                                  } catch (err) {
+                                    alert(err.message || 'Failed to resolve record');
+                                  }
+                                }
+                              }}
+                            >
+                              Resolve Record
+                            </button>
+                          ) : (
+                            <small style={{ color: '#64748b' }}>{item.resolutionNotes || 'Resolved'}</small>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
                       {activeTab === 'visitors' && (
           <div className="sec-card">
             <div className="sec-card-header">
@@ -2155,9 +2560,12 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                 <History size={18} color="#7c3aed" />
                 Campus Turnstile & Gate Entry/Exit Logs
               </h3>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button className="sec-btn-secondary" onClick={handleExportPdf}>
+                  <FileText size={14} /> Export PDF Audit
+                </button>
                 <button className="sec-btn-secondary" onClick={handleExportHistory}>
-                  <FileDown size={14} /> Export to Excel / CSV
+                  <FileDown size={14} /> Export Excel / CSV
                 </button>
                 <button className="sec-btn-secondary" onClick={loadMovementsHistory}>
                   <RefreshCw size={14} /> Refresh Logs
@@ -2171,21 +2579,47 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                 <input
                   type="text"
                   className="sec-input"
-                  style={{ maxWidth: 280 }}
-                  placeholder="Search by student, roll, or code..."
+                  style={{ maxWidth: 240 }}
+                  placeholder="Search by name, roll, or code..."
                   value={historySearch}
                   onChange={(e) => setHistorySearch(e.target.value)}
                 />
 
                 <select
                   className="sec-input"
-                  style={{ maxWidth: 180 }}
+                  style={{ maxWidth: 160 }}
                   value={historyDirection}
                   onChange={(e) => setHistoryDirection(e.target.value)}
                 >
                   <option value="ALL">All Directions</option>
                   <option value="EXIT">Exits Only</option>
                   <option value="ENTRY">Entries Only</option>
+                </select>
+
+                <select
+                  className="sec-input"
+                  style={{ maxWidth: 200 }}
+                  value={historyGateFilter}
+                  onChange={(e) => setHistoryGateFilter(e.target.value)}
+                >
+                  <option value="ALL">All Checkpoints</option>
+                  <option value="Main Campus Gate 1">Main Campus Gate 1 (Front Entrance)</option>
+                  <option value="Hostel Quadrangle North Gate 2">Hostel Quadrangle North Gate 2 (Hostel)</option>
+                  <option value="South Academic Service Gate 3">South Academic Service Gate 3</option>
+                  <option value="Sports Complex Back Perimeter Gate 4">Sports Complex Back Perimeter Gate 4</option>
+                </select>
+
+                <select
+                  className="sec-input"
+                  style={{ maxWidth: 140 }}
+                  value={historyRoleFilter}
+                  onChange={(e) => setHistoryRoleFilter(e.target.value)}
+                >
+                  <option value="ALL">All Roles</option>
+                  <option value="STUDENT">Student</option>
+                  <option value="FACULTY">Faculty</option>
+                  <option value="STAFF">Staff</option>
+                  <option value="VISITOR">Visitor</option>
                 </select>
               </div>
 
@@ -2196,11 +2630,11 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                     <tr>
                       <th>Movement Code</th>
                       <th>Date & Time</th>
-                      <th>Student Name</th>
-                      <th>Roll No</th>
+                      <th>Name & Role</th>
+                      <th>Roll / Emp ID</th>
                       <th>Direction</th>
                       <th>Gate Post</th>
-                      <th>Guard</th>
+                      <th>Checkpoint Type</th>
                       <th>Curfew Status</th>
                       <th>Remarks</th>
                     </tr>
@@ -2209,10 +2643,12 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                     {historyList
                       .filter((m) => {
                         if (historyDirection !== 'ALL' && m.direction !== historyDirection) return false;
+                        if (historyGateFilter !== 'ALL' && !(m.gateName || '').includes(historyGateFilter)) return false;
+                        if (historyRoleFilter !== 'ALL' && (m.identityType || 'STUDENT') !== historyRoleFilter) return false;
                         if (historySearch) {
                           const q = historySearch.toLowerCase();
                           return (
-                            m.studentName.toLowerCase().includes(q) ||
+                            (m.studentName && m.studentName.toLowerCase().includes(q)) ||
                             String(m.rollNumber).toLowerCase().includes(q) ||
                             (m.movementCode && m.movementCode.toLowerCase().includes(q))
                           );
@@ -2226,7 +2662,10 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                             <div>{new Date(item.movementTime || item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                             <small style={{ color: '#64748b' }}>{new Date(item.movementTime || item.createdAt).toLocaleDateString()}</small>
                           </td>
-                          <td><strong>{item.studentName}</strong></td>
+                          <td>
+                            <strong>{item.studentName}</strong>
+                            <div style={{ fontSize: '0.7rem', color: '#0284c7', fontWeight: 600 }}>{item.identityType || 'STUDENT'}</div>
+                          </td>
                           <td>{item.rollNumber}</td>
                           <td>
                             <span className={`sec-badge ${item.direction === 'EXIT' ? 'out' : 'returned'}`}>
@@ -2234,7 +2673,11 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                             </span>
                           </td>
                           <td>{item.gateName}</td>
-                          <td><small>{item.guardName}</small></td>
+                          <td>
+                            <span className="sec-post-badge" style={{ fontSize: '0.68rem' }}>
+                              {item.checkpointType || (item.gateName?.includes('Hostel') ? 'HOSTEL_GATE' : 'MAIN_CAMPUS')}
+                            </span>
+                          </td>
                           <td>
                             {item.isLate ? (
                               <span className="sec-badge late">{item.lateDuration || 'LATE'}</span>
@@ -2309,6 +2752,77 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
             </div>
 
             <div className="sec-card-body">
+              {/* Formal Digital Shift Handover Acknowledgment Card (Part 12) */}
+              <div
+                style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '12px',
+                  padding: '1.25rem',
+                  marginBottom: '1.5rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <ShieldCheck size={20} color="#16a34a" />
+                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#166534' }}>
+                      Official Shift Handover &amp; Incoming Guard Acknowledgment
+                    </h4>
+                  </div>
+                  <span className="sec-badge returned">AUDIT VERIFIED</span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '0.75rem',
+                    fontSize: '0.8rem',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  <div style={{ background: '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #dcfce7' }}>
+                    <strong style={{ color: '#166534' }}>Outgoing Guard:</strong>
+                    <div>{guardName} ({badgeId})</div>
+                    <small style={{ color: '#64748b' }}>Morning Shift (06:00 - 14:00)</small>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #dcfce7' }}>
+                    <strong style={{ color: '#166534' }}>Incoming Guard:</strong>
+                    <div>Bikash Mohanty (SG-OD-3109)</div>
+                    <small style={{ color: '#64748b' }}>Evening Shift (14:00 - 22:00)</small>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #dcfce7' }}>
+                    <strong style={{ color: '#166534' }}>Hardware &amp; Equipment:</strong>
+                    <div>Turnstiles A/B, Handheld QR Scanners, 8 Keys</div>
+                    <small style={{ color: '#16a34a', fontWeight: 600 }}>All Verified &amp; Operational</small>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="sec-btn-emerald"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                  onClick={async () => {
+                    try {
+                      await api.acknowledgeShiftHandover({
+                        shiftCode: `SH-2026-${Date.now()}`,
+                        incomingGuardId: 'SG-OD-3109',
+                        incomingGuardName: 'Bikash Mohanty',
+                        remarks: 'Incoming guard verified all optical barriers, equipment, and visitor badges.',
+                      });
+                      setActionFeedback({
+                        success: true,
+                        message: 'Shift handover officially acknowledged by incoming guard Bikash Mohanty.',
+                      });
+                    } catch (err) {
+                      alert(err.message || 'Failed to acknowledge handover');
+                    }
+                  }}
+                >
+                  <CheckCircle2 size={16} /> Acknowledge Handover &amp; Sign Shift Receipt
+                </button>
+              </div>
+
               {/* Add Note Form */}
               <form onSubmit={handleAddShiftNote} style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                 <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.88rem', color: '#0f172a' }}>Record Shift Observation / Handover Note:</h4>
@@ -2341,54 +2855,12 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
           </div>
         )}
 
-        {/* ── TAB 8: GUARD PROFILE & POST RECORD ── */}
+        {/* ── TAB 8: GUARD PROFILE & POST RECORD (OFFICIAL CMS PROFILE) ── */}
         {activeTab === 'profile' && (
-          <div className="sec-card" style={{ maxWidth: 800 }}>
-            <div className="sec-card-header">
-              <h3 className="sec-card-title">
-                <Shield size={18} color="#059669" />
-                Security Guard Personnel Service Record
-              </h3>
-              <span className="sec-badge returned">VERIFIED CREDENTIALS</span>
-            </div>
-
-            <div className="sec-card-body">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', paddingBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', marginBottom: '1.25rem' }}>
-                <div style={{ width: 64, height: 64, borderRadius: '12px', background: '#0284c7', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', fontWeight: 800 }}>
-                  {guardName.charAt(0)}
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a' }}>{guardName}</h3>
-                  <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.2rem' }}>
-                    Department of Campus Safety & Perimeter Security
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem' }}>
-                    <span className="sec-post-badge">Official Badge: {badgeId}</span>
-                    <span className="sec-badge returned">Active Service</span>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <dt style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Stationed Post</dt>
-                  <dd style={{ margin: '0.25rem 0 0 0', fontSize: '0.88rem', fontWeight: 600, color: '#0f172a' }}>{gatePost}</dd>
-                </div>
-                <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <dt style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Duty Roster Window</dt>
-                  <dd style={{ margin: '0.25rem 0 0 0', fontSize: '0.88rem', fontWeight: 600, color: '#0f172a' }}>Morning Shift (06:00 - 14:00)</dd>
-                </div>
-                <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <dt style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Reporting Authority</dt>
-                  <dd style={{ margin: '0.25rem 0 0 0', fontSize: '0.88rem', fontWeight: 600, color: '#0f172a' }}>Chief Security Officer & Warden Office</dd>
-                </div>
-                <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <dt style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>System Authorization</dt>
-                  <dd style={{ margin: '0.25rem 0 0 0', fontSize: '0.88rem', fontWeight: 600, color: '#059669' }}>Access Control & Movement Telemetry</dd>
-                </div>
-              </div>
-            </div>
-          </div>
+          <SecurityGuardEmployeeProfile
+            account={account}
+            onBack={() => setActiveTab('dashboard')}
+          />
         )}
       </div>
 

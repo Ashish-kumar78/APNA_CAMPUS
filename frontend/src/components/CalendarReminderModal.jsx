@@ -116,7 +116,20 @@ export default function CalendarReminderModal({ account }) {
     }
 
     loadReminders();
-  }, [account?.id, account?.email, account?.role, loadReminders]);
+  }, [
+    account?.id,
+    account?.identity,
+    account?.employeeId,
+    account?.empId,
+    account?.rollNumber,
+    account?.registrationNumber,
+    account?.username,
+    account?.identifier,
+    account?.email,
+    account?.role,
+    account?.roleKey,
+    loadReminders
+  ]);
 
   // Subscribe to calendar updates; reload only if not dismissed for this session
   useEffect(() => {

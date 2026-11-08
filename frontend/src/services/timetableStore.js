@@ -30,7 +30,7 @@ export const WORKING_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 export const DEFAULT_STUDENT_CLASSES = [
   { id: 'anand-1', name: 'Bachelor of Technology / ANAND (1 ST SEM)', dept: 'B.Tech', semester: '1st', section: 'ANAND' },
   { id: 'behera-1', name: 'Bachelor of Technology / BEHERA (1 ST SEM)', dept: 'B.Tech', semester: '1st', section: 'BEHERA' },
-  { id: 'bhaba-1', name: 'Bachelor of Technology / BHABA (1 ST SEM)', dept: 'B.Tech', semester: '1st', section: 'BHABA' },
+  { id: 'dhada-1', name: 'Bachelor of Technology / DHADA (1 ST SEM)', dept: 'B.Tech', semester: '1st', section: 'DHADA' },
   { id: 'kalam-1', name: 'Bachelor of Technology / KALAM (1 ST SEM)', dept: 'B.Tech', semester: '1st', section: 'KALAM' },
   { id: 'raman-1', name: 'Bachelor of Technology / RAMAN (1 ST SEM)', dept: 'B.Tech', semester: '1st', section: 'RAMAN' },
   { id: 'sarabhai-1', name: 'Bachelor of Technology / SARABHAI (1 ST SEM)', dept: 'B.Tech', semester: '1st', section: 'SARABHAI' },
@@ -38,7 +38,7 @@ export const DEFAULT_STUDENT_CLASSES = [
   { id: 'bose-1', name: 'Bachelor of Technology / BOSE (1 ST SEM)', dept: 'B.Tech', semester: '1st', section: 'BOSE' },
   { id: 'khosla-1', name: 'Bachelor of Technology / KHOSLA (1 ST SEM)', dept: 'B.Tech', semester: '1st', section: 'KHOSLA' },
   { id: 'civil-3', name: 'Bachelor of Technology / CIVIL (3 RD SEM)', dept: 'CIVIL', semester: '3rd', section: 'CIVIL-A' },
-  { id: 'ece-3', name: 'Bachelor of Technology / ECE (3 RD SEM)', dept: 'ECE', semester: '3rd', section: 'ECE-A' },
+  { id: 'eee-3', name: 'Bachelor of Technology / EEE (3 RD SEM)', dept: 'EEE', semester: '3rd', section: 'EEE-A' },
   { id: 'btech-2028-p-5th-cse-genius', name: 'BTECH 2028-P/5 TH SEM/CSE (AI) - Genius', dept: 'CSE', semester: '5th', section: 'Genius' },
   { id: 'btech-2028-p-5th-cse-turing', name: 'BTECH 2028-P/5 TH SEM/CSE - Turing', dept: 'CSE', semester: '5th', section: 'Turing' },
   { id: 'btech-mech-5', name: 'Bachelor of Technology / MECHANICAL (5 TH SEM)', dept: 'MECHANICAL', semester: '5th', section: 'MECH-A' },

@@ -62,7 +62,7 @@ export default function AccessibilityPanel() {
 
       return () => {
         clearTimeout(focusTimer);
-        document.body.style.overflow = prevOverflow;
+        document.body.style.overflow = '';
       };
     } else {
       if (previouslyFocusedElementRef.current && typeof previouslyFocusedElementRef.current.focus === 'function') {

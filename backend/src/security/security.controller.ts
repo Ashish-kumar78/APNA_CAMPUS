@@ -22,6 +22,11 @@ import {
   VerifyVisitorCodeDto,
   ReportSecurityIncidentDto,
   SyncOfflineQueueDto,
+  GenerateDynamicQrDto,
+  VerifyDynamicQrDto,
+  StudentMovementRequestDto,
+  InviteVisitorDto,
+  ShiftHandoverAckDto,
 } from './dto/security-movement.dto';
 
 @ApiTags('Campus Gate Security Operations')
@@ -145,6 +150,100 @@ export class SecurityController {
   @ApiOperation({ summary: 'Synchronize locally queued offline movements upon reconnection' })
   async syncOfflineQueue(@Body() body: SyncOfflineQueueDto, @Req() req: any) {
     return this.securityService.syncOfflineQueue(body, req.user);
+  }
+
+  // 14. GENERATE 10-SECOND DYNAMIC QR TOKEN (UNIVERSAL FOR ALL ROLES)
+  @Post('qr/generate')
+  @ApiOperation({ summary: 'Generate 10-second cryptographically signed dynamic QR token' })
+  async generateDynamicQr(@Body() body: GenerateDynamicQrDto, @Req() req: any) {
+    return this.securityService.generateDynamicQr(body, req?.user);
+  }
+
+  // 15. VERIFY 10-SECOND DYNAMIC QR CODE & EXECUTE ACCESS DECISION
+  @Post('qr/verify')
+  @Roles(Role.SECURITY, Role.ADMIN, Role.SUPER_ADMIN, Role.WARDEN)
+  @ApiOperation({ summary: 'Verify dynamic QR code with strict 10s server validity and execute access decision' })
+  async verifyDynamicQr(@Body() body: VerifyDynamicQrDto, @Req() req: any) {
+    return this.securityService.verifyDynamicQr(body, req?.user);
+  }
+
+  // 16. SUBMIT STUDENT MOVEMENT / OUTPASS REQUEST
+  @Post('movement/request')
+  @Roles(Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Submit day-out, leave, or emergency campus exit request' })
+  async createMovementRequest(@Body() body: StudentMovementRequestDto, @Req() req: any) {
+    return this.securityService.createStudentMovementRequest(body, req?.user);
+  }
+
+  // 17. GET MY MOVEMENT REQUESTS
+  @Get('movement/my-requests')
+  @Roles(Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN, Role.WARDEN)
+  @ApiOperation({ summary: 'Get current student submitted movement requests' })
+  async getMyMovementRequests(@Req() req: any) {
+    return this.securityService.getMyMovementRequests(req?.user);
+  }
+
+  // 18. GET PENDING MOVEMENT REQUESTS (WARDEN REVIEW)
+  @Get('movement/pending-warden')
+  @Roles(Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get pending student movement requests for warden approval' })
+  async getPendingWardenRequests(@Req() req: any) {
+    return this.securityService.getPendingWardenRequests(req?.user);
+  }
+
+  // 19. WARDEN APPROVE MOVEMENT REQUEST
+  @Patch('movement/:id/approve')
+  @Roles(Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Warden approves student movement pass' })
+  async approveMovementRequest(@Param('id') id: string, @Body('remarks') remarks: string, @Req() req: any) {
+    return this.securityService.approveMovementRequest(id, remarks, req?.user);
+  }
+
+  // 20. WARDEN REJECT MOVEMENT REQUEST
+  @Patch('movement/:id/reject')
+  @Roles(Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Warden rejects student movement pass' })
+  async rejectMovementRequest(@Param('id') id: string, @Body('remarks') remarks: string, @Req() req: any) {
+    return this.securityService.rejectMovementRequest(id, remarks, req?.user);
+  }
+
+  // 21. GET OVERDUE & LATE RETURN RECORDS
+  @Get('overdue-returns')
+  @Roles(Role.SECURITY, Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get overdue student return tracking list' })
+  async getOverdueReturns() {
+    return this.securityService.getOverdueReturns();
+  }
+
+  // 22. RESOLVE OVERDUE RETURN
+  @Patch('overdue-returns/:id/resolve')
+  @Roles(Role.SECURITY, Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Record resolution notes for overdue student return' })
+  async resolveOverdueReturn(@Param('id') id: string, @Body('notes') notes: string, @Req() req: any) {
+    return this.securityService.resolveOverdueReturn(id, notes, req?.user);
+  }
+
+  // 23. GET GATE CHECKPOINTS
+  @Get('checkpoints')
+  @ApiOperation({ summary: 'Get list of configured campus gate checkpoints and hardware status' })
+  async getGateCheckpoints() {
+    return this.securityService.getGateCheckpoints();
+  }
+
+  // 24. INVITE PRE-REGISTERED VISITOR
+  @Post('visitors/invite')
+  @Roles(Role.STUDENT, Role.FACULTY, Role.STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Pre-register visitor invitation with 6-digit gate verification code' })
+  async inviteVisitor(@Body() body: InviteVisitorDto, @Req() req: any) {
+    return this.securityService.inviteVisitor(body, req?.user);
+  }
+
+  // 25. ACKNOWLEDGE SHIFT HANDOVER
+  @Post('shift-handover/acknowledge')
+  @Roles(Role.SECURITY, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Incoming security guard digital signature and shift handover acknowledgement' })
+  async acknowledgeShiftHandover(@Body() body: ShiftHandoverAckDto, @Req() req: any) {
+    return this.securityService.acknowledgeShiftHandover(body, req?.user);
   }
 }
 

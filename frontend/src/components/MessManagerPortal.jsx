@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppLayout } from './Navigation';
 import {
   Utensils,
@@ -24,6 +24,7 @@ import {
   Trash2,
   Copy,
   ChevronRight,
+  ChevronDown,
   Sparkles,
   Coffee,
   Sun,
@@ -36,7 +37,6 @@ import {
   Paperclip,
   Download,
   Building2,
-  ArrowRightLeft,
   XCircle,
   HelpCircle,
   AlertCircle,
@@ -95,11 +95,198 @@ import {
 } from '../services/messReportStore.js';
 import { exportToCsv, exportToExcel } from '../utils/documentExportUtils.js';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
+import MessEmployeeProfile from './MessEmployeeProfile.jsx';
 import './AdminPortal.css';
 import './MessManagerPortal.css';
 
+// =========================================================================
+// CUSTOM DROPDOWN COMPONENT (Fixes Windows Chromium blank select popup bug)
+// =========================================================================
+function CustomFilterSelect({
+  icon: Icon,
+  iconColor = '#64748b',
+  label,
+  value,
+  onChange,
+  options = [],
+  placeholder = 'Select...',
+  minWidth = '130px',
+  ariaLabel,
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+      } else {
+        const idx = options.findIndex((o) => String(o.value) === String(value));
+        if (idx < options.length - 1) onChange(options[idx + 1].value);
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+      } else {
+        const idx = options.findIndex((o) => String(o.value) === String(value));
+        if (idx > 0) onChange(options[idx - 1].value);
+      }
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsOpen((prev) => !prev);
+    }
+  };
+
+  const currentOption = options.find((o) => String(o.value) === String(value));
+  const displayLabel = currentOption ? currentOption.label : (value || placeholder);
+
+  return (
+    <div
+      className={`mess-custom-select-wrap ${isOpen ? 'is-open' : ''}`}
+      ref={containerRef}
+      style={{ minWidth }}
+    >
+      {Icon && <Icon size={14} color={iconColor} className="mess-custom-select-icon" />}
+      {label && <span className="mess-custom-select-label">{label}:</span>}
+      <button
+        type="button"
+        className="mess-custom-select-trigger"
+        onClick={() => setIsOpen((prev) => !prev)}
+        onKeyDown={handleKeyDown}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label={ariaLabel || label || 'Filter dropdown'}
+      >
+        <span className="mess-custom-select-value">{displayLabel}</span>
+        <ChevronDown size={13} className={`mess-custom-select-chevron ${isOpen ? 'rotated' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="mess-custom-select-menu" role="listbox">
+          {options.map((opt) => {
+            const isSelected = String(opt.value) === String(value);
+            return (
+              <div
+                key={opt.value}
+                role="option"
+                aria-selected={isSelected}
+                className={`mess-custom-select-item ${isSelected ? 'selected' : ''}`}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+              >
+                <span className="mess-custom-select-item-text">{opt.label}</span>
+                {isSelected && <Check size={13} className="mess-custom-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =========================================================================
+// CUSTOM DATE FILTER PICKER (Click anywhere to pick + Clear button)
+// =========================================================================
+function DateFilterPicker({
+  value,
+  onChange,
+  label = 'Date',
+  title = 'Click to filter by date',
+}) {
+  const inputRef = useRef(null);
+
+  const formatDisplay = (val) => {
+    if (!val) return 'dd-mm-yyyy';
+    try {
+      const parts = String(val).split('-');
+      if (parts.length === 3) {
+        const d = new Date(val + 'T00:00:00');
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+      }
+    } catch {}
+    return val;
+  };
+
+  const handleOpenPicker = () => {
+    if (inputRef.current) {
+      try {
+        if (typeof inputRef.current.showPicker === 'function') {
+          inputRef.current.showPicker();
+          return;
+        }
+      } catch {}
+      inputRef.current.focus();
+    }
+  };
+
+  return (
+    <div className="mess-date-picker-wrap">
+      <Calendar size={14} color="#0284c7" />
+      {label && <span>{label}:</span>}
+      <div className="mess-date-input-box" onClick={handleOpenPicker} title={title}>
+        <span className={`mess-date-text ${value ? 'has-date' : 'placeholder'}`}>
+          {formatDisplay(value)}
+        </span>
+        <Calendar size={13} className="mess-date-cal-icon" />
+        <input
+          ref={inputRef}
+          type="date"
+          className="mess-hidden-date-input"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </div>
+      {value && (
+        <button
+          type="button"
+          className="mess-date-clear-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange('');
+          }}
+          title="Clear date filter"
+        >
+          <X size={12} /> Clear
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Fallback if legacy route/tab is 'overview'
+  useEffect(() => {
+    if (activeTab === 'overview') {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab]);
 
   const managerName = account?.name || 'Mr. Kailash Chandra Nayak';
   const managerBadge = account?.identity || 'MESS-101';
@@ -120,6 +307,7 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
 
   // Modals for Weekly Menu Management (Step 2)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSavingMeal, setIsSavingMeal] = useState(false);
   const [editingMeal, setEditingMeal] = useState({
     day: 'Monday',
     mealType: 'breakfast',
@@ -129,6 +317,7 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
     description: '',
     isSpecial: false,
     specialOccasion: '',
+    autoDisable: true,
     isAvailable: true,
     unavailabilityReason: '',
   });
@@ -164,6 +353,7 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
       description: meal.description || '',
       isSpecial: meal.isSpecial || false,
       specialOccasion: meal.specialOccasion || '',
+      autoDisable: meal.autoDisable !== undefined ? meal.autoDisable : true,
       isAvailable: meal.isAvailable !== false,
       unavailabilityReason: meal.unavailabilityReason || '',
     });
@@ -172,6 +362,7 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
 
   const handleSaveEditMeal = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    setIsSavingMeal(true);
     try {
       await updateMealMenuItem({
         day: editingMeal.day,
@@ -182,6 +373,7 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
         description: editingMeal.description,
         isSpecial: editingMeal.isSpecial,
         specialOccasion: editingMeal.specialOccasion,
+        autoDisable: editingMeal.autoDisable,
         isAvailable: editingMeal.isAvailable,
         unavailabilityReason: editingMeal.unavailabilityReason,
         lastUpdatedBy: managerName,
@@ -191,6 +383,8 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
       setIsEditModalOpen(false);
     } catch (err) {
       alert(`Failed to save meal: ${err.message}`);
+    } finally {
+      setIsSavingMeal(false);
     }
   };
 
@@ -366,6 +560,7 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
   const [complaintFilterCategory, setComplaintFilterCategory] = useState('ALL');
   const [complaintFilterHostel, setComplaintFilterHostel] = useState('ALL');
   const [complaintFilterMeal, setComplaintFilterMeal] = useState('ALL');
+  const [complaintFilterDate, setComplaintFilterDate] = useState('');
   const [complaintSearch, setComplaintSearch] = useState('');
 
   // Complaint Inspection & Resolution Modal
@@ -645,8 +840,30 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
       if (feedbackFilterHostel !== 'ALL' && !(f.hostelName || '').toLowerCase().includes(feedbackFilterHostel.toLowerCase())) {
         return false;
       }
-      if (feedbackFilterDate && f.mealDate !== feedbackFilterDate) {
-        return false;
+      if (feedbackFilterDate) {
+        const filterStr = String(feedbackFilterDate).trim();
+        const rawDate = f.mealDate || f.date || (f.createdAt ? String(f.createdAt).slice(0, 10) : '');
+        const cleanRaw = String(rawDate).trim();
+        const rawPrefix = cleanRaw.slice(0, 10);
+        let match = false;
+        if (cleanRaw === filterStr || rawPrefix === filterStr) {
+          match = true;
+        } else {
+          try {
+            const d1 = new Date(cleanRaw).toISOString().slice(0, 10);
+            const d2 = new Date(filterStr).toISOString().slice(0, 10);
+            if (d1 === d2) match = true;
+          } catch {
+            if (cleanRaw.includes('-')) {
+              const parts = cleanRaw.split('-');
+              if (parts.length === 3 && parts[0].length <= 2 && parts[2].length === 4) {
+                const reordered = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                if (reordered === filterStr) match = true;
+              }
+            }
+          }
+        }
+        if (!match) return false;
       }
       if (feedbackSearch.trim()) {
         const q = feedbackSearch.toLowerCase().trim();
@@ -677,6 +894,31 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
       if (complaintFilterMeal !== 'ALL' && (c.mealType || '').toLowerCase() !== complaintFilterMeal.toLowerCase()) {
         return false;
       }
+      if (complaintFilterDate) {
+        const filterStr = String(complaintFilterDate).trim();
+        const rawDate = c.mealDate || c.date || (c.createdAt ? String(c.createdAt).slice(0, 10) : '');
+        const cleanRaw = String(rawDate).trim();
+        const rawPrefix = cleanRaw.slice(0, 10);
+        let match = false;
+        if (cleanRaw === filterStr || rawPrefix === filterStr) {
+          match = true;
+        } else {
+          try {
+            const d1 = new Date(cleanRaw).toISOString().slice(0, 10);
+            const d2 = new Date(filterStr).toISOString().slice(0, 10);
+            if (d1 === d2) match = true;
+          } catch {
+            if (cleanRaw.includes('-')) {
+              const parts = cleanRaw.split('-');
+              if (parts.length === 3 && parts[0].length <= 2 && parts[2].length === 4) {
+                const reordered = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                if (reordered === filterStr) match = true;
+              }
+            }
+          }
+        }
+        if (!match) return false;
+      }
       if (complaintSearch.trim()) {
         const q = complaintSearch.toLowerCase().trim();
         const matches =
@@ -690,7 +932,7 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
       }
       return true;
     });
-  }, [complaintsList, complaintFilterStatus, complaintFilterCategory, complaintFilterHostel, complaintFilterMeal, complaintSearch]);
+  }, [complaintsList, complaintFilterStatus, complaintFilterCategory, complaintFilterHostel, complaintFilterMeal, complaintFilterDate, complaintSearch]);
 
   // Filtered Student Skip Declarations for Selected Date (Step 5)
   const filteredSkips = useMemo(() => {
@@ -742,7 +984,6 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
     {
       title: 'DINING OPERATIONS',
       items: [
-        { id: 'overview', label: 'Mess Overview', icon: Utensils },
         { id: 'menu', label: 'Weekly Menu', icon: Calendar },
         {
           id: 'feedback',
@@ -771,15 +1012,15 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
   // Dynamic Page Heading
   const getPageHeading = () => {
     switch (activeTab) {
+      case 'profile':
+        return {
+          title: "Mess Manager Official CMS Profile",
+          subtitle: "Institutional employee dossier, culinary certifications, service history, and health compliance records.",
+        };
       case 'dashboard':
         return {
           title: "Mess Manager Dashboard",
           subtitle: "Central campus dining operations, dietary satisfaction, nutritional logistics & meal telemetry.",
-        };
-      case 'overview':
-        return {
-          title: "Mess Manager Executive Console",
-          subtitle: "Real-time meal service telemetry, student dietary ratings, weekly menu publishing, and complaint resolution.",
         };
       case 'menu':
         return {
@@ -864,15 +1105,23 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
             <Building2 size={13} style={{ display: 'inline', marginRight: 4 }} />
             Gandhi & Sarojini Halls
           </div>
-          {onSwitchRole && (
-            <button className="mess-btn-switch" onClick={() => onSwitchRole('admin')}>
-              <ArrowRightLeft size={14} /> Switch Role
-            </button>
-          )}
         </div>
       }
     >
       <div className="mess-portal-wrapper">
+        {/* =========================================================================
+            SECTION: MESS MANAGER OFFICIAL CMS PROFILE (LIKE HOSTEL ADMIN)
+            ========================================================================= */}
+        {activeTab === 'profile' && (
+          <MessEmployeeProfile
+            account={account}
+            onBack={() => {
+              setActiveTab('dashboard');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+
         {/* =========================================================================
             SECTION 0: MESS MANAGER DASHBOARD (ROLE DASHBOARD LANDING LIKE HOSTEL ADMIN)
             ========================================================================= */}
@@ -892,232 +1141,6 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
               }}
               onSwitchRole={onSwitchRole}
             />
-          </div>
-        )}
-
-        {/* =========================================================================
-            SECTION 1: OVERVIEW EXECUTIVE CONSOLE
-            ========================================================================= */}
-        {activeTab === 'overview' && (
-          <div>
-            {/* Executive Header */}
-            <div className="mess-executive-header">
-              <div className="mess-executive-title-group">
-                <h1>
-                  Mess Manager Executive Console
-                  <span className="mess-executive-badge">Live Dining Service</span>
-                </h1>
-                <p className="mess-executive-subtitle">
-                  Supervising central food preparation, student satisfaction metrics, menu compliance, and complaint resolutions.
-                </p>
-              </div>
-              <div className="mess-quick-actions">
-                <button className="mess-btn-primary" onClick={() => setActiveTab('menu')}>
-                  <Calendar size={14} /> Manage Weekly Menu
-                </button>
-              </div>
-            </div>
-
-            {/* Top KPI Cards Grid */}
-            <div className="mess-kpi-grid">
-              <div className="mess-kpi-card" onClick={() => setActiveTab('feedback')}>
-                <div className="mess-kpi-card-header">
-                  <span className="mess-kpi-label">Average Food Rating</span>
-                  <div className="mess-kpi-icon amber"><Star size={18} /></div>
-                </div>
-                <div className="mess-kpi-val" style={{ color: Number(avgRating) >= 4 ? '#d97706' : '#e11d48' }}>
-                  {avgRating} <span style={{ fontSize: '0.9rem', color: '#64748b' }}>/ 5.0</span>
-                </div>
-                <div className="mess-kpi-sub">
-                  <span>Based on {totalFeedbackCount} student reviews</span>
-                </div>
-              </div>
-
-              <div className="mess-kpi-card" onClick={() => setActiveTab('feedback')}>
-                <div className="mess-kpi-card-header">
-                  <span className="mess-kpi-label">Total Feedback Received</span>
-                  <div className="mess-kpi-icon blue"><MessageSquare size={18} /></div>
-                </div>
-                <div className="mess-kpi-val">{totalFeedbackCount}</div>
-                <div className="mess-kpi-sub">
-                  <span>Reviews submitted this month</span>
-                </div>
-              </div>
-
-              <div className="mess-kpi-card" onClick={() => setActiveTab('feedback')}>
-                <div className="mess-kpi-card-header">
-                  <span className="mess-kpi-label">Low-Rated Meals (&lt; 3★)</span>
-                  <div className="mess-kpi-icon rose"><AlertCircle size={18} /></div>
-                </div>
-                <div className="mess-kpi-val" style={{ color: lowRatedCount > 0 ? '#e11d48' : '#059669' }}>
-                  {lowRatedCount}
-                </div>
-                <div className="mess-kpi-sub">
-                  <span style={{ color: lowRatedCount > 0 ? '#dc2626' : '#64748b', fontWeight: 600 }}>
-                    {lowRatedCount > 0 ? 'Requires recipe investigation' : 'No critical low scores'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mess-kpi-card" onClick={() => setActiveTab('complaints')}>
-                <div className="mess-kpi-card-header">
-                  <span className="mess-kpi-label">Open Mess Complaints</span>
-                  <div className="mess-kpi-icon amber"><AlertTriangle size={18} /></div>
-                </div>
-                <div className="mess-kpi-val" style={{ color: openComplaintsCount > 0 ? '#d97706' : '#059669' }}>
-                  {openComplaintsCount}
-                </div>
-                <div className="mess-kpi-sub">
-                  <span>{resolvedComplaintsCount} marked resolved</span>
-                </div>
-              </div>
-
-              <div className="mess-kpi-card" onClick={() => setActiveTab('attendance')}>
-                <div className="mess-kpi-card-header">
-                  <span className="mess-kpi-label">Total Meals Served Today</span>
-                  <div className="mess-kpi-icon emerald"><Users size={18} /></div>
-                </div>
-                <div className="mess-kpi-val" style={{ color: '#059669' }}>{totalMealsServedToday}</div>
-                <div className="mess-kpi-sub">
-                  <span>Out of {mealAttendanceData.totalHostellers} enrolled residents</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Today's 4-Meal Summary Cards */}
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: '0 0 0.85rem 0', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <Coffee size={17} color="#d97706" /> Today's Prepared Food Menus
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div className="mess-meal-card">
-                <div className="mess-meal-header">
-                  <span className="mess-meal-title"><Coffee size={15} color="#d97706" /> Breakfast</span>
-                  <span className="mess-badge available">Served</span>
-                </div>
-                <div className="mess-meal-time">07:30 AM - 09:30 AM</div>
-                <div className="mess-meal-items">{todayMeals.breakfast}</div>
-              </div>
-
-              <div className="mess-meal-card">
-                <div className="mess-meal-header">
-                  <span className="mess-meal-title"><Sun size={15} color="#0284c7" /> Lunch</span>
-                  <span className="mess-badge available">Active Now</span>
-                </div>
-                <div className="mess-meal-time">12:15 PM - 02:30 PM</div>
-                <div className="mess-meal-items">{todayMeals.lunch}</div>
-              </div>
-
-              <div className="mess-meal-card">
-                <div className="mess-meal-header">
-                  <span className="mess-meal-title"><Sunset size={15} color="#d97706" /> Evening Snacks</span>
-                  <span className="mess-badge pending">Prepping</span>
-                </div>
-                <div className="mess-meal-time">05:00 PM - 06:15 PM</div>
-                <div className="mess-meal-items">{todayMeals.snacks}</div>
-              </div>
-
-              <div className="mess-meal-card">
-                <div className="mess-meal-header">
-                  <span className="mess-meal-title"><Moon size={15} color="#7c3aed" /> Dinner</span>
-                  <span className="mess-badge available">Scheduled</span>
-                </div>
-                <div className="mess-meal-time">07:30 PM - 09:45 PM</div>
-                <div className="mess-meal-items">{todayMeals.dinner}</div>
-              </div>
-            </div>
-
-            {/* Multi-Column Monitoring Sections Grid */}
-            <div className="mess-sections-grid">
-              {/* SECTION 1: Today's Mess Overview Table */}
-              <div className="mess-card mess-col-8">
-                <div className="mess-card-header">
-                  <h3 className="mess-card-title">
-                    <UtensilsCrossed size={17} color="#d97706" /> Today's Mess Overview & Service Roster
-                  </h3>
-                  <button className="mess-btn-secondary" style={{ padding: '0.25rem 0.6rem', fontSize: '0.74rem' }} onClick={() => setActiveTab('menu')}>
-                    Edit Weekly Menu →
-                  </button>
-                </div>
-                <div className="mess-table-container">
-                  <table className="mess-table">
-                    <thead>
-                      <tr>
-                        <th>Meal</th>
-                        <th>Menu Items</th>
-                        <th>Expected Students</th>
-                        <th>Feedback Rating</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td><strong>Breakfast</strong></td>
-                        <td style={{ maxWidth: 280 }}><div style={{ fontSize: '0.78rem', color: '#475569' }}>{todayMeals.breakfast}</div></td>
-                        <td><strong>{mealAttendanceData.breakfast.expected}</strong></td>
-                        <td><span style={{ color: '#d97706', fontWeight: 700 }}>★ {mealAttendanceData.breakfast.rating}</span></td>
-                        <td><span className="mess-badge available">Available</span></td>
-                      </tr>
-                      <tr>
-                        <td><strong>Lunch</strong></td>
-                        <td style={{ maxWidth: 280 }}><div style={{ fontSize: '0.78rem', color: '#475569' }}>{todayMeals.lunch}</div></td>
-                        <td><strong>{mealAttendanceData.lunch.expected}</strong></td>
-                        <td><span style={{ color: '#d97706', fontWeight: 700 }}>★ {mealAttendanceData.lunch.rating}</span></td>
-                        <td><span className="mess-badge available">Available</span></td>
-                      </tr>
-                      <tr>
-                        <td><strong>Snacks</strong></td>
-                        <td style={{ maxWidth: 280 }}><div style={{ fontSize: '0.78rem', color: '#475569' }}>{todayMeals.snacks}</div></td>
-                        <td><strong>{mealAttendanceData.snacks.expected}</strong></td>
-                        <td><span style={{ color: '#d97706', fontWeight: 700 }}>★ {mealAttendanceData.snacks.rating}</span></td>
-                        <td><span className="mess-badge available">Available</span></td>
-                      </tr>
-                      <tr>
-                        <td><strong>Dinner</strong></td>
-                        <td style={{ maxWidth: 280 }}><div style={{ fontSize: '0.78rem', color: '#475569' }}>{todayMeals.dinner}</div></td>
-                        <td><strong>{mealAttendanceData.dinner.expected}</strong></td>
-                        <td><span style={{ color: '#d97706', fontWeight: 700 }}>★ {mealAttendanceData.dinner.rating}</span></td>
-                        <td><span className="mess-badge available">Available</span></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* SECTION 2: Recent Activities */}
-              <div className="mess-card mess-col-4">
-                <div className="mess-card-header">
-                  <h3 className="mess-card-title">
-                    <Clock size={17} color="#0284c7" /> Recent Activities
-                  </h3>
-                  <span className="mess-badge available">LIVE</span>
-                </div>
-                <div className="mess-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem' }}>
-                  <div style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Latest Student Feedback · 10m ago</div>
-                    <strong style={{ fontSize: '0.82rem', color: '#0f172a' }}>Priya Patra (Roll 04) gave 5★ for Breakfast</strong>
-                    <div style={{ fontSize: '0.76rem', color: '#475569', marginTop: '0.2rem' }}>"Crispy vadas and hot sambar."</div>
-                  </div>
-
-                  <div style={{ background: '#fff1f2', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #ffe4e6' }}>
-                    <div style={{ fontSize: '0.72rem', color: '#e11d48' }}>Food Complaint Logged · 45m ago</div>
-                    <strong style={{ fontSize: '0.82rem', color: '#9f1239' }}>Amit Nayak: Paneer gravy excessive salt</strong>
-                    <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.2rem' }}>Status: In Progress by Chef</div>
-                  </div>
-
-                  <div style={{ background: '#ecfdf5', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #a7f3d0' }}>
-                    <div style={{ fontSize: '0.72rem', color: '#059669' }}>Menu Updated · Today, 09:30 AM</div>
-                    <strong style={{ fontSize: '0.82rem', color: '#065f46' }}>Weekly Menu published by Mess Manager</strong>
-                    <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.2rem' }}>Notified all 520 boarders</div>
-                  </div>
-
-                  <div style={{ background: '#eff6ff', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-                    <div style={{ fontSize: '0.72rem', color: '#2563eb' }}>Notice Broadcast · 2d ago</div>
-                    <strong style={{ fontSize: '0.82rem', color: '#1e40af' }}>Diwali Festive Feast Announcement</strong>
-                    <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.2rem' }}>Read by 486 students</div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -1534,52 +1557,60 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
 
               {/* Multi-Dimensional Feedback Filters Bar */}
               <div className="mess-filter-bar" style={{ padding: '0.75rem 1rem', display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
-                <div className="mess-filter-group">
-                  <Calendar size={14} color="#0284c7" />
-                  <span>Date:</span>
-                  <input
-                    type="date"
-                    className="mess-filter-select"
-                    value={feedbackFilterDate}
-                    onChange={(e) => setFeedbackFilterDate(e.target.value)}
-                  />
-                </div>
+                <DateFilterPicker
+                  value={feedbackFilterDate}
+                  onChange={setFeedbackFilterDate}
+                  label="Date"
+                  title="Click to select date or filter feedback by date"
+                />
 
-                <div className="mess-filter-group">
-                  <Coffee size={14} color="#0284c7" />
-                  <span>Meal Type:</span>
-                  <select className="mess-filter-select" value={feedbackFilterMeal} onChange={(e) => setFeedbackFilterMeal(e.target.value)}>
-                    <option value="ALL">All Meals</option>
-                    <option value="Breakfast">Breakfast</option>
-                    <option value="Lunch">Lunch</option>
-                    <option value="Snacks">Snacks</option>
-                    <option value="Dinner">Dinner</option>
-                  </select>
-                </div>
+                <CustomFilterSelect
+                  icon={Coffee}
+                  iconColor="#0284c7"
+                  label="Meal Type"
+                  value={feedbackFilterMeal}
+                  onChange={setFeedbackFilterMeal}
+                  options={[
+                    { value: 'ALL', label: 'All Meals' },
+                    { value: 'Breakfast', label: 'Breakfast' },
+                    { value: 'Lunch', label: 'Lunch' },
+                    { value: 'Snacks', label: 'Snacks' },
+                    { value: 'Dinner', label: 'Dinner' },
+                  ]}
+                  minWidth="140px"
+                />
 
-                <div className="mess-filter-group">
-                  <Building2 size={14} color="#64748b" />
-                  <span>Hostel:</span>
-                  <select className="mess-filter-select" value={feedbackFilterHostel} onChange={(e) => setFeedbackFilterHostel(e.target.value)}>
-                    <option value="ALL">All Hostels</option>
-                    <option value="Gandhi Boys">Gandhi Boys Residence</option>
-                    <option value="Sarojini Girls">Sarojini Girls Residence</option>
-                  </select>
-                </div>
+                <CustomFilterSelect
+                  icon={Building2}
+                  iconColor="#64748b"
+                  label="Hostel"
+                  value={feedbackFilterHostel}
+                  onChange={setFeedbackFilterHostel}
+                  options={[
+                    { value: 'ALL', label: 'All Hostels' },
+                    { value: 'Gandhi Boys', label: 'Gandhi Boys Residence' },
+                    { value: 'Sarojini Girls', label: 'Sarojini Girls Residence' },
+                  ]}
+                  minWidth="150px"
+                />
 
-                <div className="mess-filter-group">
-                  <Star size={14} color="#d97706" />
-                  <span>Rating:</span>
-                  <select className="mess-filter-select" value={feedbackFilterRating} onChange={(e) => setFeedbackFilterRating(e.target.value)}>
-                    <option value="ALL">All Ratings</option>
-                    <option value="5">5 Stars (Excellent)</option>
-                    <option value="4">4 Stars (Good)</option>
-                    <option value="3">3 Stars (Average)</option>
-                    <option value="2">2 Stars (Poor)</option>
-                    <option value="1">1 Star (Critical Defect)</option>
-                    <option value="LOW_ONLY">Low-Rated Only (&lt; 3★)</option>
-                  </select>
-                </div>
+                <CustomFilterSelect
+                  icon={Star}
+                  iconColor="#d97706"
+                  label="Rating"
+                  value={feedbackFilterRating}
+                  onChange={setFeedbackFilterRating}
+                  options={[
+                    { value: 'ALL', label: 'All Ratings' },
+                    { value: '5', label: '5 Stars (Excellent)' },
+                    { value: '4', label: '4 Stars (Good)' },
+                    { value: '3', label: '3 Stars (Average)' },
+                    { value: '2', label: '2 Stars (Poor)' },
+                    { value: '1', label: '1 Star (Critical Defect)' },
+                    { value: 'LOW_ONLY', label: 'Low-Rated Only (< 3★)' },
+                  ]}
+                  minWidth="150px"
+                />
 
                 <div className="mess-filter-group" style={{ flex: 1, minWidth: 160 }}>
                   <Search size={14} color="#64748b" />
@@ -1651,7 +1682,26 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
                             </td>
                             <td>
                               <strong>{fb.mealType}</strong>
-                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{fb.mealDate}</div>
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => setFeedbackFilterDate(fb.mealDate ? String(fb.mealDate).slice(0, 10) : '')}
+                                  title={`Filter all feedback to ${fb.mealDate}`}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    padding: 0,
+                                    fontSize: '0.72rem',
+                                    color: '#0284c7',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                    display: 'inline-block',
+                                    textAlign: 'left',
+                                  }}
+                                >
+                                  {fb.mealDate}
+                                </button>
+                              </div>
                               <div style={{ fontSize: '0.68rem', color: '#0284c7', maxWidth: 160, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {fb.foodItems}
                               </div>
@@ -1752,50 +1802,71 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
             <div className="mess-card-body">
               {/* Multi-Dimensional Complaints Filters Bar */}
               <div className="mess-filter-bar" style={{ padding: '0.75rem 1rem', display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
-                <div className="mess-filter-group">
-                  <Filter size={14} color="#0284c7" />
-                  <span>Status:</span>
-                  <select className="mess-filter-select" value={complaintFilterStatus} onChange={(e) => setComplaintFilterStatus(e.target.value)}>
-                    <option value="ALL">All Statuses</option>
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Resolved">Resolved</option>
-                    <option value="Reopened">Reopened</option>
-                  </select>
-                </div>
+                <CustomFilterSelect
+                  icon={Filter}
+                  iconColor="#0284c7"
+                  label="Status"
+                  value={complaintFilterStatus}
+                  onChange={setComplaintFilterStatus}
+                  options={[
+                    { value: 'ALL', label: 'All Statuses' },
+                    { value: 'Pending', label: 'Pending' },
+                    { value: 'In Progress', label: 'In Progress' },
+                    { value: 'Resolved', label: 'Resolved' },
+                    { value: 'Reopened', label: 'Reopened' },
+                  ]}
+                  minWidth="140px"
+                />
 
-                <div className="mess-filter-group">
-                  <AlertCircle size={14} color="#e11d48" />
-                  <span>Category:</span>
-                  <select className="mess-filter-select" value={complaintFilterCategory} onChange={(e) => setComplaintFilterCategory(e.target.value)}>
-                    <option value="ALL">All Categories</option>
-                    {MESS_COMPLAINT_CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
+                <CustomFilterSelect
+                  icon={AlertCircle}
+                  iconColor="#e11d48"
+                  label="Category"
+                  value={complaintFilterCategory}
+                  onChange={setComplaintFilterCategory}
+                  options={[
+                    { value: 'ALL', label: 'All Categories' },
+                    ...MESS_COMPLAINT_CATEGORIES.map((cat) => ({ value: cat, label: cat })),
+                  ]}
+                  minWidth="160px"
+                />
 
-                <div className="mess-filter-group">
-                  <Building2 size={14} color="#64748b" />
-                  <span>Hostel:</span>
-                  <select className="mess-filter-select" value={complaintFilterHostel} onChange={(e) => setComplaintFilterHostel(e.target.value)}>
-                    <option value="ALL">All Hostels</option>
-                    <option value="Gandhi Boys">Gandhi Boys Residence</option>
-                    <option value="Sarojini Girls">Sarojini Girls Residence</option>
-                  </select>
-                </div>
+                <CustomFilterSelect
+                  icon={Building2}
+                  iconColor="#64748b"
+                  label="Hostel"
+                  value={complaintFilterHostel}
+                  onChange={setComplaintFilterHostel}
+                  options={[
+                    { value: 'ALL', label: 'All Hostels' },
+                    { value: 'Gandhi Boys', label: 'Gandhi Boys Residence' },
+                    { value: 'Sarojini Girls', label: 'Sarojini Girls Residence' },
+                  ]}
+                  minWidth="150px"
+                />
 
-                <div className="mess-filter-group">
-                  <Coffee size={14} color="#0284c7" />
-                  <span>Meal:</span>
-                  <select className="mess-filter-select" value={complaintFilterMeal} onChange={(e) => setComplaintFilterMeal(e.target.value)}>
-                    <option value="ALL">All Meals</option>
-                    <option value="Breakfast">Breakfast</option>
-                    <option value="Lunch">Lunch</option>
-                    <option value="Snacks">Evening Snacks</option>
-                    <option value="Dinner">Dinner</option>
-                  </select>
-                </div>
+                <DateFilterPicker
+                  value={complaintFilterDate}
+                  onChange={setComplaintFilterDate}
+                  label="Date"
+                  title="Click to filter complaints by meal date"
+                />
+
+                <CustomFilterSelect
+                  icon={Coffee}
+                  iconColor="#0284c7"
+                  label="Meal"
+                  value={complaintFilterMeal}
+                  onChange={setComplaintFilterMeal}
+                  options={[
+                    { value: 'ALL', label: 'All Meals' },
+                    { value: 'Breakfast', label: 'Breakfast' },
+                    { value: 'Lunch', label: 'Lunch' },
+                    { value: 'Snacks', label: 'Evening Snacks' },
+                    { value: 'Dinner', label: 'Dinner' },
+                  ]}
+                  minWidth="140px"
+                />
 
                 <div className="mess-filter-group" style={{ flex: 1, minWidth: 160 }}>
                   <Search size={14} color="#64748b" />
@@ -1809,7 +1880,7 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
                   />
                 </div>
 
-                {(complaintFilterStatus !== 'ALL' || complaintFilterCategory !== 'ALL' || complaintFilterHostel !== 'ALL' || complaintFilterMeal !== 'ALL' || complaintSearch) && (
+                {(complaintFilterStatus !== 'ALL' || complaintFilterCategory !== 'ALL' || complaintFilterHostel !== 'ALL' || complaintFilterMeal !== 'ALL' || complaintFilterDate || complaintSearch) && (
                   <button
                     type="button"
                     className="mess-btn-secondary"
@@ -1819,6 +1890,7 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
                       setComplaintFilterCategory('ALL');
                       setComplaintFilterHostel('ALL');
                       setComplaintFilterMeal('ALL');
+                      setComplaintFilterDate('');
                       setComplaintSearch('');
                       showToast('Complaint filters reset.');
                     }}
@@ -1869,7 +1941,26 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
                             </td>
                             <td>
                               <strong>{c.mealType}</strong>
-                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{c.mealDate}</div>
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => setComplaintFilterDate(c.mealDate ? String(c.mealDate).slice(0, 10) : '')}
+                                  title={`Filter all complaints to ${c.mealDate}`}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    padding: 0,
+                                    fontSize: '0.72rem',
+                                    color: '#0284c7',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                    display: 'inline-block',
+                                    textAlign: 'left',
+                                  }}
+                                >
+                                  {c.mealDate}
+                                </button>
+                              </div>
                             </td>
                             <td style={{ maxWidth: 280 }}>
                               <div style={{ display: 'inline-block', marginBottom: 2 }}>
@@ -1957,7 +2048,12 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
                       type="date"
                       value={attendanceDate}
                       onChange={(e) => setAttendanceDate(e.target.value)}
-                      style={{ border: 'none', background: 'transparent', fontSize: '0.82rem', fontWeight: 600, color: '#0f172a', outline: 'none' }}
+                      onClick={(e) => {
+                        try {
+                          if (typeof e.target.showPicker === 'function') e.target.showPicker();
+                        } catch {}
+                      }}
+                      style={{ border: 'none', background: 'transparent', fontSize: '0.82rem', fontWeight: 600, color: '#0f172a', outline: 'none', cursor: 'pointer' }}
                     />
                   </div>
                   <button
@@ -2283,27 +2379,30 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
                       onChange={(e) => setNoticeSearch(e.target.value)}
                     />
                   </div>
-                  <select
-                    className="mess-input"
+                  <CustomFilterSelect
+                    icon={Filter}
+                    iconColor="#0284c7"
+                    label="Category"
                     value={noticeFilterCategory}
-                    onChange={(e) => setNoticeFilterCategory(e.target.value)}
-                    style={{ minWidth: '180px' }}
-                  >
-                    <option value="ALL">All Categories</option>
-                    {NOTICE_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  <select
-                    className="mess-input"
+                    onChange={setNoticeFilterCategory}
+                    options={[
+                      { value: 'ALL', label: 'All Categories' },
+                      ...NOTICE_CATEGORIES.map((c) => ({ value: c, label: c })),
+                    ]}
+                    minWidth="170px"
+                  />
+                  <CustomFilterSelect
+                    icon={Building2}
+                    iconColor="#64748b"
+                    label="Hostel"
                     value={noticeFilterHostel}
-                    onChange={(e) => setNoticeFilterHostel(e.target.value)}
-                    style={{ minWidth: '180px' }}
-                  >
-                    {TARGET_HOSTELS.map((h) => (
-                      <option key={h} value={h}>{h}</option>
-                    ))}
-                  </select>
+                    onChange={setNoticeFilterHostel}
+                    options={[
+                      { value: 'ALL', label: 'All Hostels' },
+                      ...TARGET_HOSTELS.map((h) => ({ value: h, label: h })),
+                    ]}
+                    minWidth="170px"
+                  />
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -2469,20 +2568,20 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
             <div className="mess-card">
               <div className="mess-card-header" style={{ flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Timeframe:</span>
-                    <select
-                      className="mess-input"
-                      value={reportTimeframe}
-                      onChange={(e) => setReportTimeframe(e.target.value)}
-                      style={{ minWidth: '150px' }}
-                    >
-                      <option value="daily">Daily (Today)</option>
-                      <option value="weekly">Weekly (Last 7 Days)</option>
-                      <option value="monthly">Monthly (Last 30 Days)</option>
-                      <option value="custom">Custom Date Range</option>
-                    </select>
-                  </div>
+                  <CustomFilterSelect
+                    icon={Clock}
+                    iconColor="#0284c7"
+                    label="Timeframe"
+                    value={reportTimeframe}
+                    onChange={setReportTimeframe}
+                    options={[
+                      { value: 'daily', label: 'Daily (Today)' },
+                      { value: 'weekly', label: 'Weekly (Last 7 Days)' },
+                      { value: 'monthly', label: 'Monthly (Last 30 Days)' },
+                      { value: 'custom', label: 'Custom Date Range' },
+                    ]}
+                    minWidth="150px"
+                  />
 
                   {reportTimeframe === 'custom' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -2491,6 +2590,11 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
                         className="mess-input"
                         value={reportCustomStart}
                         onChange={(e) => setReportCustomStart(e.target.value)}
+                        onClick={(e) => {
+                          try {
+                            if (typeof e.target.showPicker === 'function') e.target.showPicker();
+                          } catch {}
+                        }}
                       />
                       <span style={{ fontSize: '0.8rem', color: '#64748b' }}>to</span>
                       <input
@@ -2498,39 +2602,40 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
                         className="mess-input"
                         value={reportCustomEnd}
                         onChange={(e) => setReportCustomEnd(e.target.value)}
+                        onClick={(e) => {
+                          try {
+                            if (typeof e.target.showPicker === 'function') e.target.showPicker();
+                          } catch {}
+                        }}
                       />
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Hostel:</span>
-                    <select
-                      className="mess-input"
-                      value={reportHostel}
-                      onChange={(e) => setReportHostel(e.target.value)}
-                      style={{ minWidth: '160px' }}
-                    >
-                      {TARGET_HOSTELS.map((h) => (
-                        <option key={h} value={h}>{h}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <CustomFilterSelect
+                    icon={Building2}
+                    iconColor="#64748b"
+                    label="Hostel"
+                    value={reportHostel}
+                    onChange={setReportHostel}
+                    options={TARGET_HOSTELS.map((h) => ({ value: h, label: h }))}
+                    minWidth="160px"
+                  />
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Session:</span>
-                    <select
-                      className="mess-input"
-                      value={reportMealType}
-                      onChange={(e) => setReportMealType(e.target.value)}
-                      style={{ minWidth: '140px' }}
-                    >
-                      <option value="ALL">All Meals</option>
-                      <option value="Breakfast">Breakfast</option>
-                      <option value="Lunch">Lunch</option>
-                      <option value="Evening Snacks">Evening Snacks</option>
-                      <option value="Dinner">Dinner</option>
-                    </select>
-                  </div>
+                  <CustomFilterSelect
+                    icon={Coffee}
+                    iconColor="#0284c7"
+                    label="Session"
+                    value={reportMealType}
+                    onChange={setReportMealType}
+                    options={[
+                      { value: 'ALL', label: 'All Meals' },
+                      { value: 'Breakfast', label: 'Breakfast' },
+                      { value: 'Lunch', label: 'Lunch' },
+                      { value: 'Evening Snacks', label: 'Evening Snacks' },
+                      { value: 'Dinner', label: 'Dinner' },
+                    ]}
+                    minWidth="140px"
+                  />
                 </div>
 
                 {/* Export Dropdown / Action Strip */}
@@ -3165,25 +3270,64 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
                 <label className="mess-label">Chef / Dietary Description (Optional)</label>
                 <input type="text" className="mess-input" style={{ width: '100%' }} value={editingMeal.description} onChange={(e) => setEditingMeal({ ...editingMeal, description: e.target.value })} />
               </div>
-              <div style={{ marginBottom: '1rem', background: '#f8fafc', padding: '0.65rem', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+              <div style={{ marginBottom: '0.85rem', background: '#f8fafc', padding: '0.65rem', borderRadius: 8, border: '1px solid #e2e8f0' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: '#0f172a' }}>
                   <input type="checkbox" checked={editingMeal.isSpecial} onChange={(e) => setEditingMeal({ ...editingMeal, isSpecial: e.target.checked })} />
                   <span>Mark as Special Festival / Celebration Meal</span>
                 </label>
                 {editingMeal.isSpecial && (
+                  <>
+                    <input
+                      type="text"
+                      className="mess-input"
+                      style={{ width: '100%', marginTop: '0.5rem' }}
+                      placeholder="Occasion (e.g. Diwali Grand Feast)"
+                      value={editingMeal.specialOccasion}
+                      onChange={(e) => setEditingMeal({ ...editingMeal, specialOccasion: e.target.value })}
+                    />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.78rem', color: '#475569', marginTop: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={editingMeal.autoDisable !== false}
+                        onChange={(e) => setEditingMeal({ ...editingMeal, autoDisable: e.target.checked })}
+                      />
+                      <span>Automatically disable after serving (One-time celebration, does not repeat weekly)</span>
+                    </label>
+                  </>
+                )}
+              </div>
+
+              {/* Option to Disable Meal Service (Holiday / Closure) */}
+              <div style={{ marginBottom: '1rem', background: '#fff1f2', padding: '0.65rem', borderRadius: 8, border: '1px solid #fecdd3' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: '#9f1239' }}>
+                  <input
+                    type="checkbox"
+                    checked={editingMeal.isAvailable === false}
+                    onChange={(e) => setEditingMeal({
+                      ...editingMeal,
+                      isAvailable: !e.target.checked,
+                      unavailabilityReason: e.target.checked ? (editingMeal.unavailabilityReason || 'Holiday / Kitchen Maintenance Closure') : '',
+                    })}
+                  />
+                  <span>Disable Meal Service (Mark as Unavailable / Holiday Closure)</span>
+                </label>
+                {editingMeal.isAvailable === false && (
                   <input
                     type="text"
                     className="mess-input"
-                    style={{ width: '100%', marginTop: '0.5rem' }}
-                    placeholder="Occasion (e.g. Diwali Grand Feast)"
-                    value={editingMeal.specialOccasion}
-                    onChange={(e) => setEditingMeal({ ...editingMeal, specialOccasion: e.target.value })}
+                    style={{ width: '100%', marginTop: '0.5rem', borderColor: '#fca5a5' }}
+                    placeholder="Reason for disabling meal (e.g. Diwali Holiday Closure)"
+                    value={editingMeal.unavailabilityReason}
+                    onChange={(e) => setEditingMeal({ ...editingMeal, unavailabilityReason: e.target.value })}
                   />
                 )}
               </div>
+
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                 <button type="button" className="mess-btn-secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
-                <button type="submit" className="mess-btn-primary">Save Menu Changes</button>
+                <button type="submit" className="mess-btn-primary" disabled={isSavingMeal}>
+                  {isSavingMeal ? 'Saving Changes...' : 'Save Menu Changes'}
+                </button>
               </div>
             </form>
           </div>
@@ -3277,52 +3421,186 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
       {isPreviewModalOpen && (
         <div className="mess-modal-backdrop" onClick={() => setIsPreviewModalOpen(false)}>
           <div className="mess-modal-card-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="mess-modal-header">
-              <h3 className="mess-modal-title">
-                <Calendar size={18} color="#0284c7" /> Comprehensive Weekly Mess Timetable Matrix
-              </h3>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button type="button" className="mess-btn-secondary" onClick={() => {
-                  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-                  const rows = days.map(d => ({
-                    Day: d,
-                    Breakfast: weeklyMenu[d]?.breakfast?.items || '',
-                    Lunch: weeklyMenu[d]?.lunch?.items || '',
-                    Snacks: weeklyMenu[d]?.snacks?.items || '',
-                    Dinner: weeklyMenu[d]?.dinner?.items || '',
-                  }));
-                  exportToCsv('Apna_Campus_Weekly_Mess_Matrix.csv', rows);
-                }}>
-                  <Download size={13} /> Export CSV
+            <div className="mess-modal-header" style={{ marginBottom: '1rem', paddingBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: 42, height: 42, borderRadius: '10px', background: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Calendar size={22} />
+                </div>
+                <div>
+                  <h3 className="mess-modal-title" style={{ fontSize: '1.2rem', color: '#0f172a', fontWeight: 800 }}>
+                    Comprehensive Weekly Mess Timetable Matrix
+                  </h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                    Complete 7-day rotational menu · Breakfast, Lunch, Snacks &amp; Dinner for all hostellers
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="mess-btn-secondary"
+                  onClick={() => {
+                    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                    const rows = days.map(d => ({
+                      Day: d,
+                      Breakfast: weeklyMenu[d]?.breakfast?.items || '',
+                      Lunch: weeklyMenu[d]?.lunch?.items || '',
+                      Snacks: weeklyMenu[d]?.snacks?.items || '',
+                      Dinner: weeklyMenu[d]?.dinner?.items || '',
+                    }));
+                    exportToCsv('Apna_Campus_Weekly_Mess_Matrix.csv', rows);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, padding: '0.5rem 0.9rem' }}
+                >
+                  <Download size={14} />
+                  <span>Export CSV</span>
                 </button>
-                <button type="button" className="mess-modal-close" onClick={() => setIsPreviewModalOpen(false)}>
-                  <X size={18} />
+                <button
+                  type="button"
+                  className="mess-btn-secondary"
+                  onClick={() => window.print()}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, padding: '0.5rem 0.9rem' }}
+                  title="Print Timetable Matrix"
+                >
+                  <FileText size={14} />
+                  <span>Print</span>
+                </button>
+                <button
+                  type="button"
+                  className="mess-modal-close"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  title="Close Dialog"
+                >
+                  <X size={20} />
                 </button>
               </div>
             </div>
-            <div style={{ overflowX: 'auto', maxHeight: '70vh' }}>
+
+            <div className="mess-matrix-table-wrap">
               <table className="mess-matrix-table">
                 <thead>
                   <tr>
-                    <th style={{ width: 100 }}>Day</th>
-                    <th>Breakfast</th>
-                    <th>Lunch</th>
-                    <th>Snacks</th>
-                    <th>Dinner</th>
+                    <th style={{ width: 120 }}>
+                      <div className="mess-matrix-th-title">Day</div>
+                      <div className="mess-matrix-th-sub">Weekly Cycle</div>
+                    </th>
+                    <th>
+                      <div className="mess-matrix-th-title">🍳 Breakfast</div>
+                      <div className="mess-matrix-th-sub">07:30 – 09:30 AM</div>
+                    </th>
+                    <th>
+                      <div className="mess-matrix-th-title">🍛 Lunch</div>
+                      <div className="mess-matrix-th-sub">12:30 – 02:30 PM</div>
+                    </th>
+                    <th>
+                      <div className="mess-matrix-th-title">☕ Evening Snacks</div>
+                      <div className="mess-matrix-th-sub">05:00 – 06:30 PM</div>
+                    </th>
+                    <th>
+                      <div className="mess-matrix-th-title">🍲 Dinner</div>
+                      <div className="mess-matrix-th-sub">08:00 – 10:00 PM</div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
-                    <tr key={day}>
-                      <td className="mess-matrix-day">{day}</td>
-                      <td>{weeklyMenu[day]?.breakfast?.items || '-'}</td>
-                      <td>{weeklyMenu[day]?.lunch?.items || '-'}</td>
-                      <td>{weeklyMenu[day]?.snacks?.items || '-'}</td>
-                      <td>{weeklyMenu[day]?.dinner?.items || '-'}</td>
-                    </tr>
-                  ))}
+                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
+                    const isToday = new Date().toLocaleDateString('en-US', { weekday: 'long' }) === day;
+                    return (
+                      <tr key={day} className={isToday ? 'mess-matrix-row-today' : ''}>
+                        <td className="mess-matrix-day">
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.88rem' }}>{day}</span>
+                            {isToday && (
+                              <span style={{ fontSize: '0.68rem', padding: '2px 6px', background: '#0284c7', color: '#ffffff', borderRadius: '4px', fontWeight: 700, width: 'fit-content' }}>
+                                TODAY
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="mess-matrix-cell-content">
+                            <span>{weeklyMenu[day]?.breakfast?.items || '-'}</span>
+                            {weeklyMenu[day]?.breakfast?.isFestival && (
+                              <span className="mess-matrix-festival-tag">
+                                ✨ {weeklyMenu[day]?.breakfast?.festivalName || 'Special Festival Meal'}
+                              </span>
+                            )}
+                            {weeklyMenu[day]?.breakfast?.isUnavailable && (
+                              <span className="mess-matrix-unavailable-tag">
+                                ⚠️ Service Suspended
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="mess-matrix-cell-content">
+                            <span>{weeklyMenu[day]?.lunch?.items || '-'}</span>
+                            {weeklyMenu[day]?.lunch?.isFestival && (
+                              <span className="mess-matrix-festival-tag">
+                                ✨ {weeklyMenu[day]?.lunch?.festivalName || 'Special Festival Meal'}
+                              </span>
+                            )}
+                            {weeklyMenu[day]?.lunch?.isUnavailable && (
+                              <span className="mess-matrix-unavailable-tag">
+                                ⚠️ Service Suspended
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="mess-matrix-cell-content">
+                            <span>{weeklyMenu[day]?.snacks?.items || '-'}</span>
+                            {weeklyMenu[day]?.snacks?.isFestival && (
+                              <span className="mess-matrix-festival-tag">
+                                ✨ {weeklyMenu[day]?.snacks?.festivalName || 'Special Festival Meal'}
+                              </span>
+                            )}
+                            {weeklyMenu[day]?.snacks?.isUnavailable && (
+                              <span className="mess-matrix-unavailable-tag">
+                                ⚠️ Service Suspended
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="mess-matrix-cell-content">
+                            <span>{weeklyMenu[day]?.dinner?.items || '-'}</span>
+                            {weeklyMenu[day]?.dinner?.isFestival && (
+                              <span className="mess-matrix-festival-tag">
+                                ✨ {weeklyMenu[day]?.dinner?.festivalName || 'Special Festival Meal'}
+                              </span>
+                            )}
+                            {weeklyMenu[day]?.dinner?.isUnavailable && (
+                              <span className="mess-matrix-unavailable-tag">
+                                ⚠️ Service Suspended
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+            </div>
+
+            {/* Footer Summary Strip */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid #f1f5f9', fontSize: '0.78rem', color: '#64748b' }}>
+              <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+                <span><strong>7 Days</strong> Active Rotational Schedule</span>
+                <span>•</span>
+                <span><strong>28 Meal Slots</strong> Configured</span>
+                <span>•</span>
+                <span style={{ color: '#059669', fontWeight: 600 }}>✓ FSSAI Nutritional Standard Compliance</span>
+              </div>
+              <button
+                type="button"
+                className="mess-btn-primary"
+                onClick={() => setIsPreviewModalOpen(false)}
+                style={{ padding: '0.45rem 1.25rem', fontSize: '0.82rem' }}
+              >
+                Close Preview
+              </button>
             </div>
           </div>
         </div>
@@ -3794,6 +4072,11 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
                     style={{ width: '100%' }}
                     value={newNoticeForm.publishDate}
                     onChange={(e) => setNewNoticeForm({ ...newNoticeForm, publishDate: e.target.value })}
+                    onClick={(e) => {
+                      try {
+                        if (typeof e.target.showPicker === 'function') e.target.showPicker();
+                      } catch {}
+                    }}
                   />
                 </div>
                 <div>
@@ -3804,6 +4087,11 @@ export default function MessManagerPortal({ account, onLogout, onSwitchRole }) {
                     style={{ width: '100%' }}
                     value={newNoticeForm.expiryDate}
                     onChange={(e) => setNewNoticeForm({ ...newNoticeForm, expiryDate: e.target.value })}
+                    onClick={(e) => {
+                      try {
+                        if (typeof e.target.showPicker === 'function') e.target.showPicker();
+                      } catch {}
+                    }}
                   />
                 </div>
               </div>

@@ -32,11 +32,13 @@ import {
 import { getActiveStudent } from '../services/studentStore.js';
 import { getAllHostels } from '../services/hostelAttendanceStore.js';
 import { getRoomsForHostelAndFloor, getFloorsForHostel } from '../services/hostelRoomStore.js';
+import UniversalDigitalIdModal from './Security/UniversalDigitalIdModal.jsx';
 
 export default function StudentGatePassSection({ student: propStudent }) {
   const currentStudent = propStudent || getActiveStudent();
   const [gatePasses, setGatePasses] = useState([]);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [digitalModalOpen, setDigitalModalOpen] = useState(false);
   const [selectedDigitalPass, setSelectedDigitalPass] = useState(null);
   const [viewDocModal, setViewDocModal] = useState(null);
   const [selectedRejectionNotice, setSelectedRejectionNotice] = useState(null);
@@ -228,12 +230,24 @@ export default function StudentGatePassSection({ student: propStudent }) {
             Once submitted, your application is automatically forwarded to the <strong>Hostel Warden</strong> for instant digital clearance.
           </p>
         </div>
-        <button
-          className="gate-pass-apply-hero-btn"
-          onClick={() => setIsApplyModalOpen(true)}
-        >
-          <Plus size={18} /> Apply for New Gate Pass
-        </button>
+        <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+          <button
+            className="gate-pass-apply-hero-btn"
+            style={{
+              background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)',
+            }}
+            onClick={() => setDigitalModalOpen(true)}
+          >
+            <QrCode size={18} /> My 10s Dynamic QR Pass
+          </button>
+          <button
+            className="gate-pass-apply-hero-btn"
+            onClick={() => setIsApplyModalOpen(true)}
+          >
+            <Plus size={18} /> Apply for New Gate Pass
+          </button>
+        </div>
       </div>
 
       {/* Stats Counter */}
@@ -1204,6 +1218,13 @@ export default function StudentGatePassSection({ student: propStudent }) {
           </div>
         </div>
       )}
+
+      {/* Universal 10-Second Dynamic QR & Digital ID Modal */}
+      <UniversalDigitalIdModal
+        isOpen={digitalModalOpen}
+        onClose={() => setDigitalModalOpen(false)}
+        user={currentStudent}
+      />
 
     </div>
   );

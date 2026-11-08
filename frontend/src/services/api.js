@@ -2758,6 +2758,50 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ movements }),
     }),
+  generateDynamicQr: (payload = {}) =>
+    request('/security/qr/generate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  verifyDynamicQr: (payload) =>
+    request('/security/qr/verify', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  submitStudentMovementRequest: (payload) =>
+    request('/security/movement/request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getMyStudentMovementRequests: () => request('/security/movement/my-requests'),
+  getPendingWardenMovementRequests: () => request('/security/movement/pending-warden'),
+  approveStudentMovementRequest: (id, remarks) =>
+    request(`/security/movement/${id}/approve`, {
+      method: 'PATCH',
+      body: JSON.stringify({ remarks }),
+    }),
+  rejectStudentMovementRequest: (id, remarks) =>
+    request(`/security/movement/${id}/reject`, {
+      method: 'PATCH',
+      body: JSON.stringify({ remarks }),
+    }),
+  getSecurityOverdueReturns: () => request('/security/overdue-returns'),
+  resolveSecurityOverdueReturn: (id, notes) =>
+    request(`/security/overdue-returns/${id}/resolve`, {
+      method: 'PATCH',
+      body: JSON.stringify({ notes }),
+    }),
+  getSecurityCheckpoints: () => request('/security/checkpoints'),
+  inviteSecurityVisitor: (payload) =>
+    request('/security/visitors/invite', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  acknowledgeShiftHandover: (payload) =>
+    request('/security/shift-handover/acknowledge', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };
 
 

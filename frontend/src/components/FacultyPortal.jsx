@@ -2587,7 +2587,7 @@ export default function FacultyPortal({ account, onLogout }) {
 
           {/* TAB: TEACHING TIMETABLE */}
           {activeTab === 'timetable' && (
-            <PublicTimetable account={account} role="faculty" onClose={() => setActiveTab('dashboard')} />
+            <PublicTimetable account={account} role="faculty" onClose={() => setActiveTab('dashboard')} embedded={true} />
           )}
 
           {/* TAB 5: CLASS PERFORMANCE & ANALYTICS */}

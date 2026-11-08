@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Printer,
   Download,
@@ -153,6 +154,28 @@ export default function PublicTimetable({ account, role = 'student', onClose, em
     };
   }, [account, isFacultyRole, isHodRole, selectedHodDept, selectedHodYear]);
 
+  // Lock body scroll and listen for Escape key when in fullscreen/portal modal mode
+  useEffect(() => {
+    if (embedded || typeof document === 'undefined') return;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (showRoutineGrid) {
+          setShowRoutineGrid(false);
+        } else if (typeof onClose === 'function') {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [embedded, showRoutineGrid, onClose]);
+
   // 6. Faculty personal teaching entries & workload metrics
   const facultyTeachingEntries = useMemo(() => {
     if (dynamicRoutineData?.weeklyTeachingSchedule?.length > 0) {
@@ -263,7 +286,7 @@ export default function PublicTimetable({ account, role = 'student', onClose, em
     ];
   }, [isHodRole, isFacultyRole, isStudentRole]);
 
-  return (
+  const content = (
     <div className={`apna-public-timetable-wrapper ${embedded ? 'is-embedded' : ''}`}>
       {/* Toast Notification */}
       {toastMessage && (
@@ -1558,6 +1581,12 @@ export default function PublicTimetable({ account, role = 'student', onClose, em
       </footer>
     </div>
   );
+
+  if (embedded || typeof document === 'undefined') {
+    return content;
+  }
+
+  return createPortal(content, document.body);
 }
 
 // Fallback faculty list

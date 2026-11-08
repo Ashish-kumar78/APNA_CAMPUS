@@ -48,6 +48,9 @@ export default function AppLayout({
   // Close mobile drawer on navigation / activeTab change & reset workspace scroll
   useEffect(() => {
     setMobileOpen(false);
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = '';
+    }
     if (mainWorkspaceRef.current) {
       try {
         mainWorkspaceRef.current.scrollTo({ top: 0, behavior: 'instant' });

@@ -215,10 +215,12 @@ describe('STEP 8: Student Dashboard Full Integration Verification (Fretbox BPUT 
   });
 
   it('7. Integrates meal count / attendance opt-out with deadline cutoff and real-time status', () => {
-    const todayIso = new Date().toISOString().split('T')[0];
+    const tm = new Date();
+    tm.setDate(tm.getDate() + 1);
+    const targetIso = tm.toISOString().split('T')[0];
 
     // Initial status: all active
-    const initialStatus = getStudentMealSkipStatus(testStudentRoll, todayIso);
+    const initialStatus = getStudentMealSkipStatus(testStudentRoll, targetIso);
     expect(initialStatus).toBeDefined();
     expect(initialStatus.statusPerMeal.Breakfast).toBeDefined();
     expect(initialStatus.statusPerMeal.Lunch).toBeDefined();
@@ -230,18 +232,18 @@ describe('STEP 8: Student Dashboard Full Integration Verification (Fretbox BPUT 
       rollNumber: testStudentRoll,
       hostelName: testHostel,
       roomNumber: 'A-304',
-      date: todayIso,
+      date: targetIso,
       skippedMeals: ['Lunch'],
       reason: 'Fasting on Tuesday',
     });
 
-    const updatedStatus = getStudentMealSkipStatus(testStudentRoll, todayIso);
+    const updatedStatus = getStudentMealSkipStatus(testStudentRoll, targetIso);
     expect(updatedStatus.record.skippedMeals).toContain('Lunch');
     expect(updatedStatus.statusPerMeal.Lunch.isSkipped).toBe(true);
 
     // Cancel skip
-    cancelStudentMealSkip({ rollNumber: testStudentRoll, date: todayIso, mealType: 'Lunch' });
-    const cancelledStatus = getStudentMealSkipStatus(testStudentRoll, todayIso);
+    cancelStudentMealSkip({ rollNumber: testStudentRoll, date: targetIso, mealType: 'Lunch' });
+    const cancelledStatus = getStudentMealSkipStatus(testStudentRoll, targetIso);
     expect(cancelledStatus.record ? cancelledStatus.record.skippedMeals : []).not.toContain('Lunch');
     expect(cancelledStatus.statusPerMeal.Lunch.isSkipped).toBe(false);
   });

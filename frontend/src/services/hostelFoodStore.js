@@ -338,24 +338,71 @@ export const resetFoodStore = resetFoodFeedbackStore;
  */
 export const getWeeklyMessMenu = () => {
   const storage = getStorage();
-  if (!storage) {
-    return _memoryWeeklyMenu || mockMessMenuWeekly;
-  }
-  const stored = storage.getItem(MESS_MENU_STORAGE_KEY);
-  if (!stored) {
-    try {
-      storage.setItem(MESS_MENU_STORAGE_KEY, JSON.stringify(mockMessMenuWeekly));
-    } catch (e) {
-      // Ignore
+  let baseMenu = _memoryWeeklyMenu || mockMessMenuWeekly;
+  if (storage) {
+    const stored = storage.getItem(MESS_MENU_STORAGE_KEY);
+    if (!stored) {
+      try {
+        storage.setItem(MESS_MENU_STORAGE_KEY, JSON.stringify(mockMessMenuWeekly));
+      } catch (e) {
+        // Ignore
+      }
+    } else {
+      try {
+        baseMenu = { ...mockMessMenuWeekly, ...JSON.parse(stored) };
+      } catch (e) {
+        baseMenu = _memoryWeeklyMenu || mockMessMenuWeekly;
+      }
     }
-    return _memoryWeeklyMenu || mockMessMenuWeekly;
   }
+
+  // Automatically disable expired special festival celebration meals that have autoDisable set
   try {
-    const parsed = JSON.parse(stored);
-    return { ...mockMessMenuWeekly, ...parsed };
-  } catch (e) {
-    return _memoryWeeklyMenu || mockMessMenuWeekly;
+    let modified = false;
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const todayStr = formatter.format(now);
+
+    const checkedMenu = { ...baseMenu };
+    Object.keys(checkedMenu).forEach((dayKey) => {
+      const dayData = { ...checkedMenu[dayKey] };
+      Object.keys(dayData).forEach((mealKey) => {
+        const meal = dayData[mealKey];
+        if (meal?.isSpecial && meal?.autoDisable && meal?.lastUpdatedDate) {
+          const updateDateStr = String(meal.lastUpdatedDate).slice(0, 10);
+          if (todayStr > updateDateStr) {
+            dayData[mealKey] = {
+              ...meal,
+              isSpecial: false,
+              specialOccasion: '',
+              autoDisable: false,
+            };
+            modified = true;
+          }
+        }
+      });
+      checkedMenu[dayKey] = dayData;
+    });
+
+    if (modified) {
+      baseMenu = checkedMenu;
+      _memoryWeeklyMenu = checkedMenu;
+      if (storage) {
+        try {
+          storage.setItem(MESS_MENU_STORAGE_KEY, JSON.stringify(checkedMenu));
+        } catch {}
+      }
+    }
+  } catch (err) {
+    console.debug('Failed to check auto-disable special meals:', err);
   }
+
+  return baseMenu;
 };
 
 /**
@@ -370,6 +417,7 @@ export const updateMealMenuItem = async ({
   description,
   isSpecial,
   specialOccasion,
+  autoDisable,
   isAvailable,
   unavailabilityReason,
   lastUpdatedBy = 'Mr. Kailash Chandra Nayak',
@@ -391,6 +439,7 @@ export const updateMealMenuItem = async ({
     description: description !== undefined ? String(description).trim() : (currentMeal.description || ''),
     isSpecial: isSpecial !== undefined ? Boolean(isSpecial) : Boolean(currentMeal.isSpecial),
     specialOccasion: specialOccasion !== undefined ? String(specialOccasion).trim() : (currentMeal.specialOccasion || ''),
+    autoDisable: autoDisable !== undefined ? Boolean(autoDisable) : Boolean(currentMeal.autoDisable),
     isAvailable: isAvailable !== undefined ? Boolean(isAvailable) : (currentMeal.isAvailable !== false),
     unavailabilityReason: unavailabilityReason !== undefined ? String(unavailabilityReason).trim() : (currentMeal.unavailabilityReason || ''),
     lastUpdatedBy: String(lastUpdatedBy || 'Mr. Kailash Chandra Nayak'),

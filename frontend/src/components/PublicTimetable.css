@@ -19,11 +19,13 @@
   position: relative;
   inset: auto;
   z-index: 1;
-  min-height: 750px;
+  width: 100%;
+  min-height: auto;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   border: 1px solid #cbd5e1;
   margin-top: 12px;
+  margin-bottom: 24px;
   overflow: visible;
 }
 

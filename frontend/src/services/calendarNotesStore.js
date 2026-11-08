@@ -89,6 +89,12 @@ export function resolveUserId(account) {
   if (!account) return 'guest_user';
   return String(
     account.id ||
+    account.identity ||
+    account.employeeId ||
+    account.empId ||
+    account.rollNumber ||
+    account.registrationNumber ||
+    account.username ||
     account.identifier ||
     account.email ||
     account.roleKey ||
@@ -183,7 +189,17 @@ export async function getPendingCalendarReminders(account, currentDate = null) {
   try {
     const res = await api.getPendingCalendarReminders({ currentDate: todayStr });
     if (res?.success && Array.isArray(res.reminders)) {
-      return sortNotesByTime(res.reminders);
+      const mergedMap = new Map();
+      localPending.forEach(n => mergedMap.set(n.id, n));
+      res.reminders.forEach(n => {
+        const local = mergedMap.get(n.id);
+        if (local?.status === 'COMPLETED') return;
+        mergedMap.set(n.id, n);
+      });
+      const allReminders = Array.from(mergedMap.values()).filter(
+        n => n.status === 'PENDING' && n.scheduledDate <= todayStr
+      );
+      return sortNotesByTime(allReminders);
     }
   } catch (err) {
     // Backend unreachable, rely on local pending
@@ -259,6 +275,9 @@ export async function createCalendarNote(account, { title, description = '', sch
     console.debug('Background backend sync for createCalendarNote fallback:', err?.message);
   });
 
+  // Clear session dismissal so new uncompleted tasks immediately remind the user
+  clearSessionDismissal(userId);
+
   return newNote;
 }
 
@@ -317,6 +336,10 @@ export async function updateCalendarNote(account, noteId, updates) {
   }).catch((err) => {
     console.debug('Background backend sync for updateCalendarNote fallback:', err?.message);
   });
+
+  if (updatedNote.status === 'PENDING') {
+    clearSessionDismissal(resolveUserId(account));
+  }
 
   return updatedNote;
 }

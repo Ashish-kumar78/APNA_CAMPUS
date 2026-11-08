@@ -165,3 +165,138 @@ export class SyncOfflineQueueDto {
   movements!: RecordMovementDto[];
 }
 
+export class GenerateDynamicQrDto {
+  @ApiPropertyOptional({ description: 'User ID for QR identity' })
+  @IsString()
+  @IsOptional()
+  userId?: string;
+
+  @ApiPropertyOptional({ description: 'Role (STUDENT, FACULTY, STAFF, etc.)' })
+  @IsString()
+  @IsOptional()
+  role?: string;
+
+  @ApiPropertyOptional({ description: 'Identity type' })
+  @IsString()
+  @IsOptional()
+  identityType?: string;
+
+  @ApiPropertyOptional({ description: 'Roll or Employee ID' })
+  @IsString()
+  @IsOptional()
+  identifier?: string;
+}
+
+export class VerifyDynamicQrDto {
+  @ApiProperty({ description: '10-second Dynamic QR token string' })
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
+
+  @ApiPropertyOptional({ description: 'Gate checkpoint ID or code' })
+  @IsString()
+  @IsOptional()
+  checkpointId?: string;
+
+  @ApiPropertyOptional({ description: 'Gate name' })
+  @IsString()
+  @IsOptional()
+  gateName?: string;
+
+  @ApiPropertyOptional({ description: 'Gate type (MAIN_CAMPUS or HOSTEL_GATE)' })
+  @IsString()
+  @IsOptional()
+  gateType?: 'MAIN_CAMPUS' | 'HOSTEL_GATE' | 'ENGINEERING_BLOCK' | 'ACADEMIC_BLOCK' | 'PERIMETER';
+
+  @ApiPropertyOptional({ description: 'Movement direction (ENTRY or EXIT or AUTO)' })
+  @IsString()
+  @IsOptional()
+  direction?: 'ENTRY' | 'EXIT' | 'AUTO';
+
+  @ApiPropertyOptional({ description: 'Guard remarks' })
+  @IsString()
+  @IsOptional()
+  remarks?: string;
+}
+
+export class StudentMovementRequestDto {
+  @ApiProperty({ description: 'Movement type (ROUTINE_ENTRY, ROUTINE_EXIT, DAY_OUT, LEAVE, OVERNIGHT_LEAVE, LATE_RETURN, EMERGENCY_LEAVE)' })
+  @IsString()
+  @IsNotEmpty()
+  movementType!: string;
+
+  @ApiProperty({ description: 'Reason for departure/movement' })
+  @IsString()
+  @IsNotEmpty()
+  reason!: string;
+
+  @ApiProperty({ description: 'Destination' })
+  @IsString()
+  @IsNotEmpty()
+  destination!: string;
+
+  @ApiProperty({ description: 'Expected departure datetime ISO string' })
+  @IsString()
+  @IsNotEmpty()
+  outDateTime!: string;
+
+  @ApiProperty({ description: 'Expected return datetime ISO string' })
+  @IsString()
+  @IsNotEmpty()
+  expectedInDateTime!: string;
+
+  @ApiPropertyOptional({ description: 'Parent approval requirement flag' })
+  @IsOptional()
+  parentApprovalRequired?: boolean;
+}
+
+export class InviteVisitorDto {
+  @ApiProperty({ description: 'Visitor full name' })
+  @IsString()
+  @IsNotEmpty()
+  visitorName!: string;
+
+  @ApiProperty({ description: 'Relation to student or staff' })
+  @IsString()
+  @IsNotEmpty()
+  relation!: string;
+
+  @ApiProperty({ description: 'Purpose of visit' })
+  @IsString()
+  @IsNotEmpty()
+  purpose!: string;
+
+  @ApiPropertyOptional({ description: 'Visitor phone' })
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiPropertyOptional({ description: 'Expected visit date & time' })
+  @IsString()
+  @IsOptional()
+  expectedArrival?: string;
+}
+
+export class ShiftHandoverAckDto {
+  @ApiProperty({ description: 'Shift code or handover ID' })
+  @IsString()
+  @IsNotEmpty()
+  shiftCode!: string;
+
+  @ApiProperty({ description: 'Incoming Guard ID' })
+  @IsString()
+  @IsNotEmpty()
+  incomingGuardId!: string;
+
+  @ApiProperty({ description: 'Incoming Guard Name' })
+  @IsString()
+  @IsNotEmpty()
+  incomingGuardName!: string;
+
+  @ApiPropertyOptional({ description: 'Handover remarks or checklist confirmation' })
+  @IsString()
+  @IsOptional()
+  remarks?: string;
+}
+
+

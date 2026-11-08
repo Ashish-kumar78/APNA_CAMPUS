@@ -14,5 +14,5 @@ export default function TimetablePage({ account, role = 'student', onClose }) {
     }
   };
 
-  return <PublicTimetable account={account} role={role} onClose={handleClose} />;
+  return <PublicTimetable account={account} role={role} onClose={handleClose} embedded={true} />;
 }

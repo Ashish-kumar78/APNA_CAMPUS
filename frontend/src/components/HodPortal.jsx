@@ -3242,7 +3242,7 @@ export default function HodPortal({ account, onLogout }) {
 
           {/* TAB 6B: AUTOMATED TIMETABLE MANAGEMENT */}
           {activeTab === 'timetable' && (
-            <PublicTimetable account={account} role="hod" onClose={() => setActiveTab('dashboard')} />
+            <PublicTimetable account={account} role="hod" onClose={() => setActiveTab('dashboard')} embedded={true} />
           )}
 
           {/* TAB 7: DEPARTMENT REPORTS */}

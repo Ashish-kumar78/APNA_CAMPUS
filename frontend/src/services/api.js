@@ -229,6 +229,14 @@ export const api = {
     return request(`/academics/subjects?${query}`);
   },
   getTimetable: () => request('/academics/timetable'),
+  getStudentAcademicDossier: (studentId) =>
+    request(`/academics/student/dossier${studentId ? `?studentId=${encodeURIComponent(studentId)}` : ''}`),
+  markNoteHelpful: (id) =>
+    request(`/academics/notes/${id}/helpful`, { method: 'POST' }),
+  submitNoteRequest: (data) =>
+    request('/academics/notes/request', { method: 'POST', body: JSON.stringify(data) }),
+  applySupplementary: (data) =>
+    request('/academics/supplementary/apply', { method: 'POST', body: JSON.stringify(data) }),
 
   // 5. Fees & Accounts
   getFeeStatement: (rollNumber = '01') => request(`/fees/statement?rollNumber=${rollNumber}`),
@@ -1525,6 +1533,20 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
   evaluateDriveEligibility: (id) => request(`/placement/drives/${id}/evaluate`),
+  checkPlacementEligibility: (driveId, studentRoll) =>
+    request('/placement/check-eligibility', {
+      method: 'POST',
+      body: JSON.stringify({ driveId, studentRoll }),
+    }),
+  registerPlacementApplication: (payload) =>
+    request('/placement/applications/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getStudentPlacementApplications: (studentRoll) =>
+    request(`/placement/student/applications${studentRoll ? '?studentRoll=' + encodeURIComponent(studentRoll) : ''}`),
+  getStudentPlacementOffers: (studentRoll) =>
+    request(`/placement/student/offers${studentRoll ? '?studentRoll=' + encodeURIComponent(studentRoll) : ''}`),
   applyToPlacementDrive: (driveId, cgpa) =>
     request('/placement/apply', {
       method: 'POST',

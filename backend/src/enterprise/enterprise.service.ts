@@ -1210,7 +1210,7 @@ export class EnterpriseService {
           minCgpa: 6.5,
           eligibleBranches: ['CSE', 'ECE', 'EEE', 'MECH', 'CIVIL'],
           driveDate: '2026-10-15',
-          venue: 'GIFT Computing Complex Labs 1-4',
+          venue: 'Apna Campus Computing Complex Labs 1-4',
           registeredCount: 310,
           shortlistedCount: 180,
           selectedCount: 42,
@@ -1532,7 +1532,7 @@ export class EnterpriseService {
   }
 
   async releasePlacementOffer(data: any, user: any) {
-    const offerToken = `GIFT-OFFER-${Math.floor(1000 + Math.random() * 9000)}-${data.regNo}`;
+    const offerToken = `APNA-OFFER-${Math.floor(1000 + Math.random() * 9000)}-${data.regNo}`;
     const details = {
       offerId: `OFFER-2026-${Math.floor(100 + Math.random() * 900)}`,
       studentName: data.studentName,
@@ -1613,6 +1613,269 @@ export class EnterpriseService {
         status: 'Applied',
       },
     });
+  }
+
+  async validateStudentEligibility(driveId: string, studentRoll: string) {
+    const drive = await this.prisma.placementDrive.findUnique({ where: { id: driveId } });
+    if (!drive) throw new NotFoundException('Placement drive not found.');
+
+    const student = await this.prisma.student.findFirst({
+      where: {
+        OR: [
+          { rollNumber: studentRoll },
+          { studentId: studentRoll },
+          { id: studentRoll },
+        ],
+      },
+    });
+
+    const reasons: string[] = [];
+    const passedCriteria: string[] = [];
+
+    const studentCgpa = student?.cgpa ?? 8.0;
+    const studentBranch = student?.deptCode || (student?.department?.includes('Computer') ? 'CSE' : student?.department?.includes('Electronics') ? 'ECE' : 'MECH');
+    const studentAttendance = student?.attendance ?? 85;
+
+    // 1. CGPA Check
+    if (studentCgpa >= drive.minCgpa) {
+      passedCriteria.push(`Minimum CGPA requirement satisfied (${studentCgpa} >= ${drive.minCgpa})`);
+    } else {
+      reasons.push(`Current CGPA (${studentCgpa}) is below minimum cutoff of ${drive.minCgpa}`);
+    }
+
+    // 2. Discipline / Branch Check
+    const isBranchAllowed = drive.eligibleBranches.some(b => 
+      b.toUpperCase() === studentBranch.toUpperCase() || 
+      (student?.department && student.department.toUpperCase().includes(b.toUpperCase()))
+    );
+    if (isBranchAllowed) {
+      passedCriteria.push(`Branch eligibility confirmed (${studentBranch} is an approved discipline)`);
+    } else {
+      reasons.push(`Academic branch (${studentBranch}) is not in the approved hiring disciplines (${drive.eligibleBranches.join(', ')})`);
+    }
+
+    // 3. Attendance Clearance (75% Minimum Institutional Cutoff)
+    if (studentAttendance >= 75) {
+      passedCriteria.push(`Academic attendance clearance verified (${studentAttendance}% >= 75%)`);
+    } else {
+      reasons.push(`Attendance percentage (${studentAttendance}%) is below the mandatory 75% placement clearance threshold`);
+    }
+
+    // 4. Drive Deadline Check
+    const isExpired = drive.status === 'Closed' || (drive.driveDate && new Date(drive.driveDate) < new Date(new Date().toDateString()));
+    if (isExpired) {
+      reasons.push('Registration window for this recruitment drive has officially closed.');
+    } else {
+      passedCriteria.push('Recruitment drive is active and accepting candidate applications');
+    }
+
+    return {
+      driveId: drive.id,
+      companyName: drive.companyName,
+      roleTitle: drive.roleTitle,
+      packageLPA: drive.packageLPA,
+      minCgpa: drive.minCgpa,
+      eligibleBranches: drive.eligibleBranches,
+      driveDate: drive.driveDate,
+      isEligible: reasons.length === 0,
+      reasons,
+      passedCriteria,
+      studentInfo: student ? {
+        name: student.name,
+        rollNumber: student.rollNumber,
+        department: student.department,
+        deptCode: student.deptCode,
+        cgpa: student.cgpa,
+        attendance: student.attendance,
+        semester: student.semester,
+        academicYear: student.academicYear,
+      } : null,
+    };
+  }
+
+  async registerStudentApplication(data: {
+    driveId: string;
+    studentRoll: string;
+    studentName?: string;
+    branch?: string;
+    cgpa?: number;
+    resumeTitle?: string;
+    resumeUrl?: string;
+    documents?: any[];
+    notes?: string;
+  }, user: any) {
+    const drive = await this.prisma.placementDrive.findUnique({ where: { id: data.driveId } });
+    if (!drive) throw new NotFoundException('Placement drive not found.');
+
+    if (drive.status === 'Closed') {
+      throw new BadRequestException('This placement drive has been closed by the Training & Placement Directorate.');
+    }
+
+    // Check duplicate
+    const existing = await this.prisma.workflowRequest.findFirst({
+      where: {
+        workflowType: 'PLACEMENT_APPLICATION',
+        requesterId: data.studentRoll,
+        details: {
+          path: ['driveId'],
+          equals: data.driveId,
+        },
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException(`You have already registered for ${drive.companyName}. Check My Applications for recruitment updates.`);
+    }
+
+    const appId = `APP-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+    const student = await this.prisma.student.findFirst({
+      where: {
+        OR: [{ rollNumber: data.studentRoll }, { studentId: data.studentRoll }],
+      },
+    });
+
+    const studentCgpa = data.cgpa || student?.cgpa || 8.0;
+    if (studentCgpa < drive.minCgpa) {
+      throw new BadRequestException(`Minimum CGPA requirement is ${drive.minCgpa}. Your verified CGPA is ${studentCgpa}.`);
+    }
+
+    const applicationDetails = {
+      applicationId: appId,
+      driveId: drive.id,
+      company: drive.companyName,
+      companyName: drive.companyName,
+      role: drive.roleTitle,
+      jobRole: drive.roleTitle,
+      packageOffered: `₹${drive.packageLPA} LPA`,
+      ctcOffered: `₹${drive.packageLPA} LPA`,
+      packageLPA: drive.packageLPA,
+      studentRoll: data.studentRoll,
+      regNo: data.studentRoll,
+      studentName: data.studentName || student?.name || user?.name || 'Student Candidate',
+      branch: data.branch || student?.deptCode || 'CSE',
+      cgpa: studentCgpa,
+      resumeTitle: data.resumeTitle || 'Primary Technical Resume (Verified)',
+      resumeUrl: data.resumeUrl || '',
+      uploadedDocuments: data.documents || [],
+      appliedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      appliedAt: new Date().toISOString(),
+      stage: 'Registered',
+      status: 'Application Submitted',
+      interviewSchedule: 'Awaiting Assessment / Pre-Placement Talk Schedule',
+      roundScore: 'Verified by Portal',
+      internalNotes: data.notes || 'Registered through Apna Campus Placement System.',
+      history: [
+        {
+          stage: 'Registered',
+          date: new Date().toLocaleDateString('en-GB'),
+          notes: 'Registration submitted online via student portal.',
+        },
+      ],
+    };
+
+    // Increment count on drive
+    await this.prisma.placementDrive.update({
+      where: { id: data.driveId },
+      data: { registeredCount: { increment: 1 } },
+    });
+
+    // Save in placementApplication
+    await this.prisma.placementApplication.create({
+      data: {
+        id: appId,
+        driveId: drive.id,
+        companyName: drive.companyName,
+        studentRoll: data.studentRoll,
+        studentName: applicationDetails.studentName,
+        cgpa: studentCgpa,
+        status: 'Registered',
+      },
+    }).catch(() => null);
+
+    // Save in WorkflowRequest for comprehensive ATS pipeline
+    await this.prisma.workflowRequest.create({
+      data: {
+        id: appId,
+        workflowType: 'PLACEMENT_APPLICATION',
+        title: `${applicationDetails.studentName} - ${drive.companyName}`,
+        requesterId: data.studentRoll,
+        requesterName: applicationDetails.studentName,
+        requesterRole: 'STUDENT',
+        department: applicationDetails.branch,
+        currentStage: 'Registered',
+        status: 'Application Submitted',
+        details: applicationDetails,
+        history: applicationDetails.history,
+      },
+    });
+
+    // Dispatch Career Notification
+    try {
+      await this.notificationsService.dispatch({
+        eventType: NotificationEventType.PLACEMENT_APPLICATION_UPDATED,
+        title: `Registration Confirmed: ${drive.companyName}`,
+        message: `Your application (ID: ${appId}) for ${drive.companyName} (${drive.roleTitle}) has been submitted successfully to the Placement Directorate.`,
+        category: NotificationCategory.CAREER,
+        priority: NotificationPriority.HIGH,
+        sourceModule: 'Training & Placement',
+        senderName: 'Placement Directorate',
+        senderRole: 'PLACEMENT',
+        actionUrl: '/placement',
+        actionTab: 'applications',
+        actionLabel: 'Track Application',
+        target: {
+          roles: [Role.STUDENT],
+          studentRollNumbers: [data.studentRoll],
+        },
+        metadata: {
+          applicationId: appId,
+          driveId: drive.id,
+          companyName: drive.companyName,
+        },
+        dedupKey: `placement-reg-${appId}`,
+      });
+    } catch {
+      // Non-blocking
+    }
+
+    return {
+      success: true,
+      applicationId: appId,
+      data: applicationDetails,
+    };
+  }
+
+  async getStudentPlacementApplications(studentRoll: string) {
+    const records = await this.prisma.workflowRequest.findMany({
+      where: {
+        workflowType: 'PLACEMENT_APPLICATION',
+        requesterId: studentRoll,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return records.map(r => ({
+      id: r.id,
+      ...((r.details as any) || {}),
+      stage: r.currentStage || ((r.details as any)?.stage) || 'Registered',
+      status: r.status,
+    }));
+  }
+
+  async getStudentPlacementOffers(studentRoll: string) {
+    const records = await this.prisma.workflowRequest.findMany({
+      where: {
+        workflowType: 'PLACEMENT_OFFER',
+        requesterId: studentRoll,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return records.map(r => ({
+      id: r.id,
+      ...((r.details as any) || {}),
+      status: r.status,
+    }));
   }
 
   // ==========================================

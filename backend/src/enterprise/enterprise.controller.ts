@@ -311,6 +311,68 @@ export class EnterpriseController {
     return { success: true, data: evaluation };
   }
 
+  @Post('placement/check-eligibility')
+  @ApiOperation({ summary: 'Validate authenticated student eligibility for a recruitment drive' })
+  async checkStudentEligibility(
+    @CurrentUser() user: any,
+    @Body() body: { driveId: string; studentRoll?: string },
+  ) {
+    const studentRoll = body.studentRoll || user?.student?.rollNumber || user?.identifier;
+    const result = await this.enterpriseService.validateStudentEligibility(body.driveId, studentRoll);
+    return { success: true, data: result };
+  }
+
+  @Post('placement/applications/register')
+  @ApiOperation({ summary: 'Complete multi-step registration for a campus placement drive' })
+  async registerPlacementApplication(
+    @CurrentUser() user: any,
+    @Body() body: {
+      driveId: string;
+      studentRoll?: string;
+      studentName?: string;
+      branch?: string;
+      cgpa?: number;
+      resumeTitle?: string;
+      resumeUrl?: string;
+      documents?: any[];
+      notes?: string;
+    },
+  ) {
+    const studentRoll = body.studentRoll || user?.student?.rollNumber || user?.identifier;
+    const studentName = body.studentName || user?.student?.name || user?.name || 'Student Candidate';
+    const result = await this.enterpriseService.registerStudentApplication(
+      {
+        ...body,
+        studentRoll,
+        studentName,
+      },
+      user,
+    );
+    return { success: true, message: 'Placement registration completed successfully!', data: result };
+  }
+
+  @Get('placement/student/applications')
+  @ApiOperation({ summary: 'Get current student applications with live ATS tracking' })
+  async getStudentApplications(
+    @CurrentUser() user: any,
+    @Query('studentRoll') queryRoll?: string,
+  ) {
+    const studentRoll = queryRoll || user?.student?.rollNumber || user?.identifier;
+    const applications = await this.enterpriseService.getStudentPlacementApplications(studentRoll);
+    return { success: true, count: applications.length, data: applications };
+  }
+
+  @Get('placement/student/offers')
+  @ApiOperation({ summary: 'Get job offers and Letter of Intent for current student' })
+  async getStudentOffers(
+    @CurrentUser() user: any,
+    @Query('studentRoll') queryRoll?: string,
+  ) {
+    const studentRoll = queryRoll || user?.student?.rollNumber || user?.identifier;
+    const offers = await this.enterpriseService.getStudentPlacementOffers(studentRoll);
+    return { success: true, count: offers.length, data: offers };
+  }
+
   @Post('placement/apply')
   @ApiOperation({ summary: 'Student applies for placement drive' })
   async applyToDrive(@CurrentUser() user: any, @Body() body: { driveId: string; cgpa: number }) {

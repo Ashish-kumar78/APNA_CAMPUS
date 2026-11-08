@@ -246,4 +246,56 @@ export class AcademicsController {
     const result = await this.academicsService.promoteStudentSemester(body);
     return { success: true, message: `Student promoted to ${body.targetSemester} successfully!`, data: result };
   }
+
+  // ==========================================
+  // COMPREHENSIVE STUDENT ACADEMIC DOSSIER
+  // ==========================================
+  @Get('student/dossier')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get complete authenticated student academic dossier & semester records' })
+  async getStudentAcademicDossier(@CurrentUser() user: any, @Query('studentId') studentId?: string) {
+    const role = normalizeRole(user?.role);
+    let targetId = user.student?.id || user.student?.rollNumber || user.identifier || user.id;
+    if (studentId && ['admin', 'super_admin', 'exam_cell', 'principal', 'hod', 'faculty'].includes(role)) {
+      targetId = studentId;
+    }
+    const data = await this.academicsService.getStudentAcademicDossier(targetId);
+    return { success: true, data };
+  }
+
+  @Post('notes/:id/helpful')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Mark a study material or note as helpful' })
+  async markNoteHelpful(@Param('id') id: string) {
+    const result = await this.academicsService.markNoteHelpful(id);
+    return result;
+  }
+
+  @Post('notes/request')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Submit request for missing study material or class notes' })
+  async submitNoteRequest(@CurrentUser() user: any, @Body() body: any) {
+    const result = await this.academicsService.submitNoteRequest({
+      ...body,
+      requestedBy: user?.name || user?.identifier,
+      studentId: user.student?.id || user.identifier,
+    });
+    return result;
+  }
+
+  @Post('supplementary/apply')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Apply for backlog supplementary examination' })
+  async applySupplementary(@CurrentUser() user: any, @Body() body: any) {
+    const result = await this.academicsService.applySupplementary({
+      ...body,
+      studentName: user?.name || user?.identifier,
+      studentRoll: user?.student?.rollNumber || user?.identifier,
+    });
+    return result;
+  }
 }

@@ -112,7 +112,7 @@ export const feesApi = {
   },
 
   // 2. Fetch Fee Statement & Payment History for Student
-  getFeeStatement: async (rollNumber = '2305201001') => {
+  getFeeStatement: async (rollNumber = '') => {
     try {
       const res = await api.getFeeStatement(rollNumber);
       if (res && res.success) return res.data;
@@ -120,34 +120,28 @@ export const feesApi = {
       // Fallback
     }
     const studentHistory = mockPaymentProofs.filter(
-      (item) => item.rollNumber === rollNumber || item.rollNumber === '2305201037' || item.rollNumber === '2305201001'
+      (item) => rollNumber && item.rollNumber === rollNumber
     );
     return {
       student: {
-        studentName: 'Rakesh Das',
-        rollNumber: '2305201001',
-        department: 'Computer Science & Engineering',
+        studentName: 'Student',
+        rollNumber: rollNumber || '—',
+        department: 'Engineering & Technology',
         program: 'B.Tech (Autonomous)',
-        semester: 'Semester 7 (4th Year)',
+        semester: 'Current Semester',
         academicYear: '2026-27',
-        category: 'General',
-        quota: 'State Counselling (OJEE)',
+        category: 'Regular',
+        quota: 'State Counselling',
       },
-      totalAnnualDues: 98500,
-      paidAmount: 86500,
-      scholarshipCredit: 15000,
-      outstanding: 12000,
-      nextDueDate: '15 Nov 2026',
-      feeHeads: [
-        { id: 'FH-01', head: 'Tuition Fee (Autumn Term)', assessed: 38000, paid: 38000, balance: 0, dueDate: '15 Aug 2026', status: 'Cleared' },
-        { id: 'FH-02', head: 'Development & Infrastructure Fee', assessed: 10500, paid: 10500, balance: 0, dueDate: '15 Aug 2026', status: 'Cleared' },
-        { id: 'FH-03', head: 'Laboratory & Computing Systems Fee', assessed: 6000, paid: 6000, balance: 0, dueDate: '30 Aug 2026', status: 'Cleared' },
-        { id: 'FH-04', head: 'Autonomous Semester Examination Fee', assessed: 2500, paid: 2500, balance: 0, dueDate: '10 Sep 2026', status: 'Cleared' },
-        { id: 'FH-05', head: 'Central Library & Digital ERP Access', assessed: 1500, paid: 1500, balance: 0, dueDate: '10 Sep 2026', status: 'Cleared' },
-        { id: 'FH-06', head: 'Hostel & Residential Boarding', assessed: 28000, paid: 20000, balance: 8000, dueDate: '15 Nov 2026', status: 'Partial' },
-        { id: 'FH-07', head: 'Mess Catering Charges (Installment 2)', assessed: 12000, paid: 8000, balance: 4000, dueDate: '15 Nov 2026', status: 'Partial' },
-      ],
+      totalAnnualDues: 0,
+      paidAmount: 0,
+      scholarshipCredit: 0,
+      outstanding: 0,
+      nextDueDate: '—',
+      feeHeads: [],
       paymentHistory: studentHistory,
+      transactions: [],
+      yearlyLedger: [],
     };
   },
 

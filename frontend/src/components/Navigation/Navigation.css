@@ -893,6 +893,11 @@ button.apna-breadcrumb-item:active {
   flex-direction: column;
 }
 
+.apna-page-content {
+  width: 100%;
+  animation: campusFadeIn 0.2s ease-out;
+}
+
 .apna-app-layout.no-breadcrumbs .apna-main-workspace {
   margin-top: var(--topbar-height);
   height: calc(100vh - var(--topbar-height));

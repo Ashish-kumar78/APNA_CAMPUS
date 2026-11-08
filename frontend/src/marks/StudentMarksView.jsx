@@ -1,5 +1,6 @@
 // src/marks/StudentMarksView.jsx
 import React, { useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   BookOpen,
   Award,
@@ -52,16 +53,17 @@ export default function StudentMarksView({
   const currentSubjects = SEMESTER_SUBJECTS[selectedSemester] || SUBJECTS
 
   const getLabMarksOut60 = (labNum) => {
-    if (!selectedSubject) return 52
+    if (!selectedSubject) return '—'
     const rawMark = backendMarksLoaded
       ? selectedSubject.marksRecord?.lab
       : selectedSubject.marksRecord?.lab || marksMap[selectedSubject.id]?.[student.id]?.lab
-    const base = rawMark !== undefined && rawMark !== '' && !isNaN(rawMark)
-      ? Math.round(Number(rawMark) > 25 ? Number(rawMark) : (Number(rawMark) / 25) * 60)
-      : 54
-    const variations = [0, 3, -2, 4, 1, -3, 2, 5, -1, 3]
-    const labScore = base + variations[(labNum - 1) % 10]
-    return Math.min(60, Math.max(30, labScore))
+    if (rawMark === undefined || rawMark === '' || rawMark === null || isNaN(rawMark)) {
+      return '—'
+    }
+    const val = Number(rawMark)
+    if (val === 0) return '0'
+    const base = Math.round(val > 25 ? val : (val / 25) * 60)
+    return Math.min(60, Math.max(0, base))
   }
 
   // Compute student stats across selected semester subjects
@@ -103,7 +105,23 @@ export default function StudentMarksView({
     } else {
       sMarks = marksMap[subject.id]?.[student.id]
       if (!sMarks || Object.keys(sMarks).length === 0) {
-        sMarks = getMockSemesterMarks(subject.id, student.id, selectedSemester)
+        sMarks = hideHero
+          ? {
+              mod1: '',
+              mod2: '',
+              q1: '',
+              q2: '',
+              q3: '',
+              q4: '',
+              q5: '',
+              q6: '',
+              a1: '',
+              a2: '',
+              st1: '',
+              st2: '',
+              lab: '',
+            }
+          : getMockSemesterMarks(subject.id, student.id, selectedSemester)
       }
     }
     const stats = computeStudentSubjectTotal(sMarks)
@@ -114,9 +132,10 @@ export default function StudentMarksView({
     }
   })
 
-  const overallAvg = Math.round(
-    subjectScores.reduce((sum, s) => sum + s.stats.pct, 0) / (subjectScores.length || 1)
-  )
+  const validScores = subjectScores.filter((s) => s.stats.totalMax > 0)
+  const overallAvg = validScores.length > 0
+    ? Math.round(validScores.reduce((sum, s) => sum + s.stats.pct, 0) / validScores.length)
+    : null
 
   return (
     <div className="mm-student-view">
@@ -140,12 +159,12 @@ export default function StudentMarksView({
 
           <div className="mm-student-overall-badge">
             <div className="mm-overall-score-circle">
-              <strong>{overallAvg}%</strong>
+              <strong>{overallAvg !== null ? `${overallAvg}%` : 'N/A'}</strong>
               <small>Average</small>
             </div>
             <div className="mm-overall-copy">
               <strong>Cumulative Internal</strong>
-              <span>{selectedSemester === 'sem5' ? 'Ongoing Semester' : 'Completed · Passed'}</span>
+              <span>{overallAvg !== null ? (selectedSemester === 'sem5' ? 'Ongoing Semester' : 'Completed · Passed') : 'Awaiting Assessments'}</span>
             </div>
           </div>
         </div>
@@ -203,33 +222,48 @@ export default function StudentMarksView({
                   <h4 className="mm-card-title">{subject.name}</h4>
                   <small className="mm-card-faculty">{subject.faculty} · {subject.credits} Credits</small>
                 </div>
-                <div className={`mm-badge-pct tone-${tone}`}>
-                  {pct}%
+                <div className={`mm-badge-pct ${subject.stats.totalMax > 0 ? `tone-${tone}` : 'tone-neutral'}`}>
+                  {subject.stats.totalMax > 0 ? `${pct}%` : 'N/A'}
                 </div>
               </div>
 
               <div className="mm-student-card-body">
                 <div className="mm-score-stat-line">
                   <span>Internal Marks:</span>
-                  <strong>{pct}% ({subject.stats.earned} / {subject.stats.totalMax})</strong>
+                  <strong>
+                    {subject.stats.totalMax > 0
+                      ? `${pct}% (${subject.stats.earned} / ${subject.stats.totalMax})`
+                      : 'N/A (Awaiting tests)'}
+                  </strong>
                 </div>
 
                 <div className="mm-progress-bar-wrapper">
                   <div className="mm-progress-bar-bg">
                     <div
-                      className={`mm-progress-bar-fill tone-${tone}`}
-                      style={{ width: `${pct}%` }}
+                      className={`mm-progress-bar-fill ${subject.stats.totalMax > 0 ? `tone-${tone}` : ''}`}
+                      style={{ width: `${subject.stats.totalMax > 0 ? pct : 0}%` }}
                     />
                   </div>
                 </div>
 
-                <div className="mm-mini-indicators">
-                  <span>Mod: 2/2</span>
-                  <span>Quiz: 6/6</span>
-                  <span>Assign: 2/2</span>
-                  <span>ST: 2/2</span>
-                  <span>Lab: 1/1</span>
-                </div>
+                {(() => {
+                  const m = subject.marksRecord || {}
+                  const countNonEmpty = (keys) => keys.filter((k) => m[k] !== '' && m[k] !== undefined && m[k] !== null).length
+                  const modDone = countNonEmpty(['mod1', 'mod2'])
+                  const quizDone = countNonEmpty(['q1', 'q2', 'q3', 'q4', 'q5', 'q6'])
+                  const assignDone = countNonEmpty(['a1', 'a2'])
+                  const stDone = countNonEmpty(['st1', 'st2'])
+                  const labDone = m.lab !== '' && m.lab !== undefined && m.lab !== null ? 1 : 0
+                  return (
+                    <div className="mm-mini-indicators">
+                      <span>Mod: {modDone}/2</span>
+                      <span>Quiz: {quizDone}/6</span>
+                      <span>Assign: {assignDone}/2</span>
+                      <span>ST: {stDone}/2</span>
+                      <span>Lab: {labDone}/1</span>
+                    </div>
+                  )
+                })()}
               </div>
 
               <div className="mm-student-card-footer">
@@ -248,8 +282,8 @@ export default function StudentMarksView({
       </div>
 
       {/* Subject Details Modal / Breakdown (Requirement Section 6) */}
-      {selectedSubject && (
-        <div className="mm-modal-backdrop" onClick={() => setSelectedSubject(null)}>
+      {selectedSubject && typeof document !== 'undefined' && createPortal(
+        <div className="mm-root-shell mm-modal-backdrop" onClick={() => setSelectedSubject(null)} style={{ zIndex: 999999 }}>
           <div
             className="mm-modal-window mm-subject-details-modal"
             onClick={(e) => e.stopPropagation()}
@@ -334,9 +368,7 @@ export default function StudentMarksView({
                       const mark = selectedSubject.marksRecord?.[selectedQuizKey] !== undefined
                         ? selectedSubject.marksRecord[selectedQuizKey]
                         : marksMap[selectedSubject.id]?.[student.id]?.[selectedQuizKey]
-                      const val = mark !== '' && mark !== undefined
-                        ? mark
-                        : backendMarksLoaded ? '—' : '9'
+                      const val = mark !== '' && mark !== undefined ? mark : '—'
                       return (
                         <strong className="mm-row-val" style={{ fontSize: '15px', color: '#0f172a' }}>
                           {val} <small style={{ fontSize: '13px', color: '#64748b' }}>/ {quizConfig.maxMarks}</small>
@@ -438,8 +470,12 @@ export default function StudentMarksView({
               <div className="mm-overall-summary-card">
                 <div>
                   <span>Overall Performance</span>
-                  <h3>{selectedSubject.stats.pct}%</h3>
-                  <small>Total: {selectedSubject.stats.earned} of {selectedSubject.stats.totalMax} Points</small>
+                  <h3>{selectedSubject.stats.totalMax > 0 ? `${selectedSubject.stats.pct}%` : 'N/A'}</h3>
+                  <small>
+                    {selectedSubject.stats.totalMax > 0
+                      ? `Total: ${selectedSubject.stats.earned} of ${selectedSubject.stats.totalMax} Points`
+                      : 'Assessments not conducted or published yet'}
+                  </small>
                 </div>
                 <button
                   type="button"
@@ -456,7 +492,8 @@ export default function StudentMarksView({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

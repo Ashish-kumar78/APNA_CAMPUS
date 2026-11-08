@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Printer,
@@ -48,8 +49,8 @@ export default function AdmissionLetterModal({ applicant, student, onClose }) {
     window.print();
   };
 
-  return (
-    <div className="adm-modal-backdrop" onClick={onClose} style={{ zIndex: 99999 }}>
+  const modalContent = (
+    <div className="adm-modal-backdrop" onClick={onClose} style={{ zIndex: 999999 }}>
       <div
         className="adm-modal-card"
         onClick={(e) => e.stopPropagation()}
@@ -502,5 +503,9 @@ export default function AdmissionLetterModal({ applicant, student, onClose }) {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }
 

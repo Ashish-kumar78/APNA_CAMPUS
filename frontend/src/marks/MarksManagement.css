@@ -3,7 +3,10 @@
    Modern, ultra-clean ERP aesthetic matching Apna Campus design
    ========================================================== */
 
-.mm-root-shell {
+:root,
+.mm-root-shell,
+.mm-modal-backdrop,
+.mm-modal-window {
   --mm-ink: #0f172a;
   --mm-ink-secondary: #334155;
   --mm-muted: #64748b;
@@ -24,7 +27,9 @@
   --mm-radius-md: 12px;
   --mm-radius-sm: 8px;
   --mm-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.05);
+}
 
+.mm-root-shell {
   color: var(--mm-ink);
   font-family: inherit;
   display: flex;
@@ -1554,6 +1559,7 @@
 .mm-badge-pct.tone-blue { background: #eff6ff; color: #1e40af; }
 .mm-badge-pct.tone-amber { background: #fef3c7; color: #92400e; }
 .mm-badge-pct.tone-purple { background: #f5f3ff; color: #6b21a8; }
+.mm-badge-pct.tone-neutral { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
 
 .mm-score-stat-line {
   display: flex;
@@ -1634,37 +1640,51 @@
 }
 
 /* ── Section 6: Subject Details Breakdown Modal ── */
-.mm-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+.mm-modal-backdrop,
+.mm-root-shell.mm-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 999999 !important;
+  padding: 24px !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  margin: 0 !important;
+  gap: 0 !important;
 }
 
 .mm-modal-window {
-  background: #fff;
+  background: #ffffff;
   border-radius: 20px;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 25px 65px -12px rgba(15, 23, 42, 0.35);
+  border: 1px solid #e2e8f0;
   width: 100%;
-  max-width: 760px;
-  max-height: 90vh;
+  max-width: 740px;
+  max-height: min(88vh, 840px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: mm-modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: auto !important;
+  animation: mm-modal-pop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .mm-subject-details-modal {
-  max-width: 680px;
+  max-width: 720px;
 }
 
 @keyframes mm-modal-pop {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 
@@ -1672,44 +1692,49 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 22px 26px;
-  border-bottom: 1px solid var(--mm-border);
-  background: #f8fafc;
+  padding: 22px 28px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .mm-modal-title-stack h3 {
   font-size: 20px;
   font-weight: 800;
-  margin: 6px 0 3px;
-  color: var(--mm-ink);
+  margin: 6px 0 4px;
+  color: #0f172a;
 }
 
 .mm-modal-title-stack p {
-  font-size: 12.5px;
-  color: var(--mm-muted);
+  font-size: 13px;
+  color: #64748b;
   margin: 0;
+  font-weight: 500;
 }
 
 .mm-pill-tag {
   display: inline-block;
-  padding: 3px 9px;
+  padding: 3px 10px;
   border-radius: 999px;
   background: #eff6ff;
-  color: var(--mm-blue);
-  font-size: 11px;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 11.5px;
   font-weight: 700;
 }
 
 .mm-modal-close-btn {
-  background: #fff;
-  border: 1px solid var(--mm-border);
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--mm-muted);
+  color: #64748b;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -1718,33 +1743,38 @@
   background: #fee2e2;
   color: #dc2626;
   border-color: #fca5a5;
+  transform: rotate(90deg);
 }
 
 .mm-modal-body {
-  padding: 24px 26px;
+  padding: 24px 28px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  background: #f8fafc;
 }
 
 .mm-breakdown-section {
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius-md);
-  padding: 16px 18px;
-  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .mm-breakdown-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .mm-icon-wrap {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -1757,16 +1787,16 @@
 .mm-icon-wrap.teal { background: #f0fdfa; color: #0d9488; }
 
 .mm-breakdown-header h4 {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 800;
   margin: 0;
-  color: var(--mm-ink);
+  color: #0f172a;
 }
 
 .mm-breakdown-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 
 .mm-breakdown-grid.cols-3 {
@@ -1777,55 +1807,89 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  background: var(--mm-bg-soft);
-  border-radius: var(--mm-radius-sm);
-  font-size: 13px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13.5px;
+  transition: all 0.15s ease;
+}
+
+.mm-breakdown-row:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .mm-row-label {
-  color: var(--mm-ink-secondary);
-  font-weight: 500;
+  color: #334155;
+  font-weight: 600;
 }
 
 .mm-row-val {
   font-weight: 800;
-  color: var(--mm-ink);
+  color: #0f172a;
+  font-size: 14.5px;
 }
 
 .mm-row-val small {
   font-weight: 500;
-  color: var(--mm-muted);
+  color: #64748b;
+  font-size: 12.5px;
 }
 
 .mm-overall-summary-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 22px;
-  background: #f8fafc;
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius-md);
-  margin-top: 6px;
+  padding: 20px 24px;
+  background: #ffffff;
+  border: 1.5px solid #dbeafe;
+  border-radius: 14px;
+  margin-top: 4px;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
 }
 
 .mm-overall-summary-card span {
   font-size: 12px;
-  font-weight: 600;
-  color: var(--mm-muted);
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   display: block;
 }
 
 .mm-overall-summary-card h3 {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 900;
-  color: var(--mm-blue);
-  margin: 2px 0;
+  color: #2563eb;
+  margin: 3px 0;
 }
 
 .mm-overall-summary-card small {
-  font-size: 12px;
-  color: var(--mm-ink-secondary);
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.mm-btn-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+  border: none !important;
+  padding: 10px 18px !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  font-size: 13.5px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.mm-btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45) !important;
+  transform: translateY(-1px) !important;
 }
 
 /* ── Section 7: Marks Analytics ── */

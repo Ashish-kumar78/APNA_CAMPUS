@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ArrowLeft,
   Award,
@@ -359,9 +360,9 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
   return (
     <section className="student-profile-page sp-modern" id="student-profile" ref={profileRootRef}>
       <div className="profile-breadcrumb">
-        <button type="button" onClick={onBack}>Home</button>
-        <span>/</span><span>Student</span><span>/</span><span>Manage Students</span><span>/</span>
-        <strong>{account?.name || 'Student'}</strong>
+        <button type="button" onClick={onBack}>Dashboard</button>
+        <span>/</span><span>Student Profile</span><span>/</span>
+        <strong>{account?.name || student?.name || 'My Record'}</strong>
       </div>
 
       <div className="profile-title-row">
@@ -619,8 +620,8 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
       </div>
 
       {/* Official Document Preview Modal */}
-      {selectedDocView && (
-        <div className="admin-modal-backdrop" style={{ zIndex: 1000 }}>
+      {selectedDocView && createPortal(
+        <div className="admin-modal-backdrop" style={{ zIndex: 999999, position: 'fixed', inset: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="admin-modal-card" style={{ maxWidth: '540px' }}>
             <div className="admin-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -670,12 +671,13 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Upload Document Modal */}
-      {isAddDocModalOpen && (
-        <div className="admin-modal-backdrop" style={{ zIndex: 1000 }}>
+      {isAddDocModalOpen && createPortal(
+        <div className="admin-modal-backdrop" style={{ zIndex: 999999, position: 'fixed', inset: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="admin-modal-card" style={{ maxWidth: '520px' }}>
             <div className="admin-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -812,7 +814,8 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </section>
   )

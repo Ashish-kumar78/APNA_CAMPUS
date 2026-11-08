@@ -342,7 +342,7 @@ const INITIAL_DOCUMENTS = [
         <li>Programmable calculators, mobile phones, smartwatch devices, and unauthorized study materials are strictly prohibited inside the examination hall.</li>
         <li>Autonomous answer scripts will be digitally scanned and evaluated through the encrypted barcode portal.</li>
       </ol>
-      <p>By Order of Controller of Examinations,<br/><strong>GIFT Autonomous College, Bhubaneswar</strong></p>
+      <p>By Order of Controller of Examinations,<br/><strong>Apna Campus</strong></p>
     `
   },
   {

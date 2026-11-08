@@ -212,7 +212,7 @@ const defaultStudentFormState = {
   permState: 'Odisha',
   permCountry: 'India',
   permPin: '751001',
-  currAddress: 'GIFT Campus Residence',
+  currAddress: 'Apna Campus Residence',
   currCity: 'Bhubaneswar',
   currState: 'Odisha',
   currCountry: 'India',
@@ -320,7 +320,7 @@ const sampleAutofillStudent = {
   permState: 'Odisha',
   permCountry: 'India',
   permPin: '753014',
-  currAddress: 'GIFT Campus Hostel (Block B, Room 204)',
+  currAddress: 'Apna Campus Hostel (Block B, Room 204)',
   currCity: 'Bhubaneswar',
   currState: 'Odisha',
   currCountry: 'India',
@@ -5730,7 +5730,7 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
                     </h5>
                     <dl style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', margin: 0 }}>
                       <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Permanent Address</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.permAddress || 'Plot 18, Unit 4'}, {viewDetailsItem.data.permCity || 'Bhubaneswar'} - {viewDetailsItem.data.permPin || '751001'}</dd></div>
-                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Current Address</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.currAddress || 'GIFT Campus Residence'}, {viewDetailsItem.data.currCity || 'Bhubaneswar'}</dd></div>
+                      <div><dt style={{ color: '#64748b', fontSize: '0.7rem' }}>Current Address</dt><dd style={{ margin: 0 }}>{viewDetailsItem.data.currAddress || 'Apna Campus Residence'}, {viewDetailsItem.data.currCity || 'Bhubaneswar'}</dd></div>
                     </dl>
                   </div>
 

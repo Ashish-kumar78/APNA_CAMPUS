@@ -329,7 +329,7 @@ html.dark select option {
 .student-portal-main,
 .campus-os-body,
 .portal-feature-page {
-  animation: campusSlideUpFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: campusFadeIn 0.22s ease-out;
 }
 
 /* ==============================================================================
@@ -580,7 +580,7 @@ details[open] summary ~ * {
 .wizard-step,
 .form-step,
 .tab-pane {
-  animation: campusSlideUpFade 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: campusFadeIn 0.2s ease-out;
 }
 
 /* Button Loading Spinner Animation */
@@ -2670,6 +2670,93 @@ table {
     width: 88vw !important;
   }
 }
+
+/* ==============================================================================
+   UNIVERSAL SYSTEM-WIDE MODAL ELEVATION & FULL-SCREEN OVERLAY ENGINE
+   Guarantees that EVERY modal across EVERY portal and page renders on top of
+   the entire screen (above sidebar, header, breadcrumbs) and centers in viewport.
+   ============================================================================== */
+.mm-modal-backdrop,
+.admin-modal-backdrop,
+.admin-modal-overlay,
+.payment-modal-backdrop,
+.notes-modal-backdrop,
+.academics-modal-backdrop,
+.admit-confirm-backdrop,
+.admit-doc-backdrop,
+.canteen-modal-overlay,
+.erp-diagnostics-overlay,
+.erp-modal-overlay,
+.exam-modal-overlay,
+.fac-modal-backdrop,
+.lib-modal-overlay,
+.mgmt-modal-backdrop,
+.mgmt-modal-overlay,
+.principal-modal-overlay,
+.reg-wizard-overlay,
+.role-modal-overlay,
+.sch-modal-overlay,
+.scholarship-modal-overlay,
+.smart-complaint-backdrop,
+.std-docs-modal-backdrop,
+.asf-modal-overlay,
+.adm-modal-backdrop,
+.bonafide-modal-backdrop,
+.preview-modal-overlay,
+.portal-modal-backdrop,
+.modal-backdrop,
+.modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  margin: 0 !important;
+  padding: 16px !important;
+}
+
+/* Ensure modal content cards stay fully accessible, centered, and above backdrop */
+.mm-modal-backdrop > *,
+.admin-modal-backdrop > *,
+.admin-modal-overlay > *,
+.payment-modal-backdrop > *,
+.notes-modal-backdrop > *,
+.academics-modal-backdrop > *,
+.admit-confirm-backdrop > *,
+.admit-doc-backdrop > *,
+.canteen-modal-overlay > *,
+.erp-modal-overlay > *,
+.exam-modal-overlay > *,
+.fac-modal-backdrop > *,
+.lib-modal-overlay > *,
+.mgmt-modal-backdrop > *,
+.mgmt-modal-overlay > *,
+.principal-modal-overlay > *,
+.reg-wizard-overlay > *,
+.sch-modal-overlay > *,
+.scholarship-modal-overlay > *,
+.std-docs-modal-backdrop > *,
+.asf-modal-overlay > *,
+.adm-modal-backdrop > *,
+.modal-backdrop > *,
+.modal-overlay > * {
+  position: relative !important;
+  z-index: 1000000 !important;
+  margin: auto !important;
+  max-height: calc(100vh - 32px) !important;
+}
+
 
 
 

@@ -260,10 +260,10 @@
   will-change: transform;
 }
 
-.dash-stats-2x2 .dash-stat:nth-child(1) { animation: campusSlideUpFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.04s both; }
-.dash-stats-2x2 .dash-stat:nth-child(2) { animation: campusSlideUpFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both; }
-.dash-stats-2x2 .dash-stat:nth-child(3) { animation: campusSlideUpFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both; }
-.dash-stats-2x2 .dash-stat:nth-child(4) { animation: campusSlideUpFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both; }
+.dash-stats-2x2 .dash-stat:nth-child(1) { animation: campusFadeIn 0.22s ease-out 0.04s both; }
+.dash-stats-2x2 .dash-stat:nth-child(2) { animation: campusFadeIn 0.22s ease-out 0.08s both; }
+.dash-stats-2x2 .dash-stat:nth-child(3) { animation: campusFadeIn 0.22s ease-out 0.12s both; }
+.dash-stats-2x2 .dash-stat:nth-child(4) { animation: campusFadeIn 0.22s ease-out 0.16s both; }
 
 .dash-stats-2x2 .dash-stat:hover {
   transform: translateY(-2px);
@@ -274,6 +274,68 @@
 .dash-stats-2x2 .dash-stat:active {
   transform: scale(0.98) translateY(1px);
   transition-duration: 0.05s !important;
+}
+
+/* Academic CGPA Sparkline & Trend Card inside 2x2 Stats Grid */
+.cgpa-chart-wrapper {
+  margin: 6px 0 8px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cgpa-sparkline-svg {
+  width: 100%;
+  height: 52px;
+  overflow: visible;
+}
+
+.cgpa-sem-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748b;
+  padding: 0 2px;
+  gap: 4px;
+}
+
+.cgpa-sem-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 10px;
+  color: #475569;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.cgpa-sem-pill b {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cgpa-sem-pill.active {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+  color: #7c3aed;
+  font-weight: 800;
+}
+
+.cgpa-sem-pill.active b {
+  color: #7c3aed;
+}
+
+.cgpa-sem-pill i {
+  font-style: normal;
+  font-weight: 700;
+  color: #059669;
 }
 
 /* Fees Details 3-Tier Card inside 2x2 Stats Grid */

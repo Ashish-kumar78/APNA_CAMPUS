@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AppLayout } from './Navigation';
 import {
   Home,
@@ -918,8 +919,8 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
       />
 
       {/* ONBOARDING CREDENTIAL MODAL (Preserved from existing portal) */}
-      {enrolledStudentInfo && (
-        <div className="adm-modal-backdrop" onClick={() => setEnrolledStudentInfo(null)}>
+      {enrolledStudentInfo && typeof document !== 'undefined' && createPortal(
+        <div className="adm-modal-backdrop" onClick={() => setEnrolledStudentInfo(null)} style={{ zIndex: 999999 }}>
           <div className="adm-modal-card" style={{ maxWidth: '560px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)', padding: '24px', color: '#ffffff' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1015,7 +1016,8 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* DIRECT TEST ACTIVATION MODAL */}

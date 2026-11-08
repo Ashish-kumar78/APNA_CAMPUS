@@ -346,47 +346,72 @@ export class FeesService {
   // =========================================================================
   // 3. STUDENT FEE LEDGER & INVOICES
   // =========================================================================
-  async getStudentStatement(rollNumber = '2305201001') {
+  async getStudentStatement(rollNumber = '') {
+    let studentName = 'Student';
+    let department = 'Computer Science & Engineering';
+    let semester = 'Semester 1';
+    let academicYear = '2026-27';
+    const program = 'B.Tech (Autonomous)';
+
+    if (rollNumber) {
+      const student = await this.prisma.student.findFirst({
+        where: {
+          OR: [
+            { rollNumber },
+            { studentId: rollNumber },
+            { id: rollNumber },
+          ],
+        },
+        include: { user: true },
+      });
+      if (student) {
+        studentName = student.name || student.user?.name || studentName;
+        department = student.department || department;
+        semester = student.semester || semester;
+        academicYear = student.academicYear || academicYear;
+      }
+    }
+
     const transactions = await this.getTransactions(rollNumber);
     const structures = await this.getFeeStructures();
 
-    const studentInfo = {
-      studentName: 'Rakesh Das',
-      rollNumber,
-      department: 'Computer Science & Engineering',
-      program: 'B.Tech (Autonomous)',
-      semester: 'Semester 7 (4th Year)',
-      academicYear: '2026-27',
-      category: 'General',
-      quota: 'State Counselling (OJEE)',
-    };
+    const paidAmount = transactions
+      .filter((t: any) => t.status === 'Paid' || t.status === 'Verified' || t.status === 'APPROVED' || t.status === 'Successful')
+      .reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
 
-    // Itemized invoice fee heads for current term
-    const feeHeads = [
-      { id: 'FH-01', head: 'Tuition Fee (Autumn Term)', assessed: 38000, paid: 38000, balance: 0, dueDate: '15 Aug 2026', status: 'Cleared' },
-      { id: 'FH-02', head: 'Development & Infrastructure Fee', assessed: 10500, paid: 10500, balance: 0, dueDate: '15 Aug 2026', status: 'Cleared' },
-      { id: 'FH-03', head: 'Laboratory & Computing Systems Fee', assessed: 6000, paid: 6000, balance: 0, dueDate: '30 Aug 2026', status: 'Cleared' },
-      { id: 'FH-04', head: 'Autonomous Semester Examination Fee', assessed: 2500, paid: 2500, balance: 0, dueDate: '10 Sep 2026', status: 'Cleared' },
-      { id: 'FH-05', head: 'Central Library & Digital ERP Access', assessed: 1500, paid: 1500, balance: 0, dueDate: '10 Sep 2026', status: 'Cleared' },
-      { id: 'FH-06', head: 'Hostel & Residential Boarding (Sarojini Block)', assessed: 28000, paid: 20000, balance: 8000, dueDate: '15 Nov 2026', status: 'Partial' },
-      { id: 'FH-07', head: 'Mess Catering Charges (Installment 2)', assessed: 12000, paid: 8000, balance: 4000, dueDate: '15 Nov 2026', status: 'Partial' },
-    ];
+    const feeHeads = transactions.map((t: any, idx: number) => ({
+      id: t.id || `FH-${idx + 1}`,
+      head: t.head || 'Tuition & Development Fee',
+      assessed: Number(t.amount) || 0,
+      paid: (t.status === 'Paid' || t.status === 'Verified' || t.status === 'APPROVED') ? Number(t.amount) || 0 : 0,
+      balance: (t.status === 'Paid' || t.status === 'Verified' || t.status === 'APPROVED') ? 0 : Number(t.amount) || 0,
+      dueDate: t.date || '30 Oct 2026',
+      status: (t.status === 'Paid' || t.status === 'Verified' || t.status === 'APPROVED') ? 'Cleared' : (t.status || 'Pending'),
+    }));
 
     const totalAnnualDues = feeHeads.reduce((s, h) => s + h.assessed, 0);
-    const paidAmount = feeHeads.reduce((s, h) => s + h.paid, 0);
-    const scholarshipCredit = 15000;
     const outstanding = Math.max(0, totalAnnualDues - paidAmount);
 
     return {
-      student: studentInfo,
+      student: {
+        studentName,
+        rollNumber: rollNumber || '—',
+        department,
+        program,
+        semester,
+        academicYear,
+        category: 'General',
+        quota: 'State Counselling (OJEE)',
+      },
       totalAnnualDues,
       paidAmount,
-      scholarshipCredit,
+      scholarshipCredit: 0,
       outstanding,
-      nextDueDate: '15 Nov 2026',
+      nextDueDate: totalAnnualDues > paidAmount ? '30 Oct 2026' : '—',
       feeHeads,
       transactions,
       structures,
+      yearlyLedger: [],
     };
   }
 
@@ -398,84 +423,6 @@ export class FeesService {
       where: { workflowType: 'FEE_TRANSACTION' },
       orderBy: { createdAt: 'desc' },
     });
-
-    if (records.length === 0) {
-      const defaultTxns = [
-        {
-          id: 'TXN-98421',
-          studentName: 'Rakesh Das',
-          rollNumber: '2305201001',
-          semester: 'Semester 7',
-          head: 'Tuition & Development Fee',
-          amount: 48500,
-          mode: 'Net Banking',
-          date: '10 Aug 2026, 11:30 AM',
-          status: 'Verified',
-          receiptNo: 'RCPT-2026-8821',
-          channel: 'HDFC BillDesk Gateway',
-          referenceNumber: 'HDFC772184129',
-        },
-        {
-          id: 'TXN-98422',
-          studentName: 'Amit Nayak',
-          rollNumber: '2305201002',
-          semester: 'Semester 7',
-          head: 'Hostel Boarding & Mess Fee',
-          amount: 36000,
-          mode: 'UPI',
-          date: '12 Aug 2026, 02:15 PM',
-          status: 'Verified',
-          receiptNo: 'RCPT-2026-8822',
-          channel: 'Campus PhonePe Scan',
-          referenceNumber: 'UPI9921401284',
-        },
-        {
-          id: 'TXN-98423',
-          studentName: 'Subham Mahapatra',
-          rollNumber: '2305201015',
-          semester: 'Semester 7',
-          head: 'Examination Fee',
-          amount: 2500,
-          mode: 'Cash at Counter',
-          date: '02 Sep 2026, 10:45 AM',
-          status: 'Verified',
-          receiptNo: 'RCPT-2026-8823',
-          channel: 'Cash Desk 01',
-          referenceNumber: 'CSH-98124',
-        },
-        {
-          id: 'TXN-98424',
-          studentName: 'Priya Patra',
-          rollNumber: '2305201004',
-          semester: 'Semester 7',
-          head: 'Transportation Fleet Fee',
-          amount: 16000,
-          mode: 'Bank Challan',
-          date: '08 Sep 2026, 04:00 PM',
-          status: 'Verified',
-          receiptNo: 'RCPT-2026-8824',
-          channel: 'PNB Bank Challan',
-          referenceNumber: 'CHL-PNB-0941',
-        },
-      ];
-
-      for (const t of defaultTxns) {
-        await this.prisma.workflowRequest.create({
-          data: {
-            workflowType: 'FEE_TRANSACTION',
-            title: `Fee Transaction: ${t.receiptNo} - ₹${t.amount}`,
-            requesterId: t.rollNumber,
-            requesterName: t.studentName,
-            requesterRole: 'Student',
-            details: t,
-            currentStage: t.status,
-            status: t.status,
-          },
-        });
-      }
-
-      return defaultTxns;
-    }
 
     let list = records.map(r => ({
       id: r.id,

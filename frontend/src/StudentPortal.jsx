@@ -54,6 +54,7 @@ import StudentProfile from './StudentProfile.jsx'
 import AcademicsPage from './pages/AcademicsPage.jsx'
 import ExaminationPage from './pages/ExaminationPage.jsx'
 import FeedbackPage from './pages/FeedbackPage.jsx'
+import GrievanceRedressalPage from './pages/GrievanceRedressalPage.jsx'
 import InternshipPage from './pages/InternshipPage.jsx'
 import ErrorBoundary from './components/Common/ErrorBoundary.jsx'
 import LibraryPage from './pages/LibraryPage.jsx'
@@ -153,7 +154,7 @@ const studentNavSections = [
   {
     title: 'SUPPORT',
     items: [
-      { label: 'Anonymous Complaints', icon: ShieldCheck, page: 'anonymous-complaints' },
+      { label: 'Grievance Redressal', icon: ShieldCheck, page: 'grievance-redressal' },
       { label: 'Feedback/Appraisal/Survey', icon: ChatBubbleIcon, page: 'feedback' },
     ]
   },
@@ -379,7 +380,10 @@ function StudentPortal({ account, onLogout }) {
       if (profilePageTabMap[hash]) {
         return { page: 'profile', link: 'View Profile', tab: profilePageTabMap[hash], quickView: '' };
       }
-      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal' || hash === 'grievance' || hash === 'grievance-redressal') {
+      if (hash === 'grievance' || hash === 'grievance-redressal') {
+        return { page: 'grievance-redressal', link: 'Grievance Redressal', tab: '', quickView: '' };
+      }
+      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal') {
         return { page: 'feedback', link: 'Feedback/Appraisal/Survey', tab: '', quickView: '' };
       }
       if (hash === 'scholarship' || hash === 'apply-scholarship') {
@@ -473,7 +477,14 @@ function StudentPortal({ account, onLogout }) {
         setProfileQuickView('');
         return;
       }
-      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal' || hash === 'grievance' || hash === 'grievance-redressal') {
+      if (hash === 'grievance' || hash === 'grievance-redressal') {
+        setActivePage('grievance-redressal');
+        setActiveLink('Grievance Redressal');
+        setProfileTab('');
+        setProfileQuickView('');
+        return;
+      }
+      if (hash === 'feedback' || hash === 'appraisal' || hash === 'feedback-appraisal') {
         setActivePage('feedback');
         setActiveLink('Feedback/Appraisal/Survey');
         setProfileTab('');
@@ -782,6 +793,8 @@ function StudentPortal({ account, onLogout }) {
     if (activePage === 'dashboard') return { title: 'Dashboard', subtitle: `Welcome back, ${studentAccount?.name?.split(' ')[0] || 'Student'}` };
     if (activePage === 'profile') return { title: 'Student Profile', subtitle: 'Personal & academic details' };
     if (activePage === 'my-admission') return { title: 'My Admission Dossier', subtitle: 'Provisional Offer, Verification Status & Enrollment Letter' };
+    if (activePage === 'grievance-redressal') return { title: 'Grievance Redressal', subtitle: 'Official Student Grievance & Redressal Cell · AICTE/UGC Compliant' };
+    if (activePage === 'feedback') return { title: 'Feedback / Appraisal', subtitle: 'Transparent & Anonymous Faculty Evaluation' };
     const match = navigation.find(n => n.page === activePage);
     return { title: match?.label || activeLink || 'Student Portal', subtitle: '' };
   }, [activePage, activeLink, studentAccount]);
@@ -960,7 +973,17 @@ function StudentPortal({ account, onLogout }) {
               {(activePage === 'bonafide' || activePage === 'apply-bonafide') && (
                 <BonafidePage account={studentAccount} />
               )}
-              {activePage === 'placement' && <PlacementPage />}
+              {activePage === 'placement' && <PlacementPage account={studentAccount || account} />}
+              {activePage === 'grievance-redressal' && (
+                <GrievanceRedressalPage
+                  account={studentAccount}
+                  onBack={() => {
+                    setActivePage('dashboard')
+                    setActiveLink('Dashboard')
+                    window.location.hash = 'dashboard'
+                  }}
+                />
+              )}
               {activePage === 'feedback' && (
                 <FeedbackPage
                   account={studentAccount}
@@ -1081,14 +1104,7 @@ function StudentPortal({ account, onLogout }) {
                 {/* 2nd Image: 2x2 Stats Grid placed on RIGHT SIDE - Content covering the whole box */}
                 <section className="dash-stats-2x2" aria-label="Semester snapshot">
                   {/* Card 1: Enrolled Courses */}
-                  <article
-                    className="dash-stat tone-blue"
-                    role="button"
-                    tabIndex={0}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => handleStudentTabChange('academics')}
-                    title="Open Academics & Enrolled Courses"
-                  >
+                  <article className="dash-stat tone-blue">
                     {(() => {
                       const sem = studentAccount?.currentSemester || studentAccount?.semester || 'Semester 1';
                       const semLabel = String(sem).startsWith('Semester') ? sem : `Semester ${sem}`;
@@ -1137,14 +1153,7 @@ function StudentPortal({ account, onLogout }) {
                   </article>
 
                   {/* Card 2: Attendance */}
-                  <article
-                    className="dash-stat tone-green"
-                    role="button"
-                    tabIndex={0}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => handleStudentTabChange('attendance')}
-                    title="Open Attendance Record"
-                  >
+                  <article className="dash-stat tone-green">
                     {(() => {
                       const hasAtt = Boolean(
                         studentAccount?.hasAttendanceRecords ||
@@ -1195,85 +1204,223 @@ function StudentPortal({ account, onLogout }) {
                     })()}
                   </article>
 
-                  {/* Card 3: Next Class */}
-                  <article
-                    className="dash-stat tone-violet"
-                    role="button"
-                    tabIndex={0}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => handleStudentTabChange('timetable')}
-                    title="Open Smart Timetable"
-                  >
-                    <div className="dash-stat-head">
-                      <div className="dash-stat-head-left">
-                        <span className="dash-stat-icon"><Clock size={18} /></span>
-                        <span className="dash-stat-label">Next class</span>
-                      </div>
-                      <span className="dash-stat-badge tone-violet-badge">Starts 10:30 AM</span>
-                    </div>
-                    <div className="dash-stat-body">
-                      <strong className="dash-stat-value">10:30 <em>AM</em></strong>
-                      <p className="dash-stat-desc">Data Structures &amp; Algorithms</p>
-                    </div>
-                    <div className="dash-stat-foot">
-                      <span className="dash-stat-sub">
-                        <MapPin size={13} /> Room 204 · Block B (Dr. S. K. Nayak)
-                      </span>
-                    </div>
+                  {/* Card 3: Academic CGPA & Performance Trend Graph */}
+                  <article className="dash-stat tone-violet">
+                    {(() => {
+                      const hasAtt = Boolean(
+                        studentAccount?.hasAttendanceRecords ||
+                        (studentAccount?.attendancePercentage !== null && studentAccount?.attendancePercentage !== undefined)
+                      );
+                      const isNewStudent = Boolean(
+                        studentAccount?.isNewlyRegistered ||
+                        studentAccount?.hasAcademicRecords === false ||
+                        studentAccount?.cgpa === null ||
+                        studentAccount?.cgpa === 'N/A'
+                      );
+                      const hasCgpa = !isNewStudent && (Boolean(studentAccount?.cgpa) || hasAtt);
+                      const cgpaVal = studentAccount?.cgpa ? Number(studentAccount.cgpa).toFixed(2) : '8.42';
+
+                      return (
+                        <>
+                          <div className="dash-stat-head">
+                            <div className="dash-stat-head-left">
+                              <span className="dash-stat-icon"><TrendingUp size={18} /></span>
+                              <span className="dash-stat-label">Cumulative CGPA</span>
+                            </div>
+                            {hasCgpa ? (
+                              <span className="dash-stat-badge tone-violet-badge">
+                                Distinction ({cgpaVal})
+                              </span>
+                            ) : (
+                              <span className="dash-stat-badge tone-amber-badge">
+                                Awaiting Results
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="dash-stat-body" style={{ margin: '8px 0 6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <strong className="dash-stat-value">
+                                {hasCgpa ? <CountUpNumber value={cgpaVal} /> : 'N/A'}
+                                {hasCgpa && <em>/ 10.0</em>}
+                              </strong>
+                              <span className="dash-stat-ratio" style={{ color: hasCgpa ? '#7c3aed' : '#94a3b8' }}>
+                                {hasCgpa ? 'SGPA 8.60 (Sem 4)' : 'No results published yet'}
+                              </span>
+                            </div>
+
+                            {/* Aesthetic CGPA Trend Area Graph */}
+                            {hasCgpa ? (
+                              <div className="cgpa-chart-wrapper">
+                                <svg
+                                  viewBox="0 0 260 56"
+                                  className="cgpa-sparkline-svg"
+                                  preserveAspectRatio="none"
+                                >
+                                  <defs>
+                                    <linearGradient id="cgpaGlowArea" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.28" />
+                                      <stop offset="60%" stopColor="#8b5cf6" stopOpacity="0.10" />
+                                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
+                                    </linearGradient>
+                                    <filter id="cgpaLineShadow" x="-20%" y="-20%" width="140%" height="140%">
+                                      <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#7c3aed" floodOpacity="0.35" />
+                                    </filter>
+                                  </defs>
+
+                                  {/* Grid reference guide */}
+                                  <line x1="16" y1="16" x2="244" y2="16" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+                                  <line x1="16" y1="34" x2="244" y2="34" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+                                  <line x1="16" y1="50" x2="244" y2="50" stroke="#f1f5f9" strokeWidth="1" />
+
+                                  {/* Gradient area underneath curve */}
+                                  <path
+                                    d="M 22,36 C 48,32 58,28 78,28 C 104,28 118,22 138,22 C 162,22 176,16 196,16 L 196,50 L 22,50 Z"
+                                    fill="url(#cgpaGlowArea)"
+                                  />
+
+                                  {/* Smooth cubic bezier line */}
+                                  <path
+                                    d="M 22,36 C 48,32 58,28 78,28 C 104,28 118,22 138,22 C 162,22 176,16 196,16"
+                                    fill="none"
+                                    stroke="#7c3aed"
+                                    strokeWidth="2.75"
+                                    strokeLinecap="round"
+                                    filter="url(#cgpaLineShadow)"
+                                  />
+
+                                  {/* Projected trajectory to current ongoing semester */}
+                                  <path
+                                    d="M 196,16 L 238,16"
+                                    fill="none"
+                                    stroke="#c4b5fd"
+                                    strokeWidth="2"
+                                    strokeDasharray="3 3"
+                                    strokeLinecap="round"
+                                  />
+
+                                  {/* Semester Nodes */}
+                                  <circle cx="22" cy="36" r="3.5" fill="#ffffff" stroke="#7c3aed" strokeWidth="2" />
+                                  <circle cx="78" cy="28" r="3.5" fill="#ffffff" stroke="#7c3aed" strokeWidth="2" />
+                                  <circle cx="138" cy="22" r="3.5" fill="#ffffff" stroke="#7c3aed" strokeWidth="2" />
+
+                                  {/* Semester 4 (Active/Latest) */}
+                                  <circle cx="196" cy="16" r="6" fill="#7c3aed" fillOpacity="0.25" />
+                                  <circle cx="196" cy="16" r="4" fill="#7c3aed" stroke="#ffffff" strokeWidth="2" />
+
+                                  {/* Semester 5 (Ongoing) */}
+                                  <circle cx="238" cy="16" r="3" fill="#ede9fe" stroke="#a78bfa" strokeWidth="1.5" />
+                                </svg>
+
+                                <div className="cgpa-sem-labels">
+                                  <span className="cgpa-sem-pill" title="Semester 1 SGPA: 8.14">S1 <b>8.14</b></span>
+                                  <span className="cgpa-sem-pill" title="Semester 2 SGPA: 8.42">S2 <b>8.42</b></span>
+                                  <span className="cgpa-sem-pill" title="Semester 3 SGPA: 8.56">S3 <b>8.56</b></span>
+                                  <span className="cgpa-sem-pill active" title="Semester 4 SGPA: 8.60">S4 <b>8.60</b></span>
+                                  <span className="cgpa-sem-pill" style={{ opacity: 0.75 }} title="Semester 5 in Progress">S5 <i>Active</i></span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="cgpa-chart-wrapper">
+                                <svg
+                                  viewBox="0 0 260 56"
+                                  className="cgpa-sparkline-svg"
+                                  preserveAspectRatio="none"
+                                >
+                                  <line x1="16" y1="36" x2="244" y2="36" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4 4" />
+                                  <circle cx="36" cy="36" r="6" fill="#8b5cf6" fillOpacity="0.2" />
+                                  <circle cx="36" cy="36" r="3.5" fill="#8b5cf6" stroke="#ffffff" strokeWidth="1.5" />
+                                  <circle cx="88" cy="36" r="2.5" fill="#cbd5e1" />
+                                  <circle cx="140" cy="36" r="2.5" fill="#cbd5e1" />
+                                  <circle cx="192" cy="36" r="2.5" fill="#cbd5e1" />
+                                  <circle cx="236" cy="36" r="2.5" fill="#cbd5e1" />
+                                </svg>
+                                <div className="cgpa-sem-labels" style={{ justifyContent: 'center', gap: '8px' }}>
+                                  <span className="cgpa-sem-pill active">Semester 1 · Enrolled</span>
+                                  <span className="cgpa-sem-pill" style={{ color: '#94a3b8' }}>Awaiting Examination Results</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="dash-stat-foot">
+                            {hasCgpa ? (
+                              <small className="dash-stat-sub text-violet" style={{ color: '#7c3aed', fontWeight: 600 }}>
+                                <Award size={13} /> Ranked in top 10% · Qualified for Dean's Merit List
+                              </small>
+                            ) : (
+                              <small className="dash-stat-sub" style={{ color: '#64748b' }}>
+                                <Check size={13} /> CGPA transcript updates following semester examinations.
+                              </small>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </article>
 
                   {/* Card 4: Fees Details (Replaces Next Holiday) */}
-                  <article
-                    className="dash-stat tone-amber dash-stat-fees-card"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleStudentTabChange('fees')}
-                    title="Open Detailed Fee Breakdown & Payment Receipts"
-                  >
+                  <article className="dash-stat tone-amber dash-stat-fees-card">
                     <div className="fees-card-header">
                       <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>₹</span>
                       <span>Fees Details</span>
                     </div>
 
                     <div className="fees-card-body">
-                      {/* Cyan Banner: Total Fees till Date */}
-                      <div className="fees-banner-row tone-cyan">
-                        <div className="fees-amount">
-                          {studentAccount?.totalFeesFormatted || '₹3,22,600.00'}
-                        </div>
-                        <div className="fees-label">
-                          Total Fees till Date
-                        </div>
-                        <span className="fees-watermark" aria-hidden="true">
-                          ₹
-                        </span>
-                      </div>
+                      {(() => {
+                        const hasFeeData = Boolean(
+                          studentAccount?.totalFees !== undefined ||
+                          studentAccount?.paidFees !== undefined ||
+                          studentAccount?.dueFees !== undefined ||
+                          studentAccount?.totalFeesFormatted
+                        );
+                        const totalFeesText = studentAccount?.totalFeesFormatted || (studentAccount?.totalFees !== undefined ? `₹${Number(studentAccount.totalFees).toLocaleString('en-IN')}` : (hasFeeData ? '₹0.00' : 'N/A'));
+                        const paidFeesText = studentAccount?.paidFeesFormatted || (studentAccount?.paidFees !== undefined ? `₹${Number(studentAccount.paidFees).toLocaleString('en-IN')}` : (hasFeeData ? '₹0.00' : 'N/A'));
+                        const dueFeesText = studentAccount?.dueFeesFormatted || (studentAccount?.dueFees !== undefined ? `₹${Number(studentAccount.dueFees).toLocaleString('en-IN')}` : (hasFeeData ? '₹0.00' : 'N/A'));
 
-                      {/* Amber Banner: Total Paid by You till Date */}
-                      <div className="fees-banner-row tone-amber">
-                        <div className="fees-amount">
-                          {studentAccount?.paidFeesFormatted || '₹1,94,680.00'}
-                        </div>
-                        <div className="fees-label">
-                          Total Paid by You till Date
-                        </div>
-                        <span className="fees-watermark" aria-hidden="true">
-                          ₹
-                        </span>
-                      </div>
+                        return (
+                          <>
+                            {/* Cyan Banner: Total Fees till Date */}
+                            <div className="fees-banner-row tone-cyan">
+                              <div className="fees-amount">
+                                {totalFeesText}
+                              </div>
+                              <div className="fees-label">
+                                Total Fees till Date
+                              </div>
+                              <span className="fees-watermark" aria-hidden="true">
+                                ₹
+                              </span>
+                            </div>
 
-                      {/* Red Banner: Total Dues */}
-                      <div className="fees-banner-row tone-red">
-                        <div className="fees-amount">
-                          {studentAccount?.dueFeesFormatted || '₹1,27,920.00'}
-                        </div>
-                        <div className="fees-label">
-                          Total Dues
-                        </div>
-                        <span className="fees-watermark" aria-hidden="true">
-                          ₹
-                        </span>
-                      </div>
+                            {/* Amber Banner: Total Paid by You till Date */}
+                            <div className="fees-banner-row tone-amber">
+                              <div className="fees-amount">
+                                {paidFeesText}
+                              </div>
+                              <div className="fees-label">
+                                Total Paid by You till Date
+                              </div>
+                              <span className="fees-watermark" aria-hidden="true">
+                                ₹
+                              </span>
+                            </div>
+
+                            {/* Red Banner: Total Dues */}
+                            <div className="fees-banner-row tone-red">
+                              <div className="fees-amount">
+                                {dueFeesText}
+                              </div>
+                              <div className="fees-label">
+                                Total Dues
+                              </div>
+                              <span className="fees-watermark" aria-hidden="true">
+                                ₹
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </article>
                 </section>

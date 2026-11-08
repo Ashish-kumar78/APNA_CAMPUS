@@ -405,14 +405,15 @@ export function buildGiftFeeReceiptDoc(receipt = {}, studentInfo = {}) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
   doc.setTextColor(0, 0, 0);
-  doc.text('Gandhi Institute for Technology (GIFT)', 46, 20);
+  doc.text('Apna Campus (Autonomous)', 46, 20);
 
-  doc.setFontSize(13);
-  doc.text('(Autonomous)', 46, 26);
+  doc.setFontSize(10);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Higher Education ERP Directorate • Student Fee & Accounts Section', 46, 27);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
-  doc.text('At- Gramadiha, P.o- Gangapada', 46, 32);
+  doc.setFontSize(9);
+  doc.text('Official University Money Receipt • Authenticated Electronic Record', 46, 33);
 
   // 3. Top dividing line
   doc.setDrawColor(0, 0, 0);
@@ -430,7 +431,7 @@ export function buildGiftFeeReceiptDoc(receipt = {}, studentInfo = {}) {
   const courseBatch = receipt.courseBatch || studentInfo.batch || 'BTECH 2028-P';
   const section = receipt.section || studentInfo.section || 'CSE (AI) - Genius';
 
-  const receiptNo = receipt.receiptNo || receipt.no || `GIFT/ACC/${receipt.id ? String(receipt.id).replace(/\D/g, '') || '128680' : '128680'}`;
+  const receiptNo = receipt.receiptNo || receipt.no || `APNA/ACC/${receipt.id ? String(receipt.id).replace(/\D/g, '') || '128680' : '128680'}`;
   const receiptDate = receipt.receiptDate || receipt.date || receipt.paymentDate || '27-07-2026';
 
   const amount = Number(receipt.amount || receipt.paid || 20000);
@@ -507,6 +508,10 @@ export function buildGiftFeeReceiptDoc(receipt = {}, studentInfo = {}) {
 export function buildFeeReceiptDoc(receipt = {}, studentInfo = {}) {
   return buildGiftFeeReceiptDoc(receipt, studentInfo);
 }
+
+export const buildApnaFeeReceiptDoc = buildGiftFeeReceiptDoc;
+export const downloadApnaFeeReceiptPdf = downloadFeeReceiptPdf;
+export const openApnaFeeReceiptPdf = openFeeReceiptPdf;
 
 export function downloadFeeReceiptPdf(receipt = {}, studentInfo = {}) {
   const { doc, receiptNo } = buildGiftFeeReceiptDoc(receipt, studentInfo);
@@ -784,23 +789,25 @@ export function buildGiftAdmitCardDoc(exam = {}, studentInfo = {}) {
   return doc;
 }
 
-export function downloadGiftAdmitCardPdf(exam = {}, studentInfo = {}) {
+export function downloadApnaAdmitCardPdf(exam = {}, studentInfo = {}) {
   const doc = buildGiftAdmitCardDoc(exam, studentInfo);
   const cleanSem = (exam.name || 'Admit_Card').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const regd = studentInfo.registrationNumber || studentInfo.rollNumber || '2401432265';
-  doc.save(`GIFT_AdmitCard_${regd}_${cleanSem}.pdf`);
+  const regd = studentInfo.registrationNumber || studentInfo.rollNumber || 'Student';
+  doc.save(`ApnaCampus_AdmitCard_${regd}_${cleanSem}.pdf`);
 }
+export const downloadGiftAdmitCardPdf = downloadApnaAdmitCardPdf;
 
-export function openGiftAdmitCardPdf(exam = {}, studentInfo = {}) {
+export function openApnaAdmitCardPdf(exam = {}, studentInfo = {}) {
   const doc = buildGiftAdmitCardDoc(exam, studentInfo);
   try {
     const blob = doc.output('blob');
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
   } catch (err) {
-    downloadGiftAdmitCardPdf(exam, studentInfo);
+    downloadApnaAdmitCardPdf(exam, studentInfo);
   }
 }
+export const openGiftAdmitCardPdf = openApnaAdmitCardPdf;
 
 
 // -------------------------------------------------------------
@@ -928,6 +935,100 @@ export function downloadGradeCardPdf(examData = {}, studentInfo = {}) {
   addInstitutionalFooter(doc, 1, 1);
 
   doc.save(`Grade_Card_${semester.replace(/\s+/g, '_')}_${rollNo}.pdf`);
+}
+
+export function downloadAcademicTranscriptPdf(dossier = {}, studentInfo = {}) {
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const std = dossier?.student || studentInfo || {};
+  const regNo = std.registrationNumber || std.rollNumber || 'Student';
+
+  addInstitutionalHeader(doc, 'OFFICIAL ACADEMIC TRANSCRIPT', 'Autonomous Degree Programme • University Examination Division');
+
+  // Student Profile Banner
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(14, 52, doc.internal.pageSize.getWidth() - 28, 28, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text(`CANDIDATE NAME: ${(std.name || 'Student').toUpperCase()}`, 20, 60);
+  doc.text(`REGISTRATION NO: ${regNo}`, 125, 60);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...TEXT_DARK);
+  doc.text(`Degree: ${std.programme || 'Bachelor of Technology'}`, 20, 67);
+  doc.text(`Branch: ${std.department || 'Computer Science & Engineering'}`, 125, 67);
+  doc.text(`Admission Batch: ${std.batch || '2023–2027'} · Mode: Regular`, 20, 74);
+  doc.text(`Institution: Apna Campus Autonomous College`, 125, 74);
+
+  // Multi-semester progression summary table
+  const progression = dossier?.progressionHistory || [];
+  const tableRows = progression.map((p) => [
+    p.semesterLabel,
+    p.academicSession || '—',
+    p.totalCredits || 22,
+    p.earnedCredits || (p.status === 'COMPLETED' ? 22 : 0),
+    p.sgpa ? Number(p.sgpa).toFixed(2) : '—',
+    p.cgpa ? Number(p.cgpa).toFixed(2) : '—',
+    p.status === 'COMPLETED' ? 'PASSED (DISTINCTION)' : p.status === 'ENROLLED' ? 'IN PROGRESS' : 'UPCOMING',
+  ]);
+
+  renderTable(doc, {
+    startY: 84,
+    head: [['Semester', 'Session', 'Credits Registered', 'Credits Earned', 'SGPA', 'CGPA', 'Result Standing']],
+    body: tableRows.length > 0 ? tableRows : [['Semester 1', '2026–27', '22', '0', '—', '—', 'AWAITING COMMENCEMENT']],
+    theme: 'grid',
+    headStyles: {
+      fillColor: [15, 23, 42],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8,
+      halign: 'center'
+    },
+    bodyStyles: {
+      fontSize: 8,
+      halign: 'center',
+      textColor: [30, 41, 59]
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 8;
+  doc.setFillColor(238, 242, 255);
+  doc.roundedRect(14, finalY, doc.internal.pageSize.getWidth() - 28, 20, 2, 2, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('CUMULATIVE CGPA:', 20, finalY + 8);
+  doc.setFontSize(13);
+  doc.setTextColor(37, 99, 235);
+  doc.text(std.cgpa ? String(std.cgpa) : 'N/A', 60, finalY + 9);
+
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text(`TOTAL CREDITS EARNED: ${progression.filter(p => p.status === 'COMPLETED').reduce((s, p) => s + (p.earnedCredits || 0), 0)} / 160`, 100, finalY + 8);
+  doc.text('CLASSIFICATION: FIRST CLASS WITH DISTINCTION', 20, finalY + 15);
+  doc.text('TRANSCRIPT INTEGRITY: CRYPTOGRAPHICALLY AUTHENTICATED', 100, finalY + 15);
+
+  const sigY = finalY + 28;
+  drawOfficialSeal(doc, 14, sigY, 'ACADEMIC COUNCIL');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Controller of Examinations', 135, sigY + 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text('Apna Campus Autonomous Examination Cell', 135, sigY + 16);
+
+  addInstitutionalFooter(doc, 1, 1);
+  doc.save(`ApnaCampus_Official_Transcript_${regNo}.pdf`);
 }
 
 // -------------------------------------------------------------
@@ -2478,6 +2579,192 @@ export function downloadStudentDocumentsRegisterPdf(records = [], filterInfo = {
   });
 
   addInstitutionalFooter(doc, 1, 1);
-  doc.save('GIFT_Student_Documents_Registry.pdf');
+  doc.save('Apna_Campus_Student_Documents_Registry.pdf');
+}
+
+/**
+ * Official Campus Placement Job Description & Drive Specification PDF
+ */
+export function downloadJobDescriptionPdf(drive = {}) {
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const comp = drive.company || drive.companyName || 'Recruiting Partner';
+  const role = drive.role || drive.roleTitle || 'Graduate Trainee';
+
+  addInstitutionalHeader(doc, 'Campus Recruitment Drive Specification', 'Directorate of Training & Placement • Corporate Relations Cell');
+
+  renderTable(doc, {
+    startY: 48,
+    head: [['Parameter', 'Drive Specification Details']],
+    body: [
+      ['Corporate Partner', comp],
+      ['Job Title / Role', role],
+      ['Compensation (CTC)', drive.packageOffered || `₹${drive.packageLPA || '7.0'} LPA`],
+      ['Employment Type', drive.employmentType || 'Full-time Regular'],
+      ['Work Location', drive.jobLocation || 'Bhubaneswar / Pan-India'],
+      ['Minimum CGPA', `${drive.eligibilityCriteria?.minCgpa || drive.minCgpa || 6.5} CGPA (Autonomous Scale)`],
+      ['Eligible Disciplines', Array.isArray(drive.eligibilityCriteria?.allowedBranches || drive.eligibleBranches)
+        ? (drive.eligibilityCriteria?.allowedBranches || drive.eligibleBranches).join(', ')
+        : 'CSE, ECE, EEE, MECH, CIVIL'],
+      ['Active Backlog Cutoff', '0 Active Backlogs (Strict Zero Tolerance Policy)'],
+      ['Graduation Batch', drive.eligibilityCriteria?.passingYear || 'Class of 2027 (Autumn Session)'],
+      ['Recruitment Venue', drive.venue || 'Campus Auditorium & Virtual Assessment Arena'],
+      ['Application Deadline', drive.recruitmentProcess?.applicationDeadline || drive.driveDate || 'As Notified'],
+      ['Key Technical Skills', Array.isArray(drive.requiredSkills) ? drive.requiredSkills.join(', ') : 'Data Structures, Python/Java, Cloud Fundamentals']
+    ],
+    theme: 'striped',
+    headStyles: { fillColor: PRIMARY_COLOR, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+    bodyStyles: { fontSize: 8.5, textColor: TEXT_DARK },
+    columnStyles: { 0: { cellWidth: 55, fontStyle: 'bold' }, 1: { cellWidth: 125 } }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 8;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Job Description & Scope of Work:', 14, finalY);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...TEXT_DARK);
+  const jdText = drive.jobDescription || 'The candidate will be engaged in full-stack engineering, algorithmic computing, test automation, and enterprise cloud solutions in an agile cross-functional environment.';
+  const splitJd = doc.splitTextToSize(jdText, 175);
+  doc.text(splitJd, 14, finalY + 5);
+
+  const sealY = finalY + 6 + (splitJd.length * 4) + 6;
+  drawOfficialSeal(doc, 14, sealY, 'T&P CELL');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Head, Directorate of Training & Placement', 125, sealY + 10);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text('Apna Campus Autonomous University', 125, sealY + 15);
+  doc.text('corporate.relations@apnacampus.edu.in', 125, sealY + 19);
+
+  addInstitutionalFooter(doc, 1, 1);
+  doc.save(`Placement_JD_${comp.replace(/[^a-zA-Z0-9]/g, '_')}_${role.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+}
+
+/**
+ * Official Placement Registration Slip PDF
+ */
+export function downloadPlacementRegistrationSlipPdf(application = {}, drive = {}, studentInfo = {}) {
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const appId = application.id || application.applicationId || `APP-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+  const comp = application.company || application.companyName || drive.companyName || 'Recruiting Partner';
+  const role = application.jobRole || application.role || drive.roleTitle || 'Software Engineer';
+  const regNo = studentInfo.rollNumber || studentInfo.registrationNumber || application.regNo || application.studentRoll || '2401432265';
+  const sName = studentInfo.name || application.studentName || 'Student Candidate';
+
+  addInstitutionalHeader(doc, 'Campus Placement Registration Slip', 'Directorate of Training & Placement • Candidate Verification Record');
+
+  renderTable(doc, {
+    startY: 48,
+    head: [['Registration Detail', 'Candidate & Drive Particulars']],
+    body: [
+      ['Application ID', appId],
+      ['Student Full Name', sName],
+      ['Registration / Roll Number', regNo],
+      ['Academic Discipline / Branch', studentInfo.department || studentInfo.branch || application.branch || 'Computer Science & Engineering'],
+      ['Verified Cumulative CGPA', `${studentInfo.cgpa || application.cgpa || 8.42} / 10.0`],
+      ['Hiring Corporate Partner', comp],
+      ['Designation / Position', role],
+      ['CTC Package Offered', application.ctcOffered || application.packageOffered || drive.packageOffered || '₹7.0 LPA'],
+      ['Registration Date & Time', application.appliedDate || application.appliedAt || new Date().toLocaleString('en-IN')],
+      ['Candidate Selection Stage', application.stage || 'Registered / Applied'],
+      ['Current Application Status', application.status || 'Application Submitted'],
+      ['Recruitment Venue / Portal', drive.venue || 'Campus Auditorium & Virtual Arena'],
+      ['Mandatory Checklist', 'Autonomous Grade Sheet, College ID Card, 3 Hard Copies of Resume']
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: PRIMARY_COLOR, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+    bodyStyles: { fontSize: 8.5, textColor: TEXT_DARK },
+    columnStyles: { 0: { cellWidth: 55, fontStyle: 'bold' }, 1: { cellWidth: 125 } }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 10;
+  drawOfficialSeal(doc, 14, finalY, 'APNA T&P');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Verification Seal & Registration Officer', 125, finalY + 10);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text('Training & Placement Cell, Apna Campus', 125, finalY + 15);
+  doc.text(`Digital Verification Stamp: ${appId}-VERIFIED`, 125, finalY + 19);
+
+  addInstitutionalFooter(doc, 1, 1);
+  doc.save(`Placement_Registration_${appId}_${comp.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+}
+
+/**
+ * Official Placement Offer Letter / Letter of Intent (LOI) PDF
+ */
+export function downloadPlacementOfferLetterPdf(offer = {}, studentInfo = {}) {
+  const doc = createPdfDoc({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const comp = offer.company || offer.companyName || 'Corporate Partner';
+  const role = offer.role || offer.jobRole || 'Associate Software Engineer';
+  const sName = offer.studentName || studentInfo.name || 'Student Candidate';
+  const regNo = offer.regNo || offer.studentRoll || studentInfo.rollNumber || '2401432265';
+  const token = offer.offerToken || `APNA-OFFER-2026-${regNo}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  addInstitutionalHeader(doc, 'Letter of Intent & Campus Offer Letter', 'Office of Campus Placements & Industry Partnerships');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text(`Ref: ${token}`, 14, 48);
+  doc.text(`Date of Release: ${offer.issuedDate || new Date().toLocaleDateString('en-GB')}`, 140, 48);
+
+  const intro = `Dear ${sName} (Reg. No: ${regNo}),\n\nOn behalf of ${comp} in partnership with the Directorate of Training & Placement, Apna Campus Autonomous University, we take immense pleasure in issuing this formal Letter of Intent (LOI) for your appointment as ${role}. Your outstanding technical aptitude, algorithmic competence, and professional presentation throughout the campus recruitment drive have distinguished you among your peers.`;
+  const splitIntro = doc.splitTextToSize(intro, 175);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...TEXT_DARK);
+  doc.text(splitIntro, 14, 55);
+
+  const tableStartY = 55 + (splitIntro.length * 4) + 4;
+  renderTable(doc, {
+    startY: tableStartY,
+    head: [['Offer Parameter', 'Official Terms of Engagement']],
+    body: [
+      ['Candidate Name', sName],
+      ['University Registration No', regNo],
+      ['Employing Organization', comp],
+      ['Designation / Position', role],
+      ['Total Cost to Company (CTC)', offer.packageOffered || offer.ctcOffered || '₹7.5 LPA'],
+      ['Fixed Base Compensation', offer.fixedSalary || offer.packageOffered || '₹6.5 LPA'],
+      ['Performance Variable Pay', offer.variableSalary || '₹1.0 LPA'],
+      ['Anticipated Date of Joining', offer.joiningDate || '01 July 2027'],
+      ['Primary Work Location', offer.officeLocation || 'Bhubaneswar / Corporate Regional Hub'],
+      ['Offer Acceptance Deadline', offer.validityDeadline || '15 December 2026'],
+      ['Service Bond Policy', offer.bond || 'Standard 1-Year Academic Foundation Agreement'],
+      ['Current Acceptance Status', offer.status || 'Offer Letter Released']
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: PRIMARY_COLOR, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+    bodyStyles: { fontSize: 8, textColor: TEXT_DARK },
+    columnStyles: { 0: { cellWidth: 55, fontStyle: 'bold' }, 1: { cellWidth: 125 } }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 10;
+  drawOfficialSeal(doc, 14, finalY, 'OFFER RATIFIED');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Head, Directorate of Training & Placement', 120, finalY + 10);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text('Apna Campus Autonomous University, Bhubaneswar', 120, finalY + 14);
+  doc.text(`Authenticated via QR Security Hash: ${token}`, 120, finalY + 18);
+
+  addInstitutionalFooter(doc, 1, 1);
+  doc.save(`Placement_Offer_${comp.replace(/[^a-zA-Z0-9]/g, '_')}_${sName.replace(/\s+/g, '_')}.pdf`);
 }
 

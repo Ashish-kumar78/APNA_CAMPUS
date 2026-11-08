@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Megaphone, Plus, Clock, Users, CheckCircle2, AlertCircle,
   Calendar, Search, Filter, Trash2, X, Send, Eye, FileText,
-  AlertTriangle, Check, BookOpen, Layers
+  AlertTriangle, Check, BookOpen, Layers, UploadCloud, Paperclip
 } from 'lucide-react';
 import { notificationsApi } from '../services/notificationsApi';
 import { notificationsStore } from '../services/notificationsStore.js';
@@ -40,7 +40,7 @@ export default function FacultyNotificationsModule({ account }) {
   const [form, setForm] = useState({
     title: '',
     message: '',
-    category: 'EXAMINATION',
+    category: 'ACADEMIC_REMINDER',
     priority: 'NORMAL',
     academicYear: '2026-27',
     program: 'B.Tech',
@@ -52,8 +52,38 @@ export default function FacultyNotificationsModule({ account }) {
     scheduledFor: '',
     expiresAt: '',
     attachmentUrl: '',
-    attachmentName: ''
+    attachmentName: '',
+    attachmentSize: '',
   });
+
+  const facFileInputRef = useRef(null);
+  const [facFileError, setFacFileError] = useState('');
+
+  const handleFacFileChange = (file) => {
+    if (!file) return;
+    setFacFileError('');
+    if (file.size > 20 * 1024 * 1024) {
+      setFacFileError('File size exceeds 20 MB limit.');
+      return;
+    }
+    const formattedSize = file.size >= 1024 * 1024
+      ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+      : `${Math.round(file.size / 1024)} KB`;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setForm((prev) => ({
+        ...prev,
+        attachmentName: file.name,
+        attachmentSize: formattedSize,
+        attachmentUrl: e.target.result,
+      }));
+    };
+    reader.onerror = () => {
+      setFacFileError('Failed to read file from disk.');
+    };
+    reader.readAsDataURL(file);
+  };
 
   const [previewInfo, setPreviewInfo] = useState({ count: 0, label: '', });
   const semesterOptions = [...new Set(facultyAssignments.map((assignment) => assignment.semester))];
@@ -712,16 +742,92 @@ export default function FacultyNotificationsModule({ account }) {
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginTop: '0.25rem' }}>
                   <div className="fac-form-group">
-                    <label htmlFor="attachmentUrl">Optional Supporting Document / Resource Link</label>
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Paperclip size={14} color="#0f766e" /> Official Supporting Document / File
+                      </span>
+                    </label>
+
                     <input
-                      type="text"
-                      id="attachmentUrl"
-                      placeholder="e.g. /assets/exam_timetable.pdf or drive link"
-                      value={form.attachmentUrl}
-                      onChange={(e) => setForm({ ...form, attachmentUrl: e.target.value })}
+                      type="file"
+                      ref={facFileInputRef}
+                      style={{ display: 'none' }}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) handleFacFileChange(e.target.files[0]);
+                      }}
                     />
+
+                    {form.attachmentName ? (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          background: '#f0fdf4',
+                          border: '1px solid #86efac',
+                          borderRadius: '8px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                          <FileText size={18} color="#16a34a" />
+                          <div style={{ overflow: 'hidden' }}>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#166534', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '240px' }}>
+                              {form.attachmentName}
+                            </div>
+                            <small style={{ color: '#15803d', fontSize: '0.7rem' }}>{form.attachmentSize || 'Attached'} · Ready to broadcast</small>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => facFileInputRef.current?.click()}
+                            style={{ border: 'none', background: 'none', color: '#0f766e', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600 }}
+                          >
+                            Change
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setForm((prev) => ({ ...prev, attachmentName: '', attachmentUrl: '', attachmentSize: '' }));
+                              if (facFileInputRef.current) facFileInputRef.current.value = '';
+                            }}
+                            style={{ border: 'none', background: 'none', color: '#b91c1c', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                            title="Remove file"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => facFileInputRef.current?.click()}
+                        style={{
+                          border: '1.5px dashed #cbd5e1',
+                          background: '#f8fafc',
+                          borderRadius: '8px',
+                          padding: '10px 14px',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          color: '#475569',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        <UploadCloud size={18} color="#0f766e" />
+                        <span>Upload PDF, Word, or Image circular</span>
+                      </div>
+                    )}
+                    {facFileError && (
+                      <div style={{ color: '#dc2626', fontSize: '0.72rem', marginTop: '3px' }}>⚠ {facFileError}</div>
+                    )}
                   </div>
 
                   <div className="fac-form-group">

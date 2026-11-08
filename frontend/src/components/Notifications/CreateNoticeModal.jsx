@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Send,
@@ -15,6 +15,10 @@ import {
   GraduationCap,
   Sparkles,
   Info,
+  UploadCloud,
+  Trash2,
+  Check,
+  Eye,
 } from 'lucide-react';
 import { notificationsApi } from '../../services/notificationsApi.js';
 
@@ -291,8 +295,16 @@ export default function CreateNoticeModal({
   const [requiresAcknowledgement, setRequiresAcknowledgement] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [expiryDays, setExpiryDays] = useState(30);
+
+  // Attachment & File Upload State
   const [attachmentName, setAttachmentName] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
+  const [attachmentSize, setAttachmentSize] = useState('');
+  const [uploadMode, setUploadMode] = useState('upload'); // 'upload' | 'link'
+  const [isDragging, setIsDragging] = useState(false);
+  const [fileError, setFileError] = useState('');
+  const fileInputRef = useRef(null);
+
   const [channels, setChannels] = useState({
     portal: true,
     email: true,
@@ -301,6 +313,65 @@ export default function CreateNoticeModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Handle local file selection from device or drag-and-drop
+  const handleFileSelection = (file) => {
+    if (!file) return;
+    setFileError('');
+
+    // 20 MB size limit for institutional documents
+    if (file.size > 20 * 1024 * 1024) {
+      setFileError('File size exceeds the 20 MB institutional attachment limit.');
+      return;
+    }
+
+    const formattedSize = file.size >= 1024 * 1024
+      ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+      : `${Math.round(file.size / 1024)} KB`;
+
+    setAttachmentName(file.name);
+    setAttachmentSize(formattedSize);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setAttachmentUrl(e.target.result);
+    };
+    reader.onerror = () => {
+      setFileError('Failed to read the file from local device.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearAttachment = () => {
+    setAttachmentName('');
+    setAttachmentUrl('');
+    setAttachmentSize('');
+    setFileError('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer?.files?.[0]) {
+      handleFileSelection(e.dataTransfer.files[0]);
+    }
+  };
 
   // Re-initialize whenever modal opens or active role changes
   useEffect(() => {
@@ -413,6 +484,7 @@ export default function CreateNoticeModal({
       expiresAt: expiresAt.toISOString(),
       attachmentName: attachmentName.trim() || null,
       attachmentUrl: attachmentUrl.trim() || null,
+      attachmentSize: attachmentSize || null,
       deliveredCount: estimatedReach,
       channels: Object.keys(channels).filter((k) => channels[k]),
     };
@@ -816,29 +888,205 @@ export default function CreateNoticeModal({
               />
             </div>
 
-            {/* Attachment */}
+            {/* Attachment & File Upload Option */}
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                ATTACH SUPPORTING DOCUMENT (PDF / DOCUMENT URL)
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px' }}>
-                <input
-                  type="text"
-                  className="admin-form-input"
-                  placeholder="e.g. Assignment_Questions.pdf"
-                  value={attachmentName}
-                  onChange={(e) => setAttachmentName(e.target.value)}
-                  style={{ padding: '8px 10px', fontSize: '0.82rem' }}
-                />
-                <input
-                  type="text"
-                  className="admin-form-input"
-                  placeholder="https://storage.apnacampus.edu.in/docs/... or internal link"
-                  value={attachmentUrl}
-                  onChange={(e) => setAttachmentUrl(e.target.value)}
-                  style={{ padding: '8px 10px', fontSize: '0.82rem' }}
-                />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Paperclip size={14} color="#4f46e5" /> OFFICIAL ATTACHMENT / SUPPORTING DOCUMENT (OPTIONAL)
+                </label>
+                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '6px', padding: '2px', gap: '2px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode('upload')}
+                    style={{
+                      border: 'none',
+                      background: uploadMode === 'upload' ? '#ffffff' : 'transparent',
+                      color: uploadMode === 'upload' ? '#0f172a' : '#64748b',
+                      fontWeight: uploadMode === 'upload' ? 700 : 500,
+                      fontSize: '0.72rem',
+                      padding: '3px 10px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      boxShadow: uploadMode === 'upload' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                    }}
+                  >
+                    📁 Upload File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode('link')}
+                    style={{
+                      border: 'none',
+                      background: uploadMode === 'link' ? '#ffffff' : 'transparent',
+                      color: uploadMode === 'link' ? '#0f172a' : '#64748b',
+                      fontWeight: uploadMode === 'link' ? 700 : 500,
+                      fontSize: '0.72rem',
+                      padding: '3px 10px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      boxShadow: uploadMode === 'link' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                    }}
+                  >
+                    🔗 External URL
+                  </button>
+                </div>
               </div>
+
+              {uploadMode === 'upload' ? (
+                <div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.txt"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        handleFileSelection(e.target.files[0]);
+                      }
+                    }}
+                  />
+
+                  {attachmentName ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 14px',
+                        background: '#f0fdf4',
+                        border: '1px solid #86efac',
+                        borderRadius: '8px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                        <div
+                          style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '8px',
+                            background: '#dcfce7',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#16a34a',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <FileText size={20} />
+                        </div>
+                        <div style={{ overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              fontSize: '0.84rem',
+                              color: '#166534',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxWidth: '380px',
+                            }}
+                          >
+                            {attachmentName}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.74rem', color: '#15803d' }}>
+                            <span>{attachmentSize || 'Uploaded File'}</span>
+                            <span>•</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}>
+                              <Check size={12} /> Ready to broadcast
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #bbf7d0',
+                            color: '#166534',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            padding: '5px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Change File
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleClearAttachment}
+                          style={{
+                            background: '#fee2e2',
+                            border: '1px solid #fca5a5',
+                            color: '#b91c1c',
+                            padding: '6px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          title="Remove attached file"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{
+                        border: `2px dashed ${isDragging ? '#4f46e5' : '#cbd5e1'}`,
+                        background: isDragging ? '#eef2ff' : '#f8fafc',
+                        borderRadius: '8px',
+                        padding: '18px 14px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <UploadCloud size={28} color={isDragging ? '#4f46e5' : '#64748b'} style={{ margin: '0 auto 6px' }} />
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
+                        Click to browse file or drag & drop here
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                        Supports PDF circulars, official Word docs (.doc, .docx), Excel schedules, or images (Up to 20MB)
+                      </div>
+                    </div>
+                  )}
+
+                  {fileError && (
+                    <div style={{ color: '#dc2626', fontSize: '0.74rem', marginTop: '4px', fontWeight: 600 }}>
+                      ⚠ {fileError}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px' }}>
+                  <input
+                    type="text"
+                    className="admin-form-input"
+                    placeholder="Document Title (e.g. Exam_Guidelines.pdf)"
+                    value={attachmentName}
+                    onChange={(e) => setAttachmentName(e.target.value)}
+                    style={{ padding: '8px 10px', fontSize: '0.82rem' }}
+                  />
+                  <input
+                    type="text"
+                    className="admin-form-input"
+                    placeholder="https://storage.apnacampus.edu.in/... or Google Drive URL"
+                    value={attachmentUrl}
+                    onChange={(e) => setAttachmentUrl(e.target.value)}
+                    style={{ padding: '8px 10px', fontSize: '0.82rem' }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Controls Row */}

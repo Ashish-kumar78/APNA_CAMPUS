@@ -551,6 +551,7 @@ export class NotificationsService {
           senderDept: r.notification.senderDept,
           attachmentUrl: r.notification.attachmentUrl,
           attachmentName: r.notification.attachmentName,
+          attachmentSize: meta.attachmentSize || '512 KB',
           referenceNumber: meta.referenceNumber || null,
           requiresAcknowledgement: Boolean(meta.requiresAcknowledgement),
           isAcknowledged: isAcked,
@@ -911,6 +912,7 @@ export class NotificationsService {
       coverImageUrl: body.coverImageUrl || null,
       expiryDate: expiresAt.toISOString(),
       channels: body.channels || ['In-App Portal'],
+      attachmentSize: body.attachmentSize || '512 KB',
     };
 
     // Department binding: Faculty notices are strictly rooted in their academic department

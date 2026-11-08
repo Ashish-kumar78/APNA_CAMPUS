@@ -342,31 +342,56 @@ export default function NoticeDetailsModal({
                 </div>
               </div>
 
-              <a
-                href={notice.attachmentUrl || '#'}
-                onClick={(e) => {
-                  if (!notice.attachmentUrl) {
-                    e.preventDefault();
-                    alert(`Downloading official circular: ${notice.attachmentName || 'Schedule.pdf'}`);
-                  }
-                }}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  background: '#15803d',
-                  color: '#ffffff',
-                  padding: '7px 14px',
-                  borderRadius: '8px',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <Download size={14} /> Download PDF
-              </a>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {notice.attachmentUrl && (
+                  <a
+                    href={notice.attachmentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      background: '#ffffff',
+                      color: '#15803d',
+                      border: '1px solid #86efac',
+                      padding: '7px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                    }}
+                  >
+                    <Eye size={14} /> Preview
+                  </a>
+                )}
+                <a
+                  href={notice.attachmentUrl || '#'}
+                  download={notice.attachmentName || 'Notice_Document.pdf'}
+                  onClick={(e) => {
+                    if (!notice.attachmentUrl) {
+                      e.preventDefault();
+                      alert(`Downloading official circular: ${notice.attachmentName || 'Schedule.pdf'}`);
+                    }
+                  }}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    background: '#15803d',
+                    color: '#ffffff',
+                    padding: '7px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Download size={14} /> Download File
+                </a>
+              </div>
             </div>
           )}
 

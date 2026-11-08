@@ -1685,6 +1685,7 @@ class InstitutionalNotificationStore {
       actionUrl: notification.actionUrl || null,
       attachmentName: notification.attachmentName || null,
       attachmentUrl: notification.attachmentUrl || null,
+      attachmentSize: notification.attachmentSize || '512 KB',
       isBroadcast: true,
     };
 

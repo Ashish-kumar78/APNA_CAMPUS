@@ -22,6 +22,8 @@ try:
 except ImportError:
     HAS_PSYCOPG2 = False
 
+from ai_engine.config import Config
+
 
 class ApnaCampusBackendClient:
     """
@@ -38,16 +40,18 @@ class ApnaCampusBackendClient:
         attendance_endpoint: str = "/api/attendance/face-sync",
         proctor_endpoint: str = "/api/proctoring/incident-event",
         api_key: str = "",
-        logs_dir: str = "./attendance_logs",
-        cache_path: str = "./pending_attendance_sync.json"
+        logs_dir: Optional[str] = None,
+        cache_path: Optional[str] = None
     ):
         self.neon_db_url = neon_db_url if neon_db_url is not None else os.getenv("NEON_DATABASE_URL", "")
         self.base_url = base_url.rstrip("/")
         self.attendance_endpoint = attendance_endpoint
         self.proctor_endpoint = proctor_endpoint
         self.api_key = api_key
-        self.logs_dir = os.path.abspath(logs_dir)
-        self.cache_path = os.path.abspath(cache_path)
+        
+        base_dir = getattr(Config, "PROJECT_ROOT", os.getcwd())
+        self.logs_dir = os.path.abspath(logs_dir) if logs_dir else os.path.join(base_dir, "attendance_logs")
+        self.cache_path = os.path.abspath(cache_path) if cache_path else os.path.join(base_dir, "pending_attendance_sync.json")
 
         os.makedirs(self.logs_dir, exist_ok=True)
         self._init_neon_table()

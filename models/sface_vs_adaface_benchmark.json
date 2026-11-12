@@ -1,0 +1,67 @@
+{
+  "benchmark_timestamp": "2026-11-12T09:33:35Z",
+  "total_test_pairs": {
+    "genuine": 525,
+    "impostor": 2250
+  },
+  "sface": {
+    "embedding_dim": 128,
+    "mean_genuine": 0.7498,
+    "mean_impostor": 0.1724,
+    "max_impostor": 0.513,
+    "low_light_retention": 0.9369,
+    "avg_latency_ms": 3.94
+  },
+  "adaface": {
+    "embedding_dim": 512,
+    "backbone": "IR-50",
+    "mean_genuine": 0.7602,
+    "mean_impostor": 0.1004,
+    "max_impostor": 0.3491,
+    "low_light_retention": 0.9686,
+    "avg_latency_ms": 32.52
+  },
+  "operating_points": [
+    {
+      "threshold": 0.35,
+      "sface_far": 4.355555555555555,
+      "sface_frr": 2.0952380952380953,
+      "adaface_far": 0.0,
+      "adaface_frr": 2.2857142857142856
+    },
+    {
+      "threshold": 0.38,
+      "sface_far": 1.9555555555555555,
+      "sface_frr": 3.0476190476190474,
+      "adaface_far": 0.0,
+      "adaface_frr": 4.190476190476191
+    },
+    {
+      "threshold": 0.4,
+      "sface_far": 1.511111111111111,
+      "sface_frr": 3.619047619047619,
+      "adaface_far": 0.0,
+      "adaface_frr": 5.333333333333334
+    },
+    {
+      "threshold": 0.45,
+      "sface_far": 0.4,
+      "sface_frr": 8.190476190476192,
+      "adaface_far": 0.0,
+      "adaface_frr": 9.714285714285714
+    },
+    {
+      "threshold": 0.5,
+      "sface_far": 0.044444444444444446,
+      "sface_frr": 11.619047619047619,
+      "adaface_far": 0.0,
+      "adaface_frr": 11.619047619047619
+    }
+  ],
+  "recommendation": {
+    "calibrated_threshold": 0.4,
+    "far_at_calibrated": 0.0,
+    "frr_at_calibrated": 5.33,
+    "verdict": "AdaFace IR-50 provides superior inter-class margin and zero false acceptances at threshold 0.40."
+  }
+}

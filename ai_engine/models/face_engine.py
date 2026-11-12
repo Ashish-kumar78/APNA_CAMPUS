@@ -19,6 +19,13 @@ import numpy as np
 
 import cv2
 
+from ai_engine.models.image_enhancer import IntelligentImageQualityModule, FrameQualityReport
+from ai_engine.models.head_pose import HeadPoseEstimator, HeadPoseEstimate, MultiFrameObservationBuffer
+from ai_engine.models.unknown_student_manager import UnknownStudentManager
+from ai_engine.core.timetable_validator import SectionAttendanceValidator, ActiveClassSession
+from ai_engine.core.confidence_engine import AttendanceConfidenceEngine, ConfidenceEvaluation
+from ai_engine.models.adaface_recognizer import AdaFaceRecognizer
+
 logger = logging.getLogger("FaceAttendanceEngine")
 
 REFERENCE_FACIAL_5POINTS = np.array([
@@ -203,7 +210,7 @@ class FaceAttendanceEngine:
 
     def __init__(
         self,
-        similarity_threshold: float = 0.45,
+        similarity_threshold: float = 0.40,
         liveness_threshold: float = 0.50,
         consecutive_frames_required: int = 3,
         min_ipd: float = 24.0,
@@ -212,10 +219,17 @@ class FaceAttendanceEngine:
         max_brightness: float = 225.0,
         min_contrast: float = 15.0,
         yunet_path: Optional[str] = None,
+        adaface_path: Optional[str] = None,
         sface_path: Optional[str] = None,
         db_path: str = "./models/face_database.npz",
         legacy_pkl_path: Optional[str] = None,
-        students_json_path: Optional[str] = None
+        students_json_path: Optional[str] = None,
+        image_quality_module: Optional[IntelligentImageQualityModule] = None,
+        head_pose_estimator: Optional[HeadPoseEstimator] = None,
+        unknown_manager: Optional[UnknownStudentManager] = None,
+        timetable_validator: Optional[SectionAttendanceValidator] = None,
+        confidence_engine: Optional[AttendanceConfidenceEngine] = None,
+        use_gpu: bool = False
     ):
         self.similarity_threshold = similarity_threshold
         self.liveness_threshold = liveness_threshold
@@ -228,13 +242,23 @@ class FaceAttendanceEngine:
         self.db_path = os.path.abspath(db_path)
         self.legacy_pkl_path = os.path.abspath(legacy_pkl_path) if legacy_pkl_path else None
         self.students_json_path = os.path.abspath(students_json_path) if students_json_path else None
+        self.use_gpu = use_gpu
 
         self.liveness_detector = PassiveLivenessDetector(self.liveness_threshold)
 
-        # Deep Learning ONNX Models
+        # Advanced Modules (Sections 1, 2, 3, 5, 9)
+        self.image_quality_module = image_quality_module or IntelligentImageQualityModule()
+        self.head_pose_estimator = head_pose_estimator or HeadPoseEstimator()
+        self.observation_buffer = MultiFrameObservationBuffer(buffer_size=5)
+        self.unknown_manager = unknown_manager or UnknownStudentManager()
+        self.timetable_validator = timetable_validator or SectionAttendanceValidator(students_metadata_path=self.students_json_path)
+        self.confidence_engine = confidence_engine or AttendanceConfidenceEngine()
+
+        # Primary Deep Learning Models: YuNet (Detection) + AdaFace IR-50 (Recognition)
+        self.embedding_dim = 512
         self.yunet_detector = None
-        self.sface_recognizer = None
-        self._init_deep_models(yunet_path, sface_path)
+        self.adaface_recognizer = None
+        self._init_deep_models(yunet_path, adaface_path)
 
         # Enrolled identity storage
         self.enrolled_embeddings: Optional[np.ndarray] = None
@@ -247,11 +271,11 @@ class FaceAttendanceEngine:
 
         self.load_database()
 
-    def _init_deep_models(self, yunet_path: Optional[str], sface_path: Optional[str]):
-        """Initializes OpenCV Deep Learning ONNX models (YuNet and SFace)."""
+    def _init_deep_models(self, yunet_path: Optional[str], adaface_path: Optional[str]):
+        """Initializes OpenCV Deep Learning ONNX models (YuNet and AdaFace IR-50)."""
         root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         y_path = yunet_path or os.path.join(root_dir, "models", "face_detection_yunet_2023mar.onnx")
-        s_path = sface_path or os.path.join(root_dir, "models", "face_recognition_sface_2021dec.onnx")
+        a_path = adaface_path or os.path.join(root_dir, "models", "adaface_ir50_ms1mv2.onnx")
 
         if os.path.exists(y_path):
             try:
@@ -260,12 +284,8 @@ class FaceAttendanceEngine:
             except Exception as e:
                 logger.warning(f"Could not load YuNet ONNX: {e}")
 
-        if os.path.exists(s_path):
-            try:
-                self.sface_recognizer = cv2.FaceRecognizerSF.create(s_path, "")
-                logger.info(f"✅ SFace Deep Face Recognizer loaded: {os.path.basename(s_path)}")
-            except Exception as e:
-                logger.warning(f"Could not load SFace ONNX: {e}")
+        # Primary Active Recognition Model: AdaFace IR-50 (512-D)
+        self.adaface_recognizer = AdaFaceRecognizer(model_path=a_path, use_gpu=self.use_gpu)
 
     @property
     def enrolled_metadata(self) -> List[Dict[str, str]]:
@@ -276,12 +296,25 @@ class FaceAttendanceEngine:
         ]
 
     def load_database(self) -> bool:
-        """Loads enrolled student embeddings supporting both modern and legacy formats."""
+        """Loads enrolled student embeddings supporting modern 512-D AdaFace format."""
         # 1. Try modern NPZ file
         if os.path.exists(self.db_path):
             try:
                 data = np.load(self.db_path, allow_pickle=True)
-                self.enrolled_embeddings = data["embeddings"].astype(np.float32)
+                loaded_embs = data["embeddings"].astype(np.float32)
+
+                # Migration Check: Detect if file is legacy 128-D SFace database
+                if len(loaded_embs) > 0 and loaded_embs.shape[1] == 128:
+                    logger.warning("Detected legacy 128-D SFace database in face_database.npz.")
+                    adaface_alt = os.path.join(os.path.dirname(self.db_path), "adaface_database.npz")
+                    if os.path.exists(adaface_alt):
+                        logger.info(f"Automatically loading modern 512-D AdaFace database from: {adaface_alt}")
+                        data = np.load(adaface_alt, allow_pickle=True)
+                        loaded_embs = data["embeddings"].astype(np.float32)
+                    else:
+                        logger.warning("Run 'python migrate_sface_to_adaface.py' to generate 512-D AdaFace embeddings.")
+
+                self.enrolled_embeddings = loaded_embs
                 if "reg_nos" in data and "names" in data:
                     self.enrolled_reg_nos = [str(r) for r in data["reg_nos"]]
                     self.enrolled_names = [str(n) for n in data["names"]]
@@ -293,56 +326,12 @@ class FaceAttendanceEngine:
                         meta = json.loads(meta)
                     self.enrolled_reg_nos = [str(m.get("reg_no", m.get("roll_number", ""))) for m in meta]
                     self.enrolled_names = [str(m.get("name", m.get("student_name", ""))) for m in meta]
-                logger.info(f"Loaded {len(self.enrolled_reg_nos)} enrolled students from {self.db_path}")
+                logger.info(f"Loaded {len(self.enrolled_reg_nos)} enrolled students from {self.db_path} (dim={self.enrolled_embeddings.shape[1] if len(self.enrolled_embeddings) > 0 else 512})")
                 return True
             except Exception as e:
                 logger.error(f"Error reading NPZ database: {e}")
 
-        # 2. Backward compatibility: Try deep_embeddings.pkl
-        pkl_path = self.legacy_pkl_path or os.path.join(os.path.dirname(self.db_path), "deep_embeddings.pkl")
-        if os.path.exists(pkl_path):
-            try:
-                with open(pkl_path, "rb") as f:
-                    pkl_data = pickle.load(f)
-
-                # Check students.json for names if needed
-                st_json = self.students_json_path or os.path.join(os.path.dirname(self.db_path), "students.json")
-                student_map = {}
-                if os.path.exists(st_json):
-                    try:
-                        with open(st_json, "r", encoding="utf-8") as jf:
-                            student_map = json.load(jf)
-                    except Exception:
-                        pass
-
-                embs = []
-                r_nos = []
-                names = []
-                for roll, entry in pkl_data.items():
-                    if "centroid" in entry:
-                        embs.append(entry["centroid"])
-                    elif "embedding" in entry:
-                        embs.append(entry["embedding"])
-                    else:
-                        continue
-                    r_nos.append(str(roll))
-                    name = entry.get("name")
-                    if not name and str(roll) in student_map:
-                        name = student_map[str(roll)].get("name")
-                    names.append(str(name or f"Student {roll}"))
-
-                if embs:
-                    self.enrolled_embeddings = np.array(embs, dtype=np.float32)
-                    self.enrolled_reg_nos = r_nos
-                    self.enrolled_names = names
-                    logger.info(f"✅ Loaded {len(r_nos)} students from legacy deep_embeddings.pkl")
-                    # Save to modern NPZ for faster access
-                    self.save_database()
-                    return True
-            except Exception as e:
-                logger.warning(f"Could not load legacy deep_embeddings.pkl: {e}")
-
-        self.enrolled_embeddings = np.empty((0, 128), dtype=np.float32)
+        self.enrolled_embeddings = np.empty((0, self.embedding_dim), dtype=np.float32)
         return False
 
     def save_database(self, db_path: Optional[str] = None) -> bool:
@@ -369,41 +358,36 @@ class FaceAttendanceEngine:
 
     def extract_embedding(self, aligned_face_112: np.ndarray) -> np.ndarray:
         """
-        Extracts L2-normalized feature representation from aligned face crop.
-        Uses SFace ONNX if available, otherwise spatial vectorizer.
+        Extracts 512-dimensional unit L2-normalized feature representation from aligned face crop
+        using AdaFace IR-50 deep metric network.
         """
-        if aligned_face_112 is None or aligned_face_112.shape[:2] != (112, 112):
-            return np.zeros((128,), dtype=np.float32)
+        if aligned_face_112 is None or aligned_face_112.size == 0:
+            return np.zeros((self.embedding_dim,), dtype=np.float32)
 
-        # Primary Path: SFace Deep Neural Embedding
-        if self.sface_recognizer is not None:
-            try:
-                emb = self.sface_recognizer.feature(aligned_face_112)
-                emb = emb.flatten()
-                norm = np.linalg.norm(emb)
-                if norm > 1e-6:
-                    emb /= norm
-                return emb.astype(np.float32)
-            except Exception:
-                pass
+        if self.adaface_recognizer is not None and self.adaface_recognizer.is_loaded:
+            return self.adaface_recognizer.extract_embedding(aligned_face_112)
 
-        # Fallback: Spatial Gradient and Chromatic Vectorizer (128 dims)
+        # Fallback 512-D spatial vectorizer if ONNX model is not present
+        return self._spatial_fallback_512(aligned_face_112)
+
+    def _spatial_fallback_512(self, aligned_face_112: np.ndarray) -> np.ndarray:
+        """Deterministic 512-D spatial gradient vectorizer fallback."""
         resized = cv2.resize(aligned_face_112, (64, 64))
         gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
         gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
         gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
         mag, ang = cv2.cartToPolar(gx, gy, angleInDegrees=True)
 
-        hist_features = []
-        cell_size = 16
-        for r in range(4):
-            for c in range(4):
+        features = []
+        cell_size = 8
+        for r in range(8):
+            for c in range(8):
                 cell_ang = ang[r*cell_size:(r+1)*cell_size, c*cell_size:(c+1)*cell_size]
                 cell_mag = mag[r*cell_size:(r+1)*cell_size, c*cell_size:(c+1)*cell_size]
                 hist, _ = np.histogram(cell_ang, bins=8, range=(0, 360), weights=cell_mag)
-                hist_features.extend(hist)
+                features.extend(hist)
 
-        emb = np.array(hist_features, dtype=np.float32)  # 128 dims
+        emb = np.array(features, dtype=np.float32)  # 512 dims
         norm = np.linalg.norm(emb)
         if norm > 1e-6:
             emb /= norm
@@ -527,7 +511,7 @@ class FaceAttendanceEngine:
             is_live, score, metrics = self.liveness_detector.evaluate_liveness(aligned)
 
             # Deep Embedding (only compute valid embedding if quality passed)
-            embedding = self.extract_embedding(aligned) if q_pass else np.zeros((128,), dtype=np.float32)
+            embedding = self.extract_embedding(aligned) if q_pass else np.zeros((self.embedding_dim,), dtype=np.float32)
 
             results.append({
                 "bbox": bbox,
@@ -617,6 +601,17 @@ class FaceAttendanceEngine:
             action = "enrolled"
 
         self.save_database()
+
+        # Synchronize newly enrolled student into active timetable registry
+        if self.timetable_validator is not None:
+            self.timetable_validator.register_or_update_student(
+                roll_number=reg_no,
+                name=final_name,
+                department=self.timetable_validator.active_session.department,
+                semester=self.timetable_validator.active_session.semester,
+                section=self.timetable_validator.active_session.scheduled_section
+            )
+
         return {
             "success": True,
             "action": action,
@@ -629,23 +624,53 @@ class FaceAttendanceEngine:
     def process_frame(
         self,
         frame: np.ndarray,
-        date_str: Optional[str] = None
+        date_str: Optional[str] = None,
+        camera_id: str = "CAM-01",
+        classroom: str = "CR-101",
+        camera_is_operational: bool = True
     ) -> List[Dict[str, Any]]:
-        """Executes complete pipeline on a CCTV video frame."""
+        """
+        Executes complete intelligent pipeline on a CCTV video frame:
+        1. Optical illumination & clarity assessment (GREEN / YELLOW / RED)
+        2. Adaptive CLAHE & gamma recovery under low lighting
+        3. YuNet face detection & 5-point landmark extraction
+        4. 3D Head Pose estimation (Yaw, Pitch, Roll) & frontality gating
+        5. FQA pre-filter & Passive Anti-Spoofing Triad
+        6. Umeyama canonical 112x112 alignment & SFace embedding
+        7. Section & Timetable validation (cross-section detection)
+        8. Unknown student evidence capturing & registration alerting
+        9. Multi-factor confidence & attendance classification
+        """
         if frame is None or frame.size == 0:
             return []
 
         today = date_str or time.strftime("%Y-%m-%d")
-        faces = self.detect_faces(frame)
+
+        # Step 1: CCTV Footage Quality & Lighting Assessment (Section 1)
+        quality_report = self.image_quality_module.assess_frame(
+            frame,
+            min_blur_threshold=self.min_blur,
+            min_contrast_threshold=self.min_contrast
+        )
+        active_frame = frame
+        enhanced_applied = False
+
+        if quality_report.status == "YELLOW":
+            active_frame, enhanced_applied = self.image_quality_module.enhance_frame(frame, quality_report)
+
+        faces = self.detect_faces(active_frame)
         results = []
 
-        for face in faces:
+        for f_idx, face in enumerate(faces):
             bbox = face["bbox"]
             landmarks = face["landmarks"]
 
-            aligned_face = align_face_112x112(frame, landmarks)
+            # Step 2: Head Pose Estimation (Section 5)
+            pose_estimate = self.head_pose_estimator.estimate_pose(landmarks, active_frame.shape)
 
-            # 1. Quality Assessment Gate
+            aligned_face = align_face_112x112(active_frame, landmarks)
+
+            # Step 3: Face Quality Assessment Gate (FQA)
             q_pass, q_score, q_metrics = assess_face_quality(
                 aligned_face_112=aligned_face,
                 landmarks=landmarks,
@@ -656,18 +681,28 @@ class FaceAttendanceEngine:
                 min_contrast=self.min_contrast
             )
 
-            # 2. Passive Anti-Spoofing
+            # Step 4: Passive Anti-Spoofing Triad
             is_live, liveness_score, liveness_metrics = self.liveness_detector.evaluate_liveness(aligned_face)
 
             matched_reg = "UNKNOWN"
             matched_name = "Unknown Person"
             best_sim = 0.0
+            is_section_valid = True
+            section_reason = ""
+            section_alert = None
+            student_section = "UNKNOWN"
 
-            if not q_pass:
+            # If Camera Quality is RED: recognition is unreliable -> defer to PENDING_VERIFICATION (Section 1)
+            if quality_report.status == "RED":
+                matched_reg = "LOW_QUALITY"
+                matched_name = "Quality Rejected"
+                embedding = np.zeros((self.embedding_dim,), dtype=np.float32)
+                q_pass = False
+            elif not q_pass:
                 matched_reg = "LOW_QUALITY"
                 matched_name = "Quality Rejected"
                 best_sim = 0.0
-                embedding = np.zeros((128,), dtype=np.float32)
+                embedding = np.zeros((self.embedding_dim,), dtype=np.float32)
             else:
                 embedding = self.extract_embedding(aligned_face)
 
@@ -681,29 +716,63 @@ class FaceAttendanceEngine:
                             matched_reg = self.enrolled_reg_nos[best_idx]
                             matched_name = self.enrolled_names[best_idx]
 
-            attendance_confirmed = False
-            if matched_reg not in ("UNKNOWN", "LOW_QUALITY") and is_live and q_pass:
-                locks = self.identity_locks.get(matched_reg, 0) + 1
-                self.identity_locks[matched_reg] = locks
+                            # Step 5: Section & Timetable Validation (Section 3)
+                            sec_val = self.timetable_validator.validate_attendance_eligibility(matched_reg)
+                            is_section_valid = sec_val.is_eligible
+                            section_reason = sec_val.reason
+                            student_section = sec_val.student_section
+                            section_alert = sec_val.alert_payload
 
+            # Step 6: Multi-Factor Attendance Confidence Evaluation (Section 9)
+            is_registered_student = (matched_reg not in ("UNKNOWN", "LOW_QUALITY"))
+            consec_hits = self.identity_locks.get(matched_reg, 0) + 1 if is_registered_student else 0
+
+            confidence_eval = self.confidence_engine.evaluate(
+                similarity_score=best_sim,
+                is_registered=is_registered_student,
+                is_section_valid=is_section_valid,
+                liveness_score=liveness_score,
+                is_live=is_live,
+                quality_score=q_score,
+                camera_quality_status=quality_report.status,
+                frontality_score=pose_estimate.frontality_score,
+                consecutive_track_hits=consec_hits,
+                required_track_hits=self.consecutive_frames_required,
+                camera_is_operational=camera_is_operational
+            )
+
+            # Step 7: Confirmation and Lockout Logic
+            attendance_confirmed = False
+            # Only confirm if section is valid, confidence passed, live, and not quality-rejected
+            if (
+                confidence_eval.passed_threshold and
+                is_section_valid and
+                is_registered_student and
+                is_live and
+                q_pass and
+                quality_report.status != "RED"
+            ):
+                self.identity_locks[matched_reg] = consec_hits
                 key = (matched_reg, today)
-                if locks >= self.consecutive_frames_required and key not in self.verified_attendance:
+                if consec_hits >= self.consecutive_frames_required and key not in self.verified_attendance:
                     attendance_confirmed = True
                     self.verified_attendance[key] = {
                         "roll_number": matched_reg,
                         "student_name": matched_name,
                         "date": today,
                         "time": time.strftime("%H:%M:%S"),
-                        "status": "PRESENT",
+                        "status": "CCTV_VERIFIED_PRESENT",
                         "source": "FACE_RECOGNITION_AI",
                         "similarity": round(best_sim, 3),
+                        "composite_confidence": round(confidence_eval.composite_confidence, 3),
                         "liveness_score": round(liveness_score, 3),
-                        "quality_score": round(q_score, 3)
+                        "quality_score": round(q_score, 3),
+                        "section": student_section
                     }
-                    logger.info(f"🎓 ATTENDANCE CONFIRMED: {matched_reg} - {matched_name} (Sim: {best_sim:.3f})")
+                    logger.info(f"🎓 ATTENDANCE CONFIRMED: {matched_reg} - {matched_name} (Conf: {confidence_eval.composite_confidence:.2f})")
             else:
-                if matched_reg in self.identity_locks:
-                    self.identity_locks[matched_reg] = max(0, self.identity_locks[matched_reg] - 1)
+                if matched_reg in self.identity_locks and consec_hits > 0:
+                    self.identity_locks[matched_reg] = max(0, consec_hits - 1)
 
             results.append({
                 "bbox": bbox,
@@ -711,14 +780,26 @@ class FaceAttendanceEngine:
                 "reg_no": matched_reg,
                 "student_name": matched_name,
                 "confidence": round(best_sim, 3),
+                "composite_confidence": round(confidence_eval.composite_confidence, 3),
+                "classification": confidence_eval.classification,
                 "is_live": is_live,
                 "liveness_score": round(liveness_score, 3),
                 "liveness_metrics": liveness_metrics,
                 "quality_passed": q_pass,
                 "quality_score": round(q_score, 3),
                 "quality_metrics": q_metrics,
+                "camera_quality_status": quality_report.status,
+                "camera_quality_warning": quality_report.warning_message,
+                "is_enhanced": enhanced_applied,
+                "head_pose": pose_estimate.to_dict(),
+                "is_section_valid": is_section_valid,
+                "is_section_mismatch": not is_section_valid and is_registered_student,
+                "student_section": student_section,
+                "section_reason": section_reason,
+                "section_alert": section_alert,
                 "attendance_confirmed": attendance_confirmed,
-                "daily_record": self.verified_attendance.get((matched_reg, today))
+                "daily_record": self.verified_attendance.get((matched_reg, today)),
+                "embedding": embedding
             })
 
         return results

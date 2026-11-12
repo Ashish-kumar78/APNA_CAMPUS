@@ -1,0 +1,69 @@
+{
+  "active_model": "AdaFace",
+  "model_backbone": "IR-50",
+  "model_version": "1.0.0-ms1mv2",
+  "embedding_dimension": 512,
+  "migration_timestamp": "2026-11-12T09:47:55Z",
+  "total_students_migrated": 8,
+  "backup_file": "/Users/somesh/Desktop/face_attendance/models/face_database_sface_backup.npz",
+  "active_database_file": "/Users/somesh/Desktop/face_attendance/models/face_database.npz",
+  "validation_passed": true,
+  "student_audit": [
+    {
+      "roll_number": "1",
+      "name": "Somesh",
+      "status": "SUCCESSFULLY_MIGRATED",
+      "sample_count": 35,
+      "embedding_dimension": 512
+    },
+    {
+      "roll_number": "2",
+      "name": "Somya",
+      "status": "SUCCESSFULLY_MIGRATED",
+      "sample_count": 35,
+      "embedding_dimension": 512
+    },
+    {
+      "roll_number": "3",
+      "name": "Ashish",
+      "status": "SUCCESSFULLY_MIGRATED",
+      "sample_count": 33,
+      "embedding_dimension": 512
+    },
+    {
+      "roll_number": "01",
+      "name": "Somesh",
+      "status": "SUCCESSFULLY_MIGRATED",
+      "sample_count": 35,
+      "embedding_dimension": 512
+    },
+    {
+      "roll_number": "03",
+      "name": "Abhijit",
+      "status": "SUCCESSFULLY_MIGRATED",
+      "sample_count": 33,
+      "embedding_dimension": 512
+    },
+    {
+      "roll_number": "04",
+      "name": "Bishnu",
+      "status": "SUCCESSFULLY_MIGRATED",
+      "sample_count": 33,
+      "embedding_dimension": 512
+    },
+    {
+      "roll_number": "4",
+      "name": "pinku",
+      "status": "SUCCESSFULLY_MIGRATED",
+      "sample_count": 27,
+      "embedding_dimension": 512
+    },
+    {
+      "roll_number": "BISHNU",
+      "name": "Bishnu prsad sahoo",
+      "status": "SUCCESSFULLY_MIGRATED",
+      "sample_count": 33,
+      "embedding_dimension": 512
+    }
+  ]
+}

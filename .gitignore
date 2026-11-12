@@ -4,4 +4,5 @@ __pycache__/
 .DS_Store
 .env
 models/*.yml
+models/adaface_ir50_ms1mv2.onnx
 

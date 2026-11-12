@@ -111,29 +111,41 @@ Displays both today's local CSV punches and live confirmed records from your **N
 face_attendance/
 ├── ai_engine/
 │   ├── config.py                 # Unified thresholds, camera URLs & Neon Cloud URL
-│   ├── examination_interface.py  # Standardized event bus for downstream Model 2 integration
+│   ├── examination_interface.py  # Standardized event bus for downstream integration
 │   ├── core/
 │   │   ├── video_stream.py       # ThreadedVideoCapture (zero buffer lag) & socket probe
 │   │   ├── tracker.py            # SimpleByteTracker (stable track_id & IoU matching)
-│   │   └── event_manager.py      # Face Attendance Event Manager with temporal voting
+│   │   ├── camera_health.py      # RTSP/CCTV stream connection & freeze monitoring
+│   │   ├── timetable_validator.py# Section, classroom & timetable validation
+│   │   ├── headcount_reconciler.py# Headcount summary, collision & duration tracker
+│   │   ├── confidence_engine.py  # Multi-factor weighted confidence scoring
+│   │   └── event_manager.py      # Central Face Attendance Event Orchestrator
 │   ├── models/
-│   │   └── face_engine.py        # Model 1: YuNet + SFace + FQA Filter + Anti-Spoofing
+│   │   ├── face_engine.py        # Central Face Engine: Detection, Liveness, Recognition
+│   │   ├── adaface_recognizer.py # AdaFace IR-50 Deep Metric Neural Engine (512-D)
+│   │   ├── image_enhancer.py     # CLAHE, Gamma, Denoising & Quality Indicators
+│   │   ├── head_pose.py          # 3D Head Pose (solvePnP Yaw/Pitch/Roll) & Observation Buffer
+│   │   └── unknown_student_manager.py # Unregistered face detection & evidence vault
 │   ├── services/
 │   │   └── backend_client.py     # Neon Cloud Direct Sync & local CSV logger
-│   └── tests/                    # Automated Unit & Benchmark Tests (17 tests, 100% PASS)
-├── run_cctv_system.py            # Master CCTV Face Attendance Runner
+│   └── tests/                    # Automated Unit Test Suite (24 tests, 100% PASS)
+├── run_cctv_system.py            # Master CCTV Face Attendance Runner with Live HUD
 ├── enroll_student_cli.py         # Visual Auto-Trigger Student Enrollment
 ├── register_student.py           # Enrollment CLI shortcut
-├── take_attendance.py            # Dedicated Face Attendance Scanner
-├── verify_system.py              # 10-Point Production Diagnostic Health Suite
+├── migrate_sface_to_adaface.py   # Database migration and AdaFace compiler tool
+├── benchmark_sface_vs_adaface.py # Empirical benchmarking suite (FAR/FRR/Low-Light)
+├── train_model.py                # Embedding compiler for dataset/
+├── verify_system.py              # 13-Step / 20-Point Production Diagnostic Health Suite
 ├── view_attendance.py            # Local & Neon Cloud Attendance Viewer
 ├── db_cloud.py                   # Neon PostgreSQL Cloud Helper
 ├── models/
 │   ├── face_detection_yunet_2023mar.onnx
-│   ├── face_recognition_sface_2021dec.onnx
-│   ├── deep_embeddings.pkl
-│   ├── face_database.npz
-│   └── archived_proctor_engine.py # Archived Model 2 reference
+│   ├── adaface_ir50_ms1mv2.onnx
+│   ├── face_database.npz         # 512-D AdaFace student database
+│   ├── face_database_sface_backup.npz
+│   ├── migration_metadata.json
+│   └── students.json
+├── evidence_vault/               # Unregistered student evidence crops
 ├── attendance_logs/              # Local daily CSV backups
 └── .env                          # Neon PostgreSQL Connection String
 ```

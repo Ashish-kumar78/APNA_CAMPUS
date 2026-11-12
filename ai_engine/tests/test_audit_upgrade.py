@@ -65,11 +65,11 @@ class TestAuditAndUpgrade(unittest.TestCase):
                 os.remove(os.path.join(self.logs_dir, f))
             os.rmdir(self.logs_dir)
 
-    def test_sface_128d_dimensionality_and_l2_norm(self):
-        """Phase 2: Confirms SFace output is strictly 128-D with unit L2 norm."""
+    def test_adaface_512d_dimensionality_and_l2_norm(self):
+        """Phase 2: Confirms AdaFace IR-50 output is strictly 512-D with unit L2 norm."""
         dummy_face = np.full((112, 112, 3), 120, dtype=np.uint8)
         emb = self.face_engine.extract_embedding(dummy_face)
-        self.assertEqual(emb.shape, (128,))
+        self.assertEqual(emb.shape, (512,))
         self.assertAlmostEqual(float(np.linalg.norm(emb)), 1.0, places=4)
 
     def test_face_quality_assessment_gates(self):

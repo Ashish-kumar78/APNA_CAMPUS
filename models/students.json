@@ -4,11 +4,11 @@
     "roll_number": "1"
   },
   "2": {
-    "name": "Ashish",
+    "name": "Somya",
     "roll_number": "2"
   },
   "3": {
-    "name": "Bishnu",
+    "name": "Ashish",
     "roll_number": "3"
   },
   "01": {
@@ -22,5 +22,13 @@
   "04": {
     "name": "Bishnu",
     "roll_number": "04"
+  },
+  "4": {
+    "name": "pinku",
+    "roll_number": "4"
+  },
+  "BISHNU": {
+    "name": "Bishnu prsad sahoo",
+    "roll_number": "BISHNU"
   }
 }

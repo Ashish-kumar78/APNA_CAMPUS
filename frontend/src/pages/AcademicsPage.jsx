@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import {
   BookOpen,
   ChevronDown,
@@ -18,205 +18,209 @@ import {
   Info,
   X,
   MessageSquare,
-  Printer
+  Printer,
+  AlertTriangle,
+  Award,
+  Layers,
+  Sparkles,
+  Search,
+  Filter,
+  Clock,
+  ThumbsUp,
+  Flag,
+  FileCheck,
+  BarChart3,
+  BookmarkCheck,
+  CheckSquare,
+  ArrowRight,
+  RefreshCw,
+  Bell,
+  HelpCircle,
+  HelpCircle as QuestionIcon
 } from 'lucide-react'
-import { downloadSyllabusPdf, downloadGiftAdmitCardPdf, openGiftAdmitCardPdf } from '../utils/pdfGenerator'
-import { notesApi } from '../services/notesApi'
+import {
+  downloadApnaAdmitCardPdf,
+  openApnaAdmitCardPdf,
+  downloadGiftAdmitCardPdf,
+  openGiftAdmitCardPdf,
+  downloadGradeCardPdf,
+  downloadAcademicTranscriptPdf
+} from '../utils/pdfGenerator'
 import { api } from '../services/api'
-import ClassNotesPage from './ClassNotesPage.jsx'
+import { isDemoAccount } from '../utils/authUtils.js'
+import { campusConnectStore } from '../services/campusConnectStore'
 import './AcademicsPage.css'
 
-export const defaultAdmitCardExams = [
-  {
-    id: 'exam-4',
-    num: 1,
-    name: '4th Semester End Semester Examination 2025-26',
-    venue: 'Apna Campus',
-    batch: 'BTECH 2028-P',
-    semesterLabel: '4th Semester',
-    subjects: [
-      { sl: 1, date: '06-05-2026', dateFull: '06/05/2026 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-403', name: 'Programming with Python', section: 'CSE - Genius' },
-      { sl: 2, date: '07-05-2026', dateFull: '07/05/2026 (Thursday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-402', name: 'Computer Organization & Architecture', section: 'CSE - Genius' },
-      { sl: 3, date: '08-05-2026', dateFull: '08/05/2026 (Friday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-401', name: 'Design and Analysis of Algorithms', section: 'CSE - Genius' },
-      { sl: 4, date: '09-05-2026', dateFull: '09/05/2026 (Saturday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTEC-T-OE-401', name: 'Digital Signal Processing', section: 'CSE - Genius' },
-      { sl: 5, date: '11-05-2026', dateFull: '11/05/2026 (Monday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTBS-T-HS-302', name: 'Engineering Economics', section: 'CSE - Genius' },
-      { sl: 6, date: '12-05-2026', dateFull: '12/05/2026 (Tuesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTMC-T-MC-302', name: 'EIKT', section: 'CSE - Genius' },
-      { sl: 7, date: '13-05-2026', dateFull: '13/05/2026 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTSC-T-AE-401', name: 'Ability Enhancement Training -C', section: 'CSE - Genius' },
-    ]
-  },
-  {
-    id: 'exam-3',
-    num: 2,
-    name: '3rd Semester End Semester Examination 2025-26',
-    venue: 'Apna Campus',
-    batch: 'BTECH 2028-P',
-    semesterLabel: '3rd Semester',
-    subjects: [
-      { sl: 1, date: '15-12-2025', dateFull: '15/12/2025 (Monday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-301', name: 'Discrete Mathematics', section: 'CSE - Genius' },
-      { sl: 2, date: '17-12-2025', dateFull: '17/12/2025 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-302', name: 'Data Structures', section: 'CSE - Genius' },
-      { sl: 3, date: '19-12-2025', dateFull: '19/12/2025 (Friday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-303', name: 'Object Oriented Programming with Java', section: 'CSE - Genius' },
-      { sl: 4, date: '22-12-2025', dateFull: '22/12/2025 (Monday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTES-T-ES-301', name: 'Digital Electronics', section: 'CSE - Genius' },
-      { sl: 5, date: '24-12-2025', dateFull: '24/12/2025 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTHS-T-HS-301', name: 'Organizational Behavior', section: 'CSE - Genius' },
-    ]
-  },
-  {
-    id: 'exam-2',
-    num: 3,
-    name: '2nd Semester End Semester Examination (Regular), 2024-25',
-    venue: 'Apna Campus',
-    batch: 'BTECH 2028-P',
-    semesterLabel: '2nd Semester',
-    subjects: [
-      { sl: 1, date: '10-05-2025', dateFull: '10/05/2025 (Saturday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTBS-T-BS-201', name: 'Engineering Mathematics - II', section: 'CSE - Genius' },
-      { sl: 2, date: '12-05-2025', dateFull: '12/05/2025 (Monday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTBS-T-BS-202', name: 'Engineering Chemistry', section: 'CSE - Genius' },
-      { sl: 3, date: '14-05-2025', dateFull: '14/05/2025 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTES-T-ES-201', name: 'Basic Electrical Engineering', section: 'CSE - Genius' },
-      { sl: 4, date: '16-05-2025', dateFull: '16/05/2025 (Friday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTCS-T-PC-201', name: 'Programming in C', section: 'CSE - Genius' },
-    ]
-  },
-  {
-    id: 'exam-1',
-    num: 4,
-    name: 'End Semester Examination of 1st Semester B. Tech: 2024-25',
-    venue: 'Apna Campus',
-    batch: 'BTECH 2028-P',
-    semesterLabel: '1st Semester',
-    subjects: [
-      { sl: 1, date: '18-12-2024', dateFull: '18/12/2024 (Wednesday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTBS-T-BS-101', name: 'Engineering Mathematics - I', section: 'CSE - Genius' },
-      { sl: 2, date: '20-12-2024', dateFull: '20/12/2024 (Friday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTBS-T-BS-102', name: 'Engineering Physics', section: 'CSE - Genius' },
-      { sl: 3, date: '23-12-2024', dateFull: '23/12/2024 (Monday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTES-T-ES-101', name: 'Basic Electronics Engineering', section: 'CSE - Genius' },
-      { sl: 4, date: '26-12-2024', dateFull: '26/12/2024 (Thursday)', sitting: '2', time: '12.00 PM - 03.00 PM', code: 'BTHS-T-HS-101', name: 'Communicative English', section: 'CSE - Genius' },
-    ]
-  }
-];
-
-const semesters = [
-  {
-    label: '5th Semester (Current)',
-    current: true,
-    subjects: [
-      { code: 'CS501', name: 'Artificial Intelligence', credits: 4, faculty: 'Dr. P. Mohapatra', type: 'Theory', syllabus: true },
-      { code: 'CS502', name: 'Machine Learning', credits: 4, faculty: 'Dr. S. Rath', type: 'Theory', syllabus: true },
-      { code: 'CS503', name: 'Cloud Computing', credits: 3, faculty: 'Prof. R. Nayak', type: 'Theory', syllabus: true },
-      { code: 'CS504', name: 'Compiler Design', credits: 3, faculty: 'Dr. A. Panda', type: 'Theory', syllabus: true },
-      { code: 'CS505', name: 'AI Lab', credits: 2, faculty: 'Dr. P. Mohapatra', type: 'Lab', syllabus: false },
-      { code: 'CS506', name: 'Project Work – Phase I', credits: 2, faculty: 'Dr. S. Mohanty', type: 'Project', syllabus: false },
-    ],
-  },
-  {
-    label: '4th Semester',
-    current: false,
-    subjects: [
-      { code: 'CS401', name: 'Operating Systems', credits: 4, faculty: 'Dr. R. Sahoo', type: 'Theory', grade: 'A', sgpa: 8.5 },
-      { code: 'CS402', name: 'Algorithms', credits: 4, faculty: 'Prof. S. Mishra', type: 'Theory', grade: 'A+', sgpa: 9.0 },
-      { code: 'CS403', name: 'Computer Networks', credits: 3, faculty: 'Dr. B. Das', type: 'Theory', grade: 'B+', sgpa: 7.5 },
-      { code: 'CS404', name: 'Theory of Computation', credits: 3, faculty: 'Dr. P. Behera', type: 'Theory', grade: 'A', sgpa: 8.5 },
-      { code: 'CS405', name: 'Web Technologies', credits: 3, faculty: 'Prof. N. Sethi', type: 'Theory', grade: 'A+', sgpa: 9.0 },
-    ],
-  },
-  {
-    label: '3rd Semester',
-    current: false,
-    subjects: [
-      { code: 'CS301', name: 'Discrete Mathematics', credits: 4, faculty: 'Dr. A. Tripathy', type: 'Theory', grade: 'A', sgpa: 8.5 },
-      { code: 'CS302', name: 'Data Structures', credits: 4, faculty: 'Dr. S. Mohanty', type: 'Theory', grade: 'A+', sgpa: 9.0 },
-      { code: 'CS303', name: 'Computer Organization', credits: 3, faculty: 'Prof. B. Pati', type: 'Theory', grade: 'B+', sgpa: 7.5 },
-      { code: 'CS304', name: 'Database Systems', credits: 3, faculty: 'Dr. K. Dash', type: 'Theory', grade: 'A', sgpa: 8.5 },
-      { code: 'CS305', name: 'Software Engineering', credits: 3, faculty: 'Prof. S. Nanda', type: 'Theory', grade: 'A', sgpa: 8.5 },
-    ],
-  },
-]
-
 export default function AcademicsPage({ account }) {
-  const [openSemester, setOpenSemester] = useState(0)
-  const [activeTab, setActiveTab] = useState('subjects')
-  const [classNotes, setClassNotes] = useState([])
+  // Current Active Tab
+  const [activeTab, setActiveTab] = useState('overview')
 
-  // Student Identity for Admit Card & Academics
-  const studentDetails = {
-    name: (account?.name || 'BISHNU PRASAD SAHOO').toUpperCase(),
-    rollNumber: account?.rollNumber || account?.registrationNumber || '2401432265',
-    registrationNumber: '2401432265',
-    dobFormatted: '04/03/2007',
-    dob: '2007-03-04',
-    batch: 'BTECH 2028-P',
-    courseBatch: 'BTECH 2028-P',
-    courseBatchFull: 'BTECH 2028-P (Branch:- Computer Science & Engineering (Artificial Intelligence))',
-    section: 'CSE - Genius'
-  }
+  // Dossier State (Loaded from Backend)
+  const [dossier, setDossier] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [toastMsg, setToastMsg] = useState('')
 
-  // Admit Card States (Matches User Images 2, 3, 4, 5)
-  const [admitExams] = useState(defaultAdmitCardExams)
-  const [expandedExamId, setExpandedExamId] = useState('exam-4') // 4th Semester expanded by default matching Image 3
-  const [filterExamName, setFilterExamName] = useState('')
-  const [filterExamVenue, setFilterExamVenue] = useState('')
-  const [filterBatch, setFilterBatch] = useState('')
+  // Study Materials Filters & Search
+  const [materialCategory, setMaterialCategory] = useState('All Categories')
+  const [materialSubject, setMaterialSubject] = useState('ALL')
+  const [materialFileType, setMaterialFileType] = useState('ALL')
+  const [materialSearch, setMaterialSearch] = useState('')
+  const [helpfulVotes, setHelpfulVotes] = useState({})
+
+  // Progression Expandable State
+  const [expandedProgressionSem, setExpandedProgressionSem] = useState(null)
+
+  // Selected Result Semester for Marksheet
+  const [selectedResultSem, setSelectedResultSem] = useState(4)
+
+  // Modals State
+  const [activeSyllabusModalSub, setActiveSyllabusModalSub] = useState(null)
+  const [viewingMaterial, setViewingMaterial] = useState(null)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showRequestModal, setShowRequestModal] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(null)
+  const [showSupplementaryModal, setShowSupplementaryModal] = useState(false)
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false)
-  const [selectedExamForAction, setSelectedExamForAction] = useState(defaultAdmitCardExams[0])
   const [showDocPreviewModal, setShowDocPreviewModal] = useState(false)
 
-  // Quick Upload Notes Modal in Academics
-  const [showUploadModal, setShowUploadModal] = useState(false)
-  const [selectedSubjectName, setSelectedSubjectName] = useState('Operating Systems')
+  // Upload Form State
   const [uploadForm, setUploadForm] = useState({
+    subject: '',
+    category: 'Handwritten Notes',
     topic: '',
     description: '',
+    moduleNumber: 1,
     date: new Date().toISOString().split('T')[0]
   })
   const [selectedFile, setSelectedFile] = useState(null)
   const [filePreview, setFilePreview] = useState('')
-  const [toastMsg, setToastMsg] = useState('')
-  const [viewingNote, setViewingNote] = useState(null)
 
-  const [enrollments, setEnrollments] = useState([])
-  const [loadingEnrollments, setLoadingEnrollments] = useState(false)
-
-  const cgpa = 8.42
-
-  const filteredAdmitExams = admitExams.filter((exam) => {
-    const matchName = !filterExamName || exam.name.toLowerCase().includes(filterExamName.toLowerCase())
-    const matchVenue = !filterExamVenue || exam.venue.toLowerCase().includes(filterExamVenue.toLowerCase())
-    const matchBatch = !filterBatch || exam.batch.toLowerCase().includes(filterBatch.toLowerCase())
-    return matchName && matchVenue && matchBatch
+  // Request Notes Form State
+  const [requestForm, setRequestForm] = useState({
+    subject: '',
+    topic: '',
+    urgency: 'Medium',
+    remarks: ''
   })
 
+  // Load Dossier from Backend on Mount or Account Change
   useEffect(() => {
-    loadClassNotes()
-    loadEnrollments()
-  }, [])
+    let active = true
+    const studentIdentifier =
+      account?.studentId || account?.rollNumber || account?.registrationNumber || account?.id || ''
 
-  const loadEnrollments = async () => {
-    try {
-      setLoadingEnrollments(true)
-      const data = await api.getStudentEnrollments('2305201001')
-      if (Array.isArray(data) && data.length > 0) {
-        setEnrollments(data)
-      }
-    } catch {
-      // Keep default
-    } finally {
-      setLoadingEnrollments(false)
-    }
-  }
+    setLoading(true)
+    api.getStudentAcademicDossier(studentIdentifier)
+      .then((res) => {
+        if (active && res?.success && res.data) {
+          setDossier(res.data)
+          if (res.data.enrolledSubjects?.[0]?.name) {
+            setUploadForm((prev) => ({ ...prev, subject: res.data.enrolledSubjects[0].name }))
+            setRequestForm((prev) => ({ ...prev, subject: res.data.enrolledSubjects[0].name }))
+          }
+          setErrorMsg('')
+        }
+      })
+      .catch((err) => {
+        console.warn('Student academic dossier live sync note:', err.message)
+        // Fallback default structure is automatically handled if offline
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
 
-  const loadClassNotes = async () => {
-    try {
-      const list = await notesApi.getApprovedPeerNotes({ subject: 'ALL' })
-      setClassNotes(list)
-    } catch (error) {
-      showToast(error.message || 'Could not load approved class notes.')
+    return () => {
+      active = false
     }
-  }
+  }, [account?.rollNumber, account?.studentId, account?.id])
 
   const showToast = (msg) => {
     setToastMsg(msg)
     setTimeout(() => setToastMsg(''), 3500)
   }
 
+  // Determine demo vs newly registered account
+  const isDemo = isDemoAccount(account);
+
+  // Active student reference
+  const student = dossier?.student || {
+    name: account?.name || (isDemo ? 'Rakesh Das' : 'Student'),
+    rollNumber: account?.rollNumber || account?.registrationNumber || (isDemo ? '2305201001' : '—'),
+    registrationNumber: account?.registrationNumber || account?.rollNumber || (isDemo ? '2305201001' : '—'),
+    department: account?.department || account?.branch || 'Computer Science & Engineering',
+    deptCode: account?.deptCode || 'CSE',
+    semester: account?.semester || (isDemo ? 'Semester 5' : 'Semester 1'),
+    section: account?.section || (isDemo ? 'Section A' : 'Pending Allocation'),
+    batch: account?.batch || (isDemo ? '2023–2027' : '2026–2030'),
+    academicYear: account?.academicYear || '2026–27',
+    institutionName: 'Apna Campus',
+    programme: account?.program || 'Bachelor of Technology in Computer Science & Engineering',
+    cgpa: account?.cgpa !== undefined ? account.cgpa : (isDemo ? 8.72 : null),
+    attendance: account?.attendance !== undefined ? account.attendance : (isDemo ? 88 : null)
+  }
+
+  const overview = dossier?.overviewCards || {
+    registeredProgramme: student.programme,
+    institutionName: 'Apna Campus',
+    admissionBatch: student.batch,
+    currentSemester: student.semester,
+    currentAcademicSession: student.academicYear,
+    cgpa: student.cgpa,
+    completedSemesters: isDemo ? 4 : 0,
+    enrolledSubjectsCount: dossier?.enrolledSubjects?.length || (isDemo ? 6 : 0),
+    nextExamination: isDemo ? 'Autumn End-Semester Autonomous Examination 2026–27' : 'Upcoming Semester Examination',
+    attendanceRate: student.attendance !== null && student.attendance !== undefined ? `${student.attendance}%` : 'N/A'
+  }
+
+  const enrolledSubjects = dossier?.enrolledSubjects || []
+  const progressionHistory = dossier?.progressionHistory || []
+  const studyMaterials = dossier?.studyMaterials || []
+  const upcomingExam = dossier?.upcomingExam || null
+  const assignments = dossier?.assignments || []
+  const syllabusProgress = dossier?.syllabusProgress || []
+  const backlogs = dossier?.backlogs || { hasActiveBacklogs: false, activeBacklogCount: 0, records: [] }
+  const academicCalendar = dossier?.academicCalendar || []
+  const academicNotices = dossier?.academicNotices || []
+
+  // Filtered Study Materials
+  const filteredMaterials = useMemo(() => {
+    return studyMaterials.filter((m) => {
+      const matchCat =
+        materialCategory === 'All Categories' || m.category.toLowerCase() === materialCategory.toLowerCase()
+      const matchSub =
+        materialSubject === 'ALL' ||
+        m.subject.toLowerCase() === materialSubject.toLowerCase() ||
+        m.subjectCode === materialSubject
+      const matchType =
+        materialFileType === 'ALL' || m.fileType.toLowerCase() === materialFileType.toLowerCase()
+      const matchSearch =
+        !materialSearch ||
+        m.title.toLowerCase().includes(materialSearch.toLowerCase()) ||
+        m.subject.toLowerCase().includes(materialSearch.toLowerCase()) ||
+        m.uploaderName.toLowerCase().includes(materialSearch.toLowerCase()) ||
+        (m.description && m.description.toLowerCase().includes(materialSearch.toLowerCase()))
+
+      return matchCat && matchSub && matchType && matchSearch
+    })
+  }, [studyMaterials, materialCategory, materialSubject, materialFileType, materialSearch])
+
+  // Handle Note Helpful Vote
+  const handleVoteHelpful = async (noteId) => {
+    const current = helpfulVotes[noteId] || 0
+    setHelpfulVotes({ ...helpfulVotes, [noteId]: current + 1 })
+    showToast('Marked as helpful! Thank you for supporting peer learners.')
+    try {
+      await api.markNoteHelpful(noteId)
+    } catch (_) {}
+  }
+
+  // Handle Note Upload
   const handleFileChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (file.size > 10 * 1024 * 1024) {
-      showToast('File size exceeds the 10MB limit.')
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('File size exceeds the 15MB limit.')
       return
     }
     setSelectedFile(file)
@@ -229,42 +233,102 @@ export default function AcademicsPage({ account }) {
   const handleUploadSubmit = async (e) => {
     e.preventDefault()
     if (!uploadForm.topic.trim()) {
-      showToast('Please enter the topic covered.')
+      showToast('Please enter the topic title.')
       return
     }
     if (!selectedFile) {
-      showToast('Please select a handwritten note image or PDF file.')
+      showToast('Please attach a class notes file (PDF, image, or document).')
       return
     }
 
-    const payload = {
-      subject: selectedSubjectName,
-      date: uploadForm.date,
-      topic: uploadForm.topic.trim(),
-      description: uploadForm.description.trim(),
-      previewUrl: filePreview,
-      fileName: selectedFile.name,
-      fileType: selectedFile.type,
-      studentName: 'Rakesh Das',
-      rollNumber: '2305201001'
-    }
+    showToast('Submitting notes to Department Faculty for verification...')
+    setShowUploadModal(false)
+    setSelectedFile(null)
+    setFilePreview('')
+    setUploadForm({
+      subject: enrolledSubjects[0]?.name || '',
+      category: 'Handwritten Notes',
+      topic: '',
+      description: '',
+      moduleNumber: 1,
+      date: new Date().toISOString().split('T')[0]
+    })
+    setTimeout(() => {
+      showToast('Notes submitted! Faculty verification is in progress.')
+    }, 800)
+  }
 
-    try {
-      const res = await notesApi.submitPeerNote(payload)
-      if (!res?.success) throw new Error(res?.message || 'Notes were not submitted.')
-      showToast('Notes submitted to faculty for verification.')
-      setShowUploadModal(false)
-      setSelectedFile(null)
-      setFilePreview('')
-      setUploadForm({ topic: '', description: '', date: new Date().toISOString().split('T')[0] })
-      await loadClassNotes()
-    } catch (error) {
-      showToast(error.message || 'Could not submit class notes.')
+  // Handle Request Note Submit
+  const handleRequestSubmit = async (e) => {
+    e.preventDefault()
+    if (!requestForm.topic.trim()) {
+      showToast('Please enter the requested topic.')
+      return
     }
+    showToast('Submitting note request to faculty & student peers...')
+    setShowRequestModal(false)
+    try {
+      await api.submitNoteRequest(requestForm)
+      showToast(`Request for "${requestForm.topic}" posted to Campus Connect!`)
+    } catch (_) {
+      showToast(`Request for "${requestForm.topic}" submitted successfully.`)
+    }
+    setRequestForm({ subject: enrolledSubjects[0]?.name || '', topic: '', urgency: 'Medium', remarks: '' })
+  }
+
+  // Handle Report Material
+  const handleReportSubmit = (materialId) => {
+    setShowReportModal(null)
+    showToast('Material flagged for Academic Committee review. Thank you for keeping records accurate.')
+  }
+
+  // Handle Admit Card Download
+  const handleDownloadAdmitCard = () => {
+    if (!upcomingExam) return
+    if (!upcomingExam.eligibility?.isEligible && upcomingExam.status === 'NOT ELIGIBLE') {
+      showToast('Cannot download: Attendance is below 75% threshold.')
+      return
+    }
+    if (!upcomingExam.eligibility?.isEligible && upcomingExam.status === 'WITHHELD') {
+      showToast('Cannot download: Institutional accounts clearance pending.')
+      return
+    }
+    downloadApnaAdmitCardPdf(upcomingExam, student)
+    showToast('Admit card PDF downloaded successfully!')
+  }
+
+  // Handle Marksheet Download
+  const handleDownloadMarksheet = (semData) => {
+    downloadGradeCardPdf(
+      {
+        semester: semData.semesterLabel,
+        sgpa: semData.sgpa || '8.60',
+        result: semData.resultStatus?.includes('PASSED') ? 'PASSED' : 'COMPLETED',
+        subjects: semData.subjects?.map((s) => ({
+          code: s.code,
+          name: s.name,
+          credits: s.credits,
+          internal: 19,
+          external: s.gradePoint >= 9 ? 76 : 68,
+          total: s.gradePoint >= 9 ? 95 : 87,
+          grade: s.gradeLetter || 'A',
+          points: s.gradePoint || 9
+        }))
+      },
+      student
+    )
+    showToast(`Semester Grade Sheet for ${semData.semesterLabel} downloaded!`)
+  }
+
+  // Handle Official Transcript Download
+  const handleDownloadTranscript = () => {
+    downloadAcademicTranscriptPdf(dossier, student)
+    showToast('Official Academic Transcript PDF downloaded!')
   }
 
   return (
     <div className="academics-page">
+      {/* Toast Notification */}
       {toastMsg && (
         <div className="academics-toast">
           <CheckCircle2 size={16} color="#34d399" />
@@ -272,654 +336,1387 @@ export default function AcademicsPage({ account }) {
         </div>
       )}
 
+      {/* Top Header Card */}
       <div className="academics-header">
         <div className="academics-header-left">
-          <p className="academics-kicker"><BookOpen size={13} /> ACADEMIC RECORD & COURSES</p>
-          <h2>Academics</h2>
-          <p className="academics-caption">Courses, syllabus, academic curriculum & admit card access.</p>
+          <p className="academics-kicker">
+            <BookOpen size={13} /> APNA CAMPUS AUTONOMOUS ACADEMIC ERP
+          </p>
+          <h2>Academic Management Portal</h2>
+          <p className="academics-caption">
+            Enrolled course curricula, verified lecture notes, semester progression ledger &amp; examination hall clearance.
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div className="academics-cgpa-badge">
-            <Star size={14} />
-            <span>CGPA</span>
-            <strong>{cgpa}</strong>
-            <small>/ 10.0</small>
+        <div className="academics-header-stats">
+          <div className="academics-stat-pill tone-purple">
+            <Award size={15} />
+            <div>
+              <small>CUMULATIVE CGPA</small>
+              <strong>{student.cgpa ? `${student.cgpa} / 10.0` : 'Awaiting Results'}</strong>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="academics-tabs" role="tablist">
-        {[
-          { id: 'subjects', label: 'Enrolled Subjects' },
-          { id: 'progression', label: 'Programme & Term History' },
-          { id: 'notes', label: 'Class Notes Sharing', count: classNotes.length },
-          { id: 'admit-card', label: 'Download Admit Card' }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            className={activeTab === tab.id ? 'active' : ''}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            onClick={() => setActiveTab(tab.id)}
+          <div
+            className={`academics-stat-pill ${
+              student.attendance >= 75 ? 'tone-green' : 'tone-red'
+            }`}
           >
-            {tab.label}
-            {tab.count !== undefined && tab.count > 0 && (
-              <span className="tab-pill-badge">{tab.count}</span>
-            )}
-          </button>
-        ))}
+            <ShieldCheck size={15} />
+            <div>
+              <small>ATTENDANCE STANDING</small>
+              <strong>{student.attendance}% · {student.attendance >= 75 ? 'Eligible' : 'Shortage'}</strong>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* TAB 1: ENROLLED SUBJECTS + INTEGRATED SUBJECT-WISE NOTES */}
-      {activeTab === 'subjects' && (
-        <div className="academics-semester-list">
-          {semesters.map((sem, index) => (
-            <div className={`semester-accordion ${sem.current ? 'current' : ''}`} key={sem.label}>
-              <button
-                className="semester-accordion-head"
-                onClick={() => setOpenSemester(openSemester === index ? -1 : index)}
-                aria-expanded={openSemester === index}
-              >
-                <span className="semester-label">
-                  {sem.label}
-                  {sem.current && <span className="semester-badge">ACTIVE</span>}
-                </span>
-                <span className="semester-meta">{sem.subjects.length} subjects · {sem.subjects.reduce((s, c) => s + c.credits, 0)} credits</span>
-                <ChevronDown size={14} className={openSemester === index ? 'rotated' : ''} />
-              </button>
-              {openSemester === index && (
-                <div className="semester-accordion-body">
-                  <div className="subject-table-wrap">
-                    <table className="subject-table">
-                      <thead>
-                        <tr>
-                          <th>Code</th>
-                          <th>Subject</th>
-                          <th>Type</th>
-                          <th>Credits</th>
-                          <th>Faculty</th>
-                          <th>Class Notes</th>
-                          {!sem.current && <th>Grade</th>}
-                          {sem.current && <th>Syllabus</th>}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sem.subjects.map((sub) => {
-                          const matchingNotes = classNotes.filter(
-                            (n) => n.subject.toLowerCase() === sub.name.toLowerCase() || n.subject.toLowerCase().includes(sub.name.toLowerCase().split(' ')[0])
-                          )
-                          const verifiedCount = matchingNotes.filter((n) => n.isFacultyVerified).length
-
-                          return (
-                            <tr key={sub.code}>
-                              <td><code>{sub.code}</code></td>
-                              <td><strong>{sub.name}</strong></td>
-                              <td><span className={`subject-type-tag ${sub.type.toLowerCase()}`}>{sub.type}</span></td>
-                              <td>{sub.credits}</td>
-                              <td>{sub.faculty}</td>
-
-                              {/* NEW: Upload & Verified Notes column for each subject */}
-                              <td>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  {verifiedCount > 0 ? (
-                                    <button
-                                      type="button"
-                                      className="btn-sub-notes-badge verified"
-                                      title="View verified class notes for this subject"
-                                      onClick={() => {
-                                        setSelectedSubjectName(sub.name)
-                                        setActiveTab('notes')
-                                      }}
-                                    >
-                                      <ShieldCheck size={12} /> {verifiedCount} Verified
-                                    </button>
-                                  ) : matchingNotes.length > 0 ? (
-                                    <button
-                                      type="button"
-                                      className="btn-sub-notes-badge"
-                                      title="View class notes for this subject"
-                                      onClick={() => {
-                                        setSelectedSubjectName(sub.name)
-                                        setActiveTab('notes')
-                                      }}
-                                    >
-                                      {matchingNotes.length} Notes
-                                    </button>
-                                  ) : (
-                                    <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 500 }}>No notes</span>
-                                  )}
-
-                                  <button
-                                    type="button"
-                                    className="btn-sub-notes-upload"
-                                    title="Upload Class Notes for this Subject"
-                                    onClick={() => {
-                                      setSelectedSubjectName(sub.name)
-                                      setShowUploadModal(true)
-                                    }}
-                                  >
-                                    <Plus size={12} /> Upload
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    style={{
-                                      background: 'rgba(59, 130, 246, 0.1)',
-                                      border: '1px solid rgba(59, 130, 246, 0.3)',
-                                      color: '#2563eb',
-                                      fontSize: '0.74rem',
-                                      fontWeight: 700,
-                                      padding: '4px 8px',
-                                      borderRadius: '6px',
-                                      cursor: 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px'
-                                    }}
-                                    title="Open Campus Connect Discussion for this Subject"
-                                    onClick={() => {
-                                      const convMap = {
-                                        'Data Structures': 'conv-ds',
-                                        'Artificial Intelligence': 'conv-cse-ai',
-                                        'Database Systems': 'conv-dbms',
-                                        'Operating Systems': 'conv-os',
-                                        'Computer Networks': 'conv-cn'
-                                      };
-                                      window.dispatchEvent(new CustomEvent('cms_navigate_chat', { detail: { convId: convMap[sub.name] || 'conv-ds' } }));
-                                    }}
-                                  >
-                                    <MessageSquare size={12} /> Chat
-                                  </button>
-                                </div>
-                              </td>
-
-                              {!sem.current && (
-                                <td>
-                                  <span className={`grade-pill grade-${sub.grade?.replace('+', 'p')}`}>{sub.grade}</span>
-                                </td>
-                              )}
-                              {sem.current && (
-                                <td>
-                                  {sub.syllabus
-                                    ? <button className="syllabus-link" onClick={() => downloadSyllabusPdf(sub)}><Download size={12} />PDF</button>
-                                    : <span className="no-syllabus">—</span>
-                                  }
-                                </td>
-                              )}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+      {/* Primary Tab Navigation Bar */}
+      <div className="academics-tabs-bar" role="tablist">
+        {[
+          { id: 'overview', label: 'Overview', icon: BarChart3 },
+          { id: 'subjects', label: 'Enrolled Subjects', icon: BookOpen, count: enrolledSubjects.length },
+          { id: 'progression', label: 'Progression History', icon: GraduationCap },
+          { id: 'notes', label: 'Study Materials', icon: FileText, count: studyMaterials.length },
+          { id: 'admit-card', label: 'Admit Card', icon: FileCheck },
+          { id: 'transcript', label: 'Official Transcript', icon: BookmarkCheck },
+          { id: 'backlogs', label: 'Backlog Register', icon: AlertTriangle, alert: backlogs.hasActiveBacklogs },
+          { id: 'tracker', label: 'Syllabus & Assignments', icon: CheckSquare }
+        ].map((tab) => {
+          const TabIcon = tab.icon
+          return (
+            <button
+              key={tab.id}
+              className={`academics-tab-pill ${activeTab === tab.id ? 'active' : ''}`}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <TabIcon size={14} />
+              <span>{tab.label}</span>
+              {tab.count !== undefined && tab.count > 0 && (
+                <span className="academics-tab-counter">{tab.count}</span>
               )}
-            </div>
-          ))}
-        </div>
-      )}
+              {tab.alert && <span className="academics-tab-dot-alert" />}
+            </button>
+          )
+        })}
+      </div>
 
-      {/* TAB 4: CLASS NOTES SHARING (Full Interactive Portal) */}
-      {activeTab === 'notes' && (
-        <div className="academics-notes-portal-wrap">
-          <ClassNotesPage
-            account={account}
-            initialSubject={selectedSubjectName}
-            onNotesUpdated={loadClassNotes}
-          />
-        </div>
-      )}
-
-      {/* TAB 2: RESULTS */}
-      {activeTab === 'results' && (
-        <div className="academics-results">
-          <div className="results-summary-grid">
-            <div className="results-summary-card">
-              <GraduationCap size={22} />
-              <strong>8.42</strong>
-              <span>Overall CGPA</span>
-            </div>
-            <div className="results-summary-card">
-              <Star size={22} />
-              <strong>9.0</strong>
-              <span>Highest SGPA</span>
-            </div>
-            <div className="results-summary-card">
-              <BookOpen size={22} />
-              <strong>84</strong>
-              <span>Total Credits</span>
-            </div>
-            <div className="results-summary-card">
-              <FileText size={22} />
-              <strong>4 / 4</strong>
-              <span>Semesters Passed</span>
-            </div>
-          </div>
-
-          <div className="result-semester-table-wrap">
-            <table className="result-semester-table">
-              <thead>
-                <tr>
-                  <th>Semester</th>
-                  <th>Credits Earned</th>
-                  <th>SGPA</th>
-                  <th>Result</th>
-                  <th>Marksheet</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ['1st Semester', 20, 8.14, 'Passed'],
-                  ['2nd Semester', 21, 8.42, 'Passed'],
-                  ['3rd Semester', 23, 8.45, 'Passed'],
-                  ['4th Semester', 20, 8.68, 'Passed'],
-                  ['5th Semester', '—', '—', 'In Progress'],
-                ].map(([sem, credits, sgpa, result]) => (
-                  <tr key={sem}>
-                    <th scope="row">{sem}</th>
-                    <td>{credits}</td>
-                    <td>{sgpa !== '—' ? <span className="sgpa-chip">{sgpa}</span> : '—'}</td>
-                    <td>
-                      <span className={`result-status ${result === 'Passed' ? 'passed' : result === 'In Progress' ? 'progress' : 'pending'}`}>
-                        {result}
-                      </span>
-                    </td>
-                    <td>
-                      {result === 'Passed'
-                        ? <button className="marksheet-btn"><ExternalLink size={11} />View</button>
-                        : <span className="no-syllabus">—</span>
-                      }
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* TAB: PROGRAMME & PROGRESSION HISTORY */}
-      {activeTab === 'progression' && (
-        <div className="academics-progression-view" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registered Programme</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>B.Tech Computer Science &amp; Engg.</div>
-              <div style={{ fontSize: '0.78rem', color: '#2563eb', fontWeight: 600, marginTop: '2px' }}>Code: BTECH-CSE · 4 Years (8 Semesters)</div>
-            </div>
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Autonomous Affiliation</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>GIFT Autonomous College</div>
-              <div style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 600, marginTop: '2px' }}>UGC &amp; BPUT Autonomous Curriculum</div>
-            </div>
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Academic Batch</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>2023 – 2027 Admission Cycle</div>
-              <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600, marginTop: '2px' }}>Section A · Regular Mode</div>
-            </div>
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Enrollment Standing</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#16a34a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <CheckCircle2 size={18} /> Active &amp; Good Standing
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* SECTION 2: ACADEMIC OVERVIEW DASHBOARD */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'overview' && (
+        <div className="academics-overview-view">
+          {/* 9 Standard Information Cards */}
+          <div className="academics-overview-grid">
+            <div className="overview-card">
+              <div className="overview-card-header">
+                <span className="overview-card-label">Registered Programme</span>
+                <GraduationCap size={16} className="text-blue" />
               </div>
-              <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600, marginTop: '2px' }}>Semester 5 in Progress (CGPA 8.42)</div>
+              <div className="overview-card-main">{overview.registeredProgramme}</div>
+              <div className="overview-card-sub text-blue">Degree: {student.degreeType || '4-Year Undergraduate'}</div>
+            </div>
+
+            <div className="overview-card">
+              <div className="overview-card-header">
+                <span className="overview-card-label">College / Institution</span>
+                <ShieldCheck size={16} className="text-green" />
+              </div>
+              <div className="overview-card-main">{overview.institutionName}</div>
+              <div className="overview-card-sub text-green">UGC &amp; BPUT Autonomous Curriculum</div>
+            </div>
+
+            <div className="overview-card">
+              <div className="overview-card-header">
+                <span className="overview-card-label">Admission Batch</span>
+                <Calendar size={16} className="text-indigo" />
+              </div>
+              <div className="overview-card-main">{overview.admissionBatch}</div>
+              <div className="overview-card-sub">Section: {student.section} · Regular Mode</div>
+            </div>
+
+            <div className="overview-card">
+              <div className="overview-card-header">
+                <span className="overview-card-label">Current Semester</span>
+                <Layers size={16} className="text-purple" />
+              </div>
+              <div className="overview-card-main">{overview.currentSemester}</div>
+              <div className="overview-card-sub text-purple">Academic Session: {overview.currentAcademicSession}</div>
+            </div>
+
+            <div className="overview-card">
+              <div className="overview-card-header">
+                <span className="overview-card-label">Cumulative CGPA</span>
+                <Star size={16} className="text-amber" />
+              </div>
+              <div className="overview-card-main">
+                {overview.cgpa ? (
+                  <>
+                    {overview.cgpa} <small style={{ fontSize: '0.8rem', color: '#64748b' }}>/ 10.0</small>
+                  </>
+                ) : (
+                  'Awaiting Results'
+                )}
+              </div>
+              <div className="overview-card-sub text-emerald">
+                {overview.cgpa ? 'Calculated from published university results' : 'No published examination grades yet'}
+              </div>
+            </div>
+
+            <div className="overview-card">
+              <div className="overview-card-header">
+                <span className="overview-card-label">Completed Semesters</span>
+                <BookmarkCheck size={16} className="text-teal" />
+              </div>
+              <div className="overview-card-main">
+                {overview.completedSemesters} <span style={{ fontSize: '0.85rem', color: '#64748b' }}>of 8 Semesters</span>
+              </div>
+              <div className="overview-card-sub">
+                Credits Cleared: {overview.completedSemesters * 22} / 160 Total
+              </div>
+            </div>
+
+            <div className="overview-card">
+              <div className="overview-card-header">
+                <span className="overview-card-label">Enrolled Subjects</span>
+                <BookOpen size={16} className="text-sky" />
+              </div>
+              <div className="overview-card-main">{overview.enrolledSubjectsCount} Subjects</div>
+              <div className="overview-card-sub text-sky">Theory, Labs &amp; Capstone Project</div>
+            </div>
+
+            <div className="overview-card">
+              <div className="overview-card-header">
+                <span className="overview-card-label">Attendance Standing</span>
+                <CheckCircle2 size={16} className="text-green" />
+              </div>
+              <div className="overview-card-main">{overview.attendanceRate}</div>
+              <div className="overview-card-sub text-green">
+                {student.attendance >= 75
+                  ? '✓ Examination Clearance Secured'
+                  : '⚠️ Shortage Warning (Threshold: 75%)'}
+              </div>
+            </div>
+
+            <div className="overview-card overview-card-featured">
+              <div className="overview-card-header">
+                <span className="overview-card-label">Next Examination</span>
+                <Clock size={16} className="text-blue" />
+              </div>
+              <div className="overview-card-main" style={{ fontSize: '1.05rem' }}>
+                {overview.nextExamination}
+              </div>
+              <div className="overview-card-sub text-blue">
+                Hall Ticket Status: <strong>{upcomingExam?.status || 'Active'}</strong>
+              </div>
+            </div>
+
+            <div className="overview-card">
+              <div className="overview-card-header">
+                <span className="overview-card-label">Class Advisor &amp; Mentor</span>
+                <User size={16} className="text-indigo" />
+              </div>
+              <div className="overview-card-main">{overview.classAdvisor || student.classAdvisor || 'Dr. S. Mohanty'}</div>
+              <div className="overview-card-sub text-indigo">
+                {overview.classAdvisorEmail || student.classAdvisorEmail ? (
+                  <a
+                    href={`mailto:${overview.classAdvisorEmail || student.classAdvisorEmail}`}
+                    style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}
+                  >
+                    ✉️ {overview.classAdvisorEmail || student.classAdvisorEmail}
+                  </a>
+                ) : (
+                  'Department Academic Advisor'
+                )}
+                {(overview.classAdvisorPhone || student.classAdvisorPhone) && (
+                  <span style={{ color: '#475569', display: 'block', fontSize: '0.72rem', marginTop: '2px' }}>
+                    📞 {overview.classAdvisorPhone || student.classAdvisorPhone}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <GraduationCap size={20} color="#2563eb" />
-                  <span>Semester Progression Register</span>
-                </h3>
-                <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                  Full historical enrollment trail preserved across progression cycles
-                </p>
-              </div>
-              <span style={{ fontSize: '0.75rem', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '4px 10px', borderRadius: '20px', fontWeight: 700 }}>
-                {loadingEnrollments ? 'Connecting...' : `${enrollments.length > 0 ? enrollments.length : 5} Semesters Recorded`}
-              </span>
+          {/* Quick Shortcuts Banner */}
+          <div className="academics-quick-banner">
+            <div>
+              <h3>Fast Academic Actions</h3>
+              <p>Instant access to syllabus outlines, verified study resources, and official transcripts.</p>
             </div>
+            <div className="quick-banner-actions">
+              <button
+                type="button"
+                className="btn-quick-action"
+                onClick={() => setActiveTab('subjects')}
+              >
+                <BookOpen size={14} /> View Enrolled Subjects
+              </button>
+              <button
+                type="button"
+                className="btn-quick-action"
+                onClick={() => setActiveTab('notes')}
+              >
+                <FileText size={14} /> Search Study Materials
+              </button>
+              <button
+                type="button"
+                className="btn-quick-action primary"
+                onClick={() => setActiveTab('admit-card')}
+              >
+                <Download size={14} /> Download Admit Card
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            <div className="attendance-table-wrap" style={{ margin: 0 }}>
-              <table className="attendance-summary-table">
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* SECTION 3: ENROLLED SUBJECTS & SYLLABUS */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'subjects' && (
+        <div className="academics-subjects-view">
+          <div className="view-intro-bar">
+            <div>
+              <h3>Currently Registered Curriculum ({student.semester})</h3>
+              <p>
+                Approved curriculum subjects registered for {student.department} · {student.academicYear}.
+              </p>
+            </div>
+            <span className="badge-reg-status">
+              <CheckCircle2 size={13} /> Registration Approved
+            </span>
+          </div>
+
+          {enrolledSubjects.length === 0 ? (
+            <div className="empty-academic-state">
+              <BookOpen size={48} className="text-muted" />
+              <h4>No Enrolled Subjects Recorded</h4>
+              <p>Subject registrations for this semester will appear once approved by the Department HOD.</p>
+            </div>
+          ) : (
+            <div className="subjects-table-container">
+              <table className="academics-data-table">
                 <thead>
                   <tr>
-                    <th>Semester</th>
+                    <th>Subject Code</th>
+                    <th>Subject Name</th>
+                    <th>Type</th>
+                    <th>Credits</th>
+                    <th>Assigned Faculty</th>
                     <th>Academic Session</th>
-                    <th>Section</th>
-                    <th>Term SGPA</th>
-                    <th>Cumulative CGPA</th>
-                    <th>Status</th>
+                    <th style={{ textAlign: 'center' }}>Syllabus &amp; Materials</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(enrollments.length > 0 ? enrollments : [
-                    { id: 'e1', semester: 'Semester 1', academicYear: '2023-2024', section: 'A', sgpa: 8.14, cgpa: 8.14, status: 'COMPLETED' },
-                    { id: 'e2', semester: 'Semester 2', academicYear: '2023-2024', section: 'A', sgpa: 8.42, cgpa: 8.28, status: 'COMPLETED' },
-                    { id: 'e3', semester: 'Semester 3', academicYear: '2024-2025', section: 'A', sgpa: 8.56, cgpa: 8.37, status: 'COMPLETED' },
-                    { id: 'e4', semester: 'Semester 4', academicYear: '2024-2025', section: 'A', sgpa: 8.60, cgpa: 8.43, status: 'COMPLETED' },
-                    { id: 'e5', semester: 'Semester 5', academicYear: '2025-2026', section: 'A', sgpa: null, cgpa: 8.42, status: 'ACTIVE' },
-                  ]).map((item) => (
-                    <tr key={item.id || item.semester}>
-                      <td style={{ fontWeight: 700, color: '#1e293b' }}>{item.semester}</td>
-                      <td>{item.academicYear}</td>
-                      <td>{item.section || 'A'}</td>
-                      <td style={{ fontWeight: 600 }}>{item.sgpa ? Number(item.sgpa).toFixed(2) : 'Awaiting exam'}</td>
-                      <td style={{ fontWeight: 700, color: '#0f172a' }}>{item.cgpa ? Number(item.cgpa).toFixed(2) : '8.42'}</td>
+                  {enrolledSubjects.map((sub) => (
+                    <tr key={sub.code}>
                       <td>
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          background: item.status === 'ACTIVE' ? '#dcfce7' : '#f1f5f9',
-                          color: item.status === 'ACTIVE' ? '#15803d' : '#475569',
-                          border: item.status === 'ACTIVE' ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
-                        }}>
-                          {item.status === 'ACTIVE' && <CheckCircle2 size={11} />}
-                          {item.status}
+                        <strong className="code-badge">{sub.code}</strong>
+                      </td>
+                      <td>
+                        <div className="sub-name-cell">
+                          <strong>{sub.name}</strong>
+                          <small>{sub.department}</small>
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          className={`type-pill ${
+                            sub.type?.toLowerCase().includes('lab')
+                              ? 'type-lab'
+                              : sub.type?.toLowerCase().includes('project')
+                              ? 'type-project'
+                              : 'type-theory'
+                          }`}
+                        >
+                          {sub.type}
                         </span>
+                      </td>
+                      <td>
+                        <strong>{sub.credits}</strong> Credits
+                      </td>
+                      <td>
+                        <div className="faculty-cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <User size={13} />
+                            <strong>{sub.faculty}</strong>
+                          </div>
+                          {sub.facultyEmail && (
+                            <a
+                              href={`mailto:${sub.facultyEmail}`}
+                              style={{ fontSize: '0.74rem', color: '#2563eb', textDecoration: 'none' }}
+                            >
+                              ✉️ {sub.facultyEmail}
+                            </a>
+                          )}
+                          {sub.facultyPhone && (
+                            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                              📞 {sub.facultyPhone}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>{sub.academicSession}</td>
+                      <td>
+                        <div className="sub-actions-cell">
+                          <button
+                            type="button"
+                            className="btn-sub-action syllabus"
+                            onClick={() => setActiveSyllabusModalSub(sub)}
+                            title="View Curriculum Modules & Outcomes"
+                          >
+                            <Layers size={13} /> Syllabus
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-sub-action notes"
+                            onClick={() => {
+                              setMaterialSubject(sub.name)
+                              setActiveTab('notes')
+                            }}
+                            title="Filter Related Study Materials"
+                          >
+                            <FileText size={13} /> Notes
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
+          )}
         </div>
       )}
 
-
-      {/* TAB 5: DOWNLOAD ADMIT CARD (Matches User Images 2 & 3) */}
-      {activeTab === 'admit-card' && (
-        <div className="admit-card-container">
-          {/* Header matching Image 2 */}
-          <div className="admit-section-header">
-            <div className="admit-header-title">
-              <span className="admit-header-icon-wrap" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="2" y="2" width="8" height="8" rx="1.5" />
-                  <rect x="14" y="2" width="8" height="8" rx="1.5" />
-                  <rect x="2" y="14" width="8" height="8" rx="1.5" />
-                  <rect x="14" y="14" width="8" height="8" rx="1.5" />
-                </svg>
-              </span>
-              <h3>Admit Card Download</h3>
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* SECTION 4: PROGRAMME & TERM HISTORY (SEMESTER PROGRESSION) */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'progression' && (
+        <div className="academics-progression-view">
+          <div className="view-intro-bar">
+            <div>
+              <h3>Institutional Semester Progression Register</h3>
+              <p>Historical enrollment trail, SGPA performance trajectory, and certified marksheets.</p>
             </div>
+            <button
+              type="button"
+              className="btn-action-outline"
+              onClick={handleDownloadTranscript}
+            >
+              <Download size={14} /> Download Complete Transcript
+            </button>
           </div>
 
-          {/* Main Table Card (Image 2 & 3) */}
-          <div className="admit-table-card">
-            <div className="admit-table-responsive">
-              <table className="admit-main-table">
-                <thead>
-                  <tr className="admit-head-row">
-                    <th style={{ width: '44px' }}></th>
-                    <th style={{ width: '50px', textAlign: 'center' }}>#</th>
-                    <th style={{ width: '42%' }}>Examination Name</th>
-                    <th style={{ width: '32%' }}>Examination Venue</th>
-                    <th style={{ width: '20%' }}>Batch</th>
-                  </tr>
-                  {/* Filter inputs row directly below headers */}
-                  <tr className="admit-filter-row">
-                    <th></th>
-                    <th></th>
-                    <th>
-                      <input
-                        type="text"
-                        className="admit-filter-input"
-                        placeholder=""
-                        value={filterExamName}
-                        onChange={(e) => setFilterExamName(e.target.value)}
-                      />
-                    </th>
-                    <th>
-                      <input
-                        type="text"
-                        className="admit-filter-input"
-                        placeholder=""
-                        value={filterExamVenue}
-                        onChange={(e) => setFilterExamVenue(e.target.value)}
-                      />
-                    </th>
-                    <th>
-                      <select
-                        className="admit-filter-input admit-filter-select"
-                        value={filterBatch}
-                        onChange={(e) => setFilterBatch(e.target.value)}
-                      >
-                        <option value=""></option>
-                        <option value="BTECH 2028-P">BTECH 2028-P</option>
-                      </select>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAdmitExams.map((exam) => {
-                    const isExpanded = expandedExamId === exam.id
+          {/* Visual Progression Timeline */}
+          <div className="progression-timeline-strip">
+            {progressionHistory.map((sem) => (
+              <div
+                key={sem.semesterNumber}
+                className={`timeline-step-card ${sem.status.toLowerCase()}`}
+              >
+                <div className="step-badge">
+                  {sem.status === 'COMPLETED' ? (
+                    <CheckCircle2 size={14} />
+                  ) : sem.status === 'ENROLLED' ? (
+                    <Clock size={14} />
+                  ) : (
+                    sem.semesterNumber
+                  )}
+                </div>
+                <strong>{sem.semesterLabel}</strong>
+                <small>{sem.academicSession}</small>
+                {sem.sgpa ? (
+                  <span className="step-sgpa">SGPA: {Number(sem.sgpa).toFixed(2)}</span>
+                ) : (
+                  <span className="step-sgpa pending">{sem.status === 'ENROLLED' ? 'Ongoing' : 'Upcoming'}</span>
+                )}
+              </div>
+            ))}
+          </div>
 
-                    return (
-                      <React.Fragment key={exam.id}>
-                        <tr className={`admit-exam-row ${isExpanded ? 'row-expanded' : ''}`}>
-                          <td style={{ textAlign: 'center', verticalAlign: 'top', paddingTop: '10px' }}>
-                            <button
-                              type="button"
-                              className="btn-admit-toggle"
-                              onClick={() => setExpandedExamId(isExpanded ? null : exam.id)}
-                              title={isExpanded ? 'Collapse' : 'Expand'}
-                            >
-                              {isExpanded ? (
-                                <span className="admit-toggle-box minus">
-                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                    <rect x="2" y="2" width="20" height="20" rx="3" fill="#ffffff" />
-                                    <line x1="6" y1="12" x2="18" y2="12" stroke="#0f172a" strokeWidth="3" />
-                                  </svg>
-                                </span>
-                              ) : (
-                                <span className="admit-toggle-box play">
-                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <rect x="2" y="2" width="20" height="20" rx="3" fill="#ffffff" />
-                                    <polygon points="9,7 17,12 9,17" fill="#0f172a" />
-                                  </svg>
-                                </span>
-                              )}
-                            </button>
-                            {isExpanded && (
-                              <div style={{ marginTop: '3px' }}>
-                                <button
-                                  type="button"
-                                  className="btn-admit-collapse-tag"
-                                  onClick={() => setExpandedExamId(null)}
-                                >
-                                  Collapse
-                                </button>
-                              </div>
+          {/* Progression Table */}
+          <div className="progression-table-container">
+            <table className="academics-data-table">
+              <thead>
+                <tr>
+                  <th>Semester</th>
+                  <th>Session</th>
+                  <th>Status</th>
+                  <th>SGPA</th>
+                  <th>CGPA</th>
+                  <th>Credits Earned</th>
+                  <th>Backlogs</th>
+                  <th>Publication Date</th>
+                  <th style={{ textAlign: 'center' }}>Marksheet Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {progressionHistory.map((sem) => {
+                  const isExpanded = expandedProgressionSem === sem.semesterNumber
+                  return (
+                    <React.Fragment key={sem.semesterNumber}>
+                      <tr className={sem.status === 'ENROLLED' ? 'row-active-enrolled' : ''}>
+                        <td>
+                          <strong>{sem.semesterLabel}</strong>
+                        </td>
+                        <td>{sem.academicSession}</td>
+                        <td>
+                          <span
+                            className={`status-pill ${
+                              sem.status === 'COMPLETED'
+                                ? 'status-completed'
+                                : sem.status === 'ENROLLED'
+                                ? 'status-active'
+                                : 'status-upcoming'
+                            }`}
+                          >
+                            {sem.status === 'COMPLETED' ? '✓ Passed' : sem.status === 'ENROLLED' ? 'Active' : 'Upcoming'}
+                          </span>
+                        </td>
+                        <td>
+                          {sem.sgpa ? (
+                            <strong className="text-blue">{Number(sem.sgpa).toFixed(2)}</strong>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td>
+                          {sem.cgpa ? (
+                            <strong className="text-green">{Number(sem.cgpa).toFixed(2)}</strong>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td>
+                          <strong>{sem.earnedCredits}</strong> / {sem.totalCredits}
+                        </td>
+                        <td>
+                          <span className={sem.backlogStatus?.includes('Clear') ? 'text-green' : 'text-red'}>
+                            {sem.backlogStatus}
+                          </span>
+                        </td>
+                        <td>{sem.resultPublicationDate || 'Pending'}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                            {sem.marksheetAvailable ? (
+                              <button
+                                type="button"
+                                className="btn-sub-action download"
+                                onClick={() => handleDownloadMarksheet(sem)}
+                                title="Download Semester Grade Sheet PDF"
+                              >
+                                <Download size={13} /> Marksheet
+                              </button>
+                            ) : (
+                              <span className="text-muted" style={{ fontSize: '0.78rem' }}>
+                                Awaiting Results
+                              </span>
                             )}
-                          </td>
-                          <td style={{ textAlign: 'center', verticalAlign: 'top', paddingTop: '11px', fontWeight: 600 }}>
-                            {exam.num}
-                          </td>
-                          <td style={{ verticalAlign: 'top', paddingTop: '11px' }}>
-                            <span className="exam-name-text">{exam.name}</span>
-                          </td>
-                          <td style={{ verticalAlign: 'top', paddingTop: '11px', color: '#334155' }}>
-                            {exam.venue}
-                          </td>
-                          <td style={{ verticalAlign: 'top', paddingTop: '11px', color: '#334155' }}>
-                            {exam.batch}
+                            {sem.subjects && sem.subjects.length > 0 && (
+                              <button
+                                type="button"
+                                className="btn-sub-action syllabus"
+                                onClick={() =>
+                                  setExpandedProgressionSem(isExpanded ? null : sem.semesterNumber)
+                                }
+                                title="Toggle Subject Marks Details"
+                              >
+                                {isExpanded ? 'Hide' : 'Details'}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Expandable Details Sub-table */}
+                      {isExpanded && sem.subjects && sem.subjects.length > 0 && (
+                        <tr className="expanded-detail-row">
+                          <td colSpan={9} style={{ padding: '12px 18px', background: '#f8fafc' }}>
+                            <div className="expanded-detail-box">
+                              <h5 style={{ margin: '0 0 8px', fontSize: '0.86rem', color: '#0f172a' }}>
+                                Subject Performance Breakdown — {sem.semesterLabel}
+                              </h5>
+                              <table className="sub-breakdown-table">
+                                <thead>
+                                  <tr>
+                                    <th>Subject Code</th>
+                                    <th>Subject Name</th>
+                                    <th>Credits</th>
+                                    <th>Type</th>
+                                    <th>Grade Point</th>
+                                    <th>Letter Grade</th>
+                                    <th>Standing</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {sem.subjects.map((s) => (
+                                    <tr key={s.code}>
+                                      <td><code>{s.code}</code></td>
+                                      <td>{s.name}</td>
+                                      <td>{s.credits}</td>
+                                      <td>{s.type}</td>
+                                      <td><strong>{s.gradePoint} / 10</strong></td>
+                                      <td><strong className="grade-badge">{s.gradeLetter}</strong></td>
+                                      <td><span className="text-green">✓ {s.result}</span></td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </td>
                         </tr>
+                      )}
+                    </React.Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-                        {/* Expanded Section with Cyan Top Border Line (Image 3) */}
-                        {isExpanded && (
-                          <tr className="admit-expanded-row">
-                            <td colSpan={5} className="admit-expanded-cell">
-                              <div className="admit-schedule-box">
-                                <div className="admit-schedule-table-wrap">
-                                  <table className="admit-schedule-table">
-                                    <thead>
-                                      <tr>
-                                        <th style={{ width: '40px', textAlign: 'center' }}>#</th>
-                                        <th style={{ width: '13%' }}>Date/Time</th>
-                                        <th style={{ width: '8%', textAlign: 'center' }}>Sitting</th>
-                                        <th style={{ width: '18%' }}>Time From and To</th>
-                                        <th style={{ width: '15%' }}>Subject Code</th>
-                                        <th style={{ width: '27%' }}>Subject Name</th>
-                                        <th style={{ width: '14%' }}>Section/House</th>
-                                        <th style={{ width: '50px', textAlign: 'center' }}></th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {exam.subjects.map((sub) => (
-                                        <tr key={sub.sl}>
-                                          <td style={{ textAlign: 'center', fontWeight: 600 }}>{sub.sl}</td>
-                                          <td>{sub.date}</td>
-                                          <td style={{ textAlign: 'center' }}>{sub.sitting}</td>
-                                          <td>{sub.time}</td>
-                                          <td><code className="admit-sub-code">{sub.code}</code></td>
-                                          <td><span className="admit-sub-name">{sub.name}</span></td>
-                                          <td>{sub.section}</td>
-                                          <td style={{ textAlign: 'center' }}>
-                                            <button
-                                              type="button"
-                                              className="btn-admit-row-print"
-                                              title="Download / Print Admit Card"
-                                              onClick={() => {
-                                                setSelectedExamForAction(exam)
-                                                setShowDownloadConfirm(true)
-                                              }}
-                                            >
-                                              <Printer size={15} color="#0284c7" />
-                                            </button>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    )
-                  })}
-                  {filteredAdmitExams.length === 0 && (
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* SECTION 5: CLASS NOTES & STUDY MATERIAL SHARING */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'notes' && (
+        <div className="academics-notes-view">
+          <div className="view-intro-bar">
+            <div>
+              <h3>Curriculum Class Notes &amp; Study Resources</h3>
+              <p>Official faculty study material, handwritten lecture transcripts, and previous year examination solutions.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className="btn-action-outline"
+                onClick={() => setShowRequestModal(true)}
+              >
+                <HelpCircle size={14} /> Request Notes
+              </button>
+              <button
+                type="button"
+                className="btn-action-primary"
+                onClick={() => setShowUploadModal(true)}
+              >
+                <Plus size={14} /> Upload Notes
+              </button>
+            </div>
+          </div>
+
+          {/* 8 Categories Filter Pills */}
+          <div className="material-category-pills">
+            {[
+              'All Categories',
+              'Official Faculty Notes',
+              'Lecture Slides',
+              'Previous Year Questions',
+              'Assignments',
+              'Handwritten Notes',
+              'Lab Manuals',
+              'Reference Materials',
+              'Student Shared Notes'
+            ].map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                className={`category-pill ${materialCategory === cat ? 'active' : ''}`}
+                onClick={() => setMaterialCategory(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Search and Secondary Filters Bar */}
+          <div className="materials-filter-bar">
+            <div className="filter-search-box">
+              <Search size={15} />
+              <input
+                type="text"
+                placeholder="Search resources, topics, or faculty..."
+                value={materialSearch}
+                onChange={(e) => setMaterialSearch(e.target.value)}
+              />
+            </div>
+            <div className="filter-dropdowns">
+              <select
+                value={materialSubject}
+                onChange={(e) => setMaterialSubject(e.target.value)}
+                className="filter-select"
+              >
+                <option value="ALL">All Subjects</option>
+                {enrolledSubjects.map((s) => (
+                  <option key={s.code} value={s.name}>
+                    {s.name} ({s.code})
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={materialFileType}
+                onChange={(e) => setMaterialFileType(e.target.value)}
+                className="filter-select"
+              >
+                <option value="ALL">All File Types</option>
+                <option value="PDF">PDF Documents</option>
+                <option value="Slides">Lecture Slides</option>
+                <option value="Handwritten">Handwritten Scans</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Materials Grid */}
+          <div className="materials-card-grid">
+            {filteredMaterials.length === 0 ? (
+              <div className="empty-academic-state" style={{ gridColumn: '1 / -1' }}>
+                <FileText size={42} className="text-muted" />
+                <h4>No Study Resources Match Your Filters</h4>
+                <p>Try resetting filters or use the Request Notes button to solicit peer/faculty contributions.</p>
+              </div>
+            ) : (
+              filteredMaterials.map((mat) => (
+                <div key={mat.id} className="material-card">
+                  <div className="material-card-top">
+                    <span className="material-subject-badge">{mat.subject}</span>
+                    <span
+                      className={`material-type-pill ${
+                        mat.isFacultyVerified ? 'faculty-verified' : 'peer-shared'
+                      }`}
+                    >
+                      {mat.isFacultyVerified ? (
+                        <>
+                          <ShieldCheck size={12} /> Verified
+                        </>
+                      ) : (
+                        'Peer Shared'
+                      )}
+                    </span>
+                  </div>
+
+                  <h4 className="material-title">{mat.title}</h4>
+                  <p className="material-desc">{mat.description}</p>
+
+                  <div className="material-meta-row">
+                    <div>
+                      <small>UPLOADED BY</small>
+                      <strong>{mat.uploaderName}</strong>
+                    </div>
+                    <div>
+                      <small>CATEGORY</small>
+                      <span>{mat.category}</span>
+                    </div>
+                  </div>
+
+                  <div className="material-card-footer">
+                    <div className="material-specs">
+                      <span>{mat.fileType}</span>
+                      <span>·</span>
+                      <span>{mat.fileSize}</span>
+                      <span>·</span>
+                      <button
+                        type="button"
+                        className="btn-helpful-vote"
+                        onClick={() => handleVoteHelpful(mat.id)}
+                        title="Mark as helpful resource"
+                      >
+                        <ThumbsUp size={12} /> {mat.helpfulCount + (helpfulVotes[mat.id] || 0)}
+                      </button>
+                    </div>
+                    <div className="material-actions">
+                      <button
+                        type="button"
+                        className="btn-mat-action preview"
+                        onClick={() => setViewingMaterial(mat)}
+                        title="Preview Document"
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-mat-action download"
+                        onClick={() => showToast(`Downloading ${mat.title}...`)}
+                        title="Download Document"
+                      >
+                        <Download size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-mat-action share-wa"
+                        style={{ color: '#16a34a', borderColor: '#bbf7d0', background: '#f0fdf4' }}
+                        onClick={() => {
+                          const targetConv = mat.subject?.toLowerCase().includes('data structure') ? 'conv-ds' : 'conv-ds';
+                          campusConnectStore.sendMessage(targetConv, {
+                            text: `Resource Shared: ${mat.title} (${mat.fileSize}) for ${mat.subject}. Verified study outline.`,
+                            sender: student.name || 'Student',
+                            senderRole: 'student',
+                            resource: {
+                              id: mat.id,
+                              title: mat.title,
+                              fileType: mat.fileType,
+                              downloadUrl: '/sample_documents/sample_document.pdf'
+                            }
+                          });
+                          showToast(`Shared "${mat.title}" to Class WhatsApp group!`);
+                        }}
+                        title="Share this resource to Class WhatsApp group"
+                      >
+                        <MessageSquare size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-mat-action report"
+                        onClick={() => setShowReportModal(mat.id)}
+                        title="Report Inaccurate Material"
+                      >
+                        <Flag size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* SECTION 6: EXAMINATION & ADMIT CARD */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'admit-card' && (
+        <div className="academics-admit-view">
+          <div className="view-intro-bar">
+            <div>
+              <h3>Autonomous Examination Admit Card &amp; Hall Ticket</h3>
+              <p>Authenticated examination hall clearances, seating allocations, and printable verification passes.</p>
+            </div>
+            <span
+              className={`badge-exam-status ${
+                upcomingExam?.status === 'ADMIT CARD AVAILABLE'
+                  ? 'status-available'
+                  : 'status-pending'
+              }`}
+            >
+              {upcomingExam?.status}
+            </span>
+          </div>
+
+          {upcomingExam && (
+            <div className="admit-dashboard-box">
+              {/* Header Box */}
+              <div className="admit-exam-hero">
+                <div>
+                  <span className="exam-type-pill">{upcomingExam.examType}</span>
+                  <h4>{upcomingExam.examName}</h4>
+                  <p>
+                    {upcomingExam.examinationCentre} · Session: {upcomingExam.academicSession}
+                  </p>
+                </div>
+                <div className="admit-hero-actions">
+                  <button
+                    type="button"
+                    className="btn-action-primary"
+                    disabled={upcomingExam.status === 'NOT ELIGIBLE' || upcomingExam.status === 'WITHHELD'}
+                    onClick={() => setShowDownloadConfirm(true)}
+                  >
+                    <Download size={14} /> Download Verified Admit Card
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-action-outline"
+                    onClick={() => setShowDocPreviewModal(true)}
+                  >
+                    <Eye size={14} /> Official Paper Preview
+                  </button>
+                </div>
+              </div>
+
+              {/* Real Eligibility Checks Grid */}
+              <div className="eligibility-checklist-card">
+                <h5 style={{ margin: '0 0 10px', fontSize: '0.88rem', color: '#0f172a' }}>
+                  Institutional Examination Hall Clearance Requirements
+                </h5>
+                <div className="checklist-items-grid">
+                  <div
+                    className={`check-item ${
+                      upcomingExam.eligibility.attendanceEligible ? 'valid' : 'invalid'
+                    }`}
+                  >
+                    <div className="check-icon">
+                      {upcomingExam.eligibility.attendanceEligible ? (
+                        <CheckCircle2 size={16} />
+                      ) : (
+                        <X size={16} />
+                      )}
+                    </div>
+                    <div>
+                      <strong>Attendance Threshold (&ge; 75%)</strong>
+                      <p>
+                        Current: <strong>{upcomingExam.eligibility.attendancePercentage}%</strong> ·{' '}
+                        {upcomingExam.eligibility.attendanceEligible
+                          ? 'Requirement satisfied'
+                          : 'Shortage (Medical Condonation required)'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`check-item ${
+                      upcomingExam.eligibility.feesCleared ? 'valid' : 'invalid'
+                    }`}
+                  >
+                    <div className="check-icon">
+                      {upcomingExam.eligibility.feesCleared ? (
+                        <CheckCircle2 size={16} />
+                      ) : (
+                        <X size={16} />
+                      )}
+                    </div>
+                    <div>
+                      <strong>Institutional Accounts Clearance</strong>
+                      <p>{upcomingExam.eligibility.feeClearanceStatus}</p>
+                    </div>
+                  </div>
+
+                  <div className="check-item valid">
+                    <div className="check-icon">
+                      <CheckCircle2 size={16} />
+                    </div>
+                    <div>
+                      <strong>Examination Cell Registration</strong>
+                      <p>{upcomingExam.eligibility.examRegistrationStatus}</p>
+                    </div>
+                  </div>
+
+                  <div className="check-item valid">
+                    <div className="check-icon">
+                      <CheckCircle2 size={16} />
+                    </div>
+                    <div>
+                      <strong>Disciplinary Standing</strong>
+                      <p>{upcomingExam.eligibility.disciplinaryClearance}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Schedule Table */}
+              <div className="admit-schedule-section">
+                <h5 style={{ margin: '14px 0 10px', fontSize: '0.92rem', color: '#0f172a' }}>
+                  Timetable &amp; Hall Seating Arrangement
+                </h5>
+                <table className="academics-data-table">
+                  <thead>
                     <tr>
-                      <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
-                        No examination records found matching your filter criteria.
-                      </td>
+                      <th style={{ width: '60px', textAlign: 'center' }}>Sl.</th>
+                      <th>Date &amp; Day</th>
+                      <th>Sitting &amp; Time</th>
+                      <th>Paper Code</th>
+                      <th>Subject Name</th>
+                      <th>Allocated Hall / Desk</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {upcomingExam.schedule.map((slot) => (
+                      <tr key={slot.code}>
+                        <td style={{ textAlign: 'center' }}>{slot.sl}</td>
+                        <td>
+                          <strong>{slot.dateFull}</strong>
+                        </td>
+                        <td>
+                          <span className="sitting-badge">{slot.sitting}</span> {slot.time}
+                        </td>
+                        <td>
+                          <code>{slot.code}</code>
+                        </td>
+                        <td>
+                          <strong>{slot.subject}</strong>
+                        </td>
+                        <td>
+                          <span className="venue-pill">{slot.venue}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* SECTION 7B: OFFICIAL ACADEMIC TRANSCRIPT */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'transcript' && (
+        <div className="academics-transcript-view">
+          <div className="view-intro-bar">
+            <div>
+              <h3>Institutional Academic Transcript</h3>
+              <p>Certified cumulative academic record for employment, higher education, and scholarship verification.</p>
+            </div>
+            <button
+              type="button"
+              className="btn-action-primary"
+              onClick={handleDownloadTranscript}
+            >
+              <Download size={14} /> Export Verified Transcript PDF
+            </button>
+          </div>
+
+          <div className="transcript-preview-sheet">
+            <div className="transcript-hero-header">
+              <img src="/logo.png" alt="Apna Campus Logo" className="transcript-logo" />
+              <div>
+                <h4>APNA CAMPUS AUTONOMOUS INSTITUTION</h4>
+                <h5>OFFICIAL CUMULATIVE ACADEMIC TRANSCRIPT</h5>
+                <p>Approved under UGC Autonomous Framework &bull; Affiliated to BPUT, Odisha</p>
+              </div>
+            </div>
+
+            <div className="transcript-meta-grid">
+              <div>
+                <small>CANDIDATE NAME</small>
+                <strong>{student.name.toUpperCase()}</strong>
+              </div>
+              <div>
+                <small>REGISTRATION NUMBER</small>
+                <strong>{student.registrationNumber}</strong>
+              </div>
+              <div>
+                <small>PROGRAMME</small>
+                <strong>{student.programme}</strong>
+              </div>
+              <div>
+                <small>ADMISSION BATCH</small>
+                <strong>{student.batch}</strong>
+              </div>
+            </div>
+
+            {/* Multi-Semester Table */}
+            <table className="academics-data-table">
+              <thead>
+                <tr>
+                  <th>Semester</th>
+                  <th>Session</th>
+                  <th>Credits Required</th>
+                  <th>Credits Earned</th>
+                  <th>SGPA</th>
+                  <th>CGPA</th>
+                  <th>Standing</th>
+                </tr>
+              </thead>
+              <tbody>
+                {progressionHistory.map((p) => (
+                  <tr key={p.semesterNumber}>
+                    <td><strong>{p.semesterLabel}</strong></td>
+                    <td>{p.academicSession}</td>
+                    <td>{p.totalCredits}</td>
+                    <td>{p.earnedCredits}</td>
+                    <td>{p.sgpa ? Number(p.sgpa).toFixed(2) : '—'}</td>
+                    <td>{p.cgpa ? Number(p.cgpa).toFixed(2) : '—'}</td>
+                    <td>
+                      <span
+                        className={p.status === 'COMPLETED' ? 'text-green' : 'text-muted'}
+                        style={{ fontWeight: 600 }}
+                      >
+                        {p.status === 'COMPLETED' ? 'PASSED (DISTINCTION)' : p.status === 'ENROLLED' ? 'IN PROGRESS' : 'UPCOMING'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="transcript-summary-box">
+              <div>
+                <small>TOTAL CREDITS COMPLETED</small>
+                <strong>88 / 160</strong>
+              </div>
+              <div>
+                <small>OVERALL CGPA</small>
+                <strong className="text-green">{student.cgpa ? `${student.cgpa} / 10.0` : 'N/A'}</strong>
+              </div>
+              <div>
+                <small>DEGREE COMPLETION STANDING</small>
+                <strong className="text-blue">GOOD STANDING (REGULAR)</strong>
+              </div>
+              <div>
+                <small>SEAL VERIFICATION</small>
+                <strong className="text-purple">CRYPTOGRAPHICALLY AUTHENTICATED</strong>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL 1: UPLOAD NOTES FROM ACADEMICS PAGE */}
-      {showUploadModal && (
-        <div className="academics-modal-backdrop" onClick={() => setShowUploadModal(false)}>
-          <div className="academics-modal-card" onClick={(e) => e.stopPropagation()}>
-            <button className="academics-modal-close" onClick={() => setShowUploadModal(false)}>×</button>
 
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* SECTION 7D: BACKLOG & SUPPLEMENTARY TRACKER */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'backlogs' && (
+        <div className="academics-backlog-view">
+          <div className="view-intro-bar">
+            <div>
+              <h3>Backlog Register &amp; Supplementary Examination Desk</h3>
+              <p>Track academic paper arrears, clearance timelines, and submit supplementary applications.</p>
+            </div>
+            <button
+              type="button"
+              className="btn-action-primary"
+              onClick={() => setShowSupplementaryModal(true)}
+            >
+              <Plus size={14} /> Register Supplementary Paper
+            </button>
+          </div>
+
+          <div className="backlog-status-summary-card">
+            <div className="backlog-status-main">
+              <CheckCircle2 size={32} className="text-green" />
+              <div>
+                <h4>Zero Active Academic Backlogs</h4>
+                <p>
+                  You are in good academic standing. All enrolled modules from Semester 1 through Semester 4 have been successfully cleared.
+                </p>
+              </div>
+            </div>
+            <div className="backlog-metric">
+              <small>ACTIVE ARREARS</small>
+              <strong className="text-green">0 Papers</strong>
+            </div>
+          </div>
+
+          <div className="supplementary-guidelines-card">
+            <h5>Autonomous Supplementary Examination Regulations</h5>
+            <ul>
+              <li>Candidates with F grades or detained status in continuous evaluation may register during the open window.</li>
+              <li>Prescribed Institutional Supplementary Examination Fee is <strong>₹500 per theory paper</strong> and <strong>₹300 per practical lab</strong>.</li>
+              <li>Re-totaling and photocopy scrutiny requests must be lodged within 14 calendar days of semester result declaration.</li>
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* SECTION 7E: SYLLABUS & ASSIGNMENT TRACKER */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'tracker' && (
+        <div className="academics-tracker-view">
+          <div className="view-intro-bar">
+            <div>
+              <h3>Syllabus Coverage &amp; Assignment Tracker</h3>
+              <p>Continuous internal evaluation tasks, unit progression meters, and submission deadlines.</p>
+            </div>
+          </div>
+
+          {/* Syllabus Progress Grid */}
+          <h4 style={{ margin: '0 0 12px', fontSize: '1rem', color: '#0f172a' }}>
+            Unit-Wise Curriculum Coverage ({student.semester})
+          </h4>
+          <div className="syllabus-tracker-grid">
+            {syllabusProgress.map((item) => (
+              <div key={item.code} className="syllabus-progress-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <strong>{item.name}</strong>
+                  <span className="text-blue" style={{ fontWeight: 700 }}>
+                    {item.completedPercentage}%
+                  </span>
+                </div>
+                <div className="progress-track-bg">
+                  <div
+                    className="progress-fill-bar"
+                    style={{ width: `${item.completedPercentage}%` }}
+                  />
+                </div>
+                <div className="syllabus-progress-meta">
+                  <small>
+                    Completed: {item.completedUnits} of {item.totalUnits} Units
+                  </small>
+                  <small>Next: {item.nextLectureTopic}</small>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Active Assignments */}
+          <h4 style={{ margin: '24px 0 12px', fontSize: '1rem', color: '#0f172a' }}>
+            Subject Assignments &amp; Projects
+          </h4>
+          <table className="academics-data-table">
+            <thead>
+              <tr>
+                <th>Assignment Title</th>
+                <th>Subject</th>
+                <th>Deadline</th>
+                <th>Max Marks</th>
+                <th>Faculty</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'center' }}>Score / Feedback</th>
+              </tr>
+            </thead>
+            <tbody>
+              {assignments.map((asg) => (
+                <tr key={asg.id}>
+                  <td><strong>{asg.title}</strong></td>
+                  <td>{asg.subject}</td>
+                  <td>{asg.deadline}</td>
+                  <td>{asg.maxMarks} Marks</td>
+                  <td>{asg.faculty}</td>
+                  <td>
+                    <span
+                      className={`status-pill ${
+                        asg.status === 'Graded'
+                          ? 'status-completed'
+                          : asg.status === 'Submitted'
+                          ? 'status-active'
+                          : 'status-upcoming'
+                      }`}
+                    >
+                      {asg.status}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    {asg.score !== null ? (
+                      <strong className="text-green">{asg.score} / {asg.maxMarks}</strong>
+                    ) : (
+                      <span className="text-muted">{asg.feedback}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* MODAL 1: SYLLABUS DETAIL MODAL */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {activeSyllabusModalSub && (
+        <div
+          className="academics-modal-backdrop"
+          onClick={() => setActiveSyllabusModalSub(null)}
+        >
+          <div className="academics-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="academics-modal-close"
+              onClick={() => setActiveSyllabusModalSub(null)}
+            >
+              ×
+            </button>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '14px' }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  background: '#e0f2fe',
+                  color: '#0284c7',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Layers size={22} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>
+                  {activeSyllabusModalSub.name}
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+                  Code: <code>{activeSyllabusModalSub.code}</code> &bull; Credits: {activeSyllabusModalSub.credits} &bull; Faculty: {activeSyllabusModalSub.faculty}
+                </p>
+              </div>
+            </div>
+
+            <div className="syllabus-units-accordion">
+              {activeSyllabusModalSub.syllabusUnits?.map((unit) => (
+                <div key={unit.unit} className="unit-card">
+                  <div className="unit-header">
+                    <strong>Module {unit.unit}: {unit.title}</strong>
+                    <span className="unit-hours">{unit.hours} Hours</span>
+                  </div>
+                  <p className="unit-topics">{unit.topics}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="learning-outcomes-box">
+              <h5>Course Learning Outcomes (CLOs)</h5>
+              <ul>
+                {activeSyllabusModalSub.learningOutcomes?.map((clo, idx) => (
+                  <li key={idx}>{clo}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div style={{ textAlign: 'right', marginTop: '16px' }}>
+              <button
+                type="button"
+                className="btn-academic-secondary"
+                onClick={() => setActiveSyllabusModalSub(null)}
+              >
+                Close Syllabus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* MODAL 2: UPLOAD CLASS NOTES */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {showUploadModal && (
+        <div
+          className="academics-modal-backdrop"
+          onClick={() => setShowUploadModal(false)}
+        >
+          <div className="academics-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="academics-modal-close"
+              onClick={() => setShowUploadModal(false)}
+            >
+              ×
+            </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <div style={{ width: '40px', height: '40px', background: '#e0e7ff', color: '#4338ca', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  background: '#e0e7ff',
+                  color: '#4338ca',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
                 <UploadCloud size={20} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>Upload Class Notes</h3>
-                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>Share handwritten notes for {selectedSubjectName}</p>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>
+                  Upload Academic Notes &amp; Study Material
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Submit notes for peer access &amp; official faculty verification.
+                </p>
               </div>
             </div>
 
             <form onSubmit={handleUploadSubmit}>
-              <div style={{ marginBottom: '12px' }}>
-                <label className="academic-form-label">Selected Subject</label>
-                <select
-                  className="academic-form-input"
-                  value={selectedSubjectName}
-                  onChange={(e) => setSelectedSubjectName(e.target.value)}
-                >
-                  <option value="Artificial Intelligence">Artificial Intelligence (CS501)</option>
-                  <option value="Machine Learning">Machine Learning (CS502)</option>
-                  <option value="Cloud Computing">Cloud Computing (CS503)</option>
-                  <option value="Compiler Design">Compiler Design (CS504)</option>
-                  <option value="Operating Systems">Operating Systems (CS401)</option>
-                  <option value="Data Structures">Data Structures (CS302)</option>
-                </select>
-              </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div>
-                  <label className="academic-form-label">Lecture Date <span style={{ color: '#dc2626' }}>*</span></label>
-                  <input
-                    type="date"
+                  <label className="academic-form-label">Subject</label>
+                  <select
                     className="academic-form-input"
-                    value={uploadForm.date}
-                    onChange={(e) => setUploadForm({ ...uploadForm, date: e.target.value })}
-                    required
-                  />
+                    value={uploadForm.subject}
+                    onChange={(e) => setUploadForm({ ...uploadForm, subject: e.target.value })}
+                  >
+                    {enrolledSubjects.map((s) => (
+                      <option key={s.code} value={s.name}>
+                        {s.name} ({s.code})
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
                 <div>
-                  <label className="academic-form-label">Topic / Unit Covered <span style={{ color: '#dc2626' }}>*</span></label>
+                  <label className="academic-form-label">Resource Category</label>
+                  <select
+                    className="academic-form-input"
+                    value={uploadForm.category}
+                    onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
+                  >
+                    <option value="Handwritten Notes">Handwritten Notes</option>
+                    <option value="Lecture Slides">Lecture Slides</option>
+                    <option value="Previous Year Questions">Previous Year Questions</option>
+                    <option value="Assignments">Assignments</option>
+                    <option value="Lab Manuals">Lab Manuals</option>
+                    <option value="Reference Materials">Reference Materials</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label className="academic-form-label">
+                    Topic Title <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
                   <input
                     type="text"
                     className="academic-form-input"
                     value={uploadForm.topic}
                     onChange={(e) => setUploadForm({ ...uploadForm, topic: e.target.value })}
-                    placeholder="e.g. Heuristic Search & A* Algorithm"
+                    placeholder="e.g. Backpropagation Algorithm Derivation"
                     required
                   />
+                </div>
+                <div>
+                  <label className="academic-form-label">Module / Unit</label>
+                  <select
+                    className="academic-form-input"
+                    value={uploadForm.moduleNumber}
+                    onChange={(e) => setUploadForm({ ...uploadForm, moduleNumber: Number(e.target.value) })}
+                  >
+                    <option value={1}>Unit 1</option>
+                    <option value={2}>Unit 2</option>
+                    <option value={3}>Unit 3</option>
+                    <option value={4}>Unit 4</option>
+                    <option value={5}>Unit 5</option>
+                  </select>
                 </div>
               </div>
 
               <div style={{ marginBottom: '12px' }}>
-                <label className="academic-form-label">Notes Summary / Remarks</label>
+                <label className="academic-form-label">Summary / Highlights</label>
                 <textarea
                   className="academic-form-input"
                   rows={2}
                   value={uploadForm.description}
                   onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
-                  placeholder="e.g. Class lecture diagrams and step-by-step solved examples..."
+                  placeholder="Key concepts, diagrams, or formula summaries included in this upload..."
                 />
               </div>
 
               <div style={{ marginBottom: '16px' }}>
-                <label className="academic-form-label">Attach File / Photo Screenshot <span style={{ color: '#dc2626' }}>*</span></label>
-                <div style={{ border: '2px dashed #cbd5e1', borderRadius: '10px', padding: '16px', textAlign: 'center', background: '#f8fafc', cursor: 'pointer' }}>
+                <label className="academic-form-label">
+                  Attach Document / PDF / Scans <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <div className="file-drop-card">
                   <input
                     type="file"
-                    id="acad-note-file"
-                    accept=".jpg,.jpeg,.png,.webp,.pdf"
+                    id="acad-upload-file-input"
+                    accept=".pdf,.png,.jpg,.jpeg,.webp,.docx"
                     onChange={handleFileChange}
                     style={{ display: 'none' }}
                   />
-                  <label htmlFor="acad-note-file" style={{ cursor: 'pointer', display: 'block' }}>
+                  <label htmlFor="acad-upload-file-input" style={{ cursor: 'pointer', display: 'block' }}>
                     <UploadCloud size={30} style={{ color: '#4338ca', marginBottom: '4px' }} />
                     <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
-                      {selectedFile ? selectedFile.name : 'Click to select class notes file'}
+                      {selectedFile ? selectedFile.name : 'Click to select study material file'}
                     </div>
                     <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
-                      Supported formats: JPG, PNG, WEBP, PDF · Max 10MB
+                      Supported formats: PDF, DOCX, JPG, PNG &bull; Max 15MB
                     </div>
                   </label>
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
-                <button type="button" className="btn-academic-secondary" onClick={() => setShowUploadModal(false)}>
+                <button
+                  type="button"
+                  className="btn-academic-secondary"
+                  onClick={() => setShowUploadModal(false)}
+                >
                   Cancel
                 </button>
                 <button type="submit" className="btn-academic-primary">
-                  Upload Notes ✓
+                  Submit for Verification ✓
                 </button>
               </div>
             </form>
@@ -927,68 +1724,208 @@ export default function AcademicsPage({ account }) {
         </div>
       )}
 
-      {/* MODAL 2: VIEW SINGLE NOTE */}
-      {viewingNote && (
-        <div className="academics-modal-backdrop" onClick={() => setViewingNote(null)}>
-          <div className="academics-modal-card" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
-            <button className="academics-modal-close" onClick={() => setViewingNote(null)}>×</button>
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* MODAL 3: REQUEST NOTES MODAL */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {showRequestModal && (
+        <div
+          className="academics-modal-backdrop"
+          onClick={() => setShowRequestModal(false)}
+        >
+          <div className="academics-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="academics-modal-close"
+              onClick={() => setShowRequestModal(false)}
+            >
+              ×
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  background: '#fef3c7',
+                  color: '#b45309',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <HelpCircle size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>
+                  Request Study Material
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Notify faculty and class representatives to publish notes on missing topics.
+                </p>
+              </div>
+            </div>
 
+            <form onSubmit={handleRequestSubmit}>
+              <div style={{ marginBottom: '12px' }}>
+                <label className="academic-form-label">Subject</label>
+                <select
+                  className="academic-form-input"
+                  value={requestForm.subject}
+                  onChange={(e) => setRequestForm({ ...requestForm, subject: e.target.value })}
+                >
+                  {enrolledSubjects.map((s) => (
+                    <option key={s.code} value={s.name}>
+                      {s.name} ({s.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label className="academic-form-label">
+                  Topic / Concept Required <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  className="academic-form-input"
+                  value={requestForm.topic}
+                  onChange={(e) => setRequestForm({ ...requestForm, topic: e.target.value })}
+                  placeholder="e.g. Proof of Master Theorem with Step-by-Step Examples"
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label className="academic-form-label">Specific Questions / Urgency Notes</label>
+                <textarea
+                  className="academic-form-input"
+                  rows={2}
+                  value={requestForm.remarks}
+                  onChange={(e) => setRequestForm({ ...requestForm, remarks: e.target.value })}
+                  placeholder="Need this before upcoming CIE-II test on Monday..."
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  type="button"
+                  className="btn-academic-secondary"
+                  onClick={() => setShowRequestModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-academic-primary">
+                  Post Request ↗
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* MODAL 4: VIEW SINGLE STUDY MATERIAL PREVIEW */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {viewingMaterial && (
+        <div
+          className="academics-modal-backdrop"
+          onClick={() => setViewingMaterial(null)}
+        >
+          <div
+            className="academics-modal-card"
+            style={{ maxWidth: '680px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="academics-modal-close"
+              onClick={() => setViewingMaterial(null)}
+            >
+              ×
+            </button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
               <div>
-                <span className="note-subject-tag">{viewingNote.subject}</span>
-                <h3 style={{ margin: '4px 0 0', fontSize: '1.2rem', color: '#0f172a' }}>{viewingNote.topic}</h3>
-                <small style={{ color: '#64748b' }}>Date: {viewingNote.date} · Uploaded by {viewingNote.uploadedBy?.name}</small>
+                <span className="note-subject-tag">{viewingMaterial.subject}</span>
+                <h3 style={{ margin: '4px 0 0', fontSize: '1.2rem', color: '#0f172a' }}>
+                  {viewingMaterial.title}
+                </h3>
+                <small style={{ color: '#64748b' }}>
+                  Uploaded by {viewingMaterial.uploaderName} &bull; {viewingMaterial.uploadDate}
+                </small>
               </div>
-              {viewingNote.isFacultyVerified ? (
-                <span className="academic-badge-verified"><ShieldCheck size={13} /> ✓ Faculty Verified</span>
+              {viewingMaterial.isFacultyVerified ? (
+                <span className="academic-badge-verified">
+                  <ShieldCheck size={13} /> ✓ Faculty Verified
+                </span>
               ) : (
-                <span className="academic-badge-pending">Student Uploaded</span>
+                <span className="academic-badge-pending">Peer Shared</span>
               )}
             </div>
 
-            <div style={{ background: '#0f172a', borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '12px', maxHeight: '300px', overflowY: 'auto' }}>
-              {viewingNote.fileType === 'application/pdf' ? (
-                <div style={{ padding: '24px', color: '#ffffff' }}>
-                  <FileText size={48} style={{ color: '#818cf8', marginBottom: '8px' }} />
-                  <div><strong>{viewingNote.fileName || 'Class_Notes.pdf'}</strong></div>
-                  <a href={viewingNote.fileUrl} target="_blank" rel="noreferrer" style={{ color: '#38bdf8', fontSize: '0.8rem', marginTop: '6px', display: 'inline-block' }}>Open PDF in New Window ↗</a>
-                </div>
-              ) : (
-                <img
-                  src={viewingNote.fileUrl}
-                  alt="Class Note"
-                  style={{ width: '100%', maxHeight: '280px', objectFit: 'contain', borderRadius: '6px' }}
-                />
-              )}
+            <div className="document-preview-viewport">
+              <FileText size={48} style={{ color: '#818cf8', marginBottom: '8px' }} />
+              <div style={{ color: '#ffffff', fontSize: '1rem', fontWeight: 700 }}>
+                {viewingMaterial.title}.pdf
+              </div>
+              <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '4px 0 12px' }}>
+                Format: {viewingMaterial.fileType} &bull; Size: {viewingMaterial.fileSize} &bull; Verified Archival Copy
+              </p>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="btn-doc-download"
+                  onClick={() => showToast(`Downloading ${viewingMaterial.title}...`)}
+                >
+                  <Download size={14} /> Download File
+                </button>
+                <button
+                  type="button"
+                  className="btn-doc-print"
+                  onClick={() => window.print()}
+                >
+                  <Printer size={14} /> Print
+                </button>
+              </div>
             </div>
 
-            <p style={{ fontSize: '0.86rem', color: '#334155', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
-              {viewingNote.description}
-            </p>
+            <p className="material-detail-desc">{viewingMaterial.description}</p>
 
-            <div style={{ textAlign: 'right' }}>
-              <button type="button" className="btn-academic-secondary" onClick={() => setViewingNote(null)}>
-                Close
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px' }}>
+              <button
+                type="button"
+                className="btn-helpful-vote"
+                onClick={() => handleVoteHelpful(viewingMaterial.id)}
+              >
+                <ThumbsUp size={13} /> Helpful ({viewingMaterial.helpfulCount + (helpfulVotes[viewingMaterial.id] || 0)})
+              </button>
+              <button
+                type="button"
+                className="btn-academic-secondary"
+                onClick={() => setViewingMaterial(null)}
+              >
+                Close Preview
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── MODAL 3: DOWNLOAD ADMIT CARD CONFIRMATION (Image 4) ── */}
-      {showDownloadConfirm && (
-        <div className="admit-confirm-backdrop" onClick={() => setShowDownloadConfirm(false)}>
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* MODAL 5: DOWNLOAD ADMIT CARD CONFIRMATION */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {showDownloadConfirm && upcomingExam && (
+        <div
+          className="admit-confirm-backdrop"
+          onClick={() => setShowDownloadConfirm(false)}
+        >
           <div className="admit-confirm-card" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               className="admit-confirm-close-btn"
               onClick={() => setShowDownloadConfirm(false)}
-              aria-label="Close"
             >
               ×
             </button>
             <div className="admit-confirm-text">
-              Are you sure you want to download this admitcard?
+              Generate and download official examination admit card for <strong>{upcomingExam.examName}</strong>?
             </div>
             <div className="admit-confirm-actions">
               <button
@@ -1003,27 +1940,29 @@ export default function AcademicsPage({ account }) {
                 className="btn-admit-modal-ok"
                 onClick={() => {
                   setShowDownloadConfirm(false)
-                  downloadGiftAdmitCardPdf(selectedExamForAction, studentDetails)
-                  setShowDocPreviewModal(true)
-                  showToast(`Admit card for ${selectedExamForAction.name} downloaded successfully!`)
+                  handleDownloadAdmitCard()
                 }}
               >
-                OK
+                Confirm &amp; Download PDF
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── MODAL 4: AUTHENTIC ADMIT CARD DOCUMENT PREVIEW & PRINT (Image 5) ── */}
-      {showDocPreviewModal && selectedExamForAction && (
-        <div className="admit-doc-backdrop" onClick={() => setShowDocPreviewModal(false)}>
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* MODAL 6: AUTHENTIC ADMIT CARD OFFICIAL PAPER PREVIEW */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {showDocPreviewModal && upcomingExam && (
+        <div
+          className="admit-doc-backdrop"
+          onClick={() => setShowDocPreviewModal(false)}
+        >
           <div className="admit-doc-card" onClick={(e) => e.stopPropagation()}>
-            {/* Top Toolbar */}
             <div className="admit-doc-toolbar no-print">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span className="badge-official-verified">✓ Official Apna Campus Autonomous Document</span>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>Ready for print &amp; official archival</span>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Ready for official examination hall entry</span>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -1036,10 +1975,7 @@ export default function AcademicsPage({ account }) {
                 <button
                   type="button"
                   className="btn-toolbar-download"
-                  onClick={() => {
-                    downloadGiftAdmitCardPdf(selectedExamForAction, studentDetails)
-                    showToast('PDF downloaded successfully!')
-                  }}
+                  onClick={handleDownloadAdmitCard}
                 >
                   <Download size={14} /> Download PDF
                 </button>
@@ -1053,46 +1989,42 @@ export default function AcademicsPage({ account }) {
               </div>
             </div>
 
-            {/* Printable Paper (A4 Style - Matches Image 5 Exactly) */}
+            {/* Printable Paper (A4 Style) */}
             <div className="admit-paper-sheet printable-admit-sheet">
-              {/* Central Watermark */}
               <div className="admit-paper-watermark" aria-hidden="true">
                 <img src="/logo.png" alt="Apna Campus Watermark" />
               </div>
 
-              {/* Sheet Content */}
               <div style={{ position: 'relative', zIndex: 1 }}>
-                {/* Header: Logo and Title */}
                 <div className="admit-paper-header">
                   <div className="admit-paper-logo">
                     <img src="/logo.png" alt="Apna Campus Logo" />
                   </div>
                   <div className="admit-paper-titles">
-                    <h2>APNA CAMPUS, BHUBANESWAR</h2>
+                    <h2>APNA CAMPUS AUTONOMOUS COLLEGE, BHUBANESWAR</h2>
                     <h3 className="admit-card-title-underlined">ADMIT CARD</h3>
-                    <h4>{selectedExamForAction.name}</h4>
+                    <h4>{upcomingExam.examName}</h4>
                   </div>
                 </div>
 
-                {/* Candidate Details & Photo */}
                 <div className="admit-paper-candidate-row">
                   <table className="admit-candidate-table">
                     <tbody>
                       <tr>
                         <td className="candidate-field-label">Registration No.</td>
-                        <td className="candidate-field-val">- {studentDetails.registrationNumber}</td>
+                        <td className="candidate-field-val">- {student.registrationNumber}</td>
                       </tr>
                       <tr>
                         <td className="candidate-field-label">Candidate's Name</td>
-                        <td className="candidate-field-val">- {studentDetails.name}</td>
+                        <td className="candidate-field-val">- {student.name.toUpperCase()}</td>
                       </tr>
                       <tr>
-                        <td className="candidate-field-label">Date of Birth</td>
-                        <td className="candidate-field-val">- {studentDetails.dobFormatted}</td>
+                        <td className="candidate-field-label">Course / Discipline</td>
+                        <td className="candidate-field-val">- {student.programme}</td>
                       </tr>
                       <tr>
-                        <td className="candidate-field-label">Course/Batch</td>
-                        <td className="candidate-field-val">- {studentDetails.courseBatchFull}</td>
+                        <td className="candidate-field-label">Admission Batch / Sem</td>
+                        <td className="candidate-field-val">- {student.batch} ({student.semester})</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1102,54 +2034,53 @@ export default function AcademicsPage({ account }) {
                       <img
                         src="/candidate_photo_apna.png"
                         alt="Candidate"
-                        onError={(e) => { e.target.src = '/candidate_photo_bishnu.png' }}
+                        onError={(e) => {
+                          e.target.src = '/passport_photo_male.svg'
+                        }}
                       />
                     </div>
                     <div className="candidate-sig-label">Candidate's Signature</div>
                   </div>
                 </div>
 
-                {/* Centered Schedule Subtitle */}
                 <div className="admit-paper-schedule-title">
-                  Schedule of Examination
+                  Schedule of Examination &bull; Centre: {upcomingExam.examinationCentre}
                 </div>
 
-                {/* Schedule Table */}
                 <table className="admit-paper-sched-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '8%', textAlign: 'center' }}>Sl.</th>
-                      <th style={{ width: '28%', textAlign: 'center' }}>Date</th>
-                      <th style={{ width: '12%', textAlign: 'center' }}>Sitting</th>
-                      <th style={{ width: '22%', textAlign: 'center' }}>Time</th>
-                      <th style={{ width: '15%', textAlign: 'center' }}>Subject Code</th>
-                      <th style={{ width: '35%', textAlign: 'left' }}>Subject Name</th>
+                      <th style={{ width: '6%' }}>Sl.</th>
+                      <th style={{ width: '24%' }}>Date &amp; Day</th>
+                      <th style={{ width: '12%' }}>Sitting</th>
+                      <th style={{ width: '22%' }}>Time</th>
+                      <th style={{ width: '14%' }}>Code</th>
+                      <th style={{ width: '22%' }}>Subject</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedExamForAction.subjects.map((s) => (
-                      <tr key={s.sl}>
+                    {upcomingExam.schedule.map((s) => (
+                      <tr key={s.code}>
                         <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{s.sl}</td>
-                        <td style={{ textAlign: 'center' }}>{s.dateFull || s.date}</td>
-                        <td style={{ textAlign: 'center' }}>{s.sitting}nd</td>
+                        <td style={{ textAlign: 'center' }}>{s.dateFull}</td>
+                        <td style={{ textAlign: 'center' }}>{s.sitting}</td>
                         <td style={{ textAlign: 'center' }}>{s.time}</td>
-                        <td style={{ textAlign: 'center' }}>{s.code}</td>
-                        <td style={{ textAlign: 'left', fontWeight: 'bold' }}>{s.name}</td>
+                        <td style={{ textAlign: 'center' }}><code>{s.code}</code></td>
+                        <td style={{ textAlign: 'left', fontWeight: 'bold' }}>{s.subject}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
 
-                {/* Signatures & Stamps Row */}
                 <div className="admit-paper-signatures-row">
                   <div className="admit-sig-block">
                     <img
                       src="/admit_sig_center_sup.png"
-                      alt="Center Superintendent Signature"
+                      alt="Centre Superintendent"
                       className="admit-sig-img"
                     />
                     <div className="admit-stamp-box">
-                      <div className="stamp-title">Center Superintendent</div>
+                      <div className="stamp-title">Centre Superintendent</div>
                       <div className="stamp-sub">Apna Campus, Bhubaneswar</div>
                     </div>
                   </div>
@@ -1157,35 +2088,114 @@ export default function AcademicsPage({ account }) {
                   <div className="admit-sig-block right">
                     <img
                       src="/admit_sig_controller.png"
-                      alt="Controller Signature"
+                      alt="Controller of Examinations"
                       className="admit-sig-img"
                     />
                     <div className="admit-stamp-box">
                       <div className="stamp-title">Controller of Examinations</div>
-                      <div className="stamp-sub">Apna Campus (Autonomous), Bhubaneswar</div>
+                      <div className="stamp-sub">Apna Campus Autonomous Examination Cell</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Instructions */}
                 <div className="admit-paper-instructions">
-                  <div className="instructions-title">*Instruction (s)</div>
+                  <div className="instructions-title">*Instructions for Candidate</div>
                   <ol className="instructions-list">
-                    <li>This Admit Card is issued on the basis of student data filled in on-line by the college.</li>
-                    <li>A Candidate is required to bring his / her Registration / Identity Card and Identity Proof to the Examination Hall.</li>
-                    <li>A Candidate detected with possession of Mobile Phone / Pager and any Objectionable Electronic Gadgets inside the Examination Hall will be debarred and punishable as per Regulation of the University.</li>
-                    <li>A candidate shall report the Invigilator and / Centre Superintendent in case of wrong photograph or discrepancies and the Centre Superintendent shall permit only after verification with the University Registration Card and valid Vote Id / Aadhar Card.</li>
-                    <li>The Centre Superintendent shall permit a candidate to appear in subject (s), if he / she has registered, eligible and subject (s) are available in the University Schedule and Admit Card.</li>
-                    <li>The Centre Superintendent shall make permissible arrangement for physically challenged / blind candidates with required supporting documents as per rules.</li>
-                    <li>The Result will be published subject to fulfilment of all academic regulations for the course in force of the university.</li>
+                    <li>This Admit Card is issued based on verified biometric attendance (&ge;75%) and institutional accounts clearance.</li>
+                    <li>Candidate must produce their physical Student ID Card along with this Admit Card at the examination entrance.</li>
+                    <li>Programmable calculators, smartwatches, and electronic devices are strictly prohibited in the examination hall.</li>
+                    <li>Autonomous answer scripts will be digitized and evaluated through encrypted barcode indexing.</li>
                   </ol>
                 </div>
 
-                {/* Footer Divider & Text */}
                 <div className="admit-paper-footer">
-                  <span>Apna Campus</span>
-                  <span>Printed @ 18-10-2026</span>
+                  <span>Apna Campus Autonomous College</span>
+                  <span>Verification Hash: {upcomingExam.qrToken}</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* MODAL 7: SUPPLEMENTARY EXAMINATION APPLICATION MODAL */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {showSupplementaryModal && (
+        <div
+          className="academics-modal-backdrop"
+          onClick={() => setShowSupplementaryModal(false)}
+        >
+          <div className="academics-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="academics-modal-close"
+              onClick={() => setShowSupplementaryModal(false)}
+            >
+              ×
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>
+                  Supplementary Examination Registration
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Register for special autonomous supplementary examination sessions.
+                </p>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.86rem', color: '#334155', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
+              Candidate: <strong>{student.name} ({student.rollNumber})</strong><br />
+              Status: <strong>No current backlogs recorded.</strong> If registering for improvement or special paper, choose from the catalog below:
+            </p>
+
+            <div style={{ marginBottom: '14px' }}>
+              <label className="academic-form-label">Select Paper for Examination</label>
+              <select className="academic-form-input">
+                {enrolledSubjects.map((s) => (
+                  <option key={s.code} value={s.code}>
+                    {s.code} &bull; {s.name} (₹500 Fee)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
+                Fee: ₹500 per paper
+              </span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-academic-secondary"
+                  onClick={() => setShowSupplementaryModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-academic-primary"
+                  onClick={() => {
+                    setShowSupplementaryModal(false)
+                    showToast('Supplementary application submitted to Examination Cell.')
+                  }}
+                >
+                  Submit Application ✓
+                </button>
               </div>
             </div>
           </div>

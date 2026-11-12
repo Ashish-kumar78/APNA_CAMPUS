@@ -141,8 +141,21 @@ export class FacultyController {
   @ApiOperation({ summary: 'Submit period attendance session for assigned cohort' })
   async submitAttendance(@CurrentUser() user: any, @Body() body: any) {
     const role = normalizeRole(user.role);
-    if (role !== 'faculty' && role !== 'hod' && role !== 'super_admin') {
+    if (role !== 'faculty' && role !== 'hod' && role !== 'super_admin' && role !== 'admin') {
       throw new ForbiddenException('Access denied. Only course faculty can record attendance.');
+    }
+
+    if (role === 'faculty') {
+      const facultyId = user.faculty?.id || user.id;
+      const assignments = await this.facultyService.getAssignments(facultyId);
+      const isAssigned = assignments.some(
+        a => (a.assignedSubject?.toLowerCase() === body.subjectCode?.toLowerCase() ||
+              (a as any).subjectCode?.toLowerCase() === body.subjectCode?.toLowerCase()) &&
+             (!body.section || a.assignedSection?.toLowerCase() === body.section?.toLowerCase())
+      );
+      if (!isAssigned && assignments.length > 0) {
+        throw new ForbiddenException(`Access denied. You are not assigned to record attendance for ${body.subjectCode} (${body.section}).`);
+      }
     }
 
     const res = await this.facultyService.submitAttendanceSession({

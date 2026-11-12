@@ -99,4 +99,88 @@ export class HodController {
     this.checkHodAccess(user);
     return this.hodService.getAuditLogs();
   }
+
+  @Get('academic-structure')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get department academic structure (Courses, Degrees, Branches, Semesters)' })
+  async getAcademicStructure(@CurrentUser() user: any, @Query('deptCode') deptCode?: string) {
+    this.checkHodAccess(user);
+    return this.hodService.getAcademicStructure(deptCode || user.department || 'CSE');
+  }
+
+  @Get('batches-sections')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get batches, sections and assigned class coordinators' })
+  async getBatchesAndSections(@CurrentUser() user: any, @Query('deptCode') deptCode?: string) {
+    this.checkHodAccess(user);
+    return this.hodService.getBatchesAndSections(deptCode || user.department || 'CSE');
+  }
+
+  @Post('allocate-advisor')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Allocate a faculty member as Class Advisor for a section' })
+  async allocateClassAdvisor(@CurrentUser() user: any, @Body() body: any) {
+    this.checkHodAccess(user);
+    return this.hodService.allocateClassAdvisor(body, user.name || user.identifier);
+  }
+
+  @Get('faculty-workload')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get department faculty teaching workload distribution' })
+  async getFacultyWorkload(@CurrentUser() user: any, @Query('deptCode') deptCode?: string) {
+    this.checkHodAccess(user);
+    return this.hodService.getFacultyWorkload(deptCode || user.department || 'CSE');
+  }
+
+  @Get('attendance-monitoring')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get department-wide attendance monitoring across sections' })
+  async getAttendanceMonitoring(@CurrentUser() user: any, @Query('deptCode') deptCode?: string) {
+    this.checkHodAccess(user);
+    return this.hodService.getAttendanceMonitoring(deptCode || user.department || 'CSE');
+  }
+
+  @Get('academic-performance')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get department academic performance and pass percentage statistics' })
+  async getAcademicPerformance(@CurrentUser() user: any, @Query('deptCode') deptCode?: string) {
+    this.checkHodAccess(user);
+    return this.hodService.getAcademicPerformance(deptCode || user.department || 'CSE');
+  }
+
+  @Get('faculty-allocations')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get faculty subject & section allocations with multi-level filtering' })
+  async getFacultyAllocations(
+    @CurrentUser() user: any,
+    @Query('deptCode') deptCode?: string,
+    @Query('semester') semester?: string,
+    @Query('section') section?: string,
+    @Query('academicYear') academicYear?: string,
+    @Query('subjectCode') subjectCode?: string,
+  ) {
+    this.checkHodAccess(user);
+    return this.hodService.getFacultyAllocations(deptCode || user.department || 'CSE', {
+      semester,
+      section,
+      academicYear,
+      subjectCode,
+    });
+  }
+
+  @Post('faculty-allocations')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Allocate existing faculty to existing subject and section' })
+  async allocateFacultySubject(@CurrentUser() user: any, @Body() body: any) {
+    this.checkHodAccess(user);
+    return this.hodService.allocateFacultySubject(body, user.name || user.identifier);
+  }
 }

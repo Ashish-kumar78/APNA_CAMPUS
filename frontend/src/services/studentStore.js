@@ -36,7 +36,7 @@ export const defaultDemoStudent = {
   lastClassAttendanceDate: '14/10/2026',
   lastHostelAttendanceDate: '16/10/2026',
   backlogCount: 0,
-  enrolledSubjects: initialSubjects.filter(s => s.semester === 5 && (s.department === 'CSE' || s.deptCode === 'CSE')),
+  enrolledSubjects: initialSubjects.filter(s => (s.semester === 5 || s.semester === 'Semester 5' || String(s.semester).includes('5')) && (s.department === 'CSE' || s.deptCode === 'CSE')),
 
   // 1. Personal Details (Image 1)
   admissionCategory: 'General',
@@ -215,7 +215,7 @@ export const rakeshDasStudent = {
   lastClassAttendanceDate: '15/10/2026',
   lastHostelAttendanceDate: '16/10/2026',
   backlogCount: 0,
-  enrolledSubjects: initialSubjects.filter(s => s.semester === 5 && (s.department === 'CSE' || s.deptCode === 'CSE')),
+  enrolledSubjects: initialSubjects.filter(s => (s.semester === 5 || s.semester === 'Semester 5' || String(s.semester).includes('5')) && (s.department === 'CSE' || s.deptCode === 'CSE')),
 
   admissionCategory: 'General',
   dob: '2005-06-12',

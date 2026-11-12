@@ -118,6 +118,19 @@ export class StudentsController {
     return { success: true, message: `Student ${updated.name} updated.`, data: updated };
   }
 
+  @Post(':id/allocate-section')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Allocate approved student to academic section (HOD or Admin)' })
+  async allocateSection(@CurrentUser() user: any, @Param('id') id: string, @Body() body: { section: string; semester?: string }) {
+    const role = normalizeRole(user.role);
+    if (!['admin', 'super_admin', 'hod', 'principal'].includes(role)) {
+      throw new ForbiddenException('Access denied. Only HOD, Principal, or Academic Admin can allocate student sections.');
+    }
+    const updated = await this.studentsService.allocateStudentSection(id, body.section, body.semester);
+    return { success: true, message: `Student allocated to ${body.section} successfully!`, data: updated };
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

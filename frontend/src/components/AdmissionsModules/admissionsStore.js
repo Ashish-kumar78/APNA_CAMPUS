@@ -16,6 +16,60 @@ import {
 import { api } from '../../services/api.js';
 import { saveStudent } from '../../services/studentStore.js';
 
+export function getCourseBranchCode(courseName) {
+  const t = (courseName || '').toLowerCase();
+  if (t.includes('artificial') || t.includes('ai') || t.includes('machine learning')) return 'AIML';
+  if (t.includes('computer') || t.includes('cse') || t.includes('software')) return 'CSE';
+  if (t.includes('electronic') || t.includes('ece')) return 'ECE';
+  if (t.includes('mechanical') || t.includes('mech')) return 'MECH';
+  if (t.includes('civil')) return 'CIVIL';
+  if (t.includes('electrical') || t.includes('eee') || t.includes('ee')) return 'EE';
+  if (t.includes('business') || t.includes('mba')) return 'MBA';
+  if (t.includes('mca')) return 'MCA';
+  return 'CSE';
+}
+
+export function sanitizeApplicantRecord(app, idx = 0) {
+  if (!app) return app;
+  const serialNo = idx + 1;
+  const serialStr = String(1000 + serialNo);
+  const branch = getCourseBranchCode(app.appliedCourse || app.programmeName || app.course);
+  const rollSeq = String(serialNo).padStart(3, '0');
+
+  let applicationNo = app.applicationNo;
+  if (!applicationNo || /XXXX/i.test(applicationNo)) {
+    applicationNo = `APP-2026-${serialStr}`;
+  }
+
+  let studentId = app.studentId || app.permanentRegistrationNo || app.enrollmentRecord?.studentId || app.registrationNumber;
+  if (!studentId || /XXXX/i.test(studentId)) {
+    studentId = `AC-2026-${serialStr}`;
+  }
+
+  let rollNumber = app.rollNumber || app.enrollmentRecord?.rollNumber || app.assignedRollNumber;
+  if (!rollNumber || /XXXX/i.test(rollNumber)) {
+    rollNumber = `26${branch}${rollSeq}`;
+  }
+
+  const enrollmentRecord = {
+    ...(app.enrollmentRecord || {}),
+    studentId: (app.enrollmentRecord?.studentId && !/XXXX/i.test(app.enrollmentRecord.studentId)) ? app.enrollmentRecord.studentId : studentId,
+    rollNumber: (app.enrollmentRecord?.rollNumber && !/XXXX/i.test(app.enrollmentRecord.rollNumber)) ? app.enrollmentRecord.rollNumber : rollNumber,
+    registrationNumber: (app.enrollmentRecord?.registrationNumber && !/XXXX/i.test(app.enrollmentRecord.registrationNumber)) ? app.enrollmentRecord.registrationNumber : studentId,
+    section: app.enrollmentRecord?.section || 'Section A',
+  };
+
+  return {
+    ...app,
+    serialNo,
+    applicationNo,
+    studentId,
+    rollNumber,
+    permanentRegistrationNo: studentId,
+    enrollmentRecord,
+  };
+}
+
 const STORAGE_KEYS = {
   COURSES: 'apna_admissions_courses_v1',
   APPLICANTS: 'apna_admissions_applicants_v1',
@@ -51,7 +105,7 @@ class AdmissionsStore {
       if (!item) return fallback;
       const parsed = JSON.parse(item);
       if (key === STORAGE_KEYS.APPLICANTS && Array.isArray(parsed)) {
-        if (parsed.length === 0) return fallback;
+        if (parsed.length === 0) return (Array.isArray(fallback) ? fallback : []).map((app, idx) => sanitizeApplicantRecord(app, idx));
         // Ensure default institutional master applicants are always retained alongside newly registered ones
         const map = new Map();
         if (Array.isArray(fallback)) {
@@ -66,7 +120,7 @@ class AdmissionsStore {
             map.set(k, { ...(map.get(k) || {}), ...item });
           }
         });
-        return Array.from(map.values()).map((app, idx) => ({ ...app, serialNo: idx + 1 }));
+        return Array.from(map.values()).map((app, idx) => sanitizeApplicantRecord(app, idx));
       }
       return parsed;
     } catch {
@@ -154,16 +208,18 @@ class AdmissionsStore {
       ...newApp,
     };
 
+    const sanitizedRecord = sanitizeApplicantRecord(fullRecord, existingIndex >= 0 ? existingIndex : this.applicants.length);
+
     if (existingIndex >= 0) {
-      this.applicants[existingIndex] = { ...this.applicants[existingIndex], ...fullRecord };
+      this.applicants[existingIndex] = { ...this.applicants[existingIndex], ...sanitizedRecord };
     } else {
-      this.applicants = [fullRecord, ...this.applicants];
+      this.applicants = [sanitizedRecord, ...this.applicants];
     }
 
-    this.applicants = this.applicants.map((a, idx) => ({ ...a, serialNo: idx + 1 }));
+    this.applicants = this.applicants.map((a, idx) => sanitizeApplicantRecord(a, idx));
     this.save(STORAGE_KEYS.APPLICANTS, this.applicants);
     this.notify();
-    return fullRecord;
+    return sanitizedRecord;
   }
 
   updateApplicant(id, updates) {
@@ -422,81 +478,51 @@ class AdmissionsStore {
   }
 
   // ---------------- ENROLLMENT & STUDENT CONVERSION ----------------
-  enrollStudent(appId, rollNumber, section = 'Section A') {
+  async enrollStudent(appId, rollNumber, section = 'Pending Section Allocation') {
     const app = this.getApplicantById(appId);
     if (!app) return { success: false, message: 'Applicant not found' };
 
+    let apiData = null;
+    try {
+      // Authoritative Backend REST API execution in PostgreSQL
+      const apiRes = await api.approveAndEnrollApplicant(appId);
+      if (apiRes && apiRes.data) {
+        apiData = apiRes.data;
+      }
+    } catch (e) {
+      console.warn('Backend API enrollment encountered notice, using local synchronized state:', e?.message);
+    }
+
     const deptCode = (app.courseCode || 'CSE').replace(/[^A-Z0-9]/g, '');
-    const randomSuffix = Math.floor(100 + Math.random() * 900);
-    const assignedRoll = rollNumber || `26${deptCode.slice(-3) || 'CSE'}${randomSuffix}`;
-    const studentId = `STU-26-${randomSuffix}`;
-    const permanentRegNo = `AC/2026/${deptCode}/000${randomSuffix}`;
-    const activationToken = `ACT-2026-${randomSuffix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const permanentRegNo = apiData?.registrationNumber || apiData?.studentId || app.permanentRegistrationNo || `AC/2026/${deptCode}/000${Math.floor(100 + Math.random() * 900)}`;
+    const studentId = apiData?.studentId || `STU-26-${Math.floor(100 + Math.random() * 900)}`;
+    const assignedRoll = apiData?.rollNumber || rollNumber || `26${deptCode.slice(-3) || 'CSE'}${Math.floor(100 + Math.random() * 900)}`;
+    const assignedSection = apiData?.section || section || 'Pending Section Allocation';
+    const academicStatus = apiData?.academicStatus || 'Pending Section Allocation';
 
     const enrollmentRecord = {
       studentId,
       registrationNumber: permanentRegNo,
       rollNumber: assignedRoll,
-      section: section || 'Section A',
+      section: assignedSection,
+      academicStatus,
       date: new Date().toLocaleDateString('en-GB'),
       status: 'Enrolled',
       accountProvisioned: true,
-      activationToken,
+      activationToken: apiData?.activationToken || null,
+      admissionBatch: apiData?.admissionBatch || '2026-2030',
     };
 
     this.updateApplicant(appId, {
       admissionStatus: 'Enrolled',
+      status: 'ENROLLED',
       permanentRegistrationNo: permanentRegNo,
+      studentId,
+      rollNumber: assignedRoll,
+      section: assignedSection,
+      academicStatus,
       enrollmentRecord,
     });
-
-    // Provision canonical Student record in central studentStore
-    try {
-      saveStudent({
-        id: `std-${randomSuffix}`,
-        name: app.name,
-        email: app.email,
-        phone: app.phone,
-        gender: app.gender || 'Female',
-        role: 'student',
-        registrationNumber: permanentRegNo,
-        rollNumber: assignedRoll,
-        studentId,
-        department: app.appliedCourse || 'Computer Science & Engineering',
-        deptCode: deptCode,
-        semester: 'Semester 1',
-        section: section || 'Section A',
-        academicYear: '2026-27',
-        status: 'Active',
-        defaultPassword: 'Apna@' + new Date().getFullYear(),
-        category: app.category || 'General',
-        attendance: 100,
-        cgpa: 0.0,
-        walletBalance: 500.0,
-        hostelName: app.hostel ? 'Gandhi Boys Residence' : null,
-      });
-    } catch (err) {
-      console.warn('Local studentStore provisioning fallback:', err.message);
-    }
-
-    // Asynchronously synchronize with Backend REST API
-    try {
-      api.approveAndEnrollApplicant(appId).then((apiRes) => {
-        if (apiRes && apiRes.success && apiRes.data) {
-          this.updateApplicant(appId, {
-            permanentRegistrationNo: apiRes.data.registrationNumber,
-            enrollmentRecord: {
-              ...enrollmentRecord,
-              registrationNumber: apiRes.data.registrationNumber,
-              rollNumber: apiRes.data.rollNumber,
-              activationToken: apiRes.data.activationToken,
-            },
-          });
-        }
-      }).catch((e) => {
-        console.warn('Backend API enrollment background sync:', e.message);
-      });
-    } catch (e) {}
 
     // Update confirmed admissions count for course
     const course = this.courses.find((c) => c.code === app.courseCode || c.name === app.appliedCourse);
@@ -525,7 +551,9 @@ class AdmissionsStore {
         studentId,
         department: app.appliedCourse,
         email: app.email,
-        activationToken,
+        section: assignedSection,
+        academicStatus,
+        activationToken: enrollmentRecord.activationToken,
       },
     };
   }
@@ -651,3 +679,4 @@ class AdmissionsStore {
 }
 
 export const admissionsStore = new AdmissionsStore();
+export default admissionsStore;

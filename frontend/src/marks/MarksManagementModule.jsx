@@ -170,6 +170,23 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
         },
       },
     }))
+
+    // Sync to backend API if value is numeric
+    if (value !== '' && !isNaN(value)) {
+      const studentObj = students.find((s) => s.id === studentId)
+      const subObj = SUBJECTS.find((s) => s.id === subjectId)
+      const code = subObj?.code || (subjectId === 'dsa' ? 'CS501' : subjectId.toUpperCase())
+      api.updateCellMark({
+        studentId: studentObj?.id || studentId,
+        rollNumber: studentObj?.rollNo || studentId,
+        subjectCode: code,
+        assessment: assessmentKey,
+        score: Number(value),
+        reason: 'Faculty continuous internal evaluation marks entry',
+      }).catch((err) => {
+        console.warn('Live mark update notice:', err?.message)
+      })
+    }
   }
 
   function handleSaveDraft(subjectId, assessmentKey) {
@@ -198,6 +215,19 @@ export default function MarksManagementModule({ initialRole = 'teacher', current
     }))
     const aName = ASSESSMENT_CONFIG.find((a) => a.key === assessmentKey)?.fullName || assessmentKey
     showToast(`${aName} marks have been finalized and locked for grade generation.`, 'success')
+
+    // Submit to HOD moderation approval queue
+    const subObj = SUBJECTS.find((s) => s.id === subjectId) || SUBJECTS[0]
+    const code = subObj?.code || (subjectId === 'dsa' ? 'CS501' : subjectId.toUpperCase())
+    api.submitMarksToHod({
+      subjectCode: code,
+      subject: subObj?.name || 'Data Structures & Algorithms',
+      faculty: account?.name || 'Dr. S. Mohanty',
+      semester: selectedSemester ? `Semester ${String(selectedSemester).replace(/\D/g, '')}` : 'Semester 5',
+      section: `Section ${selectedSection || 'A'}`,
+    }).catch((err) => {
+      console.warn('Submit to HOD queue notice:', err?.message)
+    })
   }
 
   function handleImportComplete(count) {

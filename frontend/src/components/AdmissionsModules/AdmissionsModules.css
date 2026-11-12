@@ -281,14 +281,18 @@
 }
 
 .adm-select-control {
-  padding: 7px 12px;
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid #cbd5e1;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   background: #ffffff;
-  color: #334155;
+  color: #1e293b;
   outline: none;
   cursor: pointer;
+  box-sizing: border-box;
+  min-height: 40px;
 }
 
 .adm-select-control:focus {

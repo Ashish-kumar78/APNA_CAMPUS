@@ -77,7 +77,8 @@ import AnonymousComplaintsSection from './components/CampusConnect/AnonymousComp
 import { campusConnectStore } from './services/campusConnectStore.js'
 import { api } from './services/api.js'
 import { feesApi } from './services/feesApi.js'
-import { getActiveStudent, setActiveStudent, getAllStudents, findStudentByQuery } from './services/studentStore.js'
+import { getActiveStudent, setActiveStudent, getAllStudents, findStudentByQuery, rakeshDasStudent } from './services/studentStore.js'
+import { isDemoAccount } from './utils/authUtils.js'
 import { notificationsApi } from './services/notificationsApi.js'
 import { notificationsStore } from './services/notificationsStore.js'
 import { erpStore } from './services/erpStore.js'
@@ -345,26 +346,30 @@ function StudentPortal({ account, onLogout }) {
       })
 
     // Real-time synchronization with Accounts & Fees ledger
-    const roll = account?.rollNumber || account?.registrationNumber || account?.studentId || '2305201001';
-    feesApi.getFeeStatement(roll)
-      .then((feeData) => {
-        if (!active || !feeData) return;
-        const total = Number(feeData.totalOverallFee) || Number(feeData.totalAnnualDues) || 322600;
-        const paid = Number(feeData.totalOverallPaid) || Number(feeData.paidAmount) || 194680;
-        const dues = Number(feeData.totalOverallDues) || Math.max(0, total - paid);
-        setStudentProfile((prev) => ({
-          ...(prev || {}),
-          totalFees: total,
-          paidFees: paid,
-          dueFees: dues,
-          totalFeesFormatted: `₹${total.toLocaleString('en-IN')}.00`,
-          paidFeesFormatted: `₹${paid.toLocaleString('en-IN')}.00`,
-          dueFeesFormatted: `₹${dues.toLocaleString('en-IN')}.00`,
-          hasFeeRecords: true,
-          feeStatement: feeData,
-        }));
-      })
-      .catch(() => {});
+    const isDemo = isDemoAccount(account);
+    const roll = account?.rollNumber || account?.registrationNumber || account?.studentId || (isDemo ? '2305201001' : '');
+    if (roll) {
+      feesApi.getFeeStatement(roll)
+        .then((feeData) => {
+          if (!active) return;
+          const total = Number(feeData?.totalOverallFee) || Number(feeData?.totalAnnualDues) || (isDemo ? 322600 : 0);
+          const paid = Number(feeData?.totalOverallPaid) || Number(feeData?.paidAmount) || (isDemo ? 194680 : 0);
+          const dues = Number(feeData?.totalOverallDues) || Math.max(0, total - paid);
+          const hasFees = isDemo || Boolean(feeData?.totalOverallFee || feeData?.totalAnnualDues || total > 0);
+          setStudentProfile((prev) => ({
+            ...(prev || {}),
+            totalFees: total,
+            paidFees: paid,
+            dueFees: dues,
+            totalFeesFormatted: hasFees ? `₹${total.toLocaleString('en-IN')}.00` : 'N/A',
+            paidFeesFormatted: hasFees ? `₹${paid.toLocaleString('en-IN')}.00` : 'N/A',
+            dueFeesFormatted: hasFees ? `₹${dues.toLocaleString('en-IN')}.00` : 'N/A',
+            hasFeeRecords: hasFees,
+            feeStatement: feeData,
+          }));
+        })
+        .catch(() => {});
+    }
 
     return () => {
       active = false
@@ -372,6 +377,68 @@ function StudentPortal({ account, onLogout }) {
   }, [account?.name, account?.rollNumber, account?.registrationNumber])
 
   const studentAccount = useMemo(() => {
+    const isDemo = isDemoAccount(account);
+
+    if (isDemo) {
+      // Demo student (Rakesh Das) retains complete demonstration details in all cards & portals
+      const base = {
+        ...rakeshDasStudent,
+        ...account,
+        ...studentProfile,
+      };
+      return {
+        ...base,
+        semester: studentProfile?.semester && studentProfile.semester !== 'Semester 1' ? studentProfile.semester : (rakeshDasStudent.semester || 'Semester 5'),
+        currentSemester: rakeshDasStudent.currentSemester || 5,
+        batch: rakeshDasStudent.batch || 'BTECH 2023–2027',
+        section: studentProfile?.section || rakeshDasStudent.section || 'Section A',
+        enrollments: (Array.isArray(studentProfile?.enrollments) && studentProfile.enrollments.length > 0)
+          ? studentProfile.enrollments
+          : (Array.isArray(rakeshDasStudent.enrolledSubjects) && rakeshDasStudent.enrolledSubjects.length > 0
+              ? rakeshDasStudent.enrolledSubjects
+              : [
+                  { id: 'sub-dsa', code: 'CS501', name: 'Data Structures & Algorithms', credits: 4, type: 'Core Theory' },
+                  { id: 'sub-os', code: 'CS502', name: 'Operating Systems', credits: 4, type: 'Core Theory' },
+                  { id: 'sub-dbms', code: 'CS503', name: 'Database Management Systems', credits: 4, type: 'Core Theory' },
+                  { id: 'sub-ai', code: 'CS504', name: 'Artificial Intelligence', credits: 3, type: 'Core Theory' },
+                  { id: 'sub-ml', code: 'CS505', name: 'Machine Learning Lab', credits: 2, type: 'Practical Lab' },
+                  { id: 'sub-se', code: 'CS506', name: 'Software Engineering & Project', credits: 3, type: 'Practical Lab' },
+                ]),
+        enrolledSubjects: (Array.isArray(studentProfile?.enrolledSubjects) && studentProfile.enrolledSubjects.length > 0)
+          ? studentProfile.enrolledSubjects
+          : (Array.isArray(rakeshDasStudent.enrolledSubjects) && rakeshDasStudent.enrolledSubjects.length > 0
+              ? rakeshDasStudent.enrolledSubjects
+              : [
+                  { id: 'sub-dsa', code: 'CS501', name: 'Data Structures & Algorithms', credits: 4, type: 'Core Theory' },
+                  { id: 'sub-os', code: 'CS502', name: 'Operating Systems', credits: 4, type: 'Core Theory' },
+                  { id: 'sub-dbms', code: 'CS503', name: 'Database Management Systems', credits: 4, type: 'Core Theory' },
+                  { id: 'sub-ai', code: 'CS504', name: 'Artificial Intelligence', credits: 3, type: 'Core Theory' },
+                  { id: 'sub-ml', code: 'CS505', name: 'Machine Learning Lab', credits: 2, type: 'Practical Lab' },
+                  { id: 'sub-se', code: 'CS506', name: 'Software Engineering & Project', credits: 3, type: 'Practical Lab' },
+                ]),
+        attendancePercentage: studentProfile?.attendancePercentage ?? rakeshDasStudent.attendance,
+        attendance: studentProfile?.attendance ?? rakeshDasStudent.attendance,
+        classesHeld: studentProfile?.classesHeld ?? 200,
+        classesAttended: studentProfile?.classesAttended ?? 176,
+        hasAttendanceRecords: true,
+        cgpa: studentProfile?.cgpa ?? rakeshDasStudent.cgpa,
+        hasAcademicRecords: true,
+        isNewlyRegistered: false,
+        totalFees: studentProfile?.totalFees ?? 322600,
+        paidFees: studentProfile?.paidFees ?? 194680,
+        dueFees: studentProfile?.dueFees ?? 127920,
+        totalFeesFormatted: studentProfile?.totalFeesFormatted ?? '₹3,22,600.00',
+        paidFeesFormatted: studentProfile?.paidFeesFormatted ?? '₹1,94,680.00',
+        dueFeesFormatted: studentProfile?.dueFeesFormatted ?? '₹1,27,920.00',
+        hasFeeRecords: true,
+        registrationNumber: studentProfile?.rollNumber || studentProfile?.studentId || account?.registrationNumber || rakeshDasStudent.registrationNumber,
+        identity: studentProfile?.rollNumber || studentProfile?.studentId || account?.identity || rakeshDasStudent.registrationNumber,
+        program: studentProfile?.programme?.name || account?.program || rakeshDasStudent.program,
+        branch: studentProfile?.department || account?.branch || rakeshDasStudent.department,
+      };
+    }
+
+    // Authentically created new student: uses real data only, defaults to clean blank/N/A state
     if (!studentProfile) return account
     return {
       ...account,
@@ -1100,12 +1167,15 @@ function StudentPortal({ account, onLogout }) {
                   {/* Card 1: Enrolled Courses */}
                   <article className="dash-stat tone-blue">
                     {(() => {
-                      const sem = studentAccount?.currentSemester || studentAccount?.semester || 'Semester 1';
+                      const isDemo = isDemoAccount(studentAccount);
+                      const sem = studentAccount?.currentSemester || studentAccount?.semester || (isDemo ? 'Semester 5' : 'Semester 1');
                       const semLabel = String(sem).startsWith('Semester') ? sem : `Semester ${sem}`;
                       const coursesCount = Array.isArray(studentAccount?.enrollments) && studentAccount.enrollments.length > 0
                         ? studentAccount.enrollments.length
                         : Array.isArray(studentAccount?.enrolledSubjects) && studentAccount.enrolledSubjects.length > 0
                         ? studentAccount.enrolledSubjects.length
+                        : isDemo
+                        ? 6
                         : null;
                       return (
                         <>
@@ -1362,15 +1432,20 @@ function StudentPortal({ account, onLogout }) {
 
                     <div className="fees-card-body">
                       {(() => {
-                        const hasFeeData = Boolean(
-                          studentAccount?.totalFees !== undefined ||
-                          studentAccount?.paidFees !== undefined ||
-                          studentAccount?.dueFees !== undefined ||
-                          studentAccount?.totalFeesFormatted
+                        const isDemo = isDemoAccount(studentAccount);
+                        const hasFeeData = isDemo || Boolean(
+                          studentAccount?.hasFeeRecords ||
+                          (studentAccount?.totalFees !== undefined && studentAccount?.totalFees > 0)
                         );
-                        const totalFeesText = studentAccount?.totalFeesFormatted || (studentAccount?.totalFees !== undefined ? `₹${Number(studentAccount.totalFees).toLocaleString('en-IN')}` : (hasFeeData ? '₹0.00' : 'N/A'));
-                        const paidFeesText = studentAccount?.paidFeesFormatted || (studentAccount?.paidFees !== undefined ? `₹${Number(studentAccount.paidFees).toLocaleString('en-IN')}` : (hasFeeData ? '₹0.00' : 'N/A'));
-                        const dueFeesText = studentAccount?.dueFeesFormatted || (studentAccount?.dueFees !== undefined ? `₹${Number(studentAccount.dueFees).toLocaleString('en-IN')}` : (hasFeeData ? '₹0.00' : 'N/A'));
+                        const totalFeesText = isDemo
+                          ? (studentAccount?.totalFeesFormatted || '₹3,22,600.00')
+                          : (hasFeeData && studentAccount?.totalFeesFormatted ? studentAccount.totalFeesFormatted : (hasFeeData && studentAccount?.totalFees !== undefined ? `₹${Number(studentAccount.totalFees).toLocaleString('en-IN')}.00` : 'N/A'));
+                        const paidFeesText = isDemo
+                          ? (studentAccount?.paidFeesFormatted || '₹1,94,680.00')
+                          : (hasFeeData && studentAccount?.paidFeesFormatted ? studentAccount.paidFeesFormatted : (hasFeeData && studentAccount?.paidFees !== undefined ? `₹${Number(studentAccount.paidFees).toLocaleString('en-IN')}.00` : 'N/A'));
+                        const dueFeesText = isDemo
+                          ? (studentAccount?.dueFeesFormatted || '₹1,27,920.00')
+                          : (hasFeeData && studentAccount?.dueFeesFormatted ? studentAccount.dueFeesFormatted : (hasFeeData && studentAccount?.dueFees !== undefined ? `₹${Number(studentAccount.dueFees).toLocaleString('en-IN')}.00` : 'N/A'));
 
                         return (
                           <>

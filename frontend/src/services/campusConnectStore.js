@@ -644,6 +644,176 @@ const initialMessages = {
       type: 'text',
       reactions: { '💡': 4 }
     }
+  ],
+  'conv-os': [
+    {
+      id: 'msg-os-1',
+      sender: 'Dr. S. Mohanty',
+      senderRole: 'faculty',
+      senderId: 'FAC-042',
+      time: '08:45 AM',
+      date: 'Today',
+      timestamp: Date.now() - 28800000,
+      text: 'Good morning students. Today in Operating Systems (CS502) we will analyze CPU Process Scheduling algorithms: Round Robin, FCFS, and Multilevel Feedback Queues.',
+      type: 'text',
+      reactions: { '👍': 18 }
+    },
+    {
+      id: 'msg-os-2',
+      sender: 'Rohan Sharma',
+      senderRole: 'student',
+      senderId: '2305201022',
+      time: '09:20 AM',
+      date: 'Today',
+      timestamp: Date.now() - 25000000,
+      text: 'Sir, could you please confirm if the preemptive SJF (SRTF) question from 2025 question bank is in scope for CIA-1?',
+      type: 'text',
+      reactions: { '👍': 7 }
+    },
+    {
+      id: 'msg-os-3',
+      sender: 'Dr. S. Mohanty',
+      senderRole: 'faculty',
+      senderId: 'FAC-042',
+      time: '10:15 AM',
+      date: 'Today',
+      timestamp: Date.now() - 18000000,
+      text: 'Yes Rohan. Both preemptive and non-preemptive SJF and SRTF scheduling are part of the syllabus. Problem sheets have been uploaded to portal notes.',
+      type: 'text',
+      reactions: { '🙌': 14, '❤️': 6 }
+    }
+  ],
+  'conv-cn': [
+    {
+      id: 'msg-cn-1',
+      sender: 'Dr. A. Jena',
+      senderRole: 'faculty',
+      senderId: 'FAC-043',
+      time: '09:30 AM',
+      date: 'Today',
+      timestamp: Date.now() - 21600000,
+      text: 'Please review IPv4 CIDR addressing slides and Subnetting calculations before tomorrow\'s 11:30 AM class in Room 304.',
+      type: 'text',
+      reactions: { '👍': 12 }
+    },
+    {
+      id: 'msg-cn-2',
+      sender: 'Ananya Sharma',
+      senderRole: 'student',
+      senderId: '2305201008',
+      time: '11:15 AM',
+      date: 'Today',
+      timestamp: Date.now() - 14400000,
+      text: 'Sir, will the Cisco Packet Tracer router configuration lab be assessed this Friday?',
+      type: 'text',
+      reactions: { '💡': 5 }
+    },
+    {
+      id: 'msg-cn-3',
+      sender: 'Dr. A. Jena',
+      senderRole: 'faculty',
+      senderId: 'FAC-043',
+      time: '01:05 PM',
+      date: 'Today',
+      timestamp: Date.now() - 7200000,
+      text: 'Yes Ananya. Each student must submit their Packet Tracer .pkt file for dynamic routing (OSPF / RIP) during Friday lab.',
+      type: 'text',
+      reactions: { '👍': 16 }
+    }
+  ],
+  'conv-dept': [
+    {
+      id: 'msg-dept-1',
+      sender: 'Dr. P. K. Pattnaik (HOD CSE)',
+      senderRole: 'faculty',
+      senderId: 'HOD-CSE',
+      time: '10:00 AM',
+      date: 'Today',
+      timestamp: Date.now() - 18000000,
+      text: 'Notice for all B.Tech CSE Semester 5 & 7 students: The First Continuous Internal Assessment (CIE-1) moderation process is complete. Students may review their evaluated answer scripts with respective subject faculties.',
+      type: 'text',
+      reactions: { '📢': 42, '👍': 35 }
+    }
+  ],
+  'conv-lib': [
+    {
+      id: 'msg-lib-1',
+      sender: 'Central Library Directorate',
+      senderRole: 'admin',
+      senderId: 'LIB-001',
+      time: 'Yesterday',
+      date: 'Yesterday',
+      timestamp: Date.now() - 86400000,
+      text: 'Digital Library Alert: IEEE Xplore, ScienceDirect, and ACM Digital Library institutional access has been renewed. You can access via campus LAN or through the Digital Library Portal.',
+      type: 'text',
+      reactions: { '📚': 28, '❤️': 19 }
+    }
+  ],
+  'conv-coding': [
+    {
+      id: 'msg-code-1',
+      sender: 'GIFT Coding Club',
+      senderRole: 'student',
+      senderId: 'CLUB-01',
+      time: 'Yesterday',
+      date: 'Yesterday',
+      timestamp: Date.now() - 86400000,
+      text: '⚡ Weekly Algorithm Sprint begins this Saturday 08:00 PM on HackerRank. Topics: Binary Search Trees, Dynamic Programming, and Graph Traversals. Top 3 scorers win certificates & badges!',
+      type: 'text',
+      reactions: { '🔥': 38, '🚀': 25 }
+    }
+  ],
+  'conv-direct-hod': [
+    {
+      id: 'msg-dhod-1',
+      sender: 'Dr. P. K. Pattnaik',
+      senderRole: 'faculty',
+      senderId: 'HOD-CSE',
+      time: 'Yesterday',
+      date: 'Yesterday',
+      timestamp: Date.now() - 86400000,
+      text: 'Your attendance condonation application for the Inter-College Hackathon has been verified and approved.',
+      type: 'text',
+      reactions: { '👍': 1 }
+    },
+    {
+      id: 'msg-dhod-2',
+      sender: 'Rakesh Das',
+      senderRole: 'student',
+      senderId: '2305201001',
+      time: 'Yesterday',
+      date: 'Yesterday',
+      timestamp: Date.now() - 82800000,
+      text: 'Thank you very much Sir! I will maintain regular attendance and complete all pending lab exercises.',
+      type: 'text',
+      reactions: { '🙏': 1 }
+    }
+  ],
+  'conv-direct-warden': [
+    {
+      id: 'msg-ward-1',
+      sender: 'Er. B. K. Jena',
+      senderRole: 'admin',
+      senderId: 'WRD-001',
+      time: '2 days ago',
+      date: '05 Oct',
+      timestamp: Date.now() - 172800000,
+      text: 'Please ensure your biometric gate pass is punched before the 09:30 PM hostel curfew.',
+      type: 'text',
+      reactions: { '👍': 1 }
+    },
+    {
+      id: 'msg-ward-2',
+      sender: 'Rakesh Das',
+      senderRole: 'student',
+      senderId: '2305201001',
+      time: '2 days ago',
+      date: '05 Oct',
+      timestamp: Date.now() - 169200000,
+      text: 'Yes Sir, will ensure timely return.',
+      type: 'text',
+      reactions: { '👍': 1 }
+    }
   ]
 };
 
@@ -837,14 +1007,15 @@ function loadStorage(key, fallback) {
   }
 }
 
-function saveStorage(key, value) {
+function saveStorage(key, value, extra = {}) {
   try {
     localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(value));
-    window.dispatchEvent(new CustomEvent('campus_connect_updated', { detail: { key } }));
+    const payload = { key, ...extra, timestamp: Date.now() };
+    window.dispatchEvent(new CustomEvent('campus_connect_updated', { detail: payload }));
     if (typeof BroadcastChannel !== 'undefined') {
       try {
         const bc = new BroadcastChannel('campus_connect_realtime');
-        bc.postMessage({ key, timestamp: Date.now() });
+        bc.postMessage(payload);
         bc.close();
       } catch (err) {}
     }
@@ -866,7 +1037,26 @@ if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
 export const campusConnectStore = {
   getConversations(role = 'student', category = 'All', searchQuery = '') {
     const all = loadStorage('conversations', initialConversations);
-    return all.filter((conv) => {
+    const allMsgs = loadStorage('messages', initialMessages);
+
+    const getMsgTime = (conv) => {
+      const msgs = allMsgs[conv.id];
+      if (Array.isArray(msgs) && msgs.length > 0) {
+        const last = msgs[msgs.length - 1];
+        const t = new Date(last.timestamp || last.createdAt || 0).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+      if (conv.lastMessage?.timestamp) {
+        const t = new Date(conv.lastMessage.timestamp).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+      return 0;
+    };
+
+    // Sort conversations so that the most recent message appears at the very top (WhatsApp order)
+    const sorted = [...all].sort((a, b) => getMsgTime(b) - getMsgTime(a));
+
+    return sorted.filter((conv) => {
       // Role filtering if needed: students don't see admin-only internal channels
       if (role === 'student' && conv.category === 'Administrative Restricted') {
         return false;
@@ -898,12 +1088,20 @@ export const campusConnectStore = {
 
   getMessages(conversationId) {
     const allMsgs = loadStorage('messages', initialMessages);
-    return allMsgs[conversationId] || [];
+    if (Array.isArray(allMsgs[conversationId]) && allMsgs[conversationId].length > 0) {
+      return allMsgs[conversationId];
+    }
+    if (Array.isArray(initialMessages[conversationId]) && initialMessages[conversationId].length > 0) {
+      allMsgs[conversationId] = [...initialMessages[conversationId]];
+      saveStorage('messages', allMsgs, { conversationId });
+      return allMsgs[conversationId];
+    }
+    return [];
   },
 
   sendMessage(conversationId, messagePayload) {
     const allMsgs = loadStorage('messages', initialMessages);
-    const convMsgs = allMsgs[conversationId] || [];
+    const convMsgs = allMsgs[conversationId] || initialMessages[conversationId] || [];
 
     const newMsg = {
       id: `msg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -918,31 +1116,31 @@ export const campusConnectStore = {
     };
 
     allMsgs[conversationId] = [...convMsgs, newMsg];
-    saveStorage('messages', allMsgs);
+    saveStorage('messages', allMsgs, { conversationId, message: newMsg });
 
     // Audio chime on send
     playSentSound();
 
-    // Update conversation last message snippet
+    // Update conversation last message snippet and float conversation to top of list
     const convs = loadStorage('conversations', initialConversations);
     const targetConv = convs.find(c => c.id === conversationId);
-    const updatedConvs = convs.map(c => {
-      if (c.id === conversationId) {
-        return {
-          ...c,
-          lastMessage: {
-            sender: newMsg.sender,
-            text: newMsg.text || (newMsg.attachments?.[0]?.name ? `📎 ${newMsg.attachments[0].name}` : (newMsg.voiceNote ? '🎤 Voice message' : 'New message')),
-            time: newMsg.time,
-            timestamp: newMsg.timestamp,
-            isFaculty: newMsg.senderRole === 'faculty',
-            isBroadcast: newMsg.type === 'official_announcement'
-          }
-        };
-      }
-      return c;
-    });
-    saveStorage('conversations', updatedConvs);
+    let updatedConvs = convs;
+    if (targetConv) {
+      const updatedTarget = {
+        ...targetConv,
+        lastMessage: {
+          sender: newMsg.sender,
+          text: newMsg.text || (newMsg.attachments?.[0]?.name ? `📎 ${newMsg.attachments[0].name}` : (newMsg.voiceNote ? '🎤 Voice message' : 'New message')),
+          time: newMsg.time,
+          timestamp: newMsg.timestamp,
+          isFaculty: newMsg.senderRole === 'faculty',
+          isBroadcast: newMsg.type === 'official_announcement'
+        }
+      };
+      const remaining = convs.filter(c => c.id !== conversationId);
+      updatedConvs = [updatedTarget, ...remaining];
+    }
+    saveStorage('conversations', updatedConvs, { conversationId, message: newMsg });
 
     // Asynchronous backend sync
     if (typeof fetch !== 'undefined') {
@@ -951,6 +1149,52 @@ export const campusConnectStore = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newMsg)
       }).catch(() => {});
+    }
+
+    // Interactive Faculty response for Data Structures class when student asks a question
+    if (conversationId === 'conv-ds' && (newMsg.senderRole === 'student' || !newMsg.isFaculty)) {
+      setTimeout(() => {
+        const replies = [
+          `Good question. Yes, make sure to review AVL Tree rotations (LL, RR, LR, RL) and time complexity analysis before Friday.`,
+          `Please check Assignment 3 problem set uploaded in the portal. It has the exact tree traversal and rotation questions.`,
+          `Noted. We will also walk through this problem during our practical lab session in Computing Lab 3.`,
+          `Yes, please submit your solution with proper comments and complexity analysis before Friday 11:59 PM.`
+        ];
+        const replyText = replies[Math.floor(Math.random() * replies.length)];
+
+        const facultyMsg = {
+          id: `msg-faculty-${Date.now()}`,
+          sender: 'Dr. S. Mohanty',
+          senderRole: 'faculty',
+          senderId: 'FAC-042',
+          text: replyText,
+          type: 'text',
+          time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          date: 'Today',
+          timestamp: Date.now(),
+          status: 'delivered',
+          reactions: { '👍': 4 }
+        };
+
+        const msgsAfter = loadStorage('messages', initialMessages);
+        msgsAfter[conversationId] = [...(msgsAfter[conversationId] || []), facultyMsg];
+        saveStorage('messages', msgsAfter, { conversationId, message: facultyMsg });
+
+        // Update conversation snippet
+        const convsAfter = loadStorage('conversations', initialConversations);
+        saveStorage('conversations', convsAfter.map(c => c.id === conversationId ? {
+          ...c,
+          lastMessage: {
+            sender: facultyMsg.sender,
+            text: facultyMsg.text,
+            time: facultyMsg.time,
+            timestamp: facultyMsg.timestamp,
+            isFaculty: true
+          }
+        } : c), { conversationId, message: facultyMsg });
+
+        playReceivedSound();
+      }, 2500);
     }
 
     // Interactive Peer Auto-Reply simulation if it's a 1-to-1 direct chat

@@ -48,19 +48,30 @@ export class FacultyService {
           facultyId: a.faculty.employeeId || 'FAC-042',
           facultyName: a.faculty.name,
           academicYear: a.academicYear,
+          academicSession: a.academicYear,
+          assignedAcademicSession: a.academicYear,
           subjectCode: a.courseOffering.subjectCode,
           subjectName: a.courseOffering.subjectName,
+          assignedSubject: `${a.courseOffering.subjectCode} - ${a.courseOffering.subjectName}`,
           program: a.courseOffering.programme?.name || 'B.Tech',
+          assignedCourse: a.courseOffering.programme?.name || 'B.Tech',
           deptCode: a.courseOffering.department || 'CSE',
+          branch: a.courseOffering.department || 'CSE',
+          assignedBranch: a.courseOffering.department || 'CSE',
           department: 'Computer Science & Engineering',
           semester: a.courseOffering.semester,
+          assignedSemester: a.courseOffering.semester,
           section: a.section,
+          assignedSection: a.section,
           type: a.courseOffering.type,
           credits: a.courseOffering.credits,
           room: `Block B - ${301 + (idx % 8)}`,
           labRoom: a.courseOffering.type.includes('Lab') ? 'Computing Lab 3' : null,
           sectionEnrollment: 32,
+          totalEnrolledStudents: 32,
           courseTotalEnrollment: 64,
+          todayScheduledClasses:
+            idx % 2 === 0 ? '10:00 AM – 11:00 AM (Room B-302)' : '02:00 PM – 04:00 PM (Computing Lab 3)',
           attendanceCompletion: 88,
           marksCompletion: 84,
           approvalStatus: 'In Progress · Draft',
@@ -74,7 +85,7 @@ export class FacultyService {
     }
 
     // Comprehensive teaching assignments spanning multiple semesters, sections & subjects
-    return [
+    const fallbackAssignments = [
       {
         id: 'fa-1',
         facultyId: 'FAC-042',
@@ -276,6 +287,26 @@ export class FacultyService {
         lastUpdated: '18 May 2026',
       },
     ];
+
+    return fallbackAssignments.map((a, idx) => ({
+      ...a,
+      academicSession: a.academicYear,
+      assignedAcademicSession: a.academicYear,
+      assignedCourse: a.program,
+      assignedBranch: a.deptCode,
+      assignedSemester: a.semester,
+      assignedSection: a.section,
+      assignedSubject: `${a.subjectCode} - ${a.subjectName}`,
+      totalEnrolledStudents: a.sectionEnrollment,
+      todayScheduledClasses:
+        idx === 0
+          ? '10:00 AM – 11:00 AM (Room B-302)'
+          : idx === 1
+          ? '11:15 AM – 12:15 PM (Room B-303)'
+          : idx === 2
+          ? '02:00 PM – 03:00 PM (Room B-304)'
+          : 'No classes scheduled today',
+    }));
   }
 
   /**
@@ -337,7 +368,77 @@ export class FacultyService {
       }
     }
 
-    // Generate/fetch distinct students for these assignments
+    // 1. Attempt to fetch authentic student records directly from PostgreSQL database
+    try {
+      const dbStudents = await this.prisma.student.findMany({
+        where: {
+          OR: relevantAssignments.map((a) => ({
+            semester: a.semester,
+            section: a.section,
+          })),
+        },
+        include: {
+          attendanceRecords: true,
+          marks: true,
+        },
+        orderBy: { rollNumber: 'asc' },
+      });
+
+      if (dbStudents && dbStudents.length > 0) {
+        const studentList = dbStudents.map((s) => {
+          const matchingAsgn =
+            relevantAssignments.find(
+              (a) =>
+                (s.semester || '').toLowerCase().includes(a.semester.toLowerCase()) &&
+                (s.section || '').toLowerCase().includes(a.section.toLowerCase()),
+            ) || relevantAssignments[0];
+
+          return {
+            id: s.id,
+            studentId: s.studentId,
+            rollNumber: s.rollNumber,
+            name: s.name,
+            email: s.email,
+            phone: s.phone || '+91 94370 00000',
+            department: s.department,
+            deptCode: s.deptCode,
+            program: s.programmeId || matchingAsgn?.program || 'B.Tech',
+            semester: s.semester,
+            section: s.section,
+            academicYear: s.academicYear || matchingAsgn?.academicYear || '2026-27',
+            subjectCode: matchingAsgn?.subjectCode || 'CS501',
+            subjectName: matchingAsgn?.subjectName || 'Data Structures & Algorithms',
+            status: s.status || 'Active',
+            attendance: s.attendance || 85,
+            cgpa: s.cgpa || 8.0,
+            marks: {
+              modular1: 18,
+              modular2: 17,
+              quizAvg: 9,
+              assignmentAvg: 8,
+              lab: 22,
+              totalMarks: 74,
+            },
+          };
+        });
+
+        if (query?.search && query.search.trim()) {
+          const q = query.search.trim().toLowerCase();
+          return studentList.filter(
+            (st) =>
+              st.name.toLowerCase().includes(q) ||
+              st.rollNumber.toLowerCase().includes(q) ||
+              st.studentId.toLowerCase().includes(q),
+          );
+        }
+
+        return studentList;
+      }
+    } catch {
+      // Database offline or no direct matches: proceed to deterministic class-scoped roster
+    }
+
+    // 2. Deterministic class roster strictly scoped to assigned semester & section
     const allStudentsList: any[] = [];
     const seenRolls = new Set<string>();
 
@@ -822,6 +923,73 @@ export class FacultyService {
       } catch {
         // Non-blocking
       }
+    }
+
+    // Persist and update student attendance in PostgreSQL
+    try {
+      for (const roll of rolls) {
+        const isPresent = Boolean(payload.attendanceMap[roll]);
+        const student = await this.prisma.student.findFirst({
+          where: {
+            OR: [
+              { rollNumber: roll },
+              { id: roll },
+              { studentId: roll },
+            ],
+          },
+          include: { attendanceRecords: true },
+        });
+
+        if (student) {
+          const existingRecord = (student as any).attendanceRecords?.find(
+            (r: any) => r.subjectCode?.toLowerCase() === payload.subjectCode?.toLowerCase()
+          );
+
+          if (existingRecord) {
+            const newHeld = (existingRecord.held || 0) + 1;
+            const newAttended = (existingRecord.attended || 0) + (isPresent ? 1 : 0);
+            const newPct = Number(((newAttended / newHeld) * 100).toFixed(1));
+
+            await this.prisma.attendanceRecord.update({
+              where: { id: existingRecord.id },
+              data: {
+                held: newHeld,
+                attended: newAttended,
+                percentage: newPct,
+              },
+            });
+          } else {
+            await this.prisma.attendanceRecord.create({
+              data: {
+                studentId: student.id,
+                subjectCode: payload.subjectCode,
+                subjectName: payload.subjectName || payload.subjectCode,
+                faculty: payload.facultyName || 'Course Faculty',
+                type: activityType.includes('Lab') ? 'Lab' : 'Theory',
+                held: 1,
+                attended: isPresent ? 1 : 0,
+                percentage: isPresent ? 100 : 0,
+              },
+            });
+          }
+
+          // Recalculate overall student attendance
+          const allRecords = await this.prisma.attendanceRecord.findMany({
+            where: { studentId: student.id },
+          });
+          const totHeld = allRecords.reduce((acc, curr) => acc + curr.held, 0);
+          const totAttended = allRecords.reduce((acc, curr) => acc + curr.attended, 0);
+          if (totHeld > 0) {
+            const overallPct = Math.round((totAttended / totHeld) * 100);
+            await this.prisma.student.update({
+              where: { id: student.id },
+              data: { attendance: overallPct },
+            });
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn('Database attendance sync notice:', err?.message);
     }
 
     return {

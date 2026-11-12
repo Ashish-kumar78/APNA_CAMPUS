@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { downloadGradeCardPdf, downloadAdmitCardPdf } from '../utils/pdfGenerator'
 import OfficialCollegeNoticeModal, { GIFT_MODULAR_TEST_2_NOTICE } from '../components/ExaminationCell/OfficialCollegeNoticeModal.jsx'
+import { isDemoAccount } from '../utils/authUtils.js'
 import './ExaminationPage.css'
 
 const internalSchedule = [
@@ -60,13 +61,16 @@ export default function ExaminationPage({ account }) {
   const [showModularNotice, setShowModularNotice] = useState(false)
 
   // Authentic student data check: Only students with verified published results see university grade cards
-  const studentResults = Array.isArray(account?.universityResults) ? account.universityResults : []
+  const isDemo = isDemoAccount(account)
+  const studentResults = Array.isArray(account?.universityResults) && account.universityResults.length > 0
+    ? account.universityResults
+    : (isDemo ? universityResults : [])
   const hasPublishedResults = studentResults.length > 0
   const sem = hasPublishedResults ? studentResults[selectedSemester] : null
 
-  const studentName = account?.name || 'Student'
-  const studentRoll = account?.registrationNumber || account?.rollNumber || account?.studentId || '—'
-  const cgpaValue = account?.cgpa != null ? account.cgpa : 'N/A'
+  const studentName = account?.name || (isDemo ? 'Rakesh Das' : 'Student')
+  const studentRoll = account?.registrationNumber || account?.rollNumber || account?.studentId || (isDemo ? '2305201001' : '—')
+  const cgpaValue = account?.cgpa != null ? account.cgpa : (isDemo ? '8.42' : 'N/A')
   const clearedSemesters = hasPublishedResults ? studentResults.filter(s => s.result === 'Passed' || s.result === 'PASSED').length : 0
 
   return (

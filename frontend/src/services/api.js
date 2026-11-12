@@ -1758,6 +1758,35 @@ export const api = {
       body: JSON.stringify({ count }),
     }),
   getHodAuditLogs: () => request('/hod/audit-logs'),
+  getHodAcademicStructure: (deptCode = 'CSE') =>
+    request(`/hod/academic-structure?deptCode=${encodeURIComponent(deptCode)}`),
+  getHodBatchesAndSections: (deptCode = 'CSE') =>
+    request(`/hod/batches-sections?deptCode=${encodeURIComponent(deptCode)}`),
+  allocateHodClassAdvisor: (payload) =>
+    request('/hod/allocate-advisor', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getHodFacultyWorkload: (deptCode = 'CSE') =>
+    request(`/hod/faculty-workload?deptCode=${encodeURIComponent(deptCode)}`),
+  getHodAttendanceMonitoring: (deptCode = 'CSE') =>
+    request(`/hod/attendance-monitoring?deptCode=${encodeURIComponent(deptCode)}`),
+  getHodAcademicPerformance: (deptCode = 'CSE') =>
+    request(`/hod/academic-performance?deptCode=${encodeURIComponent(deptCode)}`),
+  getHodFacultyAllocations: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/hod/faculty-allocations${q ? `?${q}` : ''}`);
+  },
+  allocateHodFacultySubject: (payload) =>
+    request('/hod/faculty-allocations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  allocateStudentSection: (id, section, semester) =>
+    request(`/students/${encodeURIComponent(id)}/allocate-section`, {
+      method: 'POST',
+      body: JSON.stringify({ section, semester }),
+    }),
 
   // 24. Report Generation Module APIs
   getReportFilters: () => request('/reports/filters'),

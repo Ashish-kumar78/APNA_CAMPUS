@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api.js';
 import { admissionsStore } from './admissionsStore.js';
+import { INITIAL_COURSES } from './admissionsData.js';
 
 // Verhoeff Algorithm lookup tables for Aadhaar checksum verification
 const VERHOEFF_D = [
@@ -141,24 +142,43 @@ export default function ComprehensiveAdmissionApplicationModal({
   const [errorMsg, setErrorMsg] = useState('');
   const [submittedData, setSubmittedData] = useState(null);
 
-  // Loaded programmes if not passed in
-  const [availableProgrammes, setAvailableProgrammes] = useState(programmes);
+  // Loaded programmes if not passed in (with immediate robust fallback to master programmes)
+  const [availableProgrammes, setAvailableProgrammes] = useState(() => {
+    if (Array.isArray(programmes) && programmes.length > 0) return programmes;
+    const storeCourses = admissionsStore?.getCourses ? admissionsStore.getCourses() : [];
+    if (Array.isArray(storeCourses) && storeCourses.length > 0) return storeCourses;
+    return INITIAL_COURSES;
+  });
 
   useEffect(() => {
-    if (programmes && programmes.length > 0) {
+    if (Array.isArray(programmes) && programmes.length > 0) {
       setAvailableProgrammes(programmes);
-    } else {
-      api.getProgrammes()
-        .then((res) => {
-          const list = Array.isArray(res) ? res : res?.data || [];
-          setAvailableProgrammes(list);
-        })
-        .catch(() => {
-          api.getPublicAdmissionProgrammes()
-            .then((res) => setAvailableProgrammes(res?.data || []))
-            .catch(() => {});
-        });
+      return;
     }
+
+    const storeCourses = admissionsStore?.getCourses ? admissionsStore.getCourses() : [];
+    const fallback = (Array.isArray(storeCourses) && storeCourses.length > 0) ? storeCourses : INITIAL_COURSES;
+
+    api.getProgrammes()
+      .then((res) => {
+        const list = Array.isArray(res) ? res : res?.data || [];
+        if (list.length > 0) {
+          setAvailableProgrammes(list);
+        } else {
+          setAvailableProgrammes(fallback);
+        }
+      })
+      .catch(() => {
+        api.getPublicAdmissionProgrammes()
+          .then((res) => {
+            const list = Array.isArray(res) ? res : res?.data || [];
+            if (list.length > 0) setAvailableProgrammes(list);
+            else setAvailableProgrammes(fallback);
+          })
+          .catch(() => {
+            setAvailableProgrammes(fallback);
+          });
+      });
   }, [programmes]);
 
   // Form State
@@ -1698,32 +1718,61 @@ Status: ENROLLED (Active)`;
                   </h3>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '18px' }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700 }}>
-                      Primary Desired Academic Programme *
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b' }}>
+                        Primary Desired Academic Programme <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
                       <select
                         className="adm-select-control"
                         required
-                        value={form.programmeId}
+                        value={form.programmeId || (availableProgrammes[0]?.id || '')}
                         onChange={(e) => setForm({ ...form, programmeId: e.target.value })}
-                        style={{ fontSize: '0.88rem', padding: '10px 12px' }}
+                        style={{
+                          width: '100%',
+                          minHeight: '44px',
+                          fontSize: '0.88rem',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #0284c7',
+                          background: '#ffffff',
+                          color: '#0f172a',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          boxSizing: 'border-box',
+                          display: 'block',
+                        }}
                       >
+                        <option value="">Select Primary Desired Programme</option>
                         {availableProgrammes.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name} ({p.code})
+                            {p.name} {p.code ? `(${p.code})` : ''}
                           </option>
                         ))}
                       </select>
-                    </label>
+                    </div>
 
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700 }}>
-                      Academic Session
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b' }}>
+                        Academic Session
+                      </label>
                       <input
                         className="adm-search-input"
                         readOnly
-                        value={form.academicYear}
-                        style={{ background: '#f8fafc', fontWeight: 700 }}
+                        value={form.academicYear || '2026-27'}
+                        style={{
+                          width: '100%',
+                          minHeight: '44px',
+                          background: '#f8fafc',
+                          fontWeight: 700,
+                          color: '#0f172a',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          padding: '10px 14px',
+                          boxSizing: 'border-box',
+                          display: 'block',
+                        }}
                       />
-                    </label>
+                    </div>
                   </div>
 
                   {/* Program Detail Card */}
@@ -1739,7 +1788,7 @@ Status: ENROLLED (Active)`;
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                         <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#0369a1', textTransform: 'uppercase' }}>
-                          Degree: {selectedProgramme.degreeType || 'Undergraduate (UG)'} · Dept: {selectedProgramme.departmentCode || 'Engineering'}
+                          Degree: {selectedProgramme.degreeType || selectedProgramme.degree || 'Undergraduate (UG)'} · Dept: {selectedProgramme.departmentCode || selectedProgramme.department || 'Engineering'}
                         </span>
                         <span className="adm-badge-pill verified">Admissions Open</span>
                       </div>
@@ -1767,34 +1816,68 @@ Status: ENROLLED (Active)`;
                     </div>
                   )}
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700 }}>
-                      Second Preference (Alternative Branch)
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b' }}>
+                        Second Preference (Alternative Branch)
+                      </label>
                       <select
                         className="adm-select-control"
                         value={form.secondPreference}
                         onChange={(e) => setForm({ ...form, secondPreference: e.target.value })}
+                        style={{
+                          width: '100%',
+                          minHeight: '42px',
+                          padding: '9px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          background: '#ffffff',
+                          color: '#0f172a',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          boxSizing: 'border-box',
+                          display: 'block',
+                        }}
                       >
                         <option value="">Choose alternative branch</option>
                         {availableProgrammes.map((p) => (
-                          <option key={`2nd-${p.id}`} value={p.name}>{p.name}</option>
+                          <option key={`2nd-${p.id}`} value={p.name}>
+                            {p.name} {p.code ? `(${p.code})` : ''}
+                          </option>
                         ))}
                       </select>
-                    </label>
+                    </div>
 
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700 }}>
-                      Third Preference
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b' }}>
+                        Third Preference
+                      </label>
                       <select
                         className="adm-select-control"
                         value={form.thirdPreference}
                         onChange={(e) => setForm({ ...form, thirdPreference: e.target.value })}
+                        style={{
+                          width: '100%',
+                          minHeight: '42px',
+                          padding: '9px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          background: '#ffffff',
+                          color: '#0f172a',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          boxSizing: 'border-box',
+                          display: 'block',
+                        }}
                       >
                         <option value="">Choose alternative branch</option>
                         {availableProgrammes.map((p) => (
-                          <option key={`3rd-${p.id}`} value={p.name}>{p.name}</option>
+                          <option key={`3rd-${p.id}`} value={p.name}>
+                            {p.name} {p.code ? `(${p.code})` : ''}
+                          </option>
                         ))}
                       </select>
-                    </label>
+                    </div>
                   </div>
                 </div>
               )}

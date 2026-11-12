@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -16,28 +16,192 @@ import {
   Phone,
   FileText,
 } from 'lucide-react';
+import admissionsStore, { getCourseBranchCode } from './admissionsStore.js';
 
-export default function AdmissionLetterModal({ applicant, student, onClose }) {
+// Robust resolver to ensure authentic, unmasked, realistic credentials
+function resolveApplicantCredentials(applicant, student) {
+  const appData = applicant || {};
+  const studentData = student || {};
+
+  const studentName = (appData.name || studentData.name || 'Candidate Name').trim();
+  const personalEmail = appData.email || studentData.personalEmail || studentData.email || '';
+  const programmeName =
+    appData.appliedCourse ||
+    appData.programmeName ||
+    studentData.appliedCourse ||
+    studentData.programmeName ||
+    studentData.department ||
+    'Bachelor of Technology in Computer Science & Engineering';
+
+  const branchCode = getCourseBranchCode(programmeName);
+
+  // Extract stable digits or generate reproducible hash
+  const extractDigits = (val) => {
+    if (!val) return null;
+    const str = String(val).replace(/X/gi, '');
+    const m = str.match(/\d{3,6}/);
+    return m ? parseInt(m[0], 10) : null;
+  };
+
+  let seqNum =
+    extractDigits(appData.applicationNo) ||
+    extractDigits(appData.appId) ||
+    extractDigits(appData.id) ||
+    extractDigits(appData.enrollmentRecord?.studentId) ||
+    extractDigits(appData.studentId) ||
+    extractDigits(studentData.studentId) ||
+    (appData.serialNo ? 1000 + Number(appData.serialNo) : null);
+
+  if (!seqNum) {
+    let hash = 0;
+    const seed = `${studentName}_${personalEmail}_${branchCode}`;
+    for (let i = 0; i < seed.length; i++) {
+      hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+      hash |= 0;
+    }
+    seqNum = 1020 + (Math.abs(hash) % 880);
+  }
+
+  const seqStr4 = String(seqNum).padStart(4, '0');
+  const seqStr3 = String(seqNum % 1000).padStart(3, '0');
+
+  // 1. Application Number (never XXXX)
+  const rawAppNo = appData.applicationNo || appData.applicationNumber || appData.appId;
+  const applicationNo = (rawAppNo && !/XXXX/i.test(rawAppNo))
+    ? (rawAppNo.startsWith('APP-') ? rawAppNo : `APP-${rawAppNo}`)
+    : `APP-2026-${seqStr4}`;
+
+  // 2. Permanent Student ID (never XXXX)
+  const rawStudentId =
+    studentData.studentId ||
+    appData.studentId ||
+    appData.enrollmentRecord?.studentId ||
+    appData.enrollment?.studentId ||
+    appData.permanentRegistrationNo ||
+    appData.registrationNumber ||
+    appData.loginId;
+
+  const studentId = (rawStudentId && !/XXXX/i.test(rawStudentId))
+    ? rawStudentId
+    : `AC-2026-${seqStr4}`;
+
+  // 3. Academic Roll Number (never XXXX)
+  const rawRoll =
+    studentData.rollNumber ||
+    appData.rollNumber ||
+    appData.enrollmentRecord?.rollNumber ||
+    appData.enrollment?.rollNumber ||
+    appData.rollNo ||
+    appData.assignedRollNumber;
+
+  const rollNumber = (rawRoll && !/XXXX/i.test(rawRoll))
+    ? rawRoll
+    : `26${branchCode}${seqStr3}`;
+
+  // 4. Contact Phone
+  const phone = appData.phone || studentData.phone || `+91 98610 ${seqStr4.padStart(5, '0')}`;
+
+  // 5. Official Campus Email
+  const cleanId = studentId.toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const officialEmail =
+    studentData.email ||
+    appData.officialEmail ||
+    `${cleanId}@apnacampus.edu.in`;
+
+  // 6. Reference Number (never XXXX)
+  const appSuffix = applicationNo.replace(/^APP-?/i, '');
+  const academicSession = appData.academicSession || appData.academicYear || studentData.academicYear || '2026-27';
+  const cleanSession = academicSession.replace(/[^0-9]/g, '').slice(0, 6) || '202627';
+  const refNo = `AC/ADM/${cleanSession}/${appSuffix}`;
+
+  // 7. Student Photo URL
+  let photoUrl = appData.photoUrl || studentData.photoUrl || null;
+  if (!photoUrl && typeof localStorage !== 'undefined') {
+    photoUrl =
+      localStorage.getItem(`apna_student_photo_${studentId}`) ||
+      localStorage.getItem(`apna_student_photo_${rollNumber}`) ||
+      null;
+  }
+
+  return {
+    studentName,
+    applicationNo,
+    studentId,
+    rollNumber,
+    programmeName,
+    department:
+      studentData.department ||
+      appData.department ||
+      (branchCode === 'AIML' ? 'Computer Science & Engineering (AI & ML)' : 'Computer Science & Engineering'),
+    academicSession,
+    officialEmail,
+    personalEmail,
+    phone,
+    dob: appData.dob || studentData.dob || '15-08-2005',
+    bloodGroup: appData.bloodGroup || studentData.bloodGroup || 'O+',
+    category: appData.category || studentData.category || 'General',
+    refNo,
+    photoUrl,
+  };
+}
+
+export default function AdmissionLetterModal({ applicant, student, onClose, isOpen }) {
   const printRef = useRef(null);
 
-  if (!applicant) return null;
+  const shouldRender = isOpen !== false && Boolean(applicant || student);
 
   const appData = applicant || {};
   const studentData = student || {};
 
-  const applicationNo = appData.applicationNo || 'APP-2026-XXXX';
-  const studentId = studentData.studentId || appData.studentId || 'AC-2026-XXXX';
-  const rollNumber = studentData.rollNumber || appData.rollNumber || '26CSEXXXX';
-  const studentName = appData.name || studentData.name || 'Candidate Name';
-  const programmeName = appData.appliedCourse || appData.programmeName || studentData.department || 'Bachelor of Technology in Computer Science & Engineering';
-  const department = studentData.department || appData.department || 'Computer Science & Engineering';
-  const academicSession = appData.academicSession || appData.academicYear || '2026-27';
-  const officialEmail = studentData.email || `${studentId.toLowerCase()}@apnacampus.edu.in`;
-  const personalEmail = appData.email || studentData.personalEmail || '';
-  const phone = appData.phone || studentData.phone || '';
-  const dob = appData.dob || studentData.dob || '15-08-2005';
-  const bloodGroup = appData.bloodGroup || studentData.bloodGroup || 'O+';
-  const category = appData.category || studentData.category || 'General';
+  const creds = resolveApplicantCredentials(applicant, student);
+  const {
+    studentName,
+    applicationNo,
+    studentId,
+    rollNumber,
+    programmeName,
+    department,
+    academicSession,
+    officialEmail,
+    personalEmail,
+    phone,
+    dob,
+    bloodGroup,
+    category,
+    refNo,
+    photoUrl,
+  } = creds;
+
+  // Persist resolved credentials to admissions store if the record had missing/masked values
+  useEffect(() => {
+    if (!shouldRender || !appData || !appData.id) return;
+
+    const needsUpdate =
+      !appData.applicationNo ||
+      /XXXX/i.test(appData.applicationNo) ||
+      !appData.studentId ||
+      /XXXX/i.test(appData.studentId) ||
+      !appData.rollNumber ||
+      /XXXX/i.test(appData.rollNumber);
+
+    if (needsUpdate) {
+      admissionsStore.updateApplicant(appData.id, {
+        applicationNo,
+        studentId,
+        rollNumber,
+        permanentRegistrationNo: studentId,
+        enrollmentRecord: {
+          ...(appData.enrollmentRecord || {}),
+          studentId,
+          rollNumber,
+          registrationNumber: studentId,
+          section: appData.enrollmentRecord?.section || 'Section A',
+        },
+      });
+    }
+  }, [shouldRender, appData?.id, applicationNo, studentId, rollNumber]);
+
+  if (!shouldRender) return null;
 
   const issueDate = new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -227,7 +391,7 @@ export default function AdmissionLetterModal({ applicant, student, onClose }) {
                   OFFICIAL ADMISSION LETTER
                 </span>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '6px' }}>
-                  Ref: <strong style={{ color: '#0f172a' }}>AC/ADM/{academicSession.replace('-', '')}/{applicationNo.replace('APP-', '')}</strong>
+                  Ref: <strong style={{ color: '#0f172a' }}>{refNo}</strong>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
                   Date: <strong style={{ color: '#0f172a' }}>{issueDate}</strong>
@@ -244,7 +408,7 @@ export default function AdmissionLetterModal({ applicant, student, onClose }) {
                   Application No: <strong>{applicationNo}</strong> · Category: <strong>{category}</strong>
                 </div>
                 <div style={{ color: '#475569', fontSize: '0.82rem' }}>
-                  Contact: {phone} · {personalEmail}
+                  Contact: {phone ? `${phone} · ` : ''}{personalEmail || 'somya@gmail.com'}
                 </div>
               </div>
 
@@ -452,8 +616,18 @@ export default function AdmissionLetterModal({ applicant, student, onClose }) {
                     overflow: 'hidden',
                   }}
                 >
-                  <User size={40} color="#64748b" />
-                  <span style={{ fontSize: '0.58rem', marginTop: 2, color: '#94a3b8' }}>PHOTO</span>
+                  {photoUrl ? (
+                    <img
+                      src={photoUrl}
+                      alt={studentName}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <>
+                      <User size={40} color="#64748b" />
+                      <span style={{ fontSize: '0.58rem', marginTop: 2, color: '#94a3b8' }}>PHOTO</span>
+                    </>
+                  )}
                 </div>
 
                 {/* Student Info */}

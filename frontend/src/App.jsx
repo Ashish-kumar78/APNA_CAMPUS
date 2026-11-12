@@ -81,6 +81,7 @@ const accounts = {
     registrationNumber: '2305201001',
     department: 'Computer Science & Engineering',
     detail: 'BTECH 2023–2027 · CSE (Sec A)',
+    isDemo: true,
   },
   'student': {
     role: 'student',
@@ -88,6 +89,7 @@ const accounts = {
     registrationNumber: '2305201001',
     department: 'Computer Science & Engineering',
     detail: 'BTECH 2023–2027 · CSE (Sec A)',
+    isDemo: true,
   },
   'superadmin': {
     role: 'super_admin',
@@ -95,6 +97,7 @@ const accounts = {
     identity: 'SYS-SUPER-01',
     department: 'Enterprise IT & Security',
     detail: 'Super Administrator · Full System Scope',
+    isDemo: true,
   },
   'super_admin': {
     role: 'super_admin',
@@ -102,6 +105,7 @@ const accounts = {
     identity: 'SYS-SUPER-01',
     department: 'Enterprise IT & Security',
     detail: 'Super Administrator · Full System Scope',
+    isDemo: true,
   },
   'sys-super-01': {
     role: 'super_admin',
@@ -109,6 +113,7 @@ const accounts = {
     identity: 'SYS-SUPER-01',
     department: 'Enterprise IT & Security',
     detail: 'Super Administrator · Full System Scope',
+    isDemo: true,
   },
   'SYS-SUPER-01': {
     role: 'super_admin',
@@ -116,6 +121,7 @@ const accounts = {
     identity: 'SYS-SUPER-01',
     department: 'Enterprise IT & Security',
     detail: 'Super Administrator · Full System Scope',
+    isDemo: true,
   },
   'management': {
     role: 'management',
@@ -123,6 +129,7 @@ const accounts = {
     identity: 'GOV-CHAIR-01',
     department: 'Governing Board / Trustees',
     detail: 'Chairman & Governing Body Trustee',
+    isDemo: true,
   },
   'GOV-CHAIR-01': {
     role: 'management',
@@ -130,6 +137,7 @@ const accounts = {
     identity: 'GOV-CHAIR-01',
     department: 'Governing Board / Trustees',
     detail: 'Chairman & Governing Body Trustee',
+    isDemo: true,
   },
   'director': {
     role: 'management',
@@ -137,6 +145,7 @@ const accounts = {
     identity: 'GOV-CHAIR-01',
     department: 'Governing Board / Trustees',
     detail: 'Chairman & Governing Body Trustee',
+    isDemo: true,
   },
   'principal': {
     role: 'principal',
@@ -144,6 +153,7 @@ const accounts = {
     identity: 'OFF-PRIN-01',
     department: 'Office of the Principal',
     detail: 'Principal & Director · Autonomous Campus',
+    isDemo: true,
   },
   'OFF-PRIN-01': {
     role: 'principal',
@@ -151,6 +161,7 @@ const accounts = {
     identity: 'OFF-PRIN-01',
     department: 'Office of the Principal',
     detail: 'Principal & Director · Autonomous Campus',
+    isDemo: true,
   },
   'faculty': {
     role: 'faculty',
@@ -158,6 +169,7 @@ const accounts = {
     identity: 'FAC-042',
     department: 'Computer Science & Engineering',
     detail: 'Faculty · School of Computing',
+    isDemo: true,
   },
   'fac-042': {
     role: 'faculty',
@@ -165,6 +177,7 @@ const accounts = {
     identity: 'FAC-042',
     department: 'Computer Science & Engineering',
     detail: 'Faculty · School of Computing',
+    isDemo: true,
   },
   'hod': {
     role: 'hod',
@@ -172,6 +185,7 @@ const accounts = {
     identity: 'HOD-CSE',
     department: 'Computer Science & Engineering',
     detail: 'Head of Department · CSE',
+    isDemo: true,
   },
   'hod-cse': {
     role: 'hod',
@@ -179,6 +193,7 @@ const accounts = {
     identity: 'HOD-CSE',
     department: 'Computer Science & Engineering',
     detail: 'Head of Department · CSE',
+    isDemo: true,
   },
   'admin': {
     role: 'admin',
@@ -186,6 +201,7 @@ const accounts = {
     identity: 'ADM-001',
     department: 'Apna Campus',
     detail: 'System administrator',
+    isDemo: true,
   },
   'adm-001': {
     role: 'admin',
@@ -193,6 +209,7 @@ const accounts = {
     identity: 'ADM-001',
     department: 'Apna Campus',
     detail: 'System administrator',
+    isDemo: true,
   },
   'accounts': {
     role: 'accounts',

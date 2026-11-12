@@ -28,6 +28,7 @@ import MarksManagementModule from '../marks/MarksManagementModule.jsx';
 import { notesApi } from '../services/notesApi.js';
 import { getDocumentsForRole, getAllStudents, saveStudent } from '../services/studentStore.js';
 import { useTimeGreeting, getGreetingDisplayName } from '../utils/timeGreeting.js';
+import { isDemoAccount } from '../utils/authUtils.js';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
@@ -456,28 +457,91 @@ export default function FacultyPortal({ account, onLogout }) {
   ]);
 
   // Faculty Assigned Classes & Subject Scoping
-  const facultyAssignments = useMemo(() => {
-    return erpStore.getFacultyAssignedClasses(account?.identity || account?.name || 'Dr. S. Mohanty');
+  const [backendAssignments, setBackendAssignments] = useState(null);
+  const [backendScopedStudents, setBackendScopedStudents] = useState(null);
+
+  // Sync real assignments from backend API
+  useEffect(() => {
+    let active = true;
+    api.getFacultyAssignments()
+      .then((res) => {
+        if (active && res?.data && Array.isArray(res.data) && res.data.length > 0) {
+          setBackendAssignments(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Faculty assignments backend sync notice:', err?.message);
+      });
+    return () => { active = false; };
   }, [account]);
 
+  const isDemo = isDemoAccount(account);
+
+  const facultyAssignments = useMemo(() => {
+    if (backendAssignments && Array.isArray(backendAssignments) && backendAssignments.length > 0) {
+      return backendAssignments;
+    }
+    if (isDemo) {
+      return erpStore.getFacultyAssignedClasses('Dr. S. Mohanty');
+    }
+    return [];
+  }, [backendAssignments, account, isDemo]);
+
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(() => {
-    const list = erpStore.getFacultyAssignedClasses(account?.identity || account?.name || 'Dr. S. Mohanty');
-    return list[0]?.id || 'fa-1';
+    if (isDemo) {
+      const list = erpStore.getFacultyAssignedClasses('Dr. S. Mohanty');
+      return list[0]?.id || 'fa-1';
+    }
+    return '';
   });
 
   const currentAssignment = useMemo(() => {
-    return facultyAssignments.find(fa => fa.id === selectedAssignmentId) || facultyAssignments[0] || {
+    if (facultyAssignments.length > 0) {
+      return facultyAssignments.find(fa => fa.id === selectedAssignmentId) || facultyAssignments[0];
+    }
+    return isDemo ? {
       program: 'B.Tech',
+      assignedCourse: 'B.Tech',
       deptCode: 'CSE',
+      assignedBranch: 'CSE',
       semester: 'Semester 5',
+      assignedSemester: 'Semester 5',
       section: 'Section A',
-      subjectName: 'Data Structures',
+      assignedSection: 'Section A',
+      subjectName: 'Data Structures & Algorithms',
+      assignedSubject: 'CS501 - Data Structures & Algorithms',
       subjectCode: 'CS501',
-      room: 'Block B - 302'
-    };
-  }, [facultyAssignments, selectedAssignmentId]);
+      room: 'Block B - 302',
+      totalEnrolledStudents: 32,
+      todayScheduledClasses: '10:00 AM – 11:00 AM (Room B-302)'
+    } : null;
+  }, [facultyAssignments, selectedAssignmentId, isDemo]);
 
   const [isConsolidatedScope, setIsConsolidatedScope] = useState(false);
+
+  // Automatically fetch enrolled student roster from backend when subject/section changes
+  useEffect(() => {
+    let active = true;
+    if (!currentAssignment?.semester || !currentAssignment?.section) return;
+
+    api.getFacultyScopedStudents({
+      academicYear: currentAssignment.academicYear || '2026-27',
+      semester: currentAssignment.semester,
+      section: currentAssignment.section,
+      subjectCode: currentAssignment.subjectCode,
+      isConsolidated: isConsolidatedScope
+    })
+      .then((res) => {
+        if (active && res?.data && Array.isArray(res.data) && res.data.length > 0) {
+          setBackendScopedStudents(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Faculty scoped students live sync note:', err?.message);
+      });
+    return () => { active = false; };
+  }, [currentAssignment?.semester, currentAssignment?.section, currentAssignment?.subjectCode, isConsolidatedScope]);
+
   const [facultyLeaveBalance, setFacultyLeaveBalance] = useState({ cl: 8, el: 15, ml: 10 });
   const [facultyLeavesList, setFacultyLeavesList] = useState([
     { id: 'FL-2026-01', type: 'Casual Leave (CL)', from: '12 Oct 2026', to: '13 Oct 2026', days: 2, reason: 'Family Function / Personal', status: 'Approved', approvedBy: 'Dr. P. K. Pattnaik (HOD)' },
@@ -495,6 +559,10 @@ export default function FacultyPortal({ account, onLogout }) {
 
   // Scoped strictly to the faculty's assigned class cohort or consolidated across assigned classes
   const scopedStudents = useMemo(() => {
+    if (backendScopedStudents && Array.isArray(backendScopedStudents) && backendScopedStudents.length > 0) {
+      return backendScopedStudents;
+    }
+
     if (isConsolidatedScope) {
       const matching = allStudents.filter(s => {
         return facultyAssignments.some(fa => {
@@ -527,7 +595,7 @@ export default function FacultyPortal({ account, onLogout }) {
       const yrMatch = !s.academicYear || s.academicYear === yr;
       return semMatch && secMatch && yrMatch;
     });
-  }, [allStudents, facultyAssignments, currentAssignment, isConsolidatedScope]);
+  }, [backendScopedStudents, allStudents, facultyAssignments, currentAssignment, isConsolidatedScope]);
 
   const atRiskStudents = useMemo(() => {
     return scopedStudents.filter(s => erpStore.calculateStudentRisk(s).isAtRisk);
@@ -843,7 +911,10 @@ export default function FacultyPortal({ account, onLogout }) {
     });
   }, [scopedStudents, studentSearch, attendanceFilter, riskFilter, facultyAlertFilter]);
 
-  const handleOpenAttendanceModal = () => {
+  const handleOpenAttendanceModal = (targetAssignment) => {
+    if (targetAssignment?.id) {
+      setSelectedAssignmentId(targetAssignment.id);
+    }
     const initialMap = {};
     scopedStudents.forEach(s => {
       initialMap[s.rollNumber] = true; // default present
@@ -905,6 +976,10 @@ export default function FacultyPortal({ account, onLogout }) {
     facultyApi.submitAttendanceSession({
       subjectCode: currentAssignment.subjectCode,
       subjectName: currentAssignment.subjectName,
+      course: currentAssignment.assignedCourse || currentAssignment.course || 'Bachelor of Technology',
+      branch: currentAssignment.assignedBranch || currentAssignment.branch || 'CSE',
+      batch: currentAssignment.batch || '2023–2027',
+      academicSession: currentAssignment.assignedAcademicSession || '2026-27',
       section: currentAssignment.section,
       date: attendanceDate,
       period: attendancePeriod,
@@ -966,6 +1041,7 @@ export default function FacultyPortal({ account, onLogout }) {
     {
       title: 'COMMUNICATION',
       items: [
+        { id: 'campus-connect', label: 'Campus Connect (WhatsApp)', icon: MessageSquare, badge: 'Live' },
         { id: 'complaints', label: 'Student Grievances', icon: ShieldAlert },
         { id: 'notifications', label: 'Notifications & Announcements', icon: Megaphone },
         { id: 'documents', label: 'Official Documents', icon: Download, badge: campusDocs.length || 3 },
@@ -1704,9 +1780,20 @@ export default function FacultyPortal({ account, onLogout }) {
                     <div style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: 700 }}>CS501 · Data Structures</div>
                     <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e3a8a', marginTop: '4px' }}>Assignment 1: Trees &amp; Graphs</div>
                     <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>Deadline: 20 Oct 2026 · Weight: 10 Marks</div>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                       <span className="admin-badge approved">30/32 Submitted</span>
                       <span className="admin-badge active">28 Evaluated</span>
+                      <button
+                        type="button"
+                        style={{ marginLeft: 'auto', background: '#25d366', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '3px 9px', fontSize: '0.72rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                        onClick={() => {
+                          setActiveTab('campus-connect');
+                          window.location.hash = 'campus-connect';
+                        }}
+                        title="Open Data Structures Class WhatsApp group"
+                      >
+                        <MessageSquare size={11} /> WhatsApp Group
+                      </button>
                     </div>
                   </div>
 
@@ -2096,64 +2183,112 @@ export default function FacultyPortal({ account, onLogout }) {
                 )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
-                {facultyAssignments.map(sub => (
-                  <div key={sub.subjectCode} className="faculty-subject-card">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
+                {facultyAssignments.map((sub) => (
+                  <div key={sub.id || `${sub.subjectCode}-${sub.section}`} className="faculty-subject-card">
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <span className="admin-badge active">{sub.subjectCode}</span>
-                        <span className={`admin-badge ${sub.marksCompletion === 100 ? 'approved' : 'pending'}`}>
-                          {sub.approvalStatus}
-                        </span>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <span
+                            className="admin-badge"
+                            style={{ background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe' }}
+                          >
+                            {sub.section || 'Section A'}
+                          </span>
+                          <span className={`admin-badge ${sub.marksCompletion === 100 ? 'approved' : 'pending'}`}>
+                            {sub.approvalStatus || 'Active'}
+                          </span>
+                        </div>
                       </div>
-                      <h3 style={{ margin: '0.5rem 0 0.25rem 0', color: '#0f172a', fontSize: '1.2rem' }}>{sub.subjectName}</h3>
-                      <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>
-                        {sub.program} · {sub.semester} · {sub.section} · {sub.credits} Credits · {sub.type}
+                      <h3 style={{ margin: '0.5rem 0 0.25rem 0', color: '#0f172a', fontSize: '1.18rem', fontWeight: 800 }}>
+                        {sub.subjectName}
+                      </h3>
+                      <p style={{ margin: 0, color: '#64748b', fontSize: '0.84rem' }}>
+                        {sub.program || sub.assignedCourse || 'B.Tech'} ({sub.deptCode || sub.assignedBranch || 'CSE'}) · {sub.semester} · {sub.credits} Credits · {sub.type}
                       </p>
                     </div>
 
-                    <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', fontSize: '0.84rem' }}>
+                    <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', fontSize: '0.83rem', border: '1px solid #e2e8f0' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                        <span>Assigned Room / Venue:</span>
-                        <strong>{sub.room} {sub.labRoom ? `| ${sub.labRoom}` : ''}</strong>
+                        <span style={{ color: '#64748b' }}>Assigned Academic Session:</span>
+                        <strong>{sub.academicYear || sub.assignedAcademicSession || '2026-27'}</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                        <span>Student Enrollment:</span>
-                        <strong>{sub.sectionEnrollment} Cohort ({sub.courseTotalEnrollment} Course Total)</strong>
+                        <span style={{ color: '#64748b' }}>Assigned Course &amp; Branch:</span>
+                        <strong>{sub.program || sub.assignedCourse || 'B.Tech'} ({sub.deptCode || sub.assignedBranch || 'CSE'})</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                        <span>Attendance Recorded:</span>
-                        <strong style={{ color: '#059669' }}>{sub.attendanceCompletion}% Sessions Logged</strong>
+                        <span style={{ color: '#64748b' }}>Assigned Semester &amp; Section:</span>
+                        <strong style={{ color: '#1e40af' }}>{sub.semester} · {sub.section}</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                        <span>Continuous Assessment (CIA):</span>
-                        <strong style={{ color: sub.marksCompletion === 100 ? '#059669' : '#2563eb' }}>
-                          {sub.marksCompletion}% Entered
+                        <span style={{ color: '#64748b' }}>Total Enrolled Students:</span>
+                        <strong style={{ color: '#059669' }}>{sub.sectionEnrollment || sub.totalEnrolledStudents || 32} Students</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                        <span style={{ color: '#64748b' }}>Today's Scheduled Classes:</span>
+                        <strong style={{ color: '#d97706' }}>
+                          {sub.todayScheduledClasses || `${sub.room || 'Block B - 302'} · 10:00 AM – 11:00 AM`}
                         </strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Upcoming Evaluation Deadline:</span>
-                        <span style={{ color: '#d97706', fontWeight: 600 }}>{sub.upcomingDeadline}</span>
+                        <span style={{ color: '#64748b' }}>Venue &amp; Room:</span>
+                        <span>{sub.room} {sub.labRoom ? `| ${sub.labRoom}` : ''}</span>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <button
-                        className="admin-action-btn-secondary"
-                        style={{ flex: 1, padding: '7px 10px', fontSize: '0.8rem', justifyContent: 'center' }}
-                        onClick={() => setSelectedSubjectModal({ ...sub, activeTab: 'overview' })}
-                      >
-                        <BookOpen size={14} /> Course Details
-                      </button>
-                      <button
+                        type="button"
                         className="admin-action-btn-primary"
                         style={{ flex: 1, padding: '7px 10px', fontSize: '0.8rem', justifyContent: 'center' }}
                         onClick={() => {
+                          setSelectedAssignmentId(sub.id);
+                          setSelectedSubject(sub.subjectName);
+                          setIsConsolidatedScope(false);
+                          setActiveTab('students');
+                        }}
+                        title="View enrolled students register for this section"
+                      >
+                        <Users size={14} /> Open Class Register
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-action-btn-secondary"
+                        style={{ padding: '7px 10px', fontSize: '0.8rem', background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0' }}
+                        onClick={() => {
+                          setActiveTab('campus-connect');
+                          window.location.hash = 'campus-connect';
+                        }}
+                        title={`Open WhatsApp class communication channel for ${sub.subjectName}`}
+                      >
+                        <MessageSquare size={14} /> Class WhatsApp
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-action-btn-secondary"
+                        style={{ padding: '7px 10px', fontSize: '0.8rem' }}
+                        onClick={() => {
+                          setSelectedAssignmentId(sub.id);
+                          handleOpenAttendanceModal(sub);
+                        }}
+                        title="Record attendance for this section"
+                      >
+                        <Calendar size={14} /> Attendance
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-action-btn-secondary"
+                        style={{ padding: '7px 10px', fontSize: '0.8rem' }}
+                        onClick={() => {
+                          setSelectedAssignmentId(sub.id);
                           setSelectedSubject(sub.subjectName);
                           setActiveTab('marks');
                         }}
+                        title="Enter marks for this section"
                       >
-                        Enter Marks <ArrowRight size={14} />
+                        <BarChart2 size={14} /> Marks
                       </button>
                     </div>
                   </div>

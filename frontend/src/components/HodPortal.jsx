@@ -65,6 +65,7 @@ import MarksManagementModule from '../marks/MarksManagementModule.jsx';
 import { api, hodApi } from '../services/api.js';
 import { getDocumentsForRole, getAllStudents } from '../services/studentStore.js';
 import { useTimeGreeting, getGreetingDisplayName } from '../utils/timeGreeting.js';
+import { isDemoAccount } from '../utils/authUtils.js';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
@@ -78,6 +79,7 @@ import { notificationsApi } from '../services/notificationsApi.js';
 import DirectParentNoticeModal from './Common/DirectParentNoticeModal.jsx';
 import Student360DossierModal from './Common/Student360DossierModal.jsx';
 import OfficialEmployeeProfile from './Profile/OfficialEmployeeProfile.jsx';
+import HodAcademicIntegrationModule from './hod/HodAcademicIntegrationModule.jsx';
 import { getStudentComprehensiveDetails, dispatchParentNotice } from '../services/parentNoticeService.js';
 
 const holidays = [
@@ -305,11 +307,12 @@ function exportToCsv(filename, rows) {
 export default function HodPortal({ account, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const greeting = useTimeGreeting();
+  const isDemo = isDemoAccount(account);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [approvalQueue, setApprovalQueue] = useState(initialApprovalQueue);
-  const [students, setStudents] = useState(() => getAllStudents());
-  const [faculty, setFaculty] = useState(initialFaculty);
-  const [subjects, setSubjects] = useState(initialSubjects);
+  const [approvalQueue, setApprovalQueue] = useState(() => (isDemo ? initialApprovalQueue : []));
+  const [students, setStudents] = useState(() => (isDemo ? getAllStudents() : []));
+  const [faculty, setFaculty] = useState(() => (isDemo ? initialFaculty : []));
+  const [subjects, setSubjects] = useState(() => (isDemo ? initialSubjects : []));
 
   // Live clock & Hero time greeting
   const [today] = useState(() => new Date());
@@ -520,6 +523,11 @@ export default function HodPortal({ account, onLogout }) {
   const pendingCount = approvalQueue.filter(q => q.status === 'Pending').length;
   const approvedCount = approvalQueue.filter(q => q.status === 'Approved').length;
   const rejectedCount = approvalQueue.filter(q => q.status === 'Rejected').length;
+  const unallocatedQueueCount = useMemo(() => {
+    return students.filter(
+      s => s.section === 'Pending Section Allocation' || s.status === 'Pending Section Allocation' || !s.section
+    ).length;
+  }, [students]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -936,6 +944,19 @@ export default function HodPortal({ account, onLogout }) {
       ]
     },
     {
+      title: 'ACADEMIC STRUCTURE & ALLOCATION',
+      items: [
+        { id: 'academic-structure', label: 'Academic Structure', icon: Layers },
+        { id: 'batches-sections', label: 'Batches & Sections', icon: Building2 },
+        { id: 'section-allocation', label: 'Student Section Allocation', icon: UserCheck, badge: unallocatedQueueCount > 0 ? unallocatedQueueCount : null, badgeType: 'warning' },
+        { id: 'faculty-allocation', label: 'Faculty Subject Allocation', icon: Sparkles },
+        { id: 'advisor-allocation', label: 'Class Advisor Allocation', icon: ShieldCheck },
+        { id: 'faculty-workload', label: 'Faculty Workload', icon: Clock },
+        { id: 'attendance-monitoring', label: 'Attendance Monitoring', icon: CheckCircle2 },
+        { id: 'academic-performance', label: 'Academic Performance', icon: TrendingUp },
+      ]
+    },
+    {
       title: 'ACADEMICS & EVALUATION',
       items: [
         { id: 'marks', label: 'Marks Management', icon: BarChart2 },
@@ -972,6 +993,46 @@ export default function HodPortal({ account, onLogout }) {
         return {
           title: 'Head of Department Overview',
           subtitle: 'Department of Computer Science & Engineering · Academic Governance & Compliance Monitoring'
+        };
+      case 'academic-structure':
+        return {
+          title: 'Department Academic Structure Management',
+          subtitle: 'Degrees, Autonomous Curriculum Regulations, Department Branches & Semesters.'
+        };
+      case 'batches-sections':
+        return {
+          title: 'Batch & Class Section Cohort Management',
+          subtitle: 'Lecture halls, cohort capacities, enrolled student counts, and designated section advisors.'
+        };
+      case 'section-allocation':
+        return {
+          title: 'Student Section Allocation & Admissions Queue',
+          subtitle: 'Allocate newly enrolled students from admissions queue into authoritative class section registers.'
+        };
+      case 'faculty-allocation':
+        return {
+          title: 'Faculty Subject & Section Allocation Matrix',
+          subtitle: 'Allocate existing department faculty members to curricular subjects and class sections.'
+        };
+      case 'advisor-allocation':
+        return {
+          title: 'Class Advisor & Mentor Designation',
+          subtitle: 'Designate senior faculty members as official Class Advisors for each academic section.'
+        };
+      case 'faculty-workload':
+        return {
+          title: 'Department Faculty Workload Audit',
+          subtitle: 'Weekly instructional hours, theory vs lab splits, and UGC workload compliance monitoring.'
+        };
+      case 'attendance-monitoring':
+        return {
+          title: 'Department Attendance Monitoring & Shortage Oversight',
+          subtitle: 'Section-wise attendance compliance, biometric logs, and critical shortage alerts (<75%).'
+        };
+      case 'academic-performance':
+        return {
+          title: 'Department Academic Performance & Pass Percentage',
+          subtitle: 'Semester-wise SGPA trends, CGPA distributions, and continuous assessment metrics.'
         };
       case 'marks':
         return {
@@ -1103,6 +1164,36 @@ export default function HodPortal({ account, onLogout }) {
         pageActions={hodHeading.actions}
       >
         <div className="hod-portal-content-wrap">
+          {/* TABS: ACADEMIC GOVERNANCE & ALLOCATION (PHASE 5) */}
+          {[
+            'academic-structure',
+            'batches-sections',
+            'section-allocation',
+            'faculty-allocation',
+            'advisor-allocation',
+            'faculty-workload',
+            'attendance-monitoring',
+            'academic-performance'
+          ].includes(activeTab) && (
+            <div style={{ marginBottom: '24px' }}>
+              <HodAcademicIntegrationModule
+                initialTab={
+                  activeTab === 'academic-structure' ? 'structure' :
+                  activeTab === 'batches-sections' ? 'batches-sections' :
+                  activeTab === 'section-allocation' ? 'section-allocation' :
+                  activeTab === 'faculty-allocation' ? 'faculty-allocation' :
+                  activeTab === 'advisor-allocation' ? 'advisor-allocation' :
+                  activeTab === 'faculty-workload' ? 'workload' :
+                  activeTab === 'attendance-monitoring' ? 'attendance' :
+                  activeTab === 'academic-performance' ? 'performance' :
+                  'structure'
+                }
+                account={account}
+                onNavigateTab={setActiveTab}
+              />
+            </div>
+          )}
+
           {/* TAB: GRIEVANCE MONITORING */}
           {activeTab === 'complaints' && (
             <div style={{ marginBottom: '24px' }}>

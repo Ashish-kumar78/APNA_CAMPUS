@@ -56,7 +56,18 @@ export default function NotificationCenter({
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedPriorities, setSelectedPriorities] = useState([]);
   const [showMoreCategories, setShowMoreCategories] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(true);
+  const [priorityOpen, setPriorityOpen] = useState(true);
+  const [dateRangeOpen, setDateRangeOpen] = useState(true);
+  const [datePreset, setDatePreset] = useState('ALL'); // 'ALL' | 'TODAY' | 'WEEK' | 'MONTH' | 'CUSTOM'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [dateRange, setDateRange] = useState('');
+
+  const activeFilterCount =
+    selectedCategories.length +
+    selectedPriorities.length +
+    (datePreset !== 'ALL' || customStartDate || customEndDate ? 1 : 0);
 
   // Modals
   const [selectedNotice, setSelectedNotice] = useState(null);
@@ -67,7 +78,6 @@ export default function NotificationCenter({
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const carouselRef = useRef(null);
   const searchInputRef = useRef(null);
 
   // Keyboard shortcut Ctrl+K to focus search input
@@ -304,6 +314,33 @@ export default function NotificationCenter({
         if (!selectedPriorities.includes(p)) return false;
       }
 
+      // Date filter
+      if (datePreset !== 'ALL') {
+        const rawDate = n.publishedDate || n.createdAt;
+        if (rawDate) {
+          const noticeDate = new Date(rawDate);
+          if (!isNaN(noticeDate.getTime())) {
+            const now = new Date();
+            if (datePreset === 'TODAY') {
+              if (noticeDate.toDateString() !== now.toDateString()) return false;
+            } else if (datePreset === 'WEEK') {
+              const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              if (noticeDate < sevenDaysAgo) return false;
+            } else if (datePreset === 'MONTH') {
+              const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              if (noticeDate < thirtyDaysAgo) return false;
+            } else if (datePreset === 'CUSTOM') {
+              if (customStartDate && noticeDate < new Date(customStartDate)) return false;
+              if (customEndDate) {
+                const end = new Date(customEndDate);
+                end.setHours(23, 59, 59, 999);
+                if (noticeDate > end) return false;
+              }
+            }
+          }
+        }
+      }
+
       // Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -318,7 +355,7 @@ export default function NotificationCenter({
 
       return true;
     });
-  }, [notices, activeTab, activeChip, selectedCategories, selectedPriorities, searchQuery]);
+  }, [notices, activeTab, activeChip, selectedCategories, selectedPriorities, searchQuery, datePreset, customStartDate, customEndDate]);
 
   // Actions
   const handleMarkAllRead = async () => {
@@ -384,18 +421,15 @@ export default function NotificationCenter({
     ]);
   };
 
-  const scrollCarousel = (direction) => {
-    if (carouselRef.current) {
-      const offset = direction === 'left' ? -200 : 200;
-      carouselRef.current.scrollBy({ left: offset, behavior: 'smooth' });
-    }
-  };
-
   const clearAllFilters = () => {
     setSelectedCategories([]);
     setSelectedPriorities([]);
-    setActiveChip('ALL');
+    setDatePreset('ALL');
+    setCustomStartDate('');
+    setCustomEndDate('');
+    setDateRange('');
     setSearchQuery('');
+    setActiveChip('ALL');
   };
 
   const displayName = currentUser?.name || 'Anshuman Nanda';
@@ -570,110 +604,7 @@ export default function NotificationCenter({
         </button>
       </div>
 
-      {/* 5. Filter Chips Carousel (Reference UI) */}
-      <div className="nc-chips-carousel-wrap">
-        <button
-          type="button"
-          className="nc-chip-nav-btn"
-          onClick={() => scrollCarousel('left')}
-          aria-label="Scroll filters left"
-        >
-          <ChevronLeft size={16} />
-        </button>
-
-        <div className="nc-chips-carousel" ref={carouselRef}>
-          <button
-            type="button"
-            className={`nc-chip ${activeChip === 'ALL' ? 'active' : ''}`}
-            onClick={() => setActiveChip('ALL')}
-          >
-            All ({stats.activeCount})
-          </button>
-
-          <button
-            type="button"
-            className={`nc-chip chip-unread ${activeChip === 'UNREAD' ? 'active' : ''}`}
-            onClick={() => setActiveChip('UNREAD')}
-          >
-            Unread ({stats.unreadCount})
-          </button>
-
-          <button
-            type="button"
-            className={`nc-chip chip-urgent ${activeChip === 'URGENT' ? 'active' : ''}`}
-            onClick={() => setActiveChip('URGENT')}
-          >
-            Urgent ({stats.urgentCount})
-          </button>
-
-          <button
-            type="button"
-            className={`nc-chip chip-important ${activeChip === 'IMPORTANT' ? 'active' : ''}`}
-            onClick={() => setActiveChip('IMPORTANT')}
-          >
-            Important (6)
-          </button>
-
-          <button
-            type="button"
-            className={`nc-chip ${activeChip === 'EXAMINATION' ? 'active' : ''}`}
-            onClick={() => setActiveChip('EXAMINATION')}
-          >
-            <GraduationCap size={13} /> Examination ({categoryCounts.EXAMINATION})
-          </button>
-
-          <button
-            type="button"
-            className={`nc-chip ${activeChip === 'ACADEMIC' ? 'active' : ''}`}
-            onClick={() => setActiveChip('ACADEMIC')}
-          >
-            <FileText size={13} /> Academic ({categoryCounts.ACADEMIC})
-          </button>
-
-          <button
-            type="button"
-            className={`nc-chip ${activeChip === 'ADMINISTRATIVE' ? 'active' : ''}`}
-            onClick={() => setActiveChip('ADMINISTRATIVE')}
-          >
-            <Building size={13} /> Administrative ({categoryCounts.ADMINISTRATIVE})
-          </button>
-
-          <button
-            type="button"
-            className={`nc-chip ${activeChip === 'EVENTS' ? 'active' : ''}`}
-            onClick={() => setActiveChip('EVENTS')}
-          >
-            <Sparkles size={13} /> Events &amp; Activities ({categoryCounts.EVENTS})
-          </button>
-
-          <button
-            type="button"
-            className={`nc-chip ${activeChip === 'ACCOUNTS' ? 'active' : ''}`}
-            onClick={() => setActiveChip('ACCOUNTS')}
-          >
-            <Layers size={13} /> Accounts &amp; Fees ({categoryCounts.ACCOUNTS})
-          </button>
-
-          <button
-            type="button"
-            className={`nc-chip ${activeChip === 'LIBRARY' ? 'active' : ''}`}
-            onClick={() => setActiveChip('LIBRARY')}
-          >
-            <FileText size={13} /> Library ({categoryCounts.LIBRARY})
-          </button>
-        </div>
-
-        <button
-          type="button"
-          className="nc-chip-nav-btn"
-          onClick={() => scrollCarousel('right')}
-          aria-label="Scroll filters right"
-        >
-          <ChevronRight size={16} />
-        </button>
-      </div>
-
-      {/* 6. Main 2-Column Layout (Feed + Right Filter Panel) */}
+      {/* 5. Main 2-Column Layout (Feed + Right Filter Panel) */}
       <div className="nc-main-layout">
         {/* Feed Column */}
         <div className="nc-feed-col">
@@ -798,144 +729,242 @@ export default function NotificationCenter({
           )}
         </div>
 
-        {/* Right Filter Panel (Reference Image Design) */}
+        {/* Right Filter Panel (Redesigned UI/UX) */}
         <aside className="nc-filter-panel">
           <div className="nc-filter-header">
             <div className="nc-filter-title-wrap">
-              <Filter size={15} color="#6366f1" />
-              <span>Filters</span>
+              <div className="nc-filter-icon-badge">
+                <Filter size={15} />
+              </div>
+              <span className="nc-filter-title-text">Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="nc-filter-active-pill" title={`${activeFilterCount} active filters`}>
+                  {activeFilterCount}
+                </span>
+              )}
             </div>
             <button
               type="button"
-              className="nc-clear-all-btn"
+              className={`nc-clear-all-btn ${activeFilterCount > 0 ? 'active' : ''}`}
               onClick={clearAllFilters}
+              disabled={activeFilterCount === 0}
             >
               Clear All
             </button>
           </div>
 
           {/* Category Checkboxes */}
-          <div className="nc-filter-section">
-            <div className="nc-filter-section-header">
-              <span>Category</span>
-              <ChevronDown size={14} color="#64748b" />
+          <div className={`nc-filter-section ${categoryOpen ? 'is-open' : 'is-collapsed'}`}>
+            <div
+              className="nc-filter-section-header"
+              onClick={() => setCategoryOpen((prev) => !prev)}
+            >
+              <div className="nc-section-header-left">
+                <span>Category</span>
+                {selectedCategories.length > 0 && (
+                  <span className="nc-section-count-dot">{selectedCategories.length}</span>
+                )}
+              </div>
+              <ChevronDown
+                size={14}
+                className={`nc-section-chevron ${categoryOpen ? 'open' : ''}`}
+              />
             </div>
 
-            <div className="nc-filter-options-list">
-              {(showMoreCategories ? ALL_CATEGORIES : ALL_CATEGORIES.slice(0, 6)).map((cat) => {
-                const count = categoryCounts[cat.id] || 0;
-                const checked = selectedCategories.includes(cat.id);
+            {categoryOpen && (
+              <div className="nc-filter-options-list">
+                {(showMoreCategories ? ALL_CATEGORIES : ALL_CATEGORIES.slice(0, 6)).map((cat) => {
+                  const count = categoryCounts[cat.id] || 0;
+                  const checked = selectedCategories.includes(cat.id);
+                  const IconComponent = cat.icon || Bell;
 
-                return (
-                  <label key={cat.id} className="nc-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedCategories((prev) => [...prev, cat.id]);
-                        } else {
-                          setSelectedCategories((prev) => prev.filter((c) => c !== cat.id));
-                        }
-                      }}
-                    />
-                    <span>
-                      {cat.label} ({count})
-                    </span>
-                  </label>
-                );
-              })}
+                  return (
+                    <label
+                      key={cat.id}
+                      className={`nc-checkbox-row ${checked ? 'checked' : ''}`}
+                    >
+                      <div className="nc-checkbox-left">
+                        <span className={`nc-custom-check ${checked ? 'checked' : ''}`}>
+                          {checked && <Check size={11} strokeWidth={3} />}
+                        </span>
+                        <input
+                          type="checkbox"
+                          className="nc-native-check"
+                          checked={checked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedCategories((prev) => [...prev, cat.id]);
+                            } else {
+                              setSelectedCategories((prev) => prev.filter((c) => c !== cat.id));
+                            }
+                          }}
+                        />
+                        <span className="nc-cat-icon-tag">
+                          <IconComponent size={13} />
+                        </span>
+                        <span className="nc-filter-label-text">{cat.label}</span>
+                      </div>
+                      <span className={`nc-count-pill ${checked ? 'checked' : ''}`}>
+                        {count}
+                      </span>
+                    </label>
+                  );
+                })}
 
-              <button
-                type="button"
-                className="nc-filter-show-more"
-                onClick={() => setShowMoreCategories((prev) => !prev)}
-              >
-                {showMoreCategories ? 'Show Less ∧' : 'Show More ∨'}
-              </button>
-            </div>
+                <button
+                  type="button"
+                  className="nc-filter-show-more"
+                  onClick={() => setShowMoreCategories((prev) => !prev)}
+                >
+                  {showMoreCategories ? 'Show Less ∧' : `Show More (${ALL_CATEGORIES.length - 6} more) ∨`}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Priority Checkboxes */}
-          <div className="nc-filter-section">
-            <div className="nc-filter-section-header">
-              <span>Priority</span>
-              <ChevronDown size={14} color="#64748b" />
+          <div className={`nc-filter-section ${priorityOpen ? 'is-open' : 'is-collapsed'}`}>
+            <div
+              className="nc-filter-section-header"
+              onClick={() => setPriorityOpen((prev) => !prev)}
+            >
+              <div className="nc-section-header-left">
+                <span>Priority</span>
+                {selectedPriorities.length > 0 && (
+                  <span className="nc-section-count-dot">{selectedPriorities.length}</span>
+                )}
+              </div>
+              <ChevronDown
+                size={14}
+                className={`nc-section-chevron ${priorityOpen ? 'open' : ''}`}
+              />
             </div>
 
-            <div className="nc-filter-options-list">
-              <label className="nc-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={selectedPriorities.includes('URGENT')}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedPriorities((prev) => [...prev, 'URGENT']);
-                    } else {
-                      setSelectedPriorities((prev) => prev.filter((p) => p !== 'URGENT'));
-                    }
-                  }}
-                />
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ color: '#dc2626' }}>🔴</span> Urgent ({stats.urgentCount})
-                </span>
-              </label>
-
-              <label className="nc-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={selectedPriorities.includes('IMPORTANT')}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedPriorities((prev) => [...prev, 'IMPORTANT']);
-                    } else {
-                      setSelectedPriorities((prev) => prev.filter((p) => p !== 'IMPORTANT'));
-                    }
-                  }}
-                />
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ color: '#d97706' }}>🟡</span> Important (6)
-                </span>
-              </label>
-
-              <label className="nc-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={selectedPriorities.includes('NORMAL')}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedPriorities((prev) => [...prev, 'NORMAL']);
-                    } else {
-                      setSelectedPriorities((prev) => prev.filter((p) => p !== 'NORMAL'));
-                    }
-                  }}
-                />
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ color: '#2563eb' }}>🔵</span> General (13)
-                </span>
-              </label>
-            </div>
+            {priorityOpen && (
+              <div className="nc-filter-options-list">
+                {[
+                  { id: 'URGENT', label: 'Urgent', count: stats.urgentCount, dotColor: '#ef4444' },
+                  { id: 'IMPORTANT', label: 'Important', count: 6, dotColor: '#f59e0b' },
+                  { id: 'NORMAL', label: 'General', count: 13, dotColor: '#3b82f6' },
+                ].map((prio) => {
+                  const checked = selectedPriorities.includes(prio.id);
+                  return (
+                    <label
+                      key={prio.id}
+                      className={`nc-checkbox-row priority-row ${prio.id.toLowerCase()} ${checked ? 'checked' : ''}`}
+                    >
+                      <div className="nc-checkbox-left">
+                        <span className={`nc-custom-check ${checked ? 'checked' : ''}`}>
+                          {checked && <Check size={11} strokeWidth={3} />}
+                        </span>
+                        <input
+                          type="checkbox"
+                          className="nc-native-check"
+                          checked={checked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedPriorities((prev) => [...prev, prio.id]);
+                            } else {
+                              setSelectedPriorities((prev) => prev.filter((p) => p !== prio.id));
+                            }
+                          }}
+                        />
+                        <span className="nc-prio-colored-dot" style={{ backgroundColor: prio.dotColor }} />
+                        <span className="nc-filter-label-text">{prio.label}</span>
+                      </div>
+                      <span className={`nc-count-pill ${checked ? 'checked' : ''}`}>
+                        {prio.count}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Date Range */}
-          <div className="nc-filter-section">
-            <div className="nc-filter-section-header">
-              <span>Date Range</span>
-              <ChevronDown size={14} color="#64748b" />
+          <div className={`nc-filter-section ${dateRangeOpen ? 'is-open' : 'is-collapsed'}`}>
+            <div
+              className="nc-filter-section-header"
+              onClick={() => setDateRangeOpen((prev) => !prev)}
+            >
+              <div className="nc-section-header-left">
+                <span>Date Range</span>
+                {datePreset !== 'ALL' && <span className="nc-section-count-dot">1</span>}
+              </div>
+              <ChevronDown
+                size={14}
+                className={`nc-section-chevron ${dateRangeOpen ? 'open' : ''}`}
+              />
             </div>
 
-            <div className="nc-date-input-wrap">
-              <input
-                type="text"
-                placeholder="Select date range"
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
-              />
-              <Calendar
-                size={14}
-                style={{ position: 'absolute', right: '10px', color: '#94a3b8', pointerEvents: 'none' }}
-              />
-            </div>
+            {dateRangeOpen && (
+              <div className="nc-date-range-content">
+                {/* Date Presets Strip */}
+                <div className="nc-date-presets-strip">
+                  {[
+                    { id: 'ALL', label: 'All Time' },
+                    { id: 'TODAY', label: 'Today' },
+                    { id: 'WEEK', label: '7 Days' },
+                    { id: 'MONTH', label: '30 Days' },
+                    { id: 'CUSTOM', label: 'Custom' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      className={`nc-date-preset-pill ${datePreset === preset.id ? 'active' : ''}`}
+                      onClick={() => setDatePreset(preset.id)}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                {datePreset === 'CUSTOM' ? (
+                  <div className="nc-custom-date-box">
+                    <div className="nc-date-field">
+                      <label>From Date:</label>
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        className="nc-date-input"
+                      />
+                    </div>
+                    <div className="nc-date-field">
+                      <label>To Date:</label>
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        className="nc-date-input"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="nc-date-input-wrap" onClick={() => setDatePreset('CUSTOM')}>
+                    <input
+                      type="text"
+                      placeholder="Select date range"
+                      value={
+                        datePreset === 'TODAY'
+                          ? "Today's Notices"
+                          : datePreset === 'WEEK'
+                          ? 'Last 7 Days'
+                          : datePreset === 'MONTH'
+                          ? 'Last 30 Days'
+                          : ''
+                      }
+                      readOnly
+                    />
+                    <Calendar
+                      size={15}
+                      className="nc-date-icon"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Notice Lifecycle Callout Card (Reference UI) */}

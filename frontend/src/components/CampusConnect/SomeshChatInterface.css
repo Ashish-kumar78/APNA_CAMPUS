@@ -607,8 +607,29 @@ textarea::placeholder {
 .sender-name {
   color: #67846d;
   padding-left: 4px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
+}
+.role-tag-badge {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: inline-block;
+}
+.role-tag-badge.faculty {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+}
+.role-tag-badge.hod {
+  background: #ede9fe !important;
+  color: #6b21a8 !important;
+}
+.role-tag-badge.student {
+  background: #dcfce7 !important;
+  color: #15803d !important;
 }
 .bubble {
   max-width: 100%;

@@ -979,14 +979,19 @@ export class NotificationsService {
   }
 
   async getUnreadCount(user: any): Promise<number> {
-    const userConditions = this.buildUserRecipientConditions(user);
-    return this.prisma.notificationRecipient.count({
-      where: {
-        isDismissed: false,
-        isRead: false,
-        OR: userConditions,
-      },
-    });
+    try {
+      const userConditions = this.buildUserRecipientConditions(user);
+      return await this.prisma.notificationRecipient.count({
+        where: {
+          isDismissed: false,
+          isRead: false,
+          OR: userConditions,
+        },
+      });
+    } catch (err: any) {
+      this.logger.warn(`Failed to fetch unread notification count (resilient fallback active): ${err?.message}`);
+      return 0;
+    }
   }
 
   // ============================================================================

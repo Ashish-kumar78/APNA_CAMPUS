@@ -31,6 +31,7 @@ import {
 import { io } from 'socket.io-client';
 import './SomeshChatInterface.css';
 import { campusConnectStore } from '../../services/campusConnectStore.js';
+import { playReceivedSound, playSentSound } from '../../services/soundEffects.js';
 
 const API = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL : 'http://localhost:4000/api';
 
@@ -109,139 +110,162 @@ function Avatar({ name, size = 'normal', image = null }) {
   );
 }
 
+function parseMessageTimestamp(m) {
+  if (m.createdAt) {
+    const t = new Date(m.createdAt).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+  if (m.timestamp) {
+    const t = new Date(m.timestamp).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+  if (m.time && (m.time.includes('AM') || m.time.includes('PM'))) {
+    const match = m.time.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+    if (match) {
+      const today = new Date();
+      let hours = parseInt(match[1], 10);
+      const mins = parseInt(match[2], 10);
+      const ampm = match[3]?.toUpperCase();
+      if (ampm === 'PM' && hours < 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+      today.setHours(hours, mins, 0, 0);
+      return today.getTime();
+    }
+  }
+  if (m.date === 'Today') {
+    return Date.now() - 60000;
+  }
+  if (m.date === 'Yesterday') {
+    return Date.now() - 86400000;
+  }
+  if (m.time && !isNaN(Date.parse(m.time))) {
+    return Date.parse(m.time);
+  }
+  if (m.date && !isNaN(Date.parse(m.date))) {
+    return Date.parse(m.date);
+  }
+  return Date.now() - 86400000;
+}
+
+function getConversationLatestTime(c) {
+  if (Array.isArray(c.messages) && c.messages.length > 0) {
+    const last = c.messages[c.messages.length - 1];
+    const t = new Date(last.createdAt || last.timestamp || 0).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+  if (c.lastMessage?.timestamp) {
+    const t = new Date(c.lastMessage.timestamp).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+  if (c.updatedAt) {
+    const t = new Date(c.updatedAt).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+  return 0;
+}
+
 // Convert campusConnectStore mock data into the Somesh Chat model
-function getInitialSeedConversations() {
-  const storeConvs = campusConnectStore.getConversations();
-  if (!Array.isArray(storeConvs) || storeConvs.length === 0) {
-    return [
-      {
-        id: 'conv-ds',
-        type: 'GROUP',
-        title: 'Data Structures - Section A (CS501)',
-        updatedAt: new Date().toISOString(),
-        members: [
-          { id: 'faculty-01', displayName: 'Dr. S. Mohanty', role: 'FACULTY' },
-          { id: 'student-01', displayName: 'Rakesh Das', role: 'STUDENT' },
-          { id: 'student-02', displayName: 'Ananya Sharma', role: 'STUDENT' },
-          { id: 'student-03', displayName: 'Bishnu Prasad Sahoo', role: 'STUDENT' },
-        ],
-        unreadCount: 1,
-        isFavorite: true,
-        messages: [
-          {
-            id: 'm1',
-            conversationId: 'conv-ds',
-            senderId: 'faculty-01',
-            body: 'Assignment 3 has been uploaded to the student portal. The submission deadline is Friday 11:59 PM.',
-            createdAt: new Date(Date.now() - 3600000).toISOString(),
-            sender: { id: 'faculty-01', displayName: 'Dr. S. Mohanty' },
-            receipts: [{ userId: 'student-01', deliveredAt: new Date().toISOString(), readAt: null }]
-          },
-          {
-            id: 'm2',
-            conversationId: 'conv-ds',
-            senderId: 'student-01',
-            body: 'Thank you Sir! Is the Red-Black Tree implementation required in C++ or Java?',
-            createdAt: new Date(Date.now() - 1800000).toISOString(),
-            sender: { id: 'student-01', displayName: 'Rakesh Das' },
-            receipts: [{ userId: 'faculty-01', deliveredAt: new Date().toISOString(), readAt: new Date().toISOString() }]
-          }
-        ]
-      },
-      {
-        id: 'conv-cse-faculty',
-        type: 'GROUP',
-        title: 'CSE Faculty Departmental Forum',
-        updatedAt: new Date().toISOString(),
-        members: [
-          { id: 'hod-01', displayName: 'Dr. P. K. Pattnaik (HOD)', role: 'HOD' },
-          { id: 'faculty-01', displayName: 'Dr. S. Mohanty', role: 'FACULTY' },
-          { id: 'faculty-02', displayName: 'Prof. Ansuman Jena', role: 'FACULTY' }
-        ],
-        unreadCount: 0,
-        isFavorite: true,
-        messages: [
-          {
-            id: 'm3',
-            conversationId: 'conv-cse-faculty',
-            senderId: 'hod-01',
-            body: 'Please submit the Midterm internal evaluation marks by Thursday 5:00 PM for HOD clearance.',
-            createdAt: new Date(Date.now() - 7200000).toISOString(),
-            sender: { id: 'hod-01', displayName: 'Dr. P. K. Pattnaik (HOD)' },
-            receipts: []
-          }
-        ]
-      },
-      {
-        id: 'conv-direct-hod',
-        type: 'DIRECT',
-        title: 'Dr. P. K. Pattnaik (HOD CSE)',
-        updatedAt: new Date().toISOString(),
-        members: [
-          { id: 'hod-01', displayName: 'Dr. P. K. Pattnaik', role: 'HOD' },
-          { id: 'student-01', displayName: 'Rakesh Das', role: 'STUDENT' }
-        ],
-        unreadCount: 0,
-        isFavorite: false,
-        messages: [
-          {
-            id: 'm4',
-            conversationId: 'conv-direct-hod',
-            senderId: 'hod-01',
-            body: 'Your attendance condonation application for the technical symposium has been verified and approved.',
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            sender: { id: 'hod-01', displayName: 'Dr. P. K. Pattnaik' },
-            receipts: [{ userId: 'student-01', deliveredAt: new Date().toISOString(), readAt: new Date().toISOString() }]
-          }
-        ]
-      },
-      {
-        id: 'conv-direct-warden',
-        type: 'DIRECT',
-        title: 'Er. B. K. Jena (Kalam Boys Residence Warden)',
-        updatedAt: new Date().toISOString(),
-        members: [
-          { id: 'warden-01', displayName: 'Er. B. K. Jena', role: 'WARDEN' },
-          { id: 'student-01', displayName: 'Rakesh Das', role: 'STUDENT' }
-        ],
-        unreadCount: 0,
-        isFavorite: false,
-        messages: [
-          {
-            id: 'm5',
-            conversationId: 'conv-direct-warden',
-            senderId: 'warden-01',
-            body: 'Please ensure your biometric gate pass is punched before 09:30 PM curfew.',
-            createdAt: new Date(Date.now() - 172800000).toISOString(),
-            sender: { id: 'warden-01', displayName: 'Er. B. K. Jena' },
-            receipts: []
-          }
-        ]
-      }
-    ];
+function convertStoreMessageToChatMessage(m, convId, currentUser) {
+  const myId = String(currentUser?.id || currentUser?.rollNumber || currentUser?.identifier || '').toLowerCase();
+  const myName = String(currentUser?.displayName || currentUser?.name || '').toLowerCase();
+  const senderName = String(m.sender || '').toLowerCase();
+  const senderId = String(m.senderId || '').toLowerCase();
+
+  const isOwn = m.isOwn === true ||
+    (myId && senderId && (senderId === myId || senderId === 'me')) ||
+    (myName && senderName && senderName === myName) ||
+    (myName && senderName && (myName.includes(senderName) || senderName.includes(myName)));
+
+  let attachment = m.attachment || null;
+  if (!attachment && m.resource) {
+    attachment = {
+      id: m.resource.id || `res-${Date.now()}`,
+      fileName: m.resource.title || m.resource.name || 'document.pdf',
+      mimeType: m.resource.fileType || 'application/pdf',
+      size: 1.8 * 1024 * 1024,
+      url: m.resource.downloadUrl || m.resource.url || '/sample_documents/sample_document.pdf'
+    };
+  } else if (!attachment && Array.isArray(m.attachments) && m.attachments[0]) {
+    const a = m.attachments[0];
+    attachment = {
+      id: a.id || `att-${Date.now()}`,
+      fileName: a.name || 'document.pdf',
+      mimeType: a.type || 'application/pdf',
+      size: a.size || 1024 * 1024,
+      url: a.url || '/sample_documents/sample_document.pdf'
+    };
   }
 
-  return storeConvs.map(c => ({
-    id: c.id,
-    type: c.isDirect ? 'DIRECT' : 'GROUP',
-    title: c.name,
-    updatedAt: new Date(c.lastMessage?.timestamp || Date.now()).toISOString(),
-    members: [
-      { id: 'user-other', displayName: c.faculty || c.name, role: c.isFaculty ? 'FACULTY' : 'STUDENT' }
-    ],
-    unreadCount: c.unreadCount || 0,
-    isFavorite: Boolean(c.isStarred || c.pinned),
-    messages: (c.messages || []).map(m => ({
-      id: m.id,
-      conversationId: c.id,
-      senderId: m.isOwn ? 'me' : (m.senderId || 'other'),
-      body: m.text || m.body || '',
-      createdAt: new Date(m.timestamp || Date.now()).toISOString(),
-      sender: { id: m.senderId || 'other', displayName: m.sender || 'Participant' },
-      attachment: m.attachment || null,
-      receipts: [{ userId: 'me', deliveredAt: new Date().toISOString(), readAt: m.isRead ? new Date().toISOString() : null }]
-    }))
-  }));
+  const role = (
+    m.senderRole ||
+    (m.isFaculty ? 'FACULTY' : (m.sender && (m.sender.includes('Dr.') || m.sender.includes('Prof.') || m.sender.includes('HOD') || m.sender.includes('Er.')) ? 'FACULTY' : 'STUDENT'))
+  ).toUpperCase();
+
+  const msgTime = parseMessageTimestamp(m);
+
+  return {
+    id: m.id || `msg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    conversationId: convId,
+    senderId: isOwn ? (currentUser?.id || 'me') : (m.senderId || 'peer'),
+    body: m.text || m.body || m.academicRequest?.requestText || m.resource?.title || '',
+    createdAt: new Date(msgTime).toISOString(),
+    sender: {
+      id: m.senderId || (isOwn ? (currentUser?.id || 'me') : 'peer'),
+      displayName: m.sender || (isOwn ? (currentUser?.displayName || 'Me') : 'Participant'),
+      role
+    },
+    attachment,
+    receipts: [{ userId: 'me', deliveredAt: new Date().toISOString(), readAt: new Date().toISOString() }],
+    reactions: m.reactions || {},
+    replyTo: m.replyTo || null,
+    isPinned: Boolean(m.pinned)
+  };
+}
+
+function getInitialSeedConversations(currentUser) {
+  const storeConvs = campusConnectStore.getConversations();
+  if (!Array.isArray(storeConvs) || storeConvs.length === 0) {
+    return [];
+  }
+
+  const mappedConvs = storeConvs.map(c => {
+    const rawMsgs = campusConnectStore.getMessages(c.id);
+    const convMsgs = (Array.isArray(rawMsgs) && rawMsgs.length > 0)
+      ? rawMsgs.map(m => convertStoreMessageToChatMessage(m, c.id, currentUser))
+      : (Array.isArray(c.messages) && c.messages.length > 0)
+      ? c.messages.map(m => convertStoreMessageToChatMessage(m, c.id, currentUser))
+      : [];
+
+    const lastMsg = convMsgs[convMsgs.length - 1];
+    const lastTime = lastMsg
+      ? new Date(lastMsg.createdAt).getTime()
+      : (c.lastMessage?.timestamp ? new Date(c.lastMessage.timestamp).getTime() : 0);
+
+    return {
+      id: c.id,
+      type: c.isDirect ? 'DIRECT' : 'GROUP',
+      title: c.name,
+      category: c.category || 'Classes',
+      subject: c.subject || c.name,
+      code: c.code || '',
+      faculty: c.faculty || '',
+      updatedAt: lastTime > 0 ? new Date(lastTime).toISOString() : new Date().toISOString(),
+      members: [
+        { id: 'faculty-01', displayName: c.faculty || 'Dr. S. Mohanty', role: 'FACULTY' },
+        { id: 'student-01', displayName: 'Rakesh Das', role: 'STUDENT' },
+        { id: 'student-02', displayName: 'Bishnu Prasad Sahoo', role: 'STUDENT' },
+        { id: 'student-03', displayName: 'Somya Ranjan', role: 'STUDENT' },
+        { id: 'student-04', displayName: 'Ananya Sharma', role: 'STUDENT' }
+      ],
+      unreadCount: c.unreadCount || 0,
+      isFavorite: Boolean(c.isStarred),
+      pinned: c.pinned || null,
+      messages: convMsgs
+    };
+  });
+
+  // Sort by latest message/activity timestamp in descending order (newest message on top)
+  return mappedConvs.sort((a, b) => getConversationLatestTime(b) - getConversationLatestTime(a));
 }
 
 export default function SomeshChatInterface({
@@ -275,12 +299,16 @@ export default function SomeshChatInterface({
   const [dark, setDark] = useState(false);
   const [identity, setIdentity] = useState('');
   const [password, setPassword] = useState('');
-  const [conversations, setConversations] = useState(() => getInitialSeedConversations());
+  const [conversations, setConversations] = useState(() => getInitialSeedConversations(me));
   const [people, setPeople] = useState([]);
   const [searchResults, setSearchResults] = useState({ users: [], conversations: [], messages: [] });
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState(() => initialConversationId || 'conv-ds');
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    const initId = initialConversationId || 'conv-ds';
+    const storeMsgs = campusConnectStore.getMessages(initId);
+    return storeMsgs.map((m) => convertStoreMessageToChatMessage(m, initId, me));
+  });
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [forwardMessage, setForwardMessage] = useState(null);
   const [forwarding, setForwarding] = useState(false);
@@ -311,15 +339,21 @@ export default function SomeshChatInterface({
   const bottomRef = useRef(null);
   const stageRef = useRef(null);
 
-  // Update 'me' if account prop changes
+  // Update 'me' and reload conversations/messages if account prop changes
   useEffect(() => {
     if (account) {
-      setMe({
+      const updatedMe = {
         id: String(account.id || account.rollNumber || account.identifier || 'me_usr_01'),
         displayName: account.name || account.displayName || 'Campus User',
         role: (account.role || 'STUDENT').toUpperCase(),
         profileImageUrl: account.avatar || null,
-      });
+      };
+      setMe(updatedMe);
+      const convs = getInitialSeedConversations(updatedMe);
+      setConversations(convs);
+      const currId = activeIdRef.current || 'conv-ds';
+      const storeMsgs = campusConnectStore.getMessages(currId);
+      setMessages(storeMsgs.map((m) => convertStoreMessageToChatMessage(m, currId, updatedMe)));
     }
   }, [account]);
 
@@ -340,7 +374,7 @@ export default function SomeshChatInterface({
   const active = conversations.find((c) => c.id === activeId) ?? conversations[0] ?? null;
 
   const visibleConversations = useMemo(() => {
-    return conversations.filter((c) => {
+    const filtered = conversations.filter((c) => {
       if (search.trim()) {
         const query = search.toLowerCase();
         const matchesTitle = c.title?.toLowerCase().includes(query);
@@ -353,6 +387,9 @@ export default function SomeshChatInterface({
       if (conversationFilter === 'groups') return c.type === 'GROUP';
       return true;
     });
+
+    // Dynamically sort by latest activity timestamp descending (most recent message at the top)
+    return [...filtered].sort((a, b) => getConversationLatestTime(b) - getConversationLatestTime(a));
   }, [conversations, conversationFilter, search]);
 
   const chatTitle = useMemo(() => {
@@ -369,24 +406,74 @@ export default function SomeshChatInterface({
       setEditingMessageId('');
     }
     setActiveId(conversationId);
-    const target = conversations.find((c) => c.id === conversationId);
-    if (target) {
-      setMessages(target.messages || []);
-      // Mark as read
-      setConversations((prev) =>
-        prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c))
-      );
-    }
+    activeIdRef.current = conversationId;
+
+    const rawMsgs = campusConnectStore.getMessages(conversationId);
+    const converted = rawMsgs.map((m) => convertStoreMessageToChatMessage(m, conversationId, me));
+    setMessages(converted);
+
+    // Mark as read in store
+    campusConnectStore.markAsRead?.(conversationId);
+
+    // Update unread count locally
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c))
+    );
   }
 
   // Load initial messages for activeId
   useEffect(() => {
     if (!activeId) return;
-    const target = conversations.find((c) => c.id === activeId);
-    if (target) {
-      setMessages(target.messages || []);
-    }
+    activeIdRef.current = activeId;
+    const rawMsgs = campusConnectStore.getMessages(activeId);
+    const converted = rawMsgs.map((m) => convertStoreMessageToChatMessage(m, activeId, me));
+    setMessages(converted);
   }, [activeId]);
+
+  // Real-time synchronization across all tabs and modules
+  useEffect(() => {
+    const handleSync = (ev) => {
+      const convId = ev?.detail?.conversationId;
+      const incomingMsg = ev?.detail?.message;
+
+      if (convId && convId === activeIdRef.current && incomingMsg) {
+        const formatted = convertStoreMessageToChatMessage(incomingMsg, convId, me);
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === formatted.id)) return prev;
+          if (formatted.senderId !== me.id) {
+            playReceivedSound();
+          }
+          return [...prev, formatted];
+        });
+      } else if (convId && incomingMsg) {
+        if (incomingMsg.senderId !== me.id && incomingMsg.sender !== me.displayName) {
+          playReceivedSound();
+        }
+      }
+
+      // Refresh conversations list to update latest snippets and unread counts
+      setConversations(getInitialSeedConversations(me));
+    };
+
+    window.addEventListener('campus_connect_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+
+    let bc;
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        bc = new BroadcastChannel('campus_connect_realtime');
+        bc.onmessage = (msgEv) => {
+          handleSync({ detail: msgEv.data });
+        };
+      } catch (err) {}
+    }
+
+    return () => {
+      window.removeEventListener('campus_connect_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+      if (bc) bc.close();
+    };
+  }, [me]);
 
   // Auto scroll
   useEffect(() => {
@@ -451,54 +538,57 @@ export default function SomeshChatInterface({
       return;
     }
 
-    const newMsg = {
-      id: `msg_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      conversationId: activeId,
+    const textToSend = draft.trim();
+    const payload = {
+      text: textToSend,
+      sender: me.displayName,
+      senderRole: me.role.toLowerCase(),
       senderId: me.id,
-      body: draft.trim(),
-      createdAt: new Date().toISOString(),
-      sender: { id: me.id, displayName: me.displayName },
+      isOwn: true,
       replyTo: replyTo ? {
         id: replyTo.id,
         body: replyTo.body,
         sender: replyTo.sender,
         attachment: replyTo.attachment
-      } : null,
-      receipts: [{ userId: 'recipient', deliveredAt: new Date().toISOString(), readAt: null }]
+      } : null
     };
 
-    setMessages((prev) => [...prev, newMsg]);
+    // 1. Save to campusConnectStore
+    const savedMsg = campusConnectStore.sendMessage(activeId, payload);
+
+    // 2. Format as chat message
+    const formatted = convertStoreMessageToChatMessage({ ...savedMsg, isOwn: true }, activeId, me);
+    formatted.senderId = me.id;
+
+    setMessages((prev) => [...prev, formatted]);
     setDraft('');
     setReplyTo(null);
 
-    // Update conversation last message in list
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === activeId
-          ? {
-              ...c,
-              updatedAt: new Date().toISOString(),
-              messages: [...(c.messages || []), newMsg],
-            }
-          : c
-      )
-    );
+    // 3. Update conversation last message in list and float to 1st position
+    setConversations((prev) => {
+      const target = prev.find((c) => c.id === activeId);
+      const updatedTarget = {
+        ...(target || {}),
+        updatedAt: new Date().toISOString(),
+        messages: [...(target?.messages || []), formatted],
+      };
+      const remaining = prev.filter((c) => c.id !== activeId);
+      return [updatedTarget, ...remaining];
+    });
 
-    // Emit over socket if ready
+    // 4. Emit over socket if ready
     if (socketRef.current?.connected) {
       socketRef.current.emit('message:send', {
         conversationId: activeId,
-        body: newMsg.body,
+        body: textToSend,
         replyToId: replyTo?.id,
       });
     }
 
-    // Persist to campusConnectStore
-    campusConnectStore.sendMessage(activeId, {
-      text: newMsg.body,
-      sender: me.displayName,
-      isOwn: true
-    });
+    // 5. Broadcast to other tabs & windows
+    window.dispatchEvent(new CustomEvent('campus_connect_updated', {
+      detail: { conversationId: activeId, message: formatted, senderId: me.id }
+    }));
   }
 
   // Voice recording
@@ -890,14 +980,34 @@ export default function SomeshChatInterface({
             <div className="message-stage" ref={stageRef}>
               <div className="day-divider">Today</div>
               {messages.map((m) => {
-                const own = m.senderId === me.id;
+                const own = m.senderId === me.id || m.senderId === 'me' || (m.sender?.displayName && m.sender.displayName === me.displayName);
                 const isMenuOpen = messageMenuId === m.id;
 
                 return (
                   <div key={m.id} className={`message-row ${own ? 'own' : ''}`}>
                     {!own && <Avatar name={m.sender?.displayName || 'User'} size="small" />}
                     <div className="message-content">
-                      {!own && <span className="sender-name">{m.sender?.displayName}</span>}
+                      {!own && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                          <span className="sender-name">{m.sender?.displayName}</span>
+                          {m.sender?.role && (
+                            <span
+                              className={`role-tag-badge ${m.sender.role.toLowerCase()}`}
+                              style={{
+                                fontSize: '8px',
+                                fontWeight: 800,
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                textTransform: 'uppercase',
+                                background: m.sender.role === 'FACULTY' ? '#dbeafe' : m.sender.role === 'HOD' ? '#ede9fe' : '#dcfce7',
+                                color: m.sender.role === 'FACULTY' ? '#1e40af' : m.sender.role === 'HOD' ? '#6b21a8' : '#15803d'
+                              }}
+                            >
+                              {m.sender.role}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       {/* Quoted / Reply Preview */}
                       {m.replyTo && (

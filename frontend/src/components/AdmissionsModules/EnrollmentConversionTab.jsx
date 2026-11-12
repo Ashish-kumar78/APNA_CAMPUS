@@ -79,26 +79,27 @@ export default function EnrollmentConversionTab({
       isOpen: true,
       applicant: app,
       rollNumber: suggestedRoll,
-      section: 'Section A',
+      section: 'Pending Section Allocation',
     });
   };
 
-  const handleConfirmConversion = (e) => {
+  const handleConfirmConversion = async (e) => {
     e.preventDefault();
     if (!conversionModalState.applicant) return;
 
-    const res = onEnrollStudent &&
-      onEnrollStudent(
+    if (onEnrollStudent) {
+      const res = await onEnrollStudent(
         conversionModalState.applicant.id,
         conversionModalState.rollNumber,
-        conversionModalState.section
+        conversionModalState.section || 'Pending Section Allocation'
       );
 
-    if (res && res.success && res.data) {
-      setConvertedStudent(res.data);
+      if (res && res.success && res.data) {
+        setConvertedStudent(res.data);
+      }
     }
 
-    setConversionModalState({ isOpen: false, applicant: null, rollNumber: '', section: 'Section A' });
+    setConversionModalState({ isOpen: false, applicant: null, rollNumber: '', section: 'Pending Section Allocation' });
   };
 
   return (
@@ -446,6 +447,7 @@ export default function EnrollmentConversionTab({
                       value={conversionModalState.section}
                       onChange={(e) => setConversionModalState({ ...conversionModalState, section: e.target.value })}
                     >
+                      <option value="Pending Section Allocation">Pending Section Allocation (Academic HOD Allocation)</option>
                       <option value="Section A">Section A (Morning Cohort)</option>
                       <option value="Section B">Section B (Afternoon Cohort)</option>
                       <option value="Section C">Section C (Honors Group)</option>

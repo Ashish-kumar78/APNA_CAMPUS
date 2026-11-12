@@ -5,17 +5,25 @@ import { PrismaService } from '../prisma/prisma.service';
 export class StudentsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getAllStudents(query?: { search?: string; department?: string; semester?: string; section?: string; status?: string }) {
+  async getAllStudents(query?: { search?: string; department?: string; semester?: string; section?: string; status?: string; unallocatedOnly?: boolean }) {
     const where: any = {};
 
-    if (query?.status && query.status !== 'All') {
-      where.status = query.status;
+    if (query?.unallocatedOnly || query?.section === 'UNALLOCATED' || query?.status === 'Pending Section Allocation') {
+      where.OR = [
+        { section: 'Pending Section Allocation' },
+        { status: 'Pending Section Allocation' },
+      ];
+    } else {
+      if (query?.status && query.status !== 'All') {
+        where.status = query.status;
+      }
+      if (query?.section && query.section !== 'All') {
+        where.section = query.section;
+      }
     }
+
     if (query?.semester && query.semester !== 'All') {
       where.semester = query.semester;
-    }
-    if (query?.section && query.section !== 'All') {
-      where.section = query.section;
     }
     if (query?.department && query.department !== 'All') {
       where.OR = [
@@ -80,16 +88,105 @@ export class StudentsService {
     const hasMarks = studentMarks.length > 0 && studentMarks.some((m) => (m.totalMarks || 0) > 0 || (m.finalWeightage || 0) > 0);
     const resolvedCgpa = hasMarks ? (student.cgpa || 8.42) : (student.cgpa || 8.42);
 
-    // 3. Authentic Enrolled Courses from Subject Registry
-    let enrolledSubjects = (student.enrollments || []).map((e: any) => e.subject || e);
+    // 3. Resolve Academic Advisor & Mentor
+    let classAdvisor = 'Dr. S. Mohanty';
+    let classAdvisorEmail = 's.mohanty@apnacampus.edu.in';
+    let classAdvisorPhone = '+91 94371 82910';
+    let classAdvisorDesignation = 'Associate Professor & Class Advisor';
+
+    try {
+      const sectionRecord = await this.prisma.section.findFirst({
+        where: {
+          department: { contains: student.deptCode || 'CSE' },
+          section: student.section || 'Section A',
+        },
+      });
+
+      if (sectionRecord?.facultyCoordinator) {
+        const advisorFaculty = await this.prisma.faculty.findFirst({
+          where: {
+            OR: [
+              { name: { contains: sectionRecord.facultyCoordinator } },
+              { id: sectionRecord.facultyCoordinator },
+            ],
+          },
+        });
+        if (advisorFaculty) {
+          classAdvisor = advisorFaculty.name;
+          classAdvisorEmail = advisorFaculty.email || classAdvisorEmail;
+          classAdvisorPhone = advisorFaculty.phone || classAdvisorPhone;
+          classAdvisorDesignation = advisorFaculty.designation || classAdvisorDesignation;
+        } else {
+          classAdvisor = sectionRecord.facultyCoordinator;
+        }
+      } else {
+        const deptFaculty = await this.prisma.faculty.findFirst({
+          where: {
+            department: { contains: student.deptCode || 'Computer' },
+          },
+        });
+        if (deptFaculty) {
+          classAdvisor = deptFaculty.name;
+          classAdvisorEmail = deptFaculty.email || classAdvisorEmail;
+          classAdvisorPhone = deptFaculty.phone || classAdvisorPhone;
+          classAdvisorDesignation = deptFaculty.designation || classAdvisorDesignation;
+        }
+      }
+    } catch {}
+
+    // 4. Authentic Enrolled Courses from Subject Registry / Course Offerings
+    let enrolledSubjects: any[] = [];
+    try {
+      const dbOfferings = await this.prisma.courseOffering.findMany({
+        where: {
+          semester: student.semester || 'Semester 5',
+          OR: [
+            { department: student.deptCode || 'CSE' },
+            { department: student.department || 'CSE' },
+          ],
+        },
+        include: {
+          facultyAssignments: {
+            include: {
+              faculty: true,
+            },
+          },
+        },
+        orderBy: { subjectCode: 'asc' },
+      });
+
+      if (dbOfferings.length > 0) {
+        enrolledSubjects = dbOfferings.map((off) => {
+          const assignment =
+            off.facultyAssignments.find((a) => a.section === (student.section || 'Section A')) ||
+            off.facultyAssignments[0];
+          const facultyObj = assignment?.faculty;
+
+          return {
+            code: off.subjectCode,
+            name: off.subjectName,
+            credits: off.credits,
+            type: off.type,
+            department: off.department,
+            semester: off.semester,
+            academicSession: off.academicYear,
+            faculty: facultyObj?.name || 'Dr. P. Mohapatra',
+            facultyEmail: facultyObj?.email || 'faculty@apnacampus.edu.in',
+            facultyPhone: facultyObj?.phone || '+91 94371 82910',
+            facultyDesignation: facultyObj?.designation || 'Associate Professor',
+          };
+        });
+      }
+    } catch {}
+
     if (enrolledSubjects.length === 0) {
       enrolledSubjects = [
-        { code: 'CS501', name: 'Artificial Intelligence', credits: 4, type: 'Theory', faculty: 'Dr. P. Mohapatra' },
-        { code: 'CS502', name: 'Machine Learning', credits: 4, type: 'Theory', faculty: 'Dr. S. Rath' },
-        { code: 'CS503', name: 'Cloud Computing', credits: 3, type: 'Theory', faculty: 'Prof. R. Nayak' },
-        { code: 'CS504', name: 'Compiler Design', credits: 3, type: 'Theory', faculty: 'Dr. A. Panda' },
-        { code: 'CS505', name: 'AI Lab', credits: 2, type: 'Lab', faculty: 'Dr. P. Mohapatra' },
-        { code: 'CS506', name: 'Project Work – Phase I', credits: 2, type: 'Project', faculty: 'Dr. S. Mohanty' },
+        { code: 'CS501', name: 'Artificial Intelligence', credits: 4, type: 'Theory', faculty: 'Dr. P. Mohapatra', facultyEmail: 'p.mohapatra@apnacampus.edu.in', facultyPhone: '+91 94370 11223', facultyDesignation: 'Professor & Head' },
+        { code: 'CS502', name: 'Machine Learning', credits: 4, type: 'Theory', faculty: 'Dr. S. Rath', facultyEmail: 's.rath@apnacampus.edu.in', facultyPhone: '+91 94372 33445', facultyDesignation: 'Associate Professor' },
+        { code: 'CS503', name: 'Cloud Computing', credits: 3, type: 'Theory', faculty: 'Prof. R. Nayak', facultyEmail: 'r.nayak@apnacampus.edu.in', facultyPhone: '+91 94373 55667', facultyDesignation: 'Assistant Professor' },
+        { code: 'CS504', name: 'Compiler Design', credits: 3, type: 'Theory', faculty: 'Dr. A. Panda', facultyEmail: 'a.panda@apnacampus.edu.in', facultyPhone: '+91 94374 77889', facultyDesignation: 'Associate Professor' },
+        { code: 'CS505', name: 'AI Lab', credits: 2, type: 'Lab', faculty: 'Dr. P. Mohapatra', facultyEmail: 'p.mohapatra@apnacampus.edu.in', facultyPhone: '+91 94370 11223', facultyDesignation: 'Professor & Head' },
+        { code: 'CS506', name: 'Project Work – Phase I', credits: 2, type: 'Project', faculty: 'Dr. S. Mohanty', facultyEmail: 's.mohanty@apnacampus.edu.in', facultyPhone: '+91 94371 82910', facultyDesignation: 'Associate Professor' },
       ];
     }
 
@@ -117,6 +214,17 @@ export class StudentsService {
 
     return {
       ...student,
+      academicSession: student.academicYear || '2026–27',
+      course: student.programme?.name || 'Bachelor of Technology in Computer Science & Engineering',
+      department: student.department || 'Computer Science & Engineering',
+      branch: student.deptCode || 'CSE',
+      admissionBatch: (student as any).batch || '2023–2027',
+      currentSemester: student.semester || 'Semester 5',
+      section: student.section || 'Section A',
+      classAdvisor,
+      classAdvisorEmail,
+      classAdvisorPhone,
+      classAdvisorDesignation,
       attendance: attendancePercentage,
       attendancePercentage: attendancePercentage,
       classesHeld: finalHeld,
@@ -192,6 +300,59 @@ export class StudentsService {
       where: { id },
       data,
     });
+  }
+
+  async allocateStudentSection(studentId: string, section: string, semester?: string) {
+    const student = await this.prisma.student.findFirst({
+      where: {
+        OR: [{ id: studentId }, { studentId }, { rollNumber: studentId }],
+      },
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student record not found.');
+    }
+
+    const updatedStudent = await this.prisma.student.update({
+      where: { id: student.id },
+      data: {
+        section,
+        status: 'Active',
+        ...(semester ? { semester } : {}),
+      },
+    });
+
+    // Update active enrollment record
+    const targetSemester = semester || student.semester || 'Semester 1';
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        studentId: student.id,
+        semester: targetSemester,
+      },
+    });
+
+    if (enrollment) {
+      await this.prisma.studentEnrollment.update({
+        where: { id: enrollment.id },
+        data: {
+          section,
+          status: 'Enrolled',
+        },
+      });
+    }
+
+    // Also update User account detail
+    if (student.userId) {
+      await this.prisma.user.update({
+        where: { id: student.userId },
+        data: {
+          detail: `${targetSemester} · ${section}`,
+          isActive: true,
+        },
+      }).catch(() => {});
+    }
+
+    return updatedStudent;
   }
 
   async saveTransferPreference(studentIdOrRoll: string, campus: string, city: string) {

@@ -39,6 +39,7 @@ import HealthPage from './pages/HealthPage.jsx'
 import UniversityMarksView from './components/UniversityMarksView.jsx'
 
 import { findStudentByQuery, defaultDemoStudent, getStudentDocuments, addStudentDocument, getLatestHostelAttendanceDate, formatToDDMMYYYY } from './services/studentStore.js'
+import { isDemoAccount } from './utils/authUtils.js'
 import { api } from './services/api.js'
 
 const profileTabs = [
@@ -79,10 +80,7 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
 
   // Merge account prop with complete student store record if available
   const baseStudent = useMemo(() => {
-    const isExplicitDemo =
-      account?.studentId === '2401432265' ||
-      account?.rollNumber === '2401432265' ||
-      account?.name === 'BISHNU PRASAD SAHOO'
+    const isDemo = isDemoAccount(account);
     const matched = findStudentByQuery(account?.registrationNumber || account?.rollNumber || account?.name)
 
     const rawName = (account?.name || '').trim()
@@ -91,31 +89,34 @@ function StudentProfile({ account, onBack, initialTab, initialQuickView }) {
     const derivedLast = nameParts.length > 1 ? nameParts[nameParts.length - 1] : ''
     const derivedMiddle = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : ''
 
-    if (!isExplicitDemo && (account?.role === 'student' || account?.role === 'STUDENT') && rawName) {
+    if (!isDemo) {
+      // Authentically created new student: uses real data only, avoids synthetic demo fallbacks
       return {
-        ...defaultDemoStudent,
         ...account,
-        name: rawName,
-        firstName: account.firstName || derivedFirst,
-        lastName: account.lastName || derivedLast,
-        middleName: account.middleName || derivedMiddle,
-        rollNumber: account.rollNumber || account.studentId || account.identifier || account.registrationNumber,
-        studentId: account.studentId || account.rollNumber || account.identifier || account.registrationNumber,
-        registrationNumber: account.registrationNumber || account.rollNumber || account.studentId,
-        department: account.department || account.branch || 'Engineering',
-        course: account.course || account.program || 'Bachelor of Technology',
-        program: account.program || account.course || 'B.Tech',
-        batch: account.batch || account.academicYear || '2026-27',
-        gender: account.gender || 'Not Specified',
-        dob: account.dob || '-',
-        dobFormatted: account.dob || '-',
-        personalEmail: account.personalEmail || account.email,
-        email: account.email,
-        phone: account.phone || '-',
-        category: account.category || 'General',
-        caste: account.category || 'General',
-        guardians: Array.isArray(account.guardians) ? account.guardians : [],
-        addresses: Array.isArray(account.addresses) ? account.addresses : [],
+        name: rawName || 'Student',
+        firstName: account?.firstName || derivedFirst,
+        lastName: account?.lastName || derivedLast,
+        middleName: account?.middleName || derivedMiddle,
+        rollNumber: account?.rollNumber || account?.studentId || account?.identifier || account?.registrationNumber || '—',
+        studentId: account?.studentId || account?.rollNumber || account?.identifier || account?.registrationNumber || '—',
+        registrationNumber: account?.registrationNumber || account?.rollNumber || account?.studentId || '—',
+        department: account?.department || account?.branch || 'Awaiting Allocation',
+        course: account?.course || account?.program || 'Bachelor of Technology',
+        program: account?.program || account?.course || 'B.Tech',
+        batch: account?.batch || account?.academicYear || '2026–2030',
+        gender: account?.gender || 'Not Specified',
+        dob: account?.dob || '-',
+        dobFormatted: account?.dob || '-',
+        personalEmail: account?.personalEmail || account?.email || '-',
+        email: account?.email || '-',
+        phone: account?.phone || '-',
+        category: account?.category || 'General',
+        caste: account?.category || 'General',
+        guardians: Array.isArray(account?.guardians) ? account.guardians : [],
+        addresses: Array.isArray(account?.addresses) ? account.addresses : [],
+        cgpa: account?.cgpa ?? null,
+        attendance: account?.attendance ?? null,
+        enrolledSubjects: Array.isArray(account?.enrolledSubjects) ? account.enrolledSubjects : [],
         isDemo: false,
       }
     }

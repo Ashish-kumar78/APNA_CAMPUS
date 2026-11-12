@@ -390,44 +390,82 @@ export class AdmissionService {
       const deptCode = (prog?.departmentCode || 'CSE').replace(/[^a-z0-9]/gi, '').toUpperCase();
       const deptName = prog?.name || applicant.programmeName || 'Computer Science & Engineering';
       const academicYear = applicant.academicYear || '2026-27';
-      const batchYear = academicYear.match(/\d{4}/)?.[0];
-      if (!batchYear) {
-        throw new BadRequestException('The applicant academic year must begin with a four-digit year.');
-      }
-
-      const { studentIdNumber, uniqueRollNumber } = await this.generateNextStudentId(tx, batchYear, deptCode);
-      const officialEmail = await this.generateStudentEmail(tx, applicant.name, emailDomain, studentIdNumber);
+      const batchYear = academicYear.match(/\d{4}/)?.[0] || '2026';
+      const durationYears = prog?.durationYears || 4;
+      const admissionBatch = `${batchYear}-${Number(batchYear) + durationYears}`;
 
       const rawDocObj: any = applicant.documents || {};
       const personal = rawDocObj.personalDetails || {};
       const parent = rawDocObj.parentDetails || {};
 
-      // 1. Create Student record
-      const student = await tx.student.create({
-        data: {
-          studentId: studentIdNumber,
-          rollNumber: uniqueRollNumber,
-          name: applicant.name,
-          email: officialEmail,
-          personalEmail: applicant.email,
-          phone: applicant.phone,
-          gender: applicant.gender || personal.gender || 'Male',
-          dob: applicant.dob || personal.dob || '2005-08-15',
-          bloodGroup: personal.bloodGroup || 'O+',
-          category: applicant.category || personal.category || 'General',
-          religion: personal.religion || 'Hindu',
-          department: deptName,
-          deptCode,
-          semester: 'Semester 1',
-          section: 'Section A',
-          academicYear: academicYear,
-          status: 'Active',
-          cgpa: 0.0,
-          attendance: 100,
-          walletBalance: 500.0,
-          programmeId: prog?.id || null,
-        },
-      });
+      // Check if student already exists for this applicant or by identifier/email/phone to prevent duplicates
+      let student = applicant.studentId
+        ? await tx.student.findUnique({ where: { id: applicant.studentId } })
+        : null;
+
+      if (!student && (applicant.email || applicant.phone)) {
+        student = await tx.student.findFirst({
+          where: {
+            OR: [
+              ...(applicant.email ? [{ email: applicant.email }, { personalEmail: applicant.email }] : []),
+              ...(applicant.phone ? [{ phone: applicant.phone }] : []),
+            ],
+          },
+        });
+      }
+
+      let studentIdNumber = student?.studentId;
+      let uniqueRollNumber = student?.rollNumber;
+      let officialEmail = student?.email;
+
+      if (!student) {
+        const nextIds = await this.generateNextStudentId(tx, batchYear, deptCode);
+        studentIdNumber = nextIds.studentIdNumber;
+        uniqueRollNumber = nextIds.uniqueRollNumber;
+        officialEmail = await this.generateStudentEmail(tx, applicant.name, emailDomain, studentIdNumber);
+
+        // 1. Create authoritative Student record with Pending Section Allocation status
+        student = await tx.student.create({
+          data: {
+            studentId: studentIdNumber,
+            rollNumber: uniqueRollNumber,
+            name: applicant.name,
+            email: officialEmail,
+            personalEmail: applicant.email,
+            phone: applicant.phone,
+            gender: applicant.gender || personal.gender || 'Male',
+            dob: applicant.dob || personal.dob || '2005-08-15',
+            bloodGroup: personal.bloodGroup || 'O+',
+            category: applicant.category || personal.category || 'General',
+            religion: personal.religion || 'Hindu',
+            department: deptName,
+            deptCode,
+            semester: 'Semester 1',
+            section: 'Pending Section Allocation',
+            academicYear: academicYear,
+            status: 'Pending Section Allocation',
+            cgpa: 0.0,
+            attendance: 100,
+            walletBalance: 500.0,
+            programmeId: prog?.id || null,
+          },
+        });
+      } else {
+        // Activate and update existing student
+        student = await tx.student.update({
+          where: { id: student.id },
+          data: {
+            name: applicant.name,
+            phone: applicant.phone || student.phone,
+            department: deptName,
+            deptCode,
+            programmeId: prog?.id || student.programmeId,
+            academicYear,
+            status: student.status === 'Active' ? 'Active' : 'Pending Section Allocation',
+            section: student.section && student.section !== 'Section A' ? student.section : 'Pending Section Allocation',
+          },
+        });
+      }
 
       // 1b. Create Guardians if present in application
       if (parent.fatherName) {
@@ -511,43 +549,88 @@ export class AdmissionService {
         }
       }
 
-      // 2. Create StudentEnrollment record
-      const enrollment = await tx.studentEnrollment.create({
-        data: {
+      // 2. Create or update authoritative StudentEnrollment record
+      let enrollment = await tx.studentEnrollment.findFirst({
+        where: {
           studentId: student.id,
-          programmeId: prog?.id || null,
-          academicYear: academicYear,
           semester: 'Semester 1',
-          section: 'Section A',
-          status: 'Enrolled',
-          attendanceRate: 100.0,
+          academicYear,
         },
       });
 
-      // 3. Create User account with role STUDENT - directly activated with known password
-      const user = await tx.user.create({
-        data: {
-          identifier: studentIdNumber,
-          email: officialEmail,
-          name: applicant.name,
-          phone: applicant.phone,
-          passwordHash: passwordHash,
-          role: Role.STUDENT,
-          department: deptName,
-          detail: 'Semester 1 · Section A',
-          isActive: true,
-          isActivated: true,
-          activationToken: activationToken,
-          tokenExpiresAt: activationExpiresAt,
-          permissions: ['student.portal', 'academics.view', 'attendance.view', 'marks.view', 'complaints.submit'],
-        },
-      });
+      if (!enrollment) {
+        enrollment = await tx.studentEnrollment.create({
+          data: {
+            studentId: student.id,
+            programmeId: prog?.id || null,
+            academicYear: academicYear,
+            semester: 'Semester 1',
+            section: student.section || 'Pending Section Allocation',
+            status: 'Pending Section Allocation',
+            attendanceRate: 100.0,
+          },
+        });
+      } else {
+        enrollment = await tx.studentEnrollment.update({
+          where: { id: enrollment.id },
+          data: {
+            programmeId: prog?.id || enrollment.programmeId,
+            status: 'Pending Section Allocation',
+          },
+        });
+      }
+
+      // 3. Create or synchronize User account with role STUDENT
+      let user = student.userId ? await tx.user.findUnique({ where: { id: student.userId } }) : null;
+      if (!user) {
+        user = await tx.user.findFirst({
+          where: {
+            OR: [
+              { identifier: student.studentId },
+              { email: officialEmail },
+              ...(applicant.email ? [{ email: applicant.email }] : []),
+            ],
+          },
+        });
+      }
+
+      if (!user) {
+        const resolvedOfficialEmail = officialEmail || student.email || `${student.studentId.toLowerCase()}@${emailDomain}`;
+        user = await tx.user.create({
+          data: {
+            identifier: student.studentId,
+            email: resolvedOfficialEmail,
+            name: applicant.name,
+            phone: applicant.phone,
+            passwordHash: passwordHash,
+            role: Role.STUDENT,
+            department: deptName,
+            detail: `Semester 1 · ${student.section}`,
+            isActive: true,
+            isActivated: true,
+            activationToken: activationToken,
+            tokenExpiresAt: activationExpiresAt,
+            permissions: ['student.portal', 'academics.view', 'attendance.view', 'marks.view', 'complaints.submit'],
+          },
+        });
+      } else {
+        user = await tx.user.update({
+          where: { id: user.id },
+          data: {
+            role: Role.STUDENT,
+            detail: `Semester 1 · ${student.section}`,
+            isActive: true,
+          },
+        });
+      }
 
       // 4. Link Student to User
-      await tx.student.update({
-        where: { id: student.id },
-        data: { userId: user.id },
-      });
+      if (student.userId !== user.id) {
+        student = await tx.student.update({
+          where: { id: student.id },
+          data: { userId: user.id },
+        });
+      }
 
       // 5. Update Applicant to ENROLLED
       const updatedApplicant = await tx.applicant.update({
@@ -567,12 +650,12 @@ export class AdmissionService {
           role: 'ADMIN',
           targetStudent: student.name,
           subject: 'Admissions & Enrollment',
-          reason: `Approved admission for applicant ${applicant.applicationNo} -> Created Student ID: ${student.studentId}`,
+          reason: `Approved admission for applicant ${applicant.applicationNo} -> Created/Activated Student ID: ${student.studentId} (${student.department}) - Status: ${student.status}`,
           changedAt: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
         },
       });
 
-      return { student, enrollment, user, updatedApplicant, passportPhotoUrl };
+      return { student, enrollment, user, updatedApplicant, passportPhotoUrl, admissionBatch };
     }, { maxWait: 15000, timeout: 30000 }).catch((error) => {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
         throw new ConflictException('Another admission action was processed concurrently. Refresh the application and retry.');
@@ -594,6 +677,8 @@ export class AdmissionService {
         semester: result.student.semester,
         section: result.student.section,
         academicYear: result.student.academicYear,
+        academicStatus: result.student.status,
+        admissionBatch: result.admissionBatch,
         loginId: result.student.studentId,
         initialPassword: initialPassword,
         activationToken,

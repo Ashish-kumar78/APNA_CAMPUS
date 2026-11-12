@@ -18,16 +18,8 @@ import {
   BookOpen
 } from 'lucide-react'
 import { api } from '../services/api'
+import { isDemoAccount } from '../utils/authUtils'
 import './AttendancePage.css'
-
-const S = [
-  { code: 'CS501', name: 'Artificial Intelligence', faculty: 'Dr. P. Mohapatra', held: 42, attended: 40, type: 'Theory' },
-  { code: 'CS502', name: 'Machine Learning', faculty: 'Dr. S. Rath', held: 38, attended: 35, type: 'Theory' },
-  { code: 'CS503', name: 'Cloud Computing', faculty: 'Prof. R. Nayak', held: 36, attended: 28, type: 'Theory' },
-  { code: 'CS504', name: 'Compiler Design', faculty: 'Dr. A. Panda', held: 40, attended: 38, type: 'Theory' },
-  { code: 'CS505', name: 'AI Lab', faculty: 'Dr. P. Mohapatra', held: 20, attended: 20, type: 'Lab' },
-  { code: 'CS506', name: 'Project Work - Phase I', faculty: 'Dr. S. Mohanty', held: 14, attended: 13, type: 'Project' }
-]
 
 function generateClassHistory(sub) {
   const { code, held, attended } = sub
@@ -81,6 +73,15 @@ function generateClassHistory(sub) {
 
 const TH = 75
 
+const demoAttendanceRecords = [
+  { code: 'CS501', name: 'Design and Analysis of Algorithms', held: 36, attended: 33, faculty: 'Dr. S. Mohanty' },
+  { code: 'CS502', name: 'Software Engineering', held: 34, attended: 31, faculty: 'Prof. R. K. Senapati' },
+  { code: 'CS503', name: 'Operating Systems', held: 35, attended: 32, faculty: 'Dr. M. K. Panda' },
+  { code: 'CS504', name: 'Computer Organisation & Architecture', held: 32, attended: 29, faculty: 'Prof. A. K. Nayak' },
+  { code: 'CS505', name: 'Artificial Intelligence & Foundations', held: 33, attended: 30, faculty: 'Dr. P. K. Pattnaik' },
+  { code: 'CS506', name: 'Advanced Algorithms Lab', held: 16, attended: 15, faculty: 'Dr. S. Mohanty' }
+]
+
 export default function AttendancePage({ account }) {
   const [expandedSubject, setExpandedSubject] = useState(null)
   const [attendanceData, setAttendanceData] = useState(null)
@@ -105,8 +106,14 @@ export default function AttendancePage({ account }) {
     }
   }, [])
 
-  // Authentic records from backend or student account
-  const records = attendanceData?.records || account?.attendanceRecords || []
+  // Authentic records vs demo seed data separation
+  const isDemo = isDemoAccount(account)
+  const rawRecords = attendanceData?.records?.length > 0
+    ? attendanceData.records
+    : (Array.isArray(account?.attendanceRecords) && account.attendanceRecords.length > 0
+      ? account.attendanceRecords
+      : (isDemo ? demoAttendanceRecords : []))
+  const records = rawRecords
   const hasRecords = Boolean(attendanceData?.hasAttendance || (records.length > 0 && records.some(r => (r.held || 0) > 0)))
 
   const held = hasRecords ? (attendanceData?.totalHeld ?? records.reduce((s, r) => s + (r.held || 0), 0)) : 0
@@ -325,6 +332,16 @@ export default function AttendancePage({ account }) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {records.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', background: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: '14px', margin: '1rem 0' }}>
+          <CalendarDays size={40} color="#94a3b8" style={{ margin: '0 auto 10px', display: 'block' }} />
+          <h3 style={{ margin: '0 0 6px', color: '#0f172a', fontSize: '1rem' }}>No Attendance Records Yet</h3>
+          <p style={{ margin: 0, fontSize: '0.84rem', color: '#64748b' }}>
+            Your biometric logs and classroom lecture attendance will appear here once faculty conduct your classes.
+          </p>
         </div>
       )}
     </div>

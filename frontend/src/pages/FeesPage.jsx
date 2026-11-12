@@ -30,6 +30,7 @@ import {
 } from 'lucide-react'
 import { downloadFeeReceiptPdf, openFeeReceiptPdf, openPaymentProofPdf, downloadPaymentProofPdf, convertNumberToIndianWords } from '../utils/pdfGenerator'
 import { feesApi } from '../services/feesApi'
+import { isDemoAccount } from '../utils/authUtils'
 import './FeesPage.css'
 
 const COLLEGE_PAYMENT_QR_URL = '/college_payment_qr_placeholder.svg'
@@ -39,10 +40,10 @@ export const feeHistory = [];
 
 export function ApnaReceiptPaperView({ receipt, studentName, studentRoll, studentCourseBatch, studentSection }) {
   const r = receipt || {}
-  const regd = r.rollNumber || r.registrationNumber || studentRoll || '2401432265'
-  const name = (r.studentName || studentName || 'BISHNU PRASAD SAHOO').toUpperCase()
-  const batch = r.courseBatch || studentCourseBatch || 'BTECH 2028-P'
-  const sec = r.section || studentSection || 'CSE (AI) - Genius'
+  const regd = r.rollNumber || r.registrationNumber || studentRoll || '2305201001'
+  const name = (r.studentName || studentName || 'RAKESH DAS').toUpperCase()
+  const batch = r.courseBatch || studentCourseBatch || 'BTECH 2023–2027'
+  const sec = r.section || studentSection || 'CSE · Section A'
   const rawNo = r.receiptNo || r.referenceNumber || (r.id ? String(r.id).replace(/\D/g, '') || '128680' : '128680')
   const recNo = String(rawNo).startsWith('APNA/ACC') ? rawNo : `APNA/ACC/${String(rawNo).replace(/^GIFT\/ACC\//, '')}`
   const recDate = r.paymentDate || r.receiptDate || r.date || '27-07-2026'
@@ -148,10 +149,11 @@ export function ApnaReceiptPaperView({ receipt, studentName, studentRoll, studen
 export const GiftReceiptPaperView = ApnaReceiptPaperView;
 
 export default function FeesPage({ account }) {
-  const studentName = account?.name || 'BISHNU PRASAD SAHOO'
-  const studentRoll = account?.rollNumber || account?.registrationNumber || '2401432265'
-  const studentCourseBatch = 'BTECH 2028-P'
-  const studentSection = 'CSE (AI) - Genius'
+  const isDemo = isDemoAccount(account)
+  const studentName = isDemo ? (account?.name || 'Rakesh Das') : (account?.name || 'New Student')
+  const studentRoll = isDemo ? (account?.rollNumber || account?.registrationNumber || '2305201001') : (account?.rollNumber || account?.registrationNumber || account?.studentId || '—')
+  const studentCourseBatch = isDemo ? (account?.batch || 'BTECH 2023–2027') : (account?.batch || account?.program || 'Semester 1')
+  const studentSection = isDemo ? (account?.section || 'CSE · Section A') : (account?.section || '—')
 
   const [activeTab, setActiveTab] = useState('current')
   const [showPayModal, setShowPayModal] = useState(false)
@@ -213,10 +215,10 @@ export default function FeesPage({ account }) {
   }, [account?.rollNumber, account?.studentId, account?.registrationNumber])
 
   const loadFeeStatement = async () => {
-    const roll = account?.rollNumber || account?.studentId || account?.registrationNumber
+    const roll = account?.rollNumber || account?.studentId || account?.registrationNumber || (isDemo ? '2305201001' : '')
     try {
       const data = roll ? await feesApi.getFeeStatement(roll) : null
-      if (data) {
+      if (data && (Number(data.totalAnnualDues) > 0 || (Array.isArray(data.feeHeads) && data.feeHeads.length > 0))) {
         setStatementData(data)
         if (data.paymentHistory) {
           setProofHistory(data.paymentHistory)
@@ -227,9 +229,40 @@ export default function FeesPage({ account }) {
         setTotalAnnualDues(Number(data.totalAnnualDues) || 0)
         setTotalPaidAmount(Number(data.paidAmount) || 0)
         setTotalPendingBalance(Number(data.outstanding) || 0)
+        return
       }
     } catch (err) {
       console.warn('Failed to load authentic fee statement:', err)
+    }
+
+    if (isDemo) {
+      // Demo student (Rakesh Das) retains full demo fee ledger & transactions
+      const demoInvoices = [
+        { id: 'INV-2026-001', head: 'Semester 5 Tuition & Academic Fee', term: 'Semester 5', assessed: 65000, paid: 65000, status: 'Cleared', mode: 'Online Gateway' },
+        { id: 'INV-2026-002', head: 'Examination & Autonomous Assessment Fee', term: 'Semester 5', assessed: 4500, paid: 4500, status: 'Cleared', mode: 'Bank Transfer' },
+        { id: 'INV-2026-003', head: 'Advanced Computing & AI Lab Facility Fee', term: 'Semester 5', assessed: 18000, paid: 18000, status: 'Cleared', mode: 'Online Gateway' },
+        { id: 'INV-2026-004', head: 'Semester 6 Tuition Installment', term: 'Semester 6', assessed: 65000, paid: 0, status: 'Pending', mode: 'Awaiting Payment' },
+        { id: 'INV-2026-005', head: 'Hostel Residence & Mess Maintenance', term: 'Annual 2026-27', assessed: 62920, paid: 0, status: 'Pending', mode: 'Awaiting Payment' },
+      ]
+      const demoLedger = [
+        { year: '1st Year', session: '2023–2024', details: 'B.Tech CSE · Semesters 1 & 2 Complete', amountPaid: 95000, outstanding: 0 },
+        { year: '2nd Year', session: '2024–2025', details: 'B.Tech CSE · Semesters 3 & 4 Complete', amountPaid: 98000, outstanding: 0 },
+        { year: '3rd Year', session: '2025–2026', details: 'B.Tech CSE · Semester 5 Ongoing (Sem 6 upcoming)', amountPaid: 87500, outstanding: 65000 },
+        { year: '4th Year', session: '2026–2027', details: 'B.Tech CSE · Final Year Dues Assessment', amountPaid: 0, outstanding: 62920 },
+      ]
+      setInvoices(demoInvoices)
+      setLedgerRecords(demoLedger)
+      setTotalAnnualDues(322600)
+      setTotalPaidAmount(194680)
+      setTotalPendingBalance(127920)
+    } else {
+      // Newly created account: starts with clean blank state (₹0 / awaiting fee assessment)
+      setInvoices([])
+      setLedgerRecords([])
+      setProofHistory([])
+      setTotalAnnualDues(0)
+      setTotalPaidAmount(0)
+      setTotalPendingBalance(0)
     }
   }
 

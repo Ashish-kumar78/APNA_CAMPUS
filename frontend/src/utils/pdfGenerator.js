@@ -2452,8 +2452,8 @@ export function downloadStudentDocumentPdf(record) {
 
   // Student Particulars Table
   const particulars = [
-    ['Student Full Name', record.studentName || 'Student', 'Student ID', record.studentId || 'GIFT-2023-XXXX'],
-    ['Registration Number', record.registrationNumber || '230520XXXX', 'Roll Number', record.rollNumber || '01'],
+    ['Student Full Name', record.studentName || 'Student', 'Student ID', record.studentId || 'AC-2023-1001'],
+    ['Registration Number', record.registrationNumber || '2305201001', 'Roll Number', record.rollNumber || '23CSE001'],
     ['Gender / Sex', record.sex || record.gender || 'Male', 'Department', record.department || 'Computer Science & Engineering'],
     ['Current Semester', record.semester || 'Semester 5', 'Section', record.section || 'Section A'],
     ['Document Type', record.docName, 'Upload Date', record.uploadedAt || '15 Aug 2023'],

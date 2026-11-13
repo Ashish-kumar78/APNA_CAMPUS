@@ -54,14 +54,26 @@ import {
   KeyRound,
   ShieldAlert,
   Zap,
-  Info
+  Info,
+  ArrowRightLeft,
+  QrCode,
+  Shield,
+  Utensils,
+  UtensilsCrossed,
+  Star
 } from 'lucide-react';
 import '../DashboardHome.css';
 import './RoleDashboardLanding.css';
 import { getGreetingDisplayName } from '../utils/timeGreeting.js';
 import { CountUpNumber } from '../utils/motion.jsx';
 import WardenEmployeeProfile from './hostel/WardenEmployeeProfile.jsx';
+import MessEmployeeProfile from './MessEmployeeProfile.jsx';
+import SecurityGuardEmployeeProfile from './SecurityGuardEmployeeProfile.jsx';
+import UniversalDigitalIdModal from './Security/UniversalDigitalIdModal.jsx';
 import { api } from '../services/api.js';
+import { getFoodFeedbackAnalytics } from '../services/hostelFoodStore.js';
+import { getAllMessComplaints } from '../services/messComplaintStore.js';
+import { getDailyMealAttendanceTelemetry } from '../services/messAttendanceStore.js';
 
 // DetailRow matching StudentPortal
 function DetailRow({ label, value }) {
@@ -1135,6 +1147,124 @@ export const ROLE_CONFIGS = {
       { day: '17', month: 'OCT', tag: 'INSPECTION', tagTone: 'tag-green', title: 'State Fire Service Safety NOC Inspection Cleared', desc: 'All campus hydrants, DCP extinguishers and sprinkler risers recertified.' },
     ],
   },
+
+  // 16. SECURITY GUARD / CAMPUS ACCESS CONTROL
+  security: {
+    roleKey: 'security',
+    roleTitle: 'Security Guard',
+    dashboardTitle: 'Security Guard dashboard',
+    kicker: 'CAMPUS ACCESS CONTROL & PERIMETER VIGILANCE · 24/7 ACTIVE POST',
+    caption: 'Oversee perimeter vigilance, turnstile optical barriers, warden-approved gate passes, and guest visitor logs.',
+    motd: 'Main Campus Gate 1 optical turnstiles calibrated. Next shift handover scheduled for 14:00 hrs.',
+    officer: {
+      name: 'Dillip Kumar Pradhan',
+      id: 'SG-OD-4421',
+      employeeCode: 'EMP-SEC-4421',
+      designation: 'Senior Security Guard & Post Marshal',
+      department: 'Campus Security & Access Control',
+      specialization: 'Perimeter Access Control, Biometrics & Gate Log Verification',
+      office: 'Main Campus Gate 1 (Front Entrance)',
+      qualification: 'Diploma in Industrial Security & First Aid Certified',
+      experience: '9+ Years Campus Security & Vigilance',
+      assignedResponsibilities: 'Main Gate 1 Checkpoint, RFID Turnstiles A & B, Visitor Register, Student Outpasses',
+      academicYear: '2026–2027',
+      email: 'security.gate1@apnacampus.edu.in',
+      phone: '+91 98610 44210',
+      employmentType: 'Full-Time Regular (Shift Guard)',
+      dateOfJoining: '05 Jan 2018',
+      employmentStatus: 'Active · On Duty',
+      reportingAuthority: 'Chief Security Officer & Campus Registrar',
+      photo: '/passport_photo_male.svg',
+      scope: 'Perimeter Post & Turnstile Access Marshal',
+      biometricId: 'BIO-SEC-4421',
+      identityVerification: 'Verified Official (Guard Badge: SG-OD-4421 · Aadhaar: •••• •••• 4421)',
+    },
+    stats: {
+      c1: { icon: Users, label: 'Students Currently Outside', badge: '1 On Pass', val: '01', desc: '1 Verified departure · 0 Curfew violations', pills: ['01 On Pass', '0 Overdue', 'Gate 1 Active'] },
+      c2: { icon: ArrowRightLeft, label: "Today's Gate Movements", badge: '4 Total Verified', val: '04', ratio: '2 Exits / 2 Entries', pct: '100%', foot: 'All turnstile optical logs synchronized with server' },
+      c3: { icon: Clock, label: 'Overdue / Late Returns', badge: 'Zero Breaches', val: '00', desc: 'Curfew violations 0 · Normal clearance', foot: 'Next curfew check window begins at 19:30 hrs' },
+      c4: { icon: ShieldCheck, label: 'Active Visitors Inside', badge: '2 Pending Exit', val: '02', desc: '2 Visitors inside · Badges issued', foot: 'Oldest visitor checked in 1.5 hrs ago' },
+    },
+    quickActions: [
+      { id: 'scanner', label: 'Open QR Scanner', icon: QrCode },
+      { id: 'passes', label: 'Approved Gate Passes', icon: FileCheck2 },
+      { id: 'visitors', label: 'Verify Visitor Code', icon: Users },
+      { id: 'alerts', label: 'Report Incident', icon: AlertTriangle },
+    ],
+    overviewTitle: 'Perimeter Gate Checkpoints & Turnstile Optical Sensor Status',
+    overviewItems: [
+      { col1: 'Main Campus Gate 1 (Front Entrance)', col2: 'Turnstiles A & B (Optical)', col3: '4 Verified Movements', col4: 'Online · Operational', badge: 'status-green' },
+      { col1: 'Hostel Quadrangle North Gate 2', col2: 'RFID Pedestrian Barrier', col3: '2 Verified Movements', col4: 'Online · Operational', badge: 'status-green' },
+      { col1: 'South Academic Service Gate 3', col2: 'Boom Barrier (Vehicular)', col3: '8 Vehicle Passes Logged', col4: 'Online · Guard Stationed', badge: 'status-green' },
+      { col1: 'Sports Complex Back Perimeter Gate 4', col2: 'Electromagnetic Padlock', col3: '0 Movements', col4: 'Locked · Secure', badge: 'status-blue' },
+    ],
+    overviewColumns: ['Gate / Checkpoint', 'Biometric / Barrier Hardware', 'Current Shift Telemetry', 'Perimeter Post Status'],
+    announcements: [
+      { day: '19', month: 'OCT', tag: 'SECURITY', tagTone: 'tag-violet', title: 'Curfew & Gate Closure Protocols Active', desc: 'Standard campus resident curfew begins strictly at 20:00 hrs. Warden verification mandatory for late entry.' },
+      { day: '16', month: 'OCT', tag: 'VISITOR', tagTone: 'tag-green', title: '6-Digit Digital Visitor Passes Standardized', desc: 'All guest visitors must present verified 6-digit OTP code before campus visitor badge issuance.' },
+      { day: '12', month: 'OCT', tag: 'OFFLINE', tagTone: 'tag-blue', title: 'Offline-First Turnstile Scanner Mode Enabled', desc: 'Local device cache buffers student outpasses automatically if campus Wi-Fi fluctuates.' },
+    ],
+  },
+
+  // 17. MESS MANAGER / CENTRAL CAMPUS DINING & NUTRITION
+  mess_manager: {
+    roleKey: 'mess_manager',
+    roleTitle: 'Mess Manager',
+    dashboardTitle: 'Mess Manager dashboard',
+    kicker: 'RESIDENTIAL MESS OPERATIONS & FOOD SAFETY · CENTRAL DINING DIRECTORATE',
+    caption: 'Supervise central kitchen food preparation, student meal ratings, rotational menu compliance, and complaint resolutions.',
+    motd: 'Hyderabadi Chicken & Veg Biryani lunch service active. Kitchen hygiene inspected and food temperature maintained >65°C.',
+    officer: {
+      name: 'Mr. Kailash Chandra Nayak',
+      id: 'MESS-101',
+      employeeCode: 'EMP-MESS-0101',
+      designation: 'Chief Mess Manager & Dining Operations Head',
+      department: 'Campus Food Services & Student Dining Logistics',
+      specialization: 'Culinary Nutrition, FSSAI Food Safety Standards & Kitchen Logistics',
+      office: 'Central Mess Administration Office (Opposite Gandhi Block)',
+      qualification: 'B.Sc. Hotel Management & FSSAI Advanced Food Safety Certified',
+      experience: '11+ Years Campus Dining & Institutional Catering',
+      assignedResponsibilities: 'Weekly Menu Planning, Meal Quality Audits, Student Feedback Review, Kitchen Hygiene & Vendor Logistics',
+      academicYear: '2026–2027',
+      email: 'kailash.nayak@apnacampus.edu.in',
+      phone: '+91 94371 88204',
+      employmentType: 'Full-Time Regular (Dining Operations Head)',
+      dateOfJoining: '12 Jul 2017',
+      employmentStatus: 'Active · On Duty',
+      reportingAuthority: 'Hostel Chief Warden & Campus Administrative Officer',
+      photo: '/candidate_photo_apna.png',
+      scope: 'Central Dining Hall, Gandhi Boys Mess & Sarojini Girls Mess',
+      biometricId: 'BIO-MESS-0101',
+      identityVerification: 'Verified Official (Manager ID: MESS-101 · FSSAI ID: FSSAI-2026-9041)',
+    },
+    stats: {
+      c1: { icon: Users, label: "Today's Meals Served", badge: '520 Residents Enrolled', val: '953', desc: '465 Breakfast · 488 Lunch (In Service)', pills: ['465 Breakfast', '488 Lunch', 'Gandhi & Sarojini'] },
+      c2: { icon: Star, label: 'Average Food Rating', badge: '3.8 / 5.0 (Good)', val: '3.8', ratio: '85% Positive Feedback', pct: '76%', foot: 'Based on 4 student quality reviews this month' },
+      c3: { icon: Utensils, label: 'Active Meal Service', badge: 'Active Now', val: 'Lunch', desc: '12:15 PM – 02:30 PM · Dum Biryani Feast', foot: 'Evening Snacks prep commences at 16:30 hrs' },
+      c4: { icon: AlertTriangle, label: 'Open Complaints & Inquiries', badge: '3 Resolved', val: '03', desc: '1 Recipe deficiency under investigation', foot: 'Kitchen corrective action logs maintained' },
+    },
+    quickActions: [
+      { id: 'menu', label: 'Manage Weekly Menu', icon: Calendar },
+      { id: 'feedback', label: 'Meal Feedback & Ratings', icon: Star },
+      { id: 'complaints', label: 'Complaints & Issues', icon: AlertTriangle },
+      { id: 'attendance', label: 'Meal Attendance Registry', icon: Users },
+      { id: 'notices', label: 'Publish Mess Notice', icon: Bell },
+      { id: 'reports', label: 'Export Analytics', icon: FileSpreadsheet },
+    ],
+    overviewTitle: "Today's Prepared Food Menus & Dining Service Telemetry",
+    overviewItems: [
+      { col1: 'Breakfast (07:30 AM - 09:30 AM)', col2: 'Chole Bhature with Pickled Onions, Fresh Fruit Juice, Sweet Lassi, Tea', col3: '465 / 480 Served (96.8% Turnout)', col4: 'Served · Complete', badge: 'status-green' },
+      { col1: 'Lunch (12:15 PM - 02:30 PM)', col2: 'Hyderabadi Chicken Dum Biryani / Veg Dum Biryani, Onion Raita, Mirchi Ka Salan, Double Ka Meetha', col3: '488 Served (In Progress)', col4: 'Active Now · Live Service', badge: 'status-green' },
+      { col1: 'Evening Snacks (05:00 PM - 06:15 PM)', col2: 'Biscuits, Rusks, Mixed Namkeen, Hot Masala Chai', col3: '380 Estimated Headcount', col4: 'Prepping in Kitchen', badge: 'status-amber' },
+      { col1: 'Dinner (07:30 PM - 09:45 PM)', col2: 'Soft Rotis, Steamed Basmati Rice, Dal Makhani, Paneer Tikka Masala, Vanilla/Butterscotch Ice Cream Cup', col3: '510 Projected Turnout', col4: 'Scheduled', badge: 'status-blue' },
+    ],
+    overviewColumns: ['Meal Session & Timing', 'Curated Menu Items', 'Telemetry / Student Headcount', 'Service Operational Status'],
+    announcements: [
+      { day: '21', month: 'OCT', tag: 'MENU', tagTone: 'tag-green', title: 'Sunday Special Biryani Feast Approved', desc: 'Hyderabadi Dum Biryani & Double Ka Meetha approved for all Gandhi & Sarojini hostellers.' },
+      { day: '19', month: 'OCT', tag: 'HYGIENE', tagTone: 'tag-violet', title: 'Monthly Central Kitchen Sanitization Cleared', desc: 'FSSAI compliance inspection conducted. High-temperature steam sterilization of utensils certified.' },
+      { day: '16', month: 'OCT', tag: 'FEEDBACK', tagTone: 'tag-amber', title: 'Curry Spice Level Adjusted Following Student Survey', desc: 'Dinner dal and paneer gravy recipes adjusted per residential student council recommendations.' },
+    ],
+  },
 };
 
 export default function RoleDashboardLanding({
@@ -1158,12 +1288,62 @@ export default function RoleDashboardLanding({
     hostel: 'warden',
     hostel_admin: 'warden',
     scholarship: 'accounts',
+    guard: 'security',
+    security_guard: 'security',
+    mess: 'mess_manager',
+    mess_manager: 'mess_manager',
+    mess_supervisor: 'mess_manager',
+    canteen_manager: 'mess_manager',
   };
   const resolvedKey = roleAliases[rawKey] || rawKey;
   const config = ROLE_CONFIGS[resolvedKey] || ROLE_CONFIGS['super_admin'];
 
   // Warden Employee Profile toggle state (Matching 2nd Image when 'More info' clicked)
   const [showWardenProfile, setShowWardenProfile] = useState(false);
+  // Mess Manager Employee Profile toggle state (Matching 1st Image 'More info' clicked)
+  const [showMessProfile, setShowMessProfile] = useState(false);
+  // Security Guard Employee Profile toggle state (Matching Images 1 to 5 when 'View Post Profile' clicked)
+  const [showSecurityProfile, setShowSecurityProfile] = useState(false);
+  // Universal 10-Second Dynamic QR & Digital ID Modal state
+  const [digitalIdModalOpen, setDigitalIdModalOpen] = useState(false);
+
+  // Mess Manager avatar synchronization
+  const [messAvatar, setMessAvatar] = useState(() => {
+    try {
+      return localStorage.getItem('mess_manager_avatar') || null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const handleMessAvatar = () => {
+      try {
+        setMessAvatar(localStorage.getItem('mess_manager_avatar') || null);
+      } catch {}
+    };
+    window.addEventListener('mess_avatar_changed', handleMessAvatar);
+    return () => window.removeEventListener('mess_avatar_changed', handleMessAvatar);
+  }, []);
+
+  // Security Guard avatar synchronization
+  const [securityAvatar, setSecurityAvatar] = useState(() => {
+    try {
+      return localStorage.getItem('security_guard_avatar') || null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const handleSecurityAvatar = () => {
+      try {
+        setSecurityAvatar(localStorage.getItem('security_guard_avatar') || null);
+      } catch {}
+    };
+    window.addEventListener('security_guard_avatar_changed', handleSecurityAvatar);
+    return () => window.removeEventListener('security_guard_avatar_changed', handleSecurityAvatar);
+  }, []);
 
   // Current live time & date matching Student Dashboard
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -1328,11 +1508,66 @@ export default function RoleDashboardLanding({
 
   const isHostelRole = resolvedKey === 'warden' || rawKey === 'hostel_admin' || account?.role === 'hostel_admin';
   const isHostelAdminRole = rawKey === 'hostel_admin' || account?.role === 'hostel_admin' || account?.identity === 'WRD-ADM-01';
+  const isSecurityRole = resolvedKey === 'security' || rawKey === 'security' || account?.role === 'security';
+  const isMessRole = resolvedKey === 'mess_manager' || rawKey === 'mess_manager' || account?.role === 'mess_manager';
 
-  // Live dynamic hostel stats backed by backend (All hostels for admin, own hostel for warden)
+  // Live dynamic hostel, security & mess stats backed by backend / stores
   const [liveStats, setLiveStats] = useState(config.stats);
 
   useEffect(() => {
+    if (isMessRole) {
+      let isMounted = true;
+      const fetchMessStats = () => {
+        try {
+          const fbAnalytics = getFoodFeedbackAnalytics();
+          const complaints = getAllMessComplaints();
+          const openComplaints = complaints.filter(c => c.status !== 'Resolved' && c.status !== 'RESOLVED');
+          const todayStr = new Date().toISOString().slice(0, 10);
+          const attTelemetry = getDailyMealAttendanceTelemetry(todayStr);
+          const totalServed = attTelemetry?.totalServed || 953;
+
+          if (isMounted) {
+            setLiveStats({
+              c1: { ...config.stats.c1, val: String(totalServed), desc: `${attTelemetry?.breakfast?.actualServed || 465} Breakfast · ${attTelemetry?.lunch?.actualServed || 488} Lunch` },
+              c2: { ...config.stats.c2, val: fbAnalytics?.averageRating ? fbAnalytics.averageRating.toFixed(1) : '3.8', badge: `${fbAnalytics?.averageRating ? fbAnalytics.averageRating.toFixed(1) : '3.8'} / 5.0 (${(fbAnalytics?.averageRating || 3.8) >= 4 ? 'Excellent' : 'Good'})`, foot: `Based on ${fbAnalytics?.totalCount || 4} student quality reviews this month` },
+              c3: { ...config.stats.c3, val: 'Lunch', badge: 'Active Now' },
+              c4: { ...config.stats.c4, val: String(openComplaints.length || '03'), badge: `${complaints.filter(c => c.status === 'Resolved' || c.status === 'RESOLVED').length || 3} Resolved` },
+            });
+          }
+        } catch (_) {}
+      };
+      fetchMessStats();
+      window.addEventListener('storage', fetchMessStats);
+      return () => {
+        isMounted = false;
+        window.removeEventListener('storage', fetchMessStats);
+      };
+    }
+
+    if (isSecurityRole) {
+      let isMounted = true;
+      const fetchSecurityStats = async () => {
+        try {
+          const res = await api.getSecurityOverviewStats();
+          const data = res?.data || res;
+          if (data && isMounted) {
+            setLiveStats({
+              c1: { ...config.stats.c1, val: String(data.studentsOutside ?? '01'), desc: `${data.studentsOutside ?? 1} Verified departure · 0 Curfew violations` },
+              c2: { ...config.stats.c2, val: String((data.todayExits || 2) + (data.todayEntries || 2)), ratio: `${data.todayExits || 2} Exits / ${data.todayEntries || 2} Entries` },
+              c3: { ...config.stats.c3, val: String(data.lateReturns ?? '00'), badge: data.lateReturns > 0 ? `${data.lateReturns} Breached` : 'Zero Breaches' },
+              c4: { ...config.stats.c4, val: String(data.activeVisitors ?? '02'), desc: `${data.activeVisitors ?? 2} Visitors inside · Badges issued` },
+            });
+          }
+        } catch (_) {}
+      };
+      fetchSecurityStats();
+      window.addEventListener('storage', fetchSecurityStats);
+      return () => {
+        isMounted = false;
+        window.removeEventListener('storage', fetchSecurityStats);
+      };
+    }
+
     if (!isHostelRole) {
       setLiveStats(config.stats);
       return;
@@ -1375,13 +1610,13 @@ export default function RoleDashboardLanding({
       window.removeEventListener('bput_hostel_rooms_updated', handleDataEvent);
       window.removeEventListener('storage', handleDataEvent);
     };
-  }, [isHostelRole, isHostelAdminRole, account]);
+  }, [isHostelRole, isHostelAdminRole, isSecurityRole, isMessRole, account, config.stats]);
 
-  const { c1, c2, c3, c4 } = isHostelRole ? liveStats : config.stats;
-  const C1Icon = c1.icon || Building;
-  const C2Icon = c2.icon || CheckCircle2;
-  const C3Icon = c3.icon || Bed;
-  const C4Icon = c4.icon || Clock;
+  const { c1, c2, c3, c4 } = (isHostelRole || isSecurityRole || isMessRole) ? liveStats : config.stats;
+  const C1Icon = c1.icon || (isSecurityRole || isMessRole ? Users : Building);
+  const C2Icon = c2.icon || (isSecurityRole ? ArrowRightLeft : isMessRole ? Star : CheckCircle2);
+  const C3Icon = c3.icon || (isSecurityRole ? Clock : isMessRole ? Utensils : Bed);
+  const C4Icon = c4.icon || (isSecurityRole ? ShieldCheck : isMessRole ? AlertTriangle : Clock);
 
   // When warden or hostel admin requests Employee Profile (2nd Image format)
   if ((resolvedKey === 'warden' || rawKey === 'hostel_admin' || account?.role === 'hostel_admin') && showWardenProfile) {
@@ -1390,6 +1625,34 @@ export default function RoleDashboardLanding({
         account={account}
         onBack={() => {
           setShowWardenProfile(false);
+          if (onNavigateTab) onNavigateTab('dashboard');
+          else if (onNavigate) onNavigate('dashboard');
+        }}
+      />
+    );
+  }
+
+  // When mess manager requests Employee Profile (Matching Hostel Admin format)
+  if ((resolvedKey === 'mess_manager' || rawKey === 'mess_manager' || isMessRole) && showMessProfile) {
+    return (
+      <MessEmployeeProfile
+        account={account}
+        onBack={() => {
+          setShowMessProfile(false);
+          if (onNavigateTab) onNavigateTab('dashboard');
+          else if (onNavigate) onNavigate('dashboard');
+        }}
+      />
+    );
+  }
+
+  // When security guard requests Employee Profile (Matching Images 1 to 5)
+  if ((resolvedKey === 'security' || rawKey === 'security' || isSecurityRole) && showSecurityProfile) {
+    return (
+      <SecurityGuardEmployeeProfile
+        account={account}
+        onBack={() => {
+          setShowSecurityProfile(false);
           if (onNavigateTab) onNavigateTab('dashboard');
           else if (onNavigate) onNavigate('dashboard');
         }}
@@ -1451,6 +1714,10 @@ export default function RoleDashboardLanding({
                   const isHostelRole = resolvedKey === 'warden' || rawKey === 'hostel_admin' || account?.role === 'warden' || account?.role === 'hostel_admin' || account?.role === 'hostel';
                   const activePhoto = isHostelRole
                     ? (localStorage.getItem('hostel_officer_avatar') || '/candidate_photo_apna.png')
+                    : isMessRole
+                    ? (messAvatar || officer.photo || account?.photo || '/candidate_photo_apna.png')
+                    : isSecurityRole
+                    ? (securityAvatar || officer.photo || account?.photo || '/passport_photo_male.svg')
                     : (officer.photo || account?.photo);
                   return !photoError && activePhoto ? (
                     <img
@@ -1481,8 +1748,70 @@ export default function RoleDashboardLanding({
               </span>
             </div>
 
-            {/* When role is Warden or Hostel Admin */}
-            {(resolvedKey === 'warden' || rawKey === 'hostel_admin' || account?.role === 'hostel_admin') ? (
+            {/* When role is Security Guard */}
+            {isSecurityRole ? (
+              <>
+                <dl className="dash-info-list">
+                  <DetailRow label="Guard Badge ID" value={account?.detail?.includes('Badge') ? account.detail.split('Badge')[1]?.trim()?.replace(')', '') : (officer.id || 'SG-OD-4421')} />
+                  <DetailRow label="Guard Name" value={officerDisplayName} />
+                  <DetailRow label="Rank / Post" value={officer.designation || 'Senior Security Guard & Post Marshal'} />
+                  <DetailRow label="Stationed Post" value={account?.detail?.includes('·') ? account.detail.split('·')[0]?.trim() : (officer.office || 'Main Campus Gate 1 (Front Entrance)')} />
+                  <DetailRow label="Active Shift" value="Morning Shift (06:00 - 14:00) · Active" />
+                  <DetailRow label="Department" value={officer.department || 'Campus Security & Access Control'} />
+                  <DetailRow label="Contact Phone" value={officer.phone || '+91 98610 44210'} />
+                  <DetailRow label="Gate Status" value="Online · Optical Turnstiles Active" />
+                </dl>
+
+                <button
+                  className="dash-btn dash-btn-primary dash-info-btn"
+                  type="button"
+                  onClick={() => {
+                    if (onNavigateTab) {
+                      onNavigateTab('profile');
+                    } else if (onNavigate) {
+                      onNavigate('profile');
+                    } else {
+                      setShowSecurityProfile(true);
+                    }
+                  }}
+                  title="View complete Security Guard Official CMS Profile"
+                >
+                  <span>More info</span>
+                  <ChevronRight size={15} />
+                </button>
+              </>
+            ) : isMessRole ? (
+              <>
+                <dl className="dash-info-list">
+                  <DetailRow label="Registration No." value={account?.identity || officer.id || 'MESS-101'} />
+                  <DetailRow label="Name" value={officerDisplayName || 'Mr. Kailash Chandra Nayak'} />
+                  <DetailRow label="Program" value={officer.designation || 'Chief Mess Manager & Dining Operations Head'} />
+                  <DetailRow label="Batch" value={officer.academicYear || '2026–2027'} />
+                  <DetailRow label="Department" value={officer.department || 'Campus Food Services & Student Dining Logistics'} />
+                  <DetailRow label="Section" value={officer.office || 'All Residential Complexes (Supervisory)'} />
+                  <DetailRow label="Email ID" value={officer.email || 'kailash.nayak@apnacampus.edu.in'} />
+                  <DetailRow label="Mobile No." value={officer.phone || '+91 94371 88204'} />
+                </dl>
+
+                <button
+                  className="dash-btn dash-btn-primary dash-info-btn"
+                  type="button"
+                  onClick={() => {
+                    if (onNavigateTab) {
+                      onNavigateTab('profile');
+                    } else if (onNavigate) {
+                      onNavigate('profile');
+                    } else {
+                      setShowMessProfile(true);
+                    }
+                  }}
+                  title="View complete Employee Profile"
+                >
+                  <span>More info</span>
+                  <ChevronRight size={15} />
+                </button>
+              </>
+            ) : (resolvedKey === 'warden' || rawKey === 'hostel_admin' || account?.role === 'hostel_admin') ? (
               <>
                 <dl className="dash-info-list">
                   <DetailRow label="Registration No." value={account?.role === 'hostel_admin' ? (account?.identity || 'WRD-ADM-01') : (officer.id || 'WRD-CHIEF-01')} />
@@ -1618,6 +1947,32 @@ export default function RoleDashboardLanding({
                 </button>
               </>
             )}
+
+            <button
+              type="button"
+              className="dash-btn"
+              style={{
+                background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                color: '#ffffff',
+                marginTop: '0.5rem',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.4rem',
+                padding: '0.55rem',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                border: 'none',
+              }}
+              onClick={() => setDigitalIdModalOpen(true)}
+              title="My Digital ID & 10s Dynamic Pass"
+              aria-label="Open My Digital ID & 10s Dynamic Pass"
+            >
+              <QrCode size={15} /> My Digital ID & Dynamic Pass
+            </button>
           </aside>
 
           {/* RIGHT: 2x2 Stats Grid (Matching Student 2x2 Stats Grid) */}
@@ -1731,7 +2086,7 @@ export default function RoleDashboardLanding({
         {/* ==========================================================
             D. DASHBOARD OVERVIEW: Dual Cards Grid (Overview + Notices)
             ========================================================== */}
-        {config.roleKey !== 'warden' && config.roleKey !== 'hostel_admin' && (
+        {config.roleKey !== 'warden' && config.roleKey !== 'hostel_admin' && config.roleKey !== 'mess_manager' && !isMessRole && config.roleKey !== 'security' && resolvedKey !== 'security' && (
           <div className="dash-grid-duo">
             {/* Left Card: Operational Summary Table */}
             <section className="dash-card" aria-label="Operational Summary">
@@ -2100,6 +2455,55 @@ export default function RoleDashboardLanding({
           </div>
         </div>
       )}
+
+      {/* Universal 10-Second Dynamic QR & Digital ID Modal */}
+      <UniversalDigitalIdModal
+        isOpen={digitalIdModalOpen}
+        onClose={() => setDigitalIdModalOpen(false)}
+        user={useMemo(() => {
+          const roleCode = (account?.role || resolvedKey || 'STAFF').toUpperCase();
+          const ident =
+            account?.employeeId ||
+            account?.identifier ||
+            account?.identity ||
+            account?.rollNumber ||
+            account?.registrationNumber ||
+            account?.id ||
+            officer?.id ||
+            officer?.employeeCode ||
+            'ID-001';
+          const displayName = account?.name || officerDisplayName || officer?.name || 'Campus Member';
+          const dept = account?.department || officer?.department || 'Administration';
+          const desig = account?.designation || officer?.designation || config?.roleTitle || roleCode;
+          const photo =
+            account?.avatar ||
+            account?.photo ||
+            (resolvedKey === 'mess_manager' ? messAvatar : resolvedKey === 'security' ? securityAvatar : officer?.photo);
+
+          return {
+            id: account?.id || officer?.id || `usr-${ident}`,
+            name: displayName,
+            role: roleCode,
+            identityType: roleCode,
+            identifier: ident,
+            department: dept,
+            designation: desig,
+            avatar: photo,
+            email: account?.email || officer?.email,
+            phone: account?.phone || officer?.phone,
+            hostelName: account?.hostelName || (roleCode === 'WARDEN' ? 'Sarojini Girls Residence' : undefined),
+            roomNumber: account?.roomNumber,
+          };
+        }, [
+          account,
+          officer,
+          resolvedKey,
+          config,
+          officerDisplayName,
+          messAvatar,
+          securityAvatar,
+        ])}
+      />
     </div>
   );
 }

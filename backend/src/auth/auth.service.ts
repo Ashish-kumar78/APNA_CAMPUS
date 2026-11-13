@@ -78,6 +78,10 @@ export class AuthService {
         scholarship: 'SCH-001',
         examcell: 'EXAM-001',
         student: '2401432255',
+        security: 'SEC-101',
+        guard: 'SEC-101',
+        mess: 'MESS-101',
+        mess_manager: 'MESS-101',
       };
       const mappedId = roleAliases[rawKey];
       if (mappedId) {

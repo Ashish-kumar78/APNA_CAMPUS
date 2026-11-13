@@ -6,6 +6,7 @@ import {
   GraduationCap,
   Bell,
   BookOpen,
+  Calendar,
   CalendarDays,
   Check,
   ChevronDown,
@@ -32,7 +33,6 @@ import {
   BarChart2,
   Heart,
   Fingerprint,
-  Utensils,
   FileText,
   Sparkles,
   Megaphone,
@@ -42,7 +42,9 @@ import {
   Award,
   Maximize2,
   FileCheck,
+  QrCode,
 } from 'lucide-react'
+import UniversalDigitalIdModal from './components/Security/UniversalDigitalIdModal.jsx'
 import './StudentPortal.css'
 import './DashboardHome.css'
 import { CountUpNumber } from './utils/motion.jsx'
@@ -136,6 +138,7 @@ const studentNavSections = [
     title: 'ACADEMICS',
     items: [
       { label: 'Academics', icon: BookOpen, page: 'academics' },
+      { label: 'Timetable', icon: Calendar, page: 'timetable' },
       { label: 'Online Examination', icon: ClipboardList, page: 'online-exam' },
     ]
   },
@@ -326,6 +329,7 @@ function StudentPortal({ account, onLogout }) {
   const [profileQuickView, setProfileQuickView] = useState('')
   const [studentProfile, setStudentProfile] = useState(null)
   const [profileError, setProfileError] = useState('')
+  const [digitalIdOpen, setDigitalIdOpen] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -1021,7 +1025,7 @@ function StudentPortal({ account, onLogout }) {
                 )}
               {activePage === 'class-notes' && <ClassNotesPage account={studentAccount || account} />}
               {activePage === 'marks' && <MarksPage initialRole="student" account={studentAccount || account} />}
-              {activePage === 'hostel' && <StudentHostelPage defaultTab="gate-pass" account={studentAccount || account} />}
+              {activePage === 'hostel' && <StudentHostelPage defaultTab="room-maintenance" account={studentAccount || account} />}
               {activePage === 'gate-pass' && <StudentHostelPage defaultTab="gate-pass" account={studentAccount || account} />}
               {activePage === 'food-feedback' && <StudentHostelPage defaultTab="food-feedback" account={studentAccount || account} />}
               {activePage === 'cleanliness-complaints' && <StudentHostelPage defaultTab="cleanliness" account={studentAccount || account} />}
@@ -1031,6 +1035,7 @@ function StudentPortal({ account, onLogout }) {
               {activePage === 'academics' && <AcademicsPage account={studentAccount} />}
               {activePage === 'timetable' && (
                 <TimetablePage
+                  account={studentAccount || account}
                   onClose={() => {
                     setActivePage('dashboard')
                     setActiveLink('Dashboard')
@@ -1160,6 +1165,29 @@ function StudentPortal({ account, onLogout }) {
                     setProfileQuickView('');
                     window.location.hash = 'profile';
                   }}>View profile <ChevronRight size={15} /></button>
+                  <button
+                    className="dash-btn"
+                    type="button"
+                    style={{
+                      background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                      color: '#ffffff',
+                      marginTop: '0.45rem',
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      padding: '0.55rem',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      border: 'none',
+                    }}
+                    onClick={() => setDigitalIdOpen(true)}
+                  >
+                    <QrCode size={15} /> My Digital ID & Dynamic Pass
+                  </button>
                 </aside>
 
                 {/* 2nd Image: 2x2 Stats Grid placed on RIGHT SIDE - Content covering the whole box */}
@@ -1601,6 +1629,27 @@ function StudentPortal({ account, onLogout }) {
           </div>
         </div>
       )}
+
+      {/* Universal 10-Second Dynamic QR & Digital ID Modal */}
+      <UniversalDigitalIdModal
+        isOpen={digitalIdOpen}
+        onClose={() => setDigitalIdOpen(false)}
+        user={useMemo(() => ({
+          ...studentAccount,
+          id: studentAccount?.id || studentAccount?.studentId || 'std-21010101',
+          name: studentAccount?.name || 'Sneha Mohanty',
+          role: 'STUDENT',
+          identityType: 'STUDENT',
+          rollNumber: studentAccount?.rollNumber || studentAccount?.registrationNumber || '21010101',
+          registrationNumber: studentAccount?.registrationNumber || studentAccount?.rollNumber || '21010101',
+          identifier: studentAccount?.registrationNumber || studentAccount?.rollNumber || studentAccount?.studentId || '21010101',
+          department: studentAccount?.department || studentAccount?.branch || 'Computer Science & Engineering',
+          designation: 'Undergraduate Scholar · B.Tech CSE',
+          avatar: studentPhoto || studentAccount?.avatar || studentAccount?.photo,
+          hostelName: studentAccount?.hostelName || 'Sarojini Girls Residence (Hostel 1)',
+          roomNumber: studentAccount?.roomNumber || 'Room 103',
+        }), [studentAccount, studentPhoto])}
+      />
     </div>
   )
 }

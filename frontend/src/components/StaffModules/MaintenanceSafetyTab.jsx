@@ -10,21 +10,26 @@ import {
   Plus,
   Clock,
   CheckCircle,
+  CheckCircle2,
   FileText,
   UserCheck,
   X,
   Flame,
   Zap,
-  Activity
+  Activity,
+  ArrowRight,
+  ExternalLink,
+  Camera
 } from 'lucide-react';
 import { labStaffStore } from '../../services/labStaffStore.js';
 import { BRANCHES_CONFIG } from './labStaffData.js';
 
 export default function MaintenanceSafetyTab({
-  subTab = 'work-orders',
+  subTab = 'complaints',
   currentBranch,
   activeLabId,
   profile,
+  complaints: propComplaints,
   maintenanceOrders = [],
   preventiveSchedule = [],
   safetyInspections = [],
@@ -41,6 +46,20 @@ export default function MaintenanceSafetyTab({
   const [resolutionInput, setResolutionInput] = useState('');
   const [assigningTicket, setAssigningTicket] = useState(null);
   const [selectedTechnician, setSelectedTechnician] = useState('Central Engineering Services');
+
+  // Complaints state & modals
+  const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [selectedComplaintWorkflow, setSelectedComplaintWorkflow] = useState(null);
+  const [complaintSearch, setComplaintSearch] = useState('');
+  const [complaintFilterStatus, setComplaintFilterStatus] = useState('ALL');
+  const [complaintFilterCategory, setComplaintFilterCategory] = useState('ALL');
+  const [newComplaint, setNewComplaint] = useState({
+    equipmentId: '',
+    category: 'Damaged instruments',
+    priority: 'Medium',
+    description: '',
+    photoUrl: ''
+  });
 
   // Incident log state
   const [incidentLogs, setIncidentLogs] = useState([
@@ -77,6 +96,52 @@ export default function MaintenanceSafetyTab({
   });
 
   const branchTickets = maintenanceOrders.filter(m => m.department === currentBranch);
+  const complaintsList = propComplaints || labStaffStore.getComplaints();
+  const branchComplaints = complaintsList.filter(c => c.department === currentBranch);
+  const branchEquipment = equipment.filter(e => e.department === currentBranch);
+
+  const filteredComplaints = branchComplaints.filter(c => {
+    const matchesSearch =
+      (c.description || '').toLowerCase().includes(complaintSearch.toLowerCase()) ||
+      (c.id || '').toLowerCase().includes(complaintSearch.toLowerCase()) ||
+      (c.complaintNumber || '').toLowerCase().includes(complaintSearch.toLowerCase()) ||
+      (c.equipmentName || '').toLowerCase().includes(complaintSearch.toLowerCase());
+    const matchesStat = complaintFilterStatus === 'ALL' || c.status === complaintFilterStatus;
+    const matchesCat = complaintFilterCategory === 'ALL' || c.category === complaintFilterCategory;
+    return matchesSearch && matchesStat && matchesCat;
+  });
+
+  const handleLodgeComplaint = (e) => {
+    e.preventDefault();
+    if (!newComplaint.description.trim()) {
+      alert('Please describe the problem or malfunction.');
+      return;
+    }
+    const selectedAsset = branchEquipment.find(eq => eq.id === newComplaint.equipmentId);
+    const created = labStaffStore.createComplaint({
+      department: currentBranch,
+      labId: activeLabId,
+      equipmentId: newComplaint.equipmentId || null,
+      equipmentName: selectedAsset ? selectedAsset.name : 'General Laboratory Infrastructure / Facility',
+      category: newComplaint.category,
+      priority: newComplaint.priority,
+      description: newComplaint.description,
+      photoUrl: newComplaint.photoUrl || null,
+      reportedBy: profile?.name || 'Mr. Biswajit Sahoo',
+    });
+
+    onSuccessToast?.(`Complaint #${created.id} submitted for Admin review & work order authorization!`);
+    setShowComplaintModal(false);
+    setNewComplaint({
+      equipmentId: '',
+      category: 'Damaged instruments',
+      priority: 'Medium',
+      description: '',
+      photoUrl: ''
+    });
+    setActiveSubTab('complaints');
+  };
+
   const filteredTickets = branchTickets.filter(t => {
     const matchesSearch = t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -140,6 +205,26 @@ export default function MaintenanceSafetyTab({
         paddingBottom: '12px',
         overflowX: 'auto'
       }}>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('complaints')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: activeSubTab === 'complaints' ? '1px solid #ef4444' : '1px solid #e2e8f0',
+            background: activeSubTab === 'complaints' ? '#fef2f2' : '#ffffff',
+            color: activeSubTab === 'complaints' ? '#ef4444' : '#475569',
+            fontWeight: 700,
+            fontSize: '0.84rem',
+            cursor: 'pointer'
+          }}
+        >
+          <AlertTriangle size={16} /> Equipment Complaints ({branchComplaints.length})
+        </button>
+
         <button
           type="button"
           onClick={() => setActiveSubTab('work-orders')}
@@ -220,6 +305,275 @@ export default function MaintenanceSafetyTab({
           <AlertOctagon size={16} /> Incident &amp; Breakdown Log ({incidentLogs.length})
         </button>
       </div>
+
+      {/* ========================================================================= */}
+      {/* 0. EQUIPMENT COMPLAINTS & REPAIR WORKFLOW (Staff -> Admin -> Repair) */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'complaints' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Repair Workflow Summary Banner */}
+          <div style={{
+            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+            color: '#ffffff',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <div style={{ fontSize: '0.96rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertTriangle size={18} color="#f59e0b" />
+                  Two-Tier Laboratory Repair Governance &amp; Complaint Lifecycle
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '2px' }}>
+                  Strict ERP Rule: Equipment status transitions to "Damaged" upon complaint submission. Requisition and repair require Admin review and work order approval before restoration to "Available".
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowComplaintModal(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '8px 18px',
+                  borderRadius: '6px',
+                  fontSize: '0.84rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                <Plus size={16} /> Lodge Equipment Complaint
+              </button>
+            </div>
+
+            {/* Visual Workflow Steps Bar */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(255, 255, 255, 0.06)',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              gap: '6px',
+              overflowX: 'auto'
+            }}>
+              <span style={{ color: '#93c5fd' }}>1. Staff Complaint Filed</span>
+              <ArrowRight size={14} color="#64748b" />
+              <span style={{ color: '#fcd34d' }}>2. Admin Approval &amp; Review</span>
+              <ArrowRight size={14} color="#64748b" />
+              <span style={{ color: '#c4b5fd' }}>3. Work Order &amp; Tech Assigned</span>
+              <ArrowRight size={14} color="#64748b" />
+              <span style={{ color: '#7dd3fc' }}>4. Repair In-Progress</span>
+              <ArrowRight size={14} color="#64748b" />
+              <span style={{ color: '#86efac' }}>5. Completed &amp; Stock Available</span>
+            </div>
+          </div>
+
+          {/* Action and Filter Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            background: '#ffffff',
+            padding: '14px 18px',
+            borderRadius: '10px',
+            border: '1px solid #e2e8f0'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '220px' }}>
+              <Search size={16} color="#64748b" />
+              <input
+                type="text"
+                placeholder="Search complaint #, asset, or issue description..."
+                value={complaintSearch}
+                onChange={(e) => setComplaintSearch(e.target.value)}
+                style={{ border: 'none', outline: 'none', fontSize: '0.86rem', width: '100%' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <select
+                value={complaintFilterCategory}
+                onChange={(e) => setComplaintFilterCategory(e.target.value)}
+                style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
+              >
+                <option value="ALL">All Categories</option>
+                <option value="Damaged instruments">Damaged instruments</option>
+                <option value="Electrical problems">Electrical problems</option>
+                <option value="Computer problems">Computer problems</option>
+                <option value="Network problems">Network problems</option>
+                <option value="Laboratory furniture">Laboratory furniture</option>
+                <option value="Other laboratory-related problems">Other laboratory-related problems</option>
+              </select>
+
+              <select
+                value={complaintFilterStatus}
+                onChange={(e) => setComplaintFilterStatus(e.target.value)}
+                style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Pending Admin Approval">Pending Admin Approval</option>
+                <option value="Approved">Approved</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Assigned">Assigned</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Waiting for Parts">Waiting for Parts</option>
+                <option value="Completed">Completed</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Complaints Table */}
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '0.76rem', textTransform: 'uppercase' }}>
+                  <tr>
+                    <th style={{ padding: '12px 14px' }}>Complaint ID</th>
+                    <th style={{ padding: '12px 14px' }}>Equipment / Instrument</th>
+                    <th style={{ padding: '12px 14px' }}>Category &amp; Lab</th>
+                    <th style={{ padding: '12px 14px' }}>Problem Description</th>
+                    <th style={{ padding: '12px 14px' }}>Priority</th>
+                    <th style={{ padding: '12px 14px' }}>Workflow Status</th>
+                    <th style={{ padding: '12px 14px' }}>Work Order #</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredComplaints.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                        No equipment complaints matching the current filter.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredComplaints.map((c, idx) => (
+                      <tr key={c.id || c.complaintNumber} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#ffffff' : '#fafafa' }}>
+                        <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0f172a' }}>
+                          {c.complaintNumber || c.id}
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{c.reportedDate}</div>
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{c.equipmentName}</div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Code: {c.equipmentId || 'Facility Infrastructure'}</div>
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            background: '#f1f5f9',
+                            color: '#334155'
+                          }}>
+                            {c.category}
+                          </span>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>{c.labId}</div>
+                        </td>
+                        <td style={{ padding: '12px 14px', maxWidth: '280px' }}>
+                          <div style={{ fontSize: '0.82rem', color: '#1e293b', fontWeight: 600 }}>{c.description}</div>
+                          {c.photoUrl && (
+                            <div style={{ fontSize: '0.72rem', color: '#2563eb', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Camera size={12} /> Inspection photo attached
+                            </div>
+                          )}
+                          {c.adminRemarks && (
+                            <div style={{ fontSize: '0.72rem', color: '#d97706', marginTop: '2px' }}>
+                              Admin: {c.adminRemarks}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            background: c.priority === 'Critical' ? '#fee2e2' : (c.priority === 'High' ? '#ffedd5' : '#f1f5f9'),
+                            color: c.priority === 'Critical' ? '#b91c1c' : (c.priority === 'High' ? '#c2410c' : '#475569')
+                          }}>
+                            {c.priority}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span style={{
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            background:
+                              c.status === 'Completed' ? '#dcfce7' :
+                              c.status === 'Approved' ? '#e0e7ff' :
+                              c.status === 'In Progress' ? '#e0f2fe' :
+                              c.status === 'Assigned' ? '#f3e8ff' :
+                              c.status === 'Waiting for Parts' ? '#fffbeb' :
+                              c.status === 'Rejected' ? '#fee2e2' : '#fef3c7',
+                            color:
+                              c.status === 'Completed' ? '#15803d' :
+                              c.status === 'Approved' ? '#4338ca' :
+                              c.status === 'In Progress' ? '#0369a1' :
+                              c.status === 'Assigned' ? '#7e22ce' :
+                              c.status === 'Waiting for Parts' ? '#b45309' :
+                              c.status === 'Rejected' ? '#b91c1c' : '#b45309',
+                            border: `1px solid ${
+                              c.status === 'Completed' ? '#bbf7d0' :
+                              c.status === 'Approved' ? '#c7d2fe' :
+                              c.status === 'In Progress' ? '#bae6fd' :
+                              c.status === 'Assigned' ? '#e9d5ff' :
+                              c.status === 'Waiting for Parts' ? '#fde68a' :
+                              c.status === 'Rejected' ? '#fecaca' : '#fde68a'
+                            }`
+                          }}>
+                            {c.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', fontSize: '0.78rem', fontWeight: 700, color: c.workOrderNumber ? '#0f172a' : '#94a3b8' }}>
+                          {c.workOrderNumber || 'Awaiting Admin Review'}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedComplaintWorkflow(c)}
+                            style={{
+                              background: '#eff6ff',
+                              color: '#2563eb',
+                              border: '1px solid #bfdbfe',
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Workflow Audit
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 1. MAINTENANCE WORK ORDERS */}
@@ -929,6 +1283,361 @@ export default function MaintenanceSafetyTab({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: LODGE EQUIPMENT COMPLAINT (Staff Lab Submission) */}
+      {/* ========================================================================= */}
+      {showComplaintModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '14px',
+            maxWidth: '620px',
+            width: '100%',
+            overflow: 'hidden',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)'
+          }}>
+            <div style={{
+              background: '#0f172a',
+              color: '#ffffff',
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertTriangle size={18} color="#ef4444" />
+                  Lodge Equipment Complaint &amp; Request Repair
+                </div>
+                <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                  Branch: {BRANCHES_CONFIG[currentBranch]?.name || currentBranch} | Lab: {activeLabId}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowComplaintModal(false)}
+                style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleLodgeComplaint} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px' }}>Target Equipment / Apparatus *</label>
+                <select
+                  value={newComplaint.equipmentId}
+                  onChange={(e) => setNewComplaint({ ...newComplaint, equipmentId: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.84rem' }}
+                >
+                  <option value="">General Facility / Non-Serialized Apparatus</option>
+                  {branchEquipment.map(eq => (
+                    <option key={eq.id} value={eq.id}>
+                      {eq.id} — {eq.name} ({eq.status})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px' }}>Issue Category *</label>
+                  <select
+                    value={newComplaint.category}
+                    onChange={(e) => setNewComplaint({ ...newComplaint, category: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.84rem' }}
+                  >
+                    <option value="Damaged instruments">Damaged instruments</option>
+                    <option value="Electrical problems">Electrical problems</option>
+                    <option value="Computer problems">Computer problems</option>
+                    <option value="Network problems">Network problems</option>
+                    <option value="Laboratory furniture">Laboratory furniture</option>
+                    <option value="Other laboratory-related problems">Other laboratory-related problems</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px' }}>Priority Level *</label>
+                  <select
+                    value={newComplaint.priority}
+                    onChange={(e) => setNewComplaint({ ...newComplaint, priority: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.84rem' }}
+                  >
+                    <option value="Low">Low (Scheduled maintenance)</option>
+                    <option value="Medium">Medium (Attention required)</option>
+                    <option value="High">High (Impairs ongoing practical)</option>
+                    <option value="Critical">Critical (Immediate safety / shutdown)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px' }}>Problem Description &amp; Symptoms *</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Detail the failure symptoms, error codes, strange noises, overheating or physical damage..."
+                  value={newComplaint.description}
+                  onChange={(e) => setNewComplaint({ ...newComplaint, description: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.84rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px' }}>Inspection Photo / Evidence URL (Optional)</label>
+                <input
+                  type="url"
+                  placeholder="https://example.com/damage-evidence.jpg"
+                  value={newComplaint.photoUrl}
+                  onChange={(e) => setNewComplaint({ ...newComplaint, photoUrl: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.84rem' }}
+                />
+              </div>
+
+              {/* ERP Rule Notice Box */}
+              <div style={{
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontSize: '0.74rem',
+                color: '#991b1b',
+                lineHeight: 1.4
+              }}>
+                <strong>Strict ERP Governance:</strong> Upon submission, the selected equipment will be automatically transitioned to <strong>"Damaged"</strong>. Only Admin review can authorize repair and issue a work order. Staff cannot unilaterally mark equipment as repaired or available.
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowComplaintModal(false)}
+                  style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px 20px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Submit Complaint to Admin
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: COMPLAINT WORKFLOW AUDIT & TIMELINE */}
+      {/* ========================================================================= */}
+      {selectedComplaintWorkflow && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '14px',
+            maxWidth: '680px',
+            width: '100%',
+            overflow: 'hidden',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)'
+          }}>
+            <div style={{
+              background: '#0f172a',
+              color: '#ffffff',
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <div style={{ fontSize: '1rem', fontWeight: 800 }}>
+                  Workflow Audit: {selectedComplaintWorkflow.complaintNumber || selectedComplaintWorkflow.id}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                  {selectedComplaintWorkflow.equipmentName} ({selectedComplaintWorkflow.department} — {selectedComplaintWorkflow.labId})
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedComplaintWorkflow(null)}
+                style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '70vh', overflowY: 'auto' }}>
+              {/* Stepper Card */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Step 1 */}
+                <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: '#dcfce7',
+                    color: '#15803d',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '0.84rem'
+                  }}>
+                    ✓
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.86rem' }}>1. Complaint Lodged by Staff Lab</div>
+                    <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                      Reported by {selectedComplaintWorkflow.reportedBy} on {selectedComplaintWorkflow.reportedDate}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#1e293b', background: '#f8fafc', padding: '8px 12px', borderRadius: '6px', marginTop: '4px' }}>
+                      <strong>Issue:</strong> {selectedComplaintWorkflow.description}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: selectedComplaintWorkflow.status === 'Submitted' || selectedComplaintWorkflow.status === 'Pending Admin Approval' ? '#fef3c7' : '#dcfce7',
+                    color: selectedComplaintWorkflow.status === 'Submitted' || selectedComplaintWorkflow.status === 'Pending Admin Approval' ? '#b45309' : '#15803d',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '0.84rem'
+                  }}>
+                    {selectedComplaintWorkflow.status === 'Submitted' || selectedComplaintWorkflow.status === 'Pending Admin Approval' ? '2' : '✓'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.86rem' }}>2. Admin Review &amp; Work Order Authorization</div>
+                    <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                      Status: {selectedComplaintWorkflow.status} | Work Order #: {selectedComplaintWorkflow.workOrderNumber || 'Pending'}
+                    </div>
+                    {selectedComplaintWorkflow.adminRemarks && (
+                      <div style={{ fontSize: '0.8rem', color: '#d97706', background: '#fffbeb', padding: '8px 12px', borderRadius: '6px', marginTop: '4px' }}>
+                        <strong>Admin Remarks:</strong> {selectedComplaintWorkflow.adminRemarks}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: selectedComplaintWorkflow.assignedTechnician ? '#dcfce7' : '#f1f5f9',
+                    color: selectedComplaintWorkflow.assignedTechnician ? '#15803d' : '#94a3b8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '0.84rem'
+                  }}>
+                    {selectedComplaintWorkflow.assignedTechnician ? '✓' : '3'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.86rem' }}>3. Technician Assignment</div>
+                    <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                      Assigned: {selectedComplaintWorkflow.assignedTechnician || 'Awaiting assignment'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 4 */}
+                <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: selectedComplaintWorkflow.status === 'In Progress' ? '#e0f2fe' : (selectedComplaintWorkflow.status === 'Completed' || selectedComplaintWorkflow.status === 'Closed' ? '#dcfce7' : '#f1f5f9'),
+                    color: selectedComplaintWorkflow.status === 'In Progress' ? '#0369a1' : (selectedComplaintWorkflow.status === 'Completed' || selectedComplaintWorkflow.status === 'Closed' ? '#15803d' : '#94a3b8'),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '0.84rem'
+                  }}>
+                    {selectedComplaintWorkflow.status === 'Completed' || selectedComplaintWorkflow.status === 'Closed' ? '✓' : '4'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.86rem' }}>4. Maintenance &amp; Repair Execution</div>
+                    <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                      Status: {selectedComplaintWorkflow.status}
+                    </div>
+                    {selectedComplaintWorkflow.resolutionNotes && (
+                      <div style={{ fontSize: '0.8rem', color: '#16a34a', background: '#f0fdf4', padding: '8px 12px', borderRadius: '6px', marginTop: '4px' }}>
+                        <strong>Service Notes:</strong> {selectedComplaintWorkflow.resolutionNotes}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Step 5 */}
+                <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: selectedComplaintWorkflow.status === 'Completed' || selectedComplaintWorkflow.status === 'Closed' ? '#dcfce7' : '#f1f5f9',
+                    color: selectedComplaintWorkflow.status === 'Completed' || selectedComplaintWorkflow.status === 'Closed' ? '#15803d' : '#94a3b8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '0.84rem'
+                  }}>
+                    {selectedComplaintWorkflow.status === 'Completed' || selectedComplaintWorkflow.status === 'Closed' ? '✓' : '5'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.86rem' }}>5. Restoration to Available Equipment Stock</div>
+                    <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                      {selectedComplaintWorkflow.status === 'Completed' || selectedComplaintWorkflow.status === 'Closed'
+                        ? 'Equipment condition restored to "Operational / Good" and status reset to "Available".'
+                        : 'Awaiting repair completion and verification before returning to active inventory.'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedComplaintWorkflow(null)}
+                  style={{ background: '#0f172a', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Close Audit View
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

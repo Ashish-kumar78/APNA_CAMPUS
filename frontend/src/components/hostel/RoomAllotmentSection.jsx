@@ -17,6 +17,7 @@ import {
   ArrowRightLeft,
   LogOut,
   Plus,
+  Minus,
   Trash2,
   ShieldAlert
 } from 'lucide-react';
@@ -30,6 +31,7 @@ import {
   addRoomToHostel,
   deleteRoomFromHostel,
   addBedToRoom,
+  reduceBedFromRoom,
   addFloorToHostel,
   deleteFloorFromHostel,
   updateRoomsForHostel,
@@ -70,13 +72,20 @@ export default function RoomAllotmentSection({ account }) {
   const canManageRooms = isHostelAdmin || permissions.manageRoomAllocations !== false;
 
   const [hostels, setHostels] = useState(() => getAllHostelComplexes());
-  const [selectedHostel, setSelectedHostel] = useState('Bhabani Hostel-1');
+  const [selectedHostel, setSelectedHostel] = useState(() => {
+    const complexes = getAllHostelComplexes();
+    return complexes && complexes.length > 0 ? complexes[0].name : 'Gandhi Boys Residence (Hostel 1)';
+  });
   const [selectedFloor, setSelectedFloor] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMsg, setToastMsg] = useState(null);
 
   // Load rooms from persistent store
-  const [rooms, setRooms] = useState(() => getRoomsForHostel('Bhabani Hostel-1'));
+  const [rooms, setRooms] = useState(() => {
+    const complexes = getAllHostelComplexes();
+    const initH = complexes && complexes.length > 0 ? complexes[0].name : 'Gandhi Boys Residence (Hostel 1)';
+    return getRoomsForHostel(initH);
+  });
 
   // Sync rooms when selected hostel changes
   useEffect(() => {
@@ -95,11 +104,17 @@ export default function RoomAllotmentSection({ account }) {
     });
     window.addEventListener('bput_hostel_complexes_updated', handleSync);
     window.addEventListener('bput_hostels_updated', handleSync);
+    window.addEventListener('bput_hostel_rooms_changed', handleSync);
+    window.addEventListener('bput_hostel_rooms_updated', handleSync);
+    window.addEventListener('hostel-rooms-updated', handleSync);
     window.addEventListener('storage', handleSync);
     return () => {
       unsubscribe();
       window.removeEventListener('bput_hostel_complexes_updated', handleSync);
       window.removeEventListener('bput_hostels_updated', handleSync);
+      window.removeEventListener('bput_hostel_rooms_changed', handleSync);
+      window.removeEventListener('bput_hostel_rooms_updated', handleSync);
+      window.removeEventListener('hostel-rooms-updated', handleSync);
       window.removeEventListener('storage', handleSync);
     };
   }, [selectedHostel]);
@@ -110,7 +125,7 @@ export default function RoomAllotmentSection({ account }) {
     studentName: 'Abhilash Mohanty',
     regNo: '2401105005',
     rollNo: '24CSE008',
-    hostelName: 'Bhabani Hostel-1',
+    hostelName: 'Gandhi Boys Residence (Hostel 1)',
     roomNo: '101',
     bedNo: 'Bed 03',
     floor: 'Floor 1'
@@ -142,6 +157,18 @@ export default function RoomAllotmentSection({ account }) {
     roomType: '4-Bed Standard AC',
     bedsPerRoom: 4
   });
+
+  // Modals for Reduce Bed, Reduce Room, Reduce Floor (-)
+  const [isReduceBedModalOpen, setIsReduceBedModalOpen] = useState(false);
+  const [reduceBedRoomNo, setReduceBedRoomNo] = useState('');
+  const [reduceBedSelectedBed, setReduceBedSelectedBed] = useState('');
+
+  const [isReduceRoomModalOpen, setIsReduceRoomModalOpen] = useState(false);
+  const [reduceRoomFloor, setReduceRoomFloor] = useState('Floor 1');
+  const [reduceRoomNo, setReduceRoomNo] = useState('');
+
+  const [isReduceFloorModalOpen, setIsReduceFloorModalOpen] = useState(false);
+  const [reduceFloorName, setReduceFloorName] = useState('Floor 1');
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -294,6 +321,87 @@ export default function RoomAllotmentSection({ account }) {
     } catch (err) {
       showToast(`⚠️ ${err.message || 'Failed to delete floor.'}`);
     }
+  };
+
+  // Handle Reduce Bed submit from modal
+  const handleReduceBedSubmit = (e) => {
+    e.preventDefault();
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
+    try {
+      if (!reduceBedRoomNo) {
+        showToast('Please select a target room.');
+        return;
+      }
+      const updated = reduceBedFromRoom(selectedHostel, reduceBedRoomNo, reduceBedSelectedBed || null);
+      setRooms(updated);
+      setIsReduceBedModalOpen(false);
+      showToast(`✓ Bed successfully reduced from Room ${reduceBedRoomNo} in ${selectedHostel}! Synced to Hostel Warden & Backend.`);
+    } catch (err) {
+      showToast(`⚠️ ${err.message || 'Failed to reduce bed.'}`);
+    }
+  };
+
+  // Handle Quick Reduce Bed from Room Card
+  const handleQuickReduceBed = (roomNo) => {
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
+    const rm = rooms.find(r => r.roomNo === roomNo);
+    if (!rm) return;
+    if (rm.beds.length <= 1) {
+      showToast(`⚠️ Cannot reduce Room ${roomNo}: room must retain at least 1 bed.`);
+      return;
+    }
+    // Find last vacant bed
+    const vacantBed = [...rm.beds].reverse().find(b => b.status !== 'Occupied');
+    if (!vacantBed) {
+      showToast(`⚠️ Cannot reduce bed in Room ${roomNo}: all ${rm.beds.length} beds are currently occupied by students.`);
+      return;
+    }
+    if (!window.confirm(`Reduce capacity of Room ${roomNo} from ${rm.capacity} to ${rm.capacity - 1} beds by removing vacant ${vacantBed.bedNo}?`)) {
+      return;
+    }
+    try {
+      const updated = reduceBedFromRoom(selectedHostel, roomNo, vacantBed.bedNo);
+      setRooms(updated);
+      showToast(`✓ Removed ${vacantBed.bedNo} from Room ${roomNo} in ${selectedHostel}! Synced to Warden & Backend.`);
+    } catch (err) {
+      showToast(`⚠️ ${err.message || 'Failed to reduce bed.'}`);
+    }
+  };
+
+  // Handle Reduce Room submit from modal
+  const handleReduceRoomSubmit = (e) => {
+    e.preventDefault();
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
+    if (!reduceRoomNo) {
+      showToast('Please select a room to delete.');
+      return;
+    }
+    handleDeleteRoom(reduceRoomNo, reduceRoomFloor);
+    setIsReduceRoomModalOpen(false);
+  };
+
+  // Handle Reduce Floor submit from modal
+  const handleReduceFloorSubmit = (e) => {
+    e.preventDefault();
+    if (!canManageRooms) {
+      showToast('⚠️ Permission Denied: You have not been given the permission to work on it. Please contact Hostel Administration.');
+      return;
+    }
+    if (!reduceFloorName) {
+      showToast('Please select a floor to delete.');
+      return;
+    }
+    handleDeleteFloor(reduceFloorName);
+    setIsReduceFloorModalOpen(false);
   };
 
   // Handle Quick Bed Allotment
@@ -470,44 +578,28 @@ export default function RoomAllotmentSection({ account }) {
       </div>
 
       <div className="hostel-card-container">
-        {/* KPI Strip */}
-        <div className="attendance-kpi-grid">
-          <div className="kpi-box total">
-            <div className="kpi-num">{rooms.length}</div>
-            <div className="kpi-label">Monitored Rooms</div>
-            <div className="kpi-sub">{selectedHostel}</div>
-          </div>
-          <div className="kpi-box present">
-            <div className="kpi-num">{occupiedBeds}</div>
-            <div className="kpi-label">Occupied Beds</div>
-            <div className="kpi-sub">{occupancyRate}% Occupancy</div>
-          </div>
-          <div className="kpi-box leave">
-            <div className="kpi-num">{vacantBeds}</div>
-            <div className="kpi-label">Available / Vacant Beds</div>
-            <div className="kpi-sub">Ready for immediate allotment</div>
-          </div>
-          <div className="kpi-box absent">
-            <div className="kpi-num">{totalBeds}</div>
-            <div className="kpi-label">Total Bed Capacity</div>
-            <div className="kpi-sub">All monitored floors</div>
-          </div>
-        </div>
-
-        {/* Toolbar & Filters */}
+        {/* 1. Toolbar & Filters (3rd Image) - PLACED FIRST */}
         <div className="view-attendance-toolbar">
           <div className="toolbar-left">
             <div className="filter-item">
-              <label>Hostel Block:</label>
-              <select value={selectedHostel} onChange={e => setSelectedHostel(e.target.value)}>
+              <label>HOSTEL BLOCK:</label>
+              <select
+                value={selectedHostel}
+                onChange={e => {
+                  setSelectedHostel(e.target.value);
+                  setSelectedFloor('ALL');
+                }}
+              >
                 {hostels.map(h => (
-                  <option key={h.code} value={h.name}>{h.name} ({h.code})</option>
+                  <option key={h.id || h.code || h.name} value={h.name}>
+                    {h.name} {h.code ? `(${h.code})` : ''}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div className="filter-item">
-              <label>Floor:</label>
+              <label>FLOOR:</label>
               <select value={selectedFloor} onChange={e => setSelectedFloor(e.target.value)}>
                 <option value="ALL">All Floors</option>
                 {availableFloors.map(fl => (
@@ -517,7 +609,7 @@ export default function RoomAllotmentSection({ account }) {
             </div>
 
             <div className="filter-item">
-              <label>Search Room or Student:</label>
+              <label>SEARCH ROOM OR STUDENT:</label>
               <div className="input-with-icon">
                 <Search size={14} color="#64748b" />
                 <input
@@ -530,22 +622,11 @@ export default function RoomAllotmentSection({ account }) {
             </div>
           </div>
 
-          <div className="toolbar-right" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* NEW ACTIONS: ADD FLOOR, DELETE FLOOR, ADD ROOM, ADD BED */}
+          <div className="toolbar-right" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* FULL ACTIONS: ADD (+) AND REDUCE (-) OPTIONS FOR FLOOR, ROOM, AND BED */}
             {canManageRooms && (
               <>
-                {selectedFloor !== 'ALL' && (
-                  <button
-                    type="button"
-                    className="h-btn-action-secondary"
-                    style={{ background: '#fef2f2', borderColor: '#fca5a5', color: '#b91c1c' }}
-                    onClick={() => handleDeleteFloor(selectedFloor)}
-                    title={`Delete ${selectedFloor} and all its rooms from ${selectedHostel}`}
-                  >
-                    <Trash2 size={14} /> Delete {selectedFloor}
-                  </button>
-                )}
-
+                {/* Floor Actions */}
                 <button
                   type="button"
                   className="h-btn-action-secondary"
@@ -560,11 +641,24 @@ export default function RoomAllotmentSection({ account }) {
                     });
                     setIsAddFloorModalOpen(true);
                   }}
-                  title="Add a new floor to this hostel"
+                  title="Add a new floor"
                 >
                   <Layers size={14} /> + Add Floor
                 </button>
 
+                <button
+                  type="button"
+                  className="h-btn-action-reduce"
+                  onClick={() => {
+                    setReduceFloorName(selectedFloor !== 'ALL' ? selectedFloor : (availableFloors[availableFloors.length - 1] || 'Floor 1'));
+                    setIsReduceFloorModalOpen(true);
+                  }}
+                  title="Reduce / delete a floor"
+                >
+                  <Minus size={14} /> - Reduce Floor
+                </button>
+
+                {/* Room Actions */}
                 <button
                   type="button"
                   className="h-btn-action-secondary"
@@ -578,11 +672,27 @@ export default function RoomAllotmentSection({ account }) {
                     });
                     setIsAddRoomModalOpen(true);
                   }}
-                  title="Add a new room to a floor"
+                  title="Add a new room"
                 >
                   <Home size={14} /> + Add Room
                 </button>
 
+                <button
+                  type="button"
+                  className="h-btn-action-reduce"
+                  onClick={() => {
+                    const fl = selectedFloor !== 'ALL' ? selectedFloor : (availableFloors[0] || 'Floor 1');
+                    setReduceRoomFloor(fl);
+                    const rmsOnFloor = rooms.filter(r => r.floor === fl);
+                    setReduceRoomNo(rmsOnFloor[0]?.roomNo || rooms[0]?.roomNo || '');
+                    setIsReduceRoomModalOpen(true);
+                  }}
+                  title="Reduce / delete a room"
+                >
+                  <Minus size={14} /> - Reduce Room
+                </button>
+
+                {/* Bed Actions */}
                 <button
                   type="button"
                   className="h-btn-action-secondary"
@@ -600,6 +710,23 @@ export default function RoomAllotmentSection({ account }) {
 
                 <button
                   type="button"
+                  className="h-btn-action-reduce"
+                  onClick={() => {
+                    if (rooms.length > 0) {
+                      setReduceBedRoomNo(rooms[0].roomNo);
+                      const vacantBed = [...rooms[0].beds].reverse().find(b => b.status !== 'Occupied');
+                      setReduceBedSelectedBed(vacantBed ? vacantBed.bedNo : (rooms[0].beds[rooms[0].beds.length - 1]?.bedNo || ''));
+                    }
+                    setIsReduceBedModalOpen(true);
+                  }}
+                  title="Reduce / remove a bed from a room"
+                >
+                  <Minus size={14} /> - Reduce Bed
+                </button>
+
+                {/* Allocate Action */}
+                <button
+                  type="button"
                   className="h-btn-action-primary"
                   onClick={() => setIsAllocateModalOpen(true)}
                   title="Allocate student to a vacant bed"
@@ -608,6 +735,30 @@ export default function RoomAllotmentSection({ account }) {
                 </button>
               </>
             )}
+          </div>
+        </div>
+
+        {/* 2. KPI Strip (2nd Image) - PLACED SECOND, DYNAMICALLY RECALCULATES ON HOSTEL CHANGE */}
+        <div className="attendance-kpi-grid" style={{ marginTop: '1.25rem', marginBottom: '1.5rem' }}>
+          <div className="kpi-box total">
+            <div className="kpi-num">{rooms.length}</div>
+            <div className="kpi-label">MONITORED ROOMS</div>
+            <div className="kpi-sub">{selectedHostel}</div>
+          </div>
+          <div className="kpi-box present">
+            <div className="kpi-num">{occupiedBeds}</div>
+            <div className="kpi-label">OCCUPIED BEDS</div>
+            <div className="kpi-sub">{occupancyRate}% Occupancy</div>
+          </div>
+          <div className="kpi-box leave">
+            <div className="kpi-num">{vacantBeds}</div>
+            <div className="kpi-label">AVAILABLE / VACANT BEDS</div>
+            <div className="kpi-sub">Ready for immediate allotment</div>
+          </div>
+          <div className="kpi-box absent">
+            <div className="kpi-num">{totalBeds}</div>
+            <div className="kpi-label">TOTAL BED CAPACITY</div>
+            <div className="kpi-sub">All monitored floors in {selectedHostel}</div>
           </div>
         </div>
 
@@ -635,7 +786,7 @@ export default function RoomAllotmentSection({ account }) {
                     <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a' }}>Room {rm.roomNo}</h4>
                     <span style={{ fontSize: '0.74rem', color: '#64748b' }}>{rm.floor} · {rm.type}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                     <span className={`room-occ-badge ${isFull ? 'full' : 'vacant'}`}>
                       {occCount} / {rm.capacity} Beds
                     </span>
@@ -652,6 +803,14 @@ export default function RoomAllotmentSection({ account }) {
                           }}
                         >
                           + Bed
+                        </button>
+                        <button
+                          type="button"
+                          className="quick-reduce-bed-btn"
+                          title={`Reduce a bed from Room ${rm.roomNo}`}
+                          onClick={() => handleQuickReduceBed(rm.roomNo)}
+                        >
+                          - Bed
                         </button>
                         <button
                           type="button"
@@ -1026,6 +1185,310 @@ export default function RoomAllotmentSection({ account }) {
                 </button>
                 <button type="submit" className="h-btn-action-primary">
                   Create Floor &amp; Rooms
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: REDUCE / DELETE FLOOR (-) ── */}
+      {isReduceFloorModalOpen && (
+        <div className="hostel-modal-overlay" onClick={() => setIsReduceFloorModalOpen(false)}>
+          <div className="hostel-modal-box" onClick={e => e.stopPropagation()}>
+            <div className="hostel-modal-header">
+              <div>
+                <h3 style={{ color: '#b91c1c' }}>- Reduce / Remove Floor</h3>
+                <p>Delete an entire residential floor and its room matrix in {selectedHostel}</p>
+              </div>
+              <button
+                type="button"
+                className="close-modal-btn"
+                onClick={() => setIsReduceFloorModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleReduceFloorSubmit} className="hostel-modal-body">
+              <div className="form-group-field">
+                <label>Target Hostel</label>
+                <input type="text" value={selectedHostel} disabled style={{ background: '#f8fafc', color: '#64748b' }} />
+              </div>
+
+              <div className="form-group-field">
+                <label>Select Floor to Remove *</label>
+                <select
+                  value={reduceFloorName}
+                  onChange={e => setReduceFloorName(e.target.value)}
+                  required
+                >
+                  {availableFloors.map(fl => {
+                    const floorRooms = rooms.filter(r => r.floor === fl);
+                    const floorOccupied = floorRooms.reduce((acc, r) => acc + r.beds.filter(b => b.status === 'Occupied').length, 0);
+                    return (
+                      <option key={fl} value={fl}>
+                        {fl} ({floorRooms.length} rooms, {floorOccupied} occupied beds)
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {(() => {
+                const floorRooms = rooms.filter(r => r.floor === reduceFloorName);
+                const floorOccupied = floorRooms.reduce((acc, r) => acc + r.beds.filter(b => b.status === 'Occupied').length, 0);
+                const floorTotalBeds = floorRooms.reduce((acc, r) => acc + r.capacity, 0);
+                return (
+                  <div style={{ background: floorOccupied > 0 ? '#fff1f2' : '#f8fafc', padding: '0.85rem', borderRadius: '8px', border: `1px solid ${floorOccupied > 0 ? '#fecdd3' : '#e2e8f0'}`, marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem', marginBottom: '0.35rem' }}>
+                      <span style={{ color: '#64748b' }}>Rooms on {reduceFloorName}:</span>
+                      <strong style={{ color: '#0f172a' }}>{floorRooms.length} Rooms</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem', marginBottom: '0.35rem' }}>
+                      <span style={{ color: '#64748b' }}>Total Bed Capacity:</span>
+                      <strong style={{ color: '#0f172a' }}>{floorTotalBeds} Beds</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem' }}>
+                      <span style={{ color: '#64748b' }}>Occupied Beds:</span>
+                      <strong style={{ color: floorOccupied > 0 ? '#e11d48' : '#059669' }}>
+                        {floorOccupied} Occupied
+                      </strong>
+                    </div>
+                    {floorOccupied > 0 && (
+                      <div style={{ color: '#be123c', fontSize: '0.78rem', marginTop: '0.5rem', fontWeight: 600 }}>
+                        ⚠️ Warning: {floorOccupied} resident(s) are currently allotted to rooms on this floor. Deleting will vacate them.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div className="hostel-modal-footer" style={{ padding: '1rem 0 0 0' }}>
+                <button
+                  type="button"
+                  className="h-btn-secondary"
+                  onClick={() => setIsReduceFloorModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="h-btn-action-reduce"
+                  style={{ background: '#dc2626', color: '#ffffff', borderColor: '#dc2626' }}
+                >
+                  <Trash2 size={14} /> Remove Floor &amp; All Rooms
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: REDUCE / DELETE ROOM (-) ── */}
+      {isReduceRoomModalOpen && (
+        <div className="hostel-modal-overlay" onClick={() => setIsReduceRoomModalOpen(false)}>
+          <div className="hostel-modal-box" onClick={e => e.stopPropagation()}>
+            <div className="hostel-modal-header">
+              <div>
+                <h3 style={{ color: '#b91c1c' }}>- Reduce / Remove Room</h3>
+                <p>Delete a residential room and reduce capacity in {selectedHostel}</p>
+              </div>
+              <button
+                type="button"
+                className="close-modal-btn"
+                onClick={() => setIsReduceRoomModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleReduceRoomSubmit} className="hostel-modal-body">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group-field">
+                  <label>Filter by Floor</label>
+                  <select
+                    value={reduceRoomFloor}
+                    onChange={e => {
+                      setReduceRoomFloor(e.target.value);
+                      const rms = rooms.filter(r => r.floor === e.target.value);
+                      setReduceRoomNo(rms[0]?.roomNo || '');
+                    }}
+                  >
+                    {availableFloors.map(fl => (
+                      <option key={fl} value={fl}>{fl}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group-field">
+                  <label>Select Room to Remove *</label>
+                  <select
+                    value={reduceRoomNo}
+                    onChange={e => setReduceRoomNo(e.target.value)}
+                    required
+                  >
+                    {rooms
+                      .filter(r => r.floor === reduceRoomFloor)
+                      .map(rm => {
+                        const occ = rm.beds.filter(b => b.status === 'Occupied').length;
+                        return (
+                          <option key={rm.roomNo} value={rm.roomNo}>
+                            Room {rm.roomNo} ({occ}/{rm.capacity} beds occupied)
+                          </option>
+                        );
+                      })}
+                  </select>
+                </div>
+              </div>
+
+              {(() => {
+                const targetRoom = rooms.find(r => r.roomNo === reduceRoomNo);
+                if (!targetRoom) return null;
+                const occ = targetRoom.beds.filter(b => b.status === 'Occupied').length;
+                return (
+                  <div style={{ background: occ > 0 ? '#fff1f2' : '#f8fafc', padding: '0.85rem', borderRadius: '8px', border: `1px solid ${occ > 0 ? '#fecdd3' : '#e2e8f0'}`, marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
+                      Room {targetRoom.roomNo} ({targetRoom.floor} · {targetRoom.type})
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                      Capacity: <strong>{targetRoom.capacity} Beds</strong> · Currently Occupied: <strong style={{ color: occ > 0 ? '#e11d48' : '#059669' }}>{occ} Beds</strong>
+                    </div>
+                    {occ > 0 && (
+                      <div style={{ color: '#be123c', fontSize: '0.78rem', marginTop: '0.5rem', fontWeight: 600 }}>
+                        ⚠️ Warning: This room has {occ} active student resident(s). Deleting it will permanently un-assign them.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div className="hostel-modal-footer" style={{ padding: '1rem 0 0 0' }}>
+                <button
+                  type="button"
+                  className="h-btn-secondary"
+                  onClick={() => setIsReduceRoomModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="h-btn-action-reduce"
+                  style={{ background: '#dc2626', color: '#ffffff', borderColor: '#dc2626' }}
+                >
+                  <Trash2 size={14} /> Remove Room
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: REDUCE BED (-) ── */}
+      {isReduceBedModalOpen && (
+        <div className="hostel-modal-overlay" onClick={() => setIsReduceBedModalOpen(false)}>
+          <div className="hostel-modal-box" onClick={e => e.stopPropagation()}>
+            <div className="hostel-modal-header">
+              <div>
+                <h3 style={{ color: '#b91c1c' }}>- Reduce Bed Capacity</h3>
+                <p>Reduce a bed slot and decrease capacity from an existing room in {selectedHostel}</p>
+              </div>
+              <button
+                type="button"
+                className="close-modal-btn"
+                onClick={() => setIsReduceBedModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleReduceBedSubmit} className="hostel-modal-body">
+              <div className="form-group-field">
+                <label>Select Room *</label>
+                <select
+                  value={reduceBedRoomNo}
+                  onChange={e => {
+                    const r = rooms.find(rm => rm.roomNo === e.target.value);
+                    setReduceBedRoomNo(e.target.value);
+                    if (r) {
+                      const vacantBed = [...r.beds].reverse().find(b => b.status !== 'Occupied');
+                      setReduceBedSelectedBed(vacantBed ? vacantBed.bedNo : (r.beds[r.beds.length - 1]?.bedNo || ''));
+                    }
+                  }}
+                  required
+                >
+                  {rooms.map(rm => {
+                    const occ = rm.beds.filter(b => b.status === 'Occupied').length;
+                    return (
+                      <option key={rm.roomNo} value={rm.roomNo}>
+                        Room {rm.roomNo} ({rm.floor} · {occ}/{rm.capacity} beds occupied)
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {(() => {
+                const r = rooms.find(rm => rm.roomNo === reduceBedRoomNo);
+                if (!r) return null;
+                const occ = r.beds.filter(b => b.status === 'Occupied').length;
+                const vac = r.capacity - occ;
+                const selectedBedObj = r.beds.find(b => b.bedNo === reduceBedSelectedBed);
+                const isBedOccupied = selectedBedObj?.status === 'Occupied';
+                return (
+                  <>
+                    <div className="form-group-field">
+                      <label>Select Bed to Remove *</label>
+                      <select
+                        value={reduceBedSelectedBed}
+                        onChange={e => setReduceBedSelectedBed(e.target.value)}
+                        required
+                      >
+                        {r.beds.map(b => (
+                          <option key={b.bedNo} value={b.bedNo}>
+                            {b.bedNo} {b.status === 'Occupied' ? `(Occupied by ${b.resident})` : '(Vacant - Safe to remove)'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ background: isBedOccupied ? '#fff1f2' : '#f0fdf4', padding: '0.85rem', borderRadius: '8px', border: `1px solid ${isBedOccupied ? '#fecdd3' : '#bbf7d0'}`, marginBottom: '1rem' }}>
+                      <div style={{ fontSize: '0.86rem', color: '#0f172a', fontWeight: 600 }}>
+                        Room {r.roomNo} Status: {occ} Occupied · {vac} Vacant (Total {r.capacity} beds)
+                      </div>
+                      {isBedOccupied ? (
+                        <div style={{ color: '#be123c', fontSize: '0.8rem', marginTop: '0.4rem', fontWeight: 600 }}>
+                          ⚠️ {reduceBedSelectedBed} is occupied by {selectedBedObj?.resident}. You must vacate or transfer the resident before removing this bed.
+                        </div>
+                      ) : (
+                        <div style={{ color: '#15803d', fontSize: '0.8rem', marginTop: '0.4rem' }}>
+                          ✓ {reduceBedSelectedBed} is vacant and can be safely removed. Room capacity will decrease to {r.capacity - 1}.
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+
+              <div className="hostel-modal-footer" style={{ padding: '1rem 0 0 0' }}>
+                <button
+                  type="button"
+                  className="h-btn-secondary"
+                  onClick={() => setIsReduceBedModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="h-btn-action-reduce"
+                  style={{ background: '#dc2626', color: '#ffffff', borderColor: '#dc2626' }}
+                  disabled={(() => {
+                    const r = rooms.find(rm => rm.roomNo === reduceBedRoomNo);
+                    const b = r?.beds.find(bed => bed.bedNo === reduceBedSelectedBed);
+                    return b?.status === 'Occupied' || (r && r.beds.length <= 1);
+                  })()}
+                >
+                  <Minus size={14} /> Reduce Bed (-1 Bed)
                 </button>
               </div>
             </form>

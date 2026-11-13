@@ -1,4 +1,5 @@
 // Central API Client connecting Frontend to NestJS Backend
+import { getOfflineStudentQuizzes, submitOfflineStudentQuiz } from './studentQuizStore.js';
 
 const rawBase =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
@@ -296,6 +297,21 @@ export const api = {
     if (params.floor) q.append('floor', params.floor);
     const qs = q.toString();
     return request(`/hostel/floors${qs ? '?' + qs : ''}`, {
+      method: 'DELETE',
+    });
+  },
+  createHostelBed: (payload) =>
+    request('/hostel/beds', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  deleteHostelBed: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.hostelName) q.append('hostelName', params.hostelName);
+    if (params.roomNumber) q.append('roomNumber', params.roomNumber);
+    if (params.bedNumber) q.append('bedNumber', params.bedNumber);
+    const qs = q.toString();
+    return request(`/hostel/beds${qs ? '?' + qs : ''}`, {
       method: 'DELETE',
     });
   },
@@ -1711,12 +1727,34 @@ export const api = {
     request(`/faculty/quizzes/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }),
-  getStudentQuizzes: () => request('/exams/student/quizzes'),
-  submitStudentQuiz: (id, answers) =>
-    request(`/exams/student/quizzes/${encodeURIComponent(id)}/submit`, {
-      method: 'POST',
-      body: JSON.stringify({ answers }),
-    }),
+  getStudentQuizzes: async () => {
+    try {
+      const res = await request('/exams/student/quizzes');
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        return res;
+      }
+    } catch (err) {
+      console.warn('[api] getStudentQuizzes network fallback:', err.message);
+    }
+    return {
+      success: true,
+      data: getOfflineStudentQuizzes(),
+    };
+  },
+  submitStudentQuiz: async (id, answers) => {
+    try {
+      const res = await request(`/exams/student/quizzes/${encodeURIComponent(id)}/submit`, {
+        method: 'POST',
+        body: JSON.stringify({ answers }),
+      });
+      if (res && res.success && res.data) {
+        return res;
+      }
+    } catch (err) {
+      console.warn('[api] submitStudentQuiz network fallback:', err.message);
+    }
+    return submitOfflineStudentQuiz(id, answers);
+  },
   getFacultyPerformance: (subjectCode = 'CS501', section = 'Section A') =>
     request(`/faculty/performance?subjectCode=${encodeURIComponent(subjectCode)}&section=${encodeURIComponent(section)}`),
   getFacultyEarlyWarning: (subjectCode = 'CS501', section = 'Section A') =>
@@ -2723,6 +2761,152 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // 17. Campus Gate Security Operations
+  scanSecurityPass: (payload) =>
+    request('/security/scan', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  recordSecurityExit: (payload) =>
+    request('/security/movement/exit', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  recordSecurityEntry: (payload) =>
+    request('/security/movement/entry', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getSecurityOverviewStats: () => request('/security/overview-stats'),
+  getSecurityApprovedPasses: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.date) q.append('date', params.date);
+    if (params.hostel) q.append('hostel', params.hostel);
+    if (params.status) q.append('status', params.status);
+    if (params.search) q.append('search', params.search);
+    const qs = q.toString();
+    return request(`/security/passes/approved${qs ? '?' + qs : ''}`);
+  },
+  getSecurityMovementsHistory: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.direction) q.append('direction', params.direction);
+    if (params.search) q.append('search', params.search);
+    const qs = q.toString();
+    return request(`/security/movements/history${qs ? '?' + qs : ''}`);
+  },
+  verifySecurityVisitorCode: (code) =>
+    request('/security/visitors/verify-code', {
+      method: 'POST',
+      body: JSON.stringify({ verificationCode: code }),
+    }),
+  registerSecurityWalkInVisitor: (payload) =>
+    request('/security/visitors/walk-in', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  checkInSecurityVisitor: (id, badgeNumber) =>
+    request(`/security/visitors/${id}/checkin`, {
+      method: 'PATCH',
+      body: JSON.stringify({ badgeNumber }),
+    }),
+  checkOutSecurityVisitor: (id) =>
+    request(`/security/visitors/${id}/checkout`, {
+      method: 'PATCH',
+    }),
+  studentApproveSecurityVisitor: (id) =>
+    request(`/security/visitors/${id}/student-approve`, {
+      method: 'PATCH',
+    }),
+  studentRejectSecurityVisitor: (id, remarks) =>
+    request(`/security/visitors/${id}/student-reject`, {
+      method: 'PATCH',
+      body: JSON.stringify({ remarks }),
+    }),
+  getSecurityVisitors: () => request('/security/visitors'),
+  getSecurityIncidents: () => request('/security/incidents'),
+  reportSecurityIncident: (payload) =>
+    request('/security/incidents', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  syncSecurityOfflineQueue: (movements) =>
+    request('/security/sync-offline-queue', {
+      method: 'POST',
+      body: JSON.stringify({ movements }),
+    }),
+  generateDynamicQr: (payload = {}) =>
+    request('/security/qr/generate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  verifyDynamicQr: (payload) =>
+    request('/security/qr/verify', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  submitStudentMovementRequest: (payload) =>
+    request('/security/movement/request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getMyStudentMovementRequests: () => request('/security/movement/my-requests'),
+  getPendingWardenMovementRequests: () => request('/security/movement/pending-warden'),
+  approveStudentMovementRequest: (id, remarks) =>
+    request(`/security/movement/${id}/approve`, {
+      method: 'PATCH',
+      body: JSON.stringify({ remarks }),
+    }),
+  rejectStudentMovementRequest: (id, remarks) =>
+    request(`/security/movement/${id}/reject`, {
+      method: 'PATCH',
+      body: JSON.stringify({ remarks }),
+    }),
+  getSecurityOverdueReturns: () => request('/security/overdue-returns'),
+  resolveSecurityOverdueReturn: (id, payload) =>
+    request(`/security/overdue-returns/${id}/resolve`, {
+      method: 'PATCH',
+      body: JSON.stringify(typeof payload === 'string' ? { notes: payload } : payload),
+    }),
+  escalateSecurityOverdueReturn: (id, channel) =>
+    request(`/security/overdue-returns/${id}/escalate`, {
+      method: 'POST',
+      body: JSON.stringify({ channel }),
+    }),
+  getSecurityCheckpoints: () => request('/security/checkpoints'),
+  inviteSecurityVisitor: (payload) =>
+    request('/security/visitors/invite', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  acknowledgeShiftHandover: (payload) =>
+    request('/security/shift-handover/acknowledge', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getSecurityAdminAnalytics: (hostel) =>
+    request(`/security/admin/analytics${hostel ? '?hostel=' + encodeURIComponent(hostel) : ''}`),
+  getDailySecurityReport: (date, hostel) => {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    if (hostel) params.append('hostel', hostel);
+    const q = params.toString();
+    return request(`/security/reports/daily${q ? '?' + q : ''}`);
+  },
+  getSecurityAuditTrail: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.search) q.append('search', params.search);
+    if (params.action) q.append('action', params.action);
+    if (params.role) q.append('role', params.role);
+    if (params.limit) q.append('limit', params.limit);
+    if (params.page) q.append('page', params.page);
+    const qs = q.toString();
+    return request(`/security/audit-trail${qs ? '?' + qs : ''}`);
+  },
+  correctSecurityRecord: (payload) =>
+    request('/security/audit/correct-record', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };
 
 

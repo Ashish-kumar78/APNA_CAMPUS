@@ -21,10 +21,21 @@ import {
   INITIAL_PURCHASE_REQUESTS,
   INITIAL_DISPATCH_RECORDS,
   INITIAL_HANDOVERS,
-  INITIAL_STAFF_NOTIFICATIONS
+  INITIAL_STAFF_NOTIFICATIONS,
+  INITIAL_COMPLAINTS
 } from '../components/StaffModules/labStaffData.js';
 
 const STORAGE_KEY = 'apna_lab_staff_master_v2';
+
+const mergeById = (storedList, initialList) => {
+  const merged = [...(storedList || [])];
+  (initialList || []).forEach(item => {
+    if (!merged.some(m => m.id === item.id)) {
+      merged.push(item);
+    }
+  });
+  return merged;
+};
 
 class LabStaffStore {
   constructor() {
@@ -34,37 +45,41 @@ class LabStaffStore {
 
   loadInitialData() {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return {
-          currentBranch: parsed.currentBranch || 'CSE',
-          activeLabId: parsed.activeLabId || 'CSE-LAB-02',
-          profile: parsed.profile || { ...STAFF_PROFILE_DEFAULT },
-          laboratories: parsed.laboratories || [...INITIAL_LABORATORIES],
-          timetable: parsed.timetable || [...INITIAL_TIMETABLE],
-          experiments: parsed.experiments || [...INITIAL_EXPERIMENTS],
-          students: parsed.students || [...INITIAL_STUDENTS_BATCH_A1],
-          equipment: parsed.equipment || [...INITIAL_EQUIPMENT],
-          issueReturn: parsed.issueReturn || [...INITIAL_ISSUE_RETURN],
-          consumables: parsed.consumables || [...INITIAL_CONSUMABLES],
-          stockMovements: parsed.stockMovements || [...INITIAL_STOCK_MOVEMENTS],
-          maintenanceOrders: parsed.maintenanceOrders || [...INITIAL_MAINTENANCE_ORDERS],
-          preventiveSchedule: parsed.preventiveSchedule || [...INITIAL_PREVENTIVE_SCHEDULE],
-          safetyInspections: parsed.safetyInspections || [...INITIAL_SAFETY_INSPECTIONS],
-          requisitions: parsed.requisitions || [...INITIAL_REQUISITIONS],
-          purchaseRequests: parsed.purchaseRequests || [...INITIAL_PURCHASE_REQUESTS],
-          dispatchRecords: parsed.dispatchRecords || [...INITIAL_DISPATCH_RECORDS],
-          handovers: parsed.handovers || [...INITIAL_HANDOVERS],
-          notifications: parsed.notifications || [...INITIAL_STAFF_NOTIFICATIONS],
-          evaluations: parsed.evaluations || [],
-          preferences: parsed.preferences || {
-            theme: 'dark-navy',
-            pageSize: 10,
-            autoRefresh: true,
-            alertSound: true
-          }
-        };
+      if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+        const stored = window.localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          return {
+            currentBranch: parsed.currentBranch || 'CSE',
+            activeLabId: parsed.activeLabId || 'CSE-LAB-02',
+            profile: parsed.profile || { ...STAFF_PROFILE_DEFAULT },
+            laboratories: mergeById(parsed.laboratories, INITIAL_LABORATORIES),
+            timetable: mergeById(parsed.timetable, INITIAL_TIMETABLE),
+            experiments: mergeById(parsed.experiments, INITIAL_EXPERIMENTS),
+            students: mergeById(parsed.students, INITIAL_STUDENTS_BATCH_A1),
+            equipment: mergeById(parsed.equipment, INITIAL_EQUIPMENT),
+            issueReturn: mergeById(parsed.issueReturn, INITIAL_ISSUE_RETURN),
+            consumables: mergeById(parsed.consumables, INITIAL_CONSUMABLES),
+            stockMovements: mergeById(parsed.stockMovements, INITIAL_STOCK_MOVEMENTS),
+            maintenanceOrders: mergeById(parsed.maintenanceOrders, INITIAL_MAINTENANCE_ORDERS),
+            complaints: mergeById(parsed.complaints, INITIAL_COMPLAINTS),
+            preventiveSchedule: mergeById(parsed.preventiveSchedule, INITIAL_PREVENTIVE_SCHEDULE),
+            safetyInspections: mergeById(parsed.safetyInspections, INITIAL_SAFETY_INSPECTIONS),
+            requisitions: mergeById(parsed.requisitions, INITIAL_REQUISITIONS),
+            purchaseRequests: mergeById(parsed.purchaseRequests, INITIAL_PURCHASE_REQUESTS),
+            dispatchRecords: mergeById(parsed.dispatchRecords, INITIAL_DISPATCH_RECORDS),
+            handovers: mergeById(parsed.handovers, INITIAL_HANDOVERS),
+            notifications: mergeById(parsed.notifications, INITIAL_STAFF_NOTIFICATIONS),
+            auditLogs: parsed.auditLogs || [],
+            evaluations: parsed.evaluations || [],
+            preferences: parsed.preferences || {
+              theme: 'dark-navy',
+              pageSize: 10,
+              autoRefresh: true,
+              alertSound: true
+            }
+          };
+        }
       }
     } catch (e) {
       console.warn('Error reading lab staff state from localStorage', e);
@@ -83,6 +98,7 @@ class LabStaffStore {
       consumables: [...INITIAL_CONSUMABLES],
       stockMovements: [...INITIAL_STOCK_MOVEMENTS],
       maintenanceOrders: [...INITIAL_MAINTENANCE_ORDERS],
+      complaints: [...INITIAL_COMPLAINTS],
       preventiveSchedule: [...INITIAL_PREVENTIVE_SCHEDULE],
       safetyInspections: [...INITIAL_SAFETY_INSPECTIONS],
       requisitions: [...INITIAL_REQUISITIONS],
@@ -90,6 +106,7 @@ class LabStaffStore {
       dispatchRecords: [...INITIAL_DISPATCH_RECORDS],
       handovers: [...INITIAL_HANDOVERS],
       notifications: [...INITIAL_STAFF_NOTIFICATIONS],
+      auditLogs: [],
       evaluations: [],
       preferences: {
         theme: 'dark-navy',
@@ -102,7 +119,9 @@ class LabStaffStore {
 
   save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+      if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+      }
     } catch (e) {
       console.error('Failed to save lab staff state to localStorage', e);
     }
@@ -139,6 +158,151 @@ class LabStaffStore {
         this.data.profile.assignedLabs = branchLabs.map(l => l.id);
       }
       this.save();
+      // Asynchronously trigger live synchronization with NestJS backend
+      this.syncWithBackend(branchKey).catch(() => {});
+    }
+  }
+
+  async syncWithBackend(branchKey = this.data.currentBranch) {
+    try {
+      if (typeof fetch === 'undefined') return;
+      const token = typeof window !== 'undefined' ? (window.localStorage?.getItem('auth_token') || '') : '';
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const [labsRes, eqRes, reqRes, cmpRes, sessRes] = await Promise.allSettled([
+        fetch(`/api/laboratories?department=${branchKey}`, { headers }),
+        fetch(`/api/laboratories/equipment?department=${branchKey}`, { headers }),
+        fetch(`/api/laboratories/requisitions?department=${branchKey}`, { headers }),
+        fetch(`/api/laboratories/complaints?department=${branchKey}`, { headers }),
+        fetch(`/api/laboratories/sessions?department=${branchKey}`, { headers }),
+      ]);
+
+      let changed = false;
+      if (labsRes.status === 'fulfilled' && labsRes.value.ok) {
+        const liveLabs = await labsRes.value.json();
+        if (Array.isArray(liveLabs) && liveLabs.length > 0) {
+          const formatted = liveLabs.map(l => ({
+            id: l.code,
+            name: l.name,
+            department: l.department,
+            building: l.building,
+            room: l.room,
+            capacity: l.capacity,
+            status: l.status,
+            safetyStatus: l.safetyStatus,
+            assignedStaff: l.assignedStaff || 'Lab Technical Staff',
+            inCharge: l.inChargeName || 'Department HOD',
+          }));
+          this.data.laboratories = [
+            ...this.data.laboratories.filter(l => l.department !== branchKey),
+            ...formatted,
+          ];
+          changed = true;
+        }
+      }
+
+      if (eqRes.status === 'fulfilled' && eqRes.value.ok) {
+        const liveEq = await eqRes.value.json();
+        if (Array.isArray(liveEq) && liveEq.length > 0) {
+          const formatted = liveEq.map(e => ({
+            id: e.equipmentCode,
+            name: e.equipmentName,
+            category: e.category,
+            department: e.department,
+            assignedLab: e.labCode,
+            status: e.status,
+            condition: e.condition,
+            serialNo: e.equipmentCode,
+          }));
+          this.data.equipment = [
+            ...this.data.equipment.filter(e => e.department !== branchKey),
+            ...formatted,
+          ];
+          changed = true;
+        }
+      }
+
+      if (reqRes.status === 'fulfilled' && reqRes.value.ok) {
+        const liveReqs = await reqRes.value.json();
+        if (Array.isArray(liveReqs) && liveReqs.length > 0) {
+          const formatted = liveReqs.map(r => ({
+            id: r.id,
+            requisitionNo: r.requisitionNumber,
+            department: r.department,
+            labId: r.labCode,
+            itemName: r.equipmentName,
+            quantity: r.requestedQuantity,
+            status: r.status,
+            priority: r.urgency,
+            reason: r.reason,
+            requestingStaff: r.requesterName,
+          }));
+          this.data.requisitions = [
+            ...this.data.requisitions.filter(r => r.department !== branchKey),
+            ...formatted,
+          ];
+          changed = true;
+        }
+      }
+
+      if (cmpRes.status === 'fulfilled' && cmpRes.value.ok) {
+        const liveCmps = await cmpRes.value.json();
+        if (Array.isArray(liveCmps) && liveCmps.length > 0) {
+          const formattedComplaints = liveCmps.map(c => ({
+            id: c.complaintNumber || c.id,
+            complaintNumber: c.complaintNumber,
+            workOrderNumber: c.workOrderNumber,
+            department: c.department,
+            labId: c.labCode,
+            equipmentId: c.equipmentCode,
+            equipmentName: c.equipmentName,
+            category: c.issueType,
+            status: c.status,
+            priority: c.priority,
+            description: c.description,
+            photoUrl: c.photoUrl,
+            assignedTechnician: c.assignedTechnician,
+            adminRemarks: c.adminRemarks,
+            resolutionNotes: c.resolutionNotes,
+            reportedBy: c.reporterName,
+            reportedDate: c.createdAt ? c.createdAt.split('T')[0] : '2026-10-24',
+          }));
+
+          const formattedOrders = liveCmps
+            .filter(c => c.workOrderNumber)
+            .map(c => ({
+              id: c.workOrderNumber,
+              department: c.department,
+              labId: c.labCode,
+              assetName: c.equipmentName,
+              status: c.status,
+              priority: c.priority,
+              description: c.description,
+              assignedTechnician: c.assignedTechnician,
+              reportedDate: c.createdAt ? c.createdAt.split('T')[0] : '2026-10-24',
+            }));
+
+          this.data.complaints = [
+            ...(this.data.complaints || []).filter(c => c.department !== branchKey),
+            ...formattedComplaints,
+          ];
+
+          if (formattedOrders.length > 0) {
+            this.data.maintenanceOrders = [
+              ...this.data.maintenanceOrders.filter(m => m.department !== branchKey),
+              ...formattedOrders,
+            ];
+          }
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        this.save();
+      }
+    } catch (e) {
+      // Graceful offline fallback
     }
   }
 
@@ -228,8 +392,12 @@ class LabStaffStore {
   }
 
   // --- Student Attendance ---
-  getStudents() {
-    return this.data.students;
+  getStudents(branch = null) {
+    const list = this.data.students || [];
+    if (branch && branch !== 'ALL') {
+      return list.filter(s => !s.department || s.department === branch || s.roll?.startsWith(branch));
+    }
+    return list;
   }
 
   saveAttendance(sessionId, studentList, sessionNotes = '') {
@@ -239,27 +407,64 @@ class LabStaffStore {
     const excused = studentList.filter(s => s.attendanceStatus === 'Excused').length;
 
     this.data.students = studentList;
+    let updatedSession = null;
     this.data.timetable = this.data.timetable.map(s => {
       if (s.id === sessionId) {
-        return {
+        updatedSession = {
           ...s,
           attendanceTaken: true,
+          status: 'Completed',
           presentCount: present,
           absentCount: absent,
           lateCount: late,
           excusedCount: excused,
           sessionNotes
         };
+        return updatedSession;
       }
       return s;
     });
+
+    if (updatedSession && Array.isArray(this.data.notifications)) {
+      this.data.notifications.unshift({
+        id: `NOTIF-ATT-${Date.now().toString().slice(-4)}`,
+        category: 'Academics',
+        title: 'Practical Attendance Recorded',
+        message: `Attendance marked for "${updatedSession.subject || 'Practical Session'}" (${updatedSession.batch}): ${present} Present, ${absent} Absent.`,
+        time: 'Just now',
+        unread: true,
+        priority: 'Medium',
+        actionRoute: 'academics'
+      });
+    }
+
     this.save();
+
+    // Asynchronously dispatch to backend
+    if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+      try {
+        const token = window.localStorage?.getItem('auth_token') || '';
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const presentStudents = studentList.filter(s => s.attendanceStatus === 'Present' || s.attendanceStatus === 'Late').map(s => s.regNo || s.roll);
+        const absentStudents = studentList.filter(s => s.attendanceStatus === 'Absent').map(s => s.regNo || s.roll);
+
+        fetch(`/api/laboratories/sessions/${sessionId}/attendance`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ presentStudents, absentStudents, notes: sessionNotes })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    return updatedSession;
   }
 
   // --- Experiments & Evaluations ---
   getExperiments(branch = null) {
     const list = this.data.experiments;
-    if (branch) return list.filter(e => e.department === branch);
+    if (branch && branch !== 'ALL') return list.filter(e => e.department === branch);
     return list;
   }
 
@@ -274,22 +479,50 @@ class LabStaffStore {
     return newExp;
   }
 
-  getEvaluations() {
-    return this.data.evaluations;
+  getEvaluations(branch = null) {
+    const list = this.data.evaluations || [];
+    if (branch && branch !== 'ALL') {
+      return list.filter(e => e.department === branch || e.roll?.startsWith(branch));
+    }
+    return list;
   }
 
   saveEvaluation(evaluation) {
-    const existingIndex = this.data.evaluations.findIndex(e => e.id === evaluation.id);
+    const experimentation = Number(evaluation.experimentation || 0);
+    const viva = Number(evaluation.viva || 0);
+    const recordWork = Number(evaluation.recordWork || 0);
+    const timeliness = Number(evaluation.timeliness || 0);
+    const totalScore = evaluation.totalScore ?? (experimentation + viva + recordWork + timeliness);
+
+    let grade = evaluation.grade;
+    if (!grade) {
+      if (totalScore >= 36) grade = 'O';
+      else if (totalScore >= 32) grade = 'A+';
+      else if (totalScore >= 28) grade = 'A';
+      else if (totalScore >= 24) grade = 'B+';
+      else if (totalScore >= 20) grade = 'B';
+      else grade = 'C';
+    }
+
+    const payload = {
+      ...evaluation,
+      id: evaluation.id || `EVAL-${Date.now().toString().slice(-6)}`,
+      totalScore,
+      grade,
+      date: evaluation.date || new Date().toISOString().split('T')[0]
+    };
+
+    const existingIndex = (this.data.evaluations || []).findIndex(e => e.id === payload.id);
+    if (!Array.isArray(this.data.evaluations)) {
+      this.data.evaluations = [];
+    }
     if (existingIndex >= 0) {
-      this.data.evaluations[existingIndex] = evaluation;
+      this.data.evaluations[existingIndex] = payload;
     } else {
-      this.data.evaluations.unshift({
-        ...evaluation,
-        id: evaluation.id || `EVAL-${Date.now().toString().slice(-6)}`,
-        date: evaluation.date || new Date().toISOString().split('T')[0]
-      });
+      this.data.evaluations.unshift(payload);
     }
     this.save();
+    return payload;
   }
 
   // --- Equipment Register ---
@@ -509,6 +742,340 @@ class LabStaffStore {
     this.save();
   }
 
+  // --- Equipment Complaints & Repair Tracking ---
+  getComplaints(branch = null) {
+    const list = this.data.complaints || [];
+    if (branch) return list.filter(c => c.department === branch);
+    return list;
+  }
+
+  createComplaint(complaintData) {
+    const nextSeq = String((this.data.complaints?.length || 0) + 1).padStart(3, '0');
+    const nextId = `CMP-${new Date().getFullYear()}-${nextSeq}`;
+    
+    const newComplaint = {
+      id: nextId,
+      complaintNumber: nextId,
+      department: (complaintData.department || this.data.currentBranch).toUpperCase(),
+      labId: complaintData.labId || this.data.activeLabId,
+      labName: complaintData.labName || `Laboratory ${complaintData.labId || this.data.activeLabId}`,
+      equipmentId: complaintData.equipmentId || null,
+      equipmentName: complaintData.equipmentName || 'Laboratory Equipment / Infrastructure',
+      category: complaintData.category || 'Damaged instruments',
+      priority: complaintData.priority || 'Medium',
+      description: complaintData.description || '',
+      photoUrl: complaintData.photoUrl || null,
+      reportedBy: complaintData.reportedBy || this.data.profile.name,
+      reportedDate: new Date().toISOString().split('T')[0],
+      status: 'Submitted', // Initial status: Staff Lab submission (Pending Admin Review)
+      workOrderNumber: null,
+      assignedTechnician: null,
+      adminRemarks: null,
+      resolutionNotes: null,
+    };
+
+    if (!Array.isArray(this.data.complaints)) {
+      this.data.complaints = [];
+    }
+    this.data.complaints.unshift(newComplaint);
+
+    // If linked to an equipment, mark equipment status & condition as 'Damaged' (NOT auto-repaired)
+    if (newComplaint.equipmentId) {
+      this.data.equipment = this.data.equipment.map(e => {
+        if (e.id === newComplaint.equipmentId) {
+          return {
+            ...e,
+            status: 'Damaged',
+            condition: 'Damaged'
+          };
+        }
+        return e;
+      });
+    }
+
+    // Push notification to central feed for Admin oversight
+    if (Array.isArray(this.data.notifications)) {
+      this.data.notifications.unshift({
+        id: `NOTIF-CMP-${Date.now().toString().slice(-4)}`,
+        category: 'Maintenance',
+        title: 'Equipment Complaint Filed',
+        message: `${newComplaint.reportedBy} reported "${newComplaint.category}" on ${newComplaint.equipmentName} in ${newComplaint.labId} (${newComplaint.department}).`,
+        time: 'Just now',
+        unread: true,
+        priority: newComplaint.priority === 'Critical' ? 'Critical' : 'High',
+        actionRoute: 'laboratory-management'
+      });
+    }
+
+    this.save();
+
+    // Asynchronously dispatch to backend NestJS API
+    try {
+      if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+        const token = window.localStorage?.getItem('auth_token') || '';
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        fetch('/api/laboratories/complaints', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            department: newComplaint.department,
+            labCode: newComplaint.labId,
+            equipmentCode: newComplaint.equipmentId,
+            equipmentName: newComplaint.equipmentName,
+            issueType: newComplaint.category,
+            priority: newComplaint.priority,
+            description: newComplaint.description,
+            photoUrl: newComplaint.photoUrl,
+          }),
+        }).catch(err => console.warn('Offline: complaint saved locally', err));
+      }
+    } catch (e) {
+      // offline fallback
+    }
+
+    return newComplaint;
+  }
+
+  updateComplaint(id, patch) {
+    if (!Array.isArray(this.data.complaints)) return;
+    this.data.complaints = this.data.complaints.map(c => {
+      if (c.id === id || c.complaintNumber === id) {
+        const updated = { ...c, ...patch };
+        // If approved by admin and work order generated -> Under Maintenance
+        if (patch.status === 'Approved' || patch.status === 'Assigned' || patch.status === 'In Progress' || patch.status === 'Waiting for Parts') {
+          if (updated.equipmentId) {
+            this.data.equipment = this.data.equipment.map(e =>
+              e.id === updated.equipmentId ? { ...e, status: 'Under Maintenance', condition: 'Under Maintenance' } : e
+            );
+          }
+        }
+        // If repair completed -> Available
+        if ((patch.status === 'Completed' || patch.status === 'Closed') && updated.equipmentId) {
+          this.data.equipment = this.data.equipment.map(e =>
+            e.id === updated.equipmentId ? { ...e, status: 'Available', condition: 'Operational / Good' } : e
+          );
+        }
+        return updated;
+      }
+      return c;
+    });
+    this.save();
+  }
+
+  reviewComplaint(id, { action, assignedTechnician = '', adminRemarks = '', reviewerName = 'Campus Administrator' }) {
+    const targetCmp = (this.data.complaints || []).find(c => c.id === id || c.complaintNumber === id);
+    if (!targetCmp) {
+      throw new Error(`Complaint ${id} not found.`);
+    }
+
+    let updatedCmp = null;
+    if (action === 'APPROVE') {
+      const workOrderNum = `WO-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
+      const nextStatus = assignedTechnician ? 'Assigned' : 'Approved';
+
+      // Update linked equipment condition and status to 'Under Maintenance'
+      if (targetCmp.equipmentId) {
+        this.data.equipment = (this.data.equipment || []).map(e =>
+          e.id === targetCmp.equipmentId
+            ? { ...e, status: 'Under Maintenance', condition: 'Under Maintenance' }
+            : e
+        );
+      }
+
+      this.data.complaints = this.data.complaints.map(c => {
+        if (c.id === id || c.complaintNumber === id) {
+          updatedCmp = {
+            ...c,
+            status: nextStatus,
+            workOrderNumber: workOrderNum,
+            assignedTechnician: assignedTechnician || c.assignedTechnician,
+            assignedAt: assignedTechnician ? new Date().toISOString() : null,
+            adminRemarks: adminRemarks || c.adminRemarks,
+            reviewedBy: reviewerName,
+            reviewedAt: new Date().toISOString()
+          };
+          return updatedCmp;
+        }
+        return c;
+      });
+
+      // Also reflect in maintenanceOrders list
+      const newMaintOrder = {
+        id: workOrderNum,
+        complaintId: targetCmp.id,
+        department: targetCmp.department,
+        labId: targetCmp.labId,
+        labName: targetCmp.labName || `Lab ${targetCmp.labId}`,
+        assetId: targetCmp.equipmentId,
+        assetName: targetCmp.equipmentName,
+        category: targetCmp.category,
+        priority: targetCmp.priority,
+        description: targetCmp.description,
+        status: nextStatus,
+        assignedTechnician: assignedTechnician || 'Central Maintenance',
+        reportedDate: targetCmp.reportedDate,
+        targetDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0]
+      };
+      this.data.maintenanceOrders = [newMaintOrder, ...(this.data.maintenanceOrders || [])];
+
+      if (Array.isArray(this.data.notifications)) {
+        this.data.notifications.unshift({
+          id: `NOTIF-WO-${Date.now().toString().slice(-4)}`,
+          category: 'Maintenance',
+          title: 'Work Order Generated & Approved',
+          message: `Work Order #${workOrderNum} generated for "${targetCmp.equipmentName}". Assigned to ${assignedTechnician || 'Maintenance Division'}. Instrument set to Under Maintenance.`,
+          time: 'Just now',
+          unread: true,
+          priority: 'High',
+          actionRoute: 'laboratory-management'
+        });
+      }
+    } else {
+      this.data.complaints = this.data.complaints.map(c => {
+        if (c.id === id || c.complaintNumber === id) {
+          updatedCmp = {
+            ...c,
+            status: 'Rejected',
+            adminRemarks: adminRemarks || c.adminRemarks,
+            reviewedBy: reviewerName,
+            reviewedAt: new Date().toISOString()
+          };
+          return updatedCmp;
+        }
+        return c;
+      });
+
+      if (Array.isArray(this.data.notifications)) {
+        this.data.notifications.unshift({
+          id: `NOTIF-REJ-${Date.now().toString().slice(-4)}`,
+          category: 'Maintenance',
+          title: 'Equipment Complaint Rejected',
+          message: `Complaint #${targetCmp.complaintNumber || targetCmp.id} for "${targetCmp.equipmentName}" was rejected by ${reviewerName}.`,
+          time: 'Just now',
+          unread: true,
+          priority: 'Medium',
+          actionRoute: 'laboratory-management'
+        });
+      }
+    }
+
+    if (updatedCmp) {
+      this.recordAuditLog({
+        user: reviewerName,
+        role: 'ADMIN',
+        action: action === 'APPROVE' ? 'Approve Complaint & Issue Work Order' : 'Reject Equipment Complaint',
+        target: `Complaint #${targetCmp.complaintNumber || targetCmp.id} (${targetCmp.equipmentName})`,
+        oldValue: targetCmp.status,
+        newValue: updatedCmp.status,
+        status: 'Success'
+      });
+    }
+
+    this.save();
+
+    // Asynchronously dispatch PATCH to backend
+    if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+      try {
+        const token = window.localStorage?.getItem('auth_token') || '';
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        fetch(`/api/laboratories/complaints/${id}/review`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ action, assignedTechnician, adminRemarks })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    return updatedCmp;
+  }
+
+  updateWorkOrderProgress(id, { status, resolutionNotes = '', technicianName = '' }) {
+    const targetCmp = (this.data.complaints || []).find(c => c.id === id || c.complaintNumber === id || c.workOrderNumber === id);
+    if (!targetCmp) {
+      throw new Error(`Work order / complaint ${id} not found.`);
+    }
+
+    if (targetCmp.status === 'Submitted' && !targetCmp.workOrderNumber) {
+      throw new Error(`Cannot update progress on complaint ${id}: Complaint is pending Admin review and has no authorized Work Order.`);
+    }
+
+    let updatedCmp = null;
+    this.data.complaints = this.data.complaints.map(c => {
+      if (c.id === targetCmp.id) {
+        updatedCmp = {
+          ...c,
+          status,
+          resolutionNotes: resolutionNotes || c.resolutionNotes,
+          completedAt: (status === 'Completed' || status === 'Closed') ? new Date().toISOString() : c.completedAt
+        };
+        return updatedCmp;
+      }
+      return c;
+    });
+
+    // Update corresponding maintenance order
+    if (targetCmp.workOrderNumber) {
+      this.data.maintenanceOrders = (this.data.maintenanceOrders || []).map(m =>
+        m.id === targetCmp.workOrderNumber ? { ...m, status, resolutionNotes } : m
+      );
+    }
+
+    // If Completed or Closed -> restore equipment status to Available & condition to Operational / Good
+    if ((status === 'Completed' || status === 'Closed') && targetCmp.equipmentId) {
+      this.data.equipment = (this.data.equipment || []).map(e =>
+        e.id === targetCmp.equipmentId
+          ? { ...e, status: 'Available', condition: 'Operational / Good' }
+          : e
+      );
+
+      if (Array.isArray(this.data.notifications)) {
+        this.data.notifications.unshift({
+          id: `NOTIF-DONE-${Date.now().toString().slice(-4)}`,
+          category: 'Maintenance',
+          title: 'Equipment Repair Completed',
+          message: `Repair on "${targetCmp.equipmentName}" (WO #${targetCmp.workOrderNumber || targetCmp.id}) completed successfully. Instrument returned to Available inventory.`,
+          time: 'Just now',
+          unread: true,
+          priority: 'Medium',
+          actionRoute: 'equipment'
+        });
+      }
+    }
+
+    if (updatedCmp) {
+      this.recordAuditLog({
+        user: technicianName || 'Central Maintenance',
+        role: 'STAFF',
+        action: 'Update Work Order Status',
+        target: `Work Order #${targetCmp.workOrderNumber || targetCmp.id} (${targetCmp.equipmentName})`,
+        oldValue: targetCmp.status,
+        newValue: status,
+        status: 'Success'
+      });
+    }
+
+    this.save();
+
+    // Asynchronously dispatch PATCH to backend
+    if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+      try {
+        const token = window.localStorage?.getItem('auth_token') || '';
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        fetch(`/api/laboratories/complaints/${targetCmp.id}/work-order`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ status, resolutionNotes })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    return updatedCmp;
+  }
+
   getPreventiveSchedule(branch = null) {
     const list = this.data.preventiveSchedule;
     if (branch) return list.filter(p => p.department === branch);
@@ -557,7 +1124,46 @@ class LabStaffStore {
       ]
     };
     this.data.requisitions.unshift(newReq);
+
+    // Push notification to central feed for Admin oversight
+    if (Array.isArray(this.data.notifications)) {
+      this.data.notifications.unshift({
+        id: `NOTIF-REQ-${Date.now().toString().slice(-4)}`,
+        category: 'Requisition',
+        title: 'New Instrument Requisition Submitted',
+        message: `${newReq.requestingStaff} requested ${newReq.quantity || 1}x ${newReq.itemName} for ${newReq.labId} (${newReq.department}).`,
+        time: 'Just now',
+        unread: true,
+        priority: newReq.priority === 'Critical' || newReq.priority === 'High' ? 'High' : 'Medium',
+        actionRoute: 'laboratory-management'
+      });
+    }
+
     this.save();
+
+    // Asynchronously dispatch to NestJS backend /api/laboratories/requisitions
+    if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+      try {
+        const token = window.localStorage?.getItem('auth_token') || '';
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        fetch('/api/laboratories/requisitions', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            department: req.department || this.data.currentBranch,
+            labCode: req.labId || this.data.activeLabId,
+            equipmentName: req.itemName,
+            category: req.category || 'Instruments',
+            requestedQuantity: Number(req.quantity) || 1,
+            estimatedCost: Number(req.estimatedBudget) || 15000,
+            urgency: req.priority || 'Normal',
+            reason: req.reason || 'Laboratory equipment requirement.'
+          })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
     return newReq;
   }
 
@@ -581,6 +1187,196 @@ class LabStaffStore {
       return r;
     });
     this.save();
+  }
+
+  reviewRequisition(id, { action, adminRemarks = '', reviewerName = 'Campus Administrator' }) {
+    let reviewedReq = null;
+    const nextStatus = action === 'APPROVE' ? 'Approved' : (action === 'REQUEST_CHANGES' ? 'Changes Requested' : 'Rejected');
+
+    this.data.requisitions = (this.data.requisitions || []).map(r => {
+      if (r.id === id || r.requisitionNo === id) {
+        const timeline = [...(r.approvalTimeline || [])];
+        timeline.push({
+          step: `Admin Review: ${nextStatus}`,
+          by: reviewerName,
+          date: new Date().toLocaleString(),
+          status: nextStatus,
+          notes: adminRemarks
+        });
+        reviewedReq = {
+          ...r,
+          status: nextStatus,
+          adminRemarks: adminRemarks || r.adminRemarks,
+          reviewedBy: reviewerName,
+          reviewedAt: new Date().toISOString(),
+          approvalTimeline: timeline
+        };
+        return reviewedReq;
+      }
+      return r;
+    });
+
+    if (reviewedReq && Array.isArray(this.data.notifications)) {
+      this.data.notifications.unshift({
+        id: `NOTIF-REV-${Date.now().toString().slice(-4)}`,
+        category: 'Requisition',
+        title: `Requisition ${nextStatus}`,
+        message: `Requisition #${reviewedReq.requisitionNo || reviewedReq.id} for "${reviewedReq.itemName}" was ${nextStatus} by ${reviewerName}.`,
+        time: 'Just now',
+        unread: true,
+        priority: nextStatus === 'Approved' ? 'Medium' : 'High',
+        actionRoute: 'requisitions'
+      });
+    }
+
+    if (reviewedReq) {
+      this.recordAuditLog({
+        user: reviewerName,
+        role: 'ADMIN',
+        action: 'Review Lab Requisition',
+        target: `Requisition #${reviewedReq.requisitionNo || reviewedReq.id} (${reviewedReq.itemName})`,
+        oldValue: 'Pending Approval',
+        newValue: nextStatus,
+        status: 'Success'
+      });
+    }
+
+    this.save();
+
+    // Asynchronously dispatch PATCH to backend
+    if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+      try {
+        const token = window.localStorage?.getItem('auth_token') || '';
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        fetch(`/api/laboratories/requisitions/${id}/review`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ action, adminRemarks })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    return reviewedReq;
+  }
+
+  issueRequisitionStock(id, { issuedQuantity, adminRemarks = '', issuerName = 'Central Store Officer' }) {
+    const targetReq = (this.data.requisitions || []).find(r => r.id === id || r.requisitionNo === id);
+    if (!targetReq) {
+      throw new Error(`Requisition ${id} not found.`);
+    }
+
+    if (targetReq.status !== 'Approved') {
+      throw new Error(`Cannot issue stock for a requisition that is in "${targetReq.status}" status. It must be Approved first.`);
+    }
+
+    const qty = Number(issuedQuantity) || Number(targetReq.quantity) || 1;
+
+    // Update equipment inventory in target branch / laboratory
+    let matched = false;
+    this.data.equipment = (this.data.equipment || []).map(e => {
+      const isMatch = e.department === targetReq.department &&
+        (e.name?.toLowerCase().includes((targetReq.itemName || '').toLowerCase()) ||
+         (targetReq.itemName || '').toLowerCase().includes(e.name?.toLowerCase() || ''));
+      if (isMatch && !matched) {
+        matched = true;
+        return {
+          ...e,
+          quantity: (Number(e.quantity) || 0) + qty,
+          availableQuantity: (Number(e.availableQuantity) || 0) + qty,
+          status: 'Available',
+          condition: e.condition || 'Operational / Good'
+        };
+      }
+      return e;
+    });
+
+    if (!matched) {
+      const newEquipment = {
+        id: `EQ-${targetReq.department}-${Date.now().toString().slice(-3)}`,
+        name: targetReq.itemName,
+        category: targetReq.category || 'Laboratory Instruments',
+        department: targetReq.department,
+        assignedLab: targetReq.labId,
+        quantity: qty,
+        availableQuantity: qty,
+        issuedQuantity: 0,
+        condition: 'Operational / Good',
+        status: 'Available',
+        purchaseInfo: `Approved Requisition #${targetReq.requisitionNo || targetReq.id}`,
+        responsibleStaff: targetReq.requestingStaff || 'Lab Technical Staff'
+      };
+      this.data.equipment.unshift(newEquipment);
+    }
+
+    // Update requisition status to 'Issued'
+    let issuedReq = null;
+    this.data.requisitions = this.data.requisitions.map(r => {
+      if (r.id === id || r.requisitionNo === id) {
+        const timeline = [...(r.approvalTimeline || [])];
+        timeline.push({
+          step: `Instrument Stock Issued (${qty} units)`,
+          by: issuerName,
+          date: new Date().toLocaleString(),
+          status: 'Issued',
+          notes: adminRemarks || 'Stock issued and added to available laboratory inventory.'
+        });
+        issuedReq = {
+          ...r,
+          status: 'Issued',
+          issuedQuantity: qty,
+          issuedBy: issuerName,
+          issuedAt: new Date().toISOString(),
+          adminRemarks: adminRemarks ? `${r.adminRemarks || ''} | Stock Issued: ${adminRemarks}` : r.adminRemarks,
+          approvalTimeline: timeline
+        };
+        return issuedReq;
+      }
+      return r;
+    });
+
+    if (Array.isArray(this.data.notifications)) {
+      this.data.notifications.unshift({
+        id: `NOTIF-ISS-${Date.now().toString().slice(-4)}`,
+        category: 'Inventory',
+        title: 'Instrument Stock Issued',
+        message: `${qty}x "${targetReq.itemName}" issued to ${targetReq.labId} (${targetReq.department}). Available inventory has been updated automatically.`,
+        time: 'Just now',
+        unread: true,
+        priority: 'High',
+        actionRoute: 'equipment'
+      });
+    }
+
+    if (issuedReq) {
+      this.recordAuditLog({
+        user: issuerName,
+        role: 'ADMIN',
+        action: 'Issue Requisition Stock',
+        target: `Requisition #${issuedReq.requisitionNo || issuedReq.id} (${issuedReq.itemName})`,
+        oldValue: 'Approved',
+        newValue: `Issued (${qty} Units)`,
+        status: 'Success'
+      });
+    }
+
+    this.save();
+
+    // Asynchronously dispatch PATCH to backend
+    if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+      try {
+        const token = window.localStorage?.getItem('auth_token') || '';
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        fetch(`/api/laboratories/requisitions/${id}/issue`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ issuedQuantity: qty, adminRemarks })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    return issuedReq;
   }
 
   getPurchaseRequests(branch = null) {
@@ -641,23 +1437,89 @@ class LabStaffStore {
     return newHandover;
   }
 
-  // --- Notifications ---
-  getNotifications() {
-    return this.data.notifications;
+  // --- Notifications & Real-Time Broadcast Feeds ---
+  getNotifications(filter = {}) {
+    let list = this.data.notifications || [];
+    if (filter.branch && filter.branch !== 'ALL') {
+      list = list.filter(n => !n.branch || n.branch === 'ALL' || n.branch === filter.branch);
+    }
+    if (filter.role && filter.role !== 'ALL') {
+      list = list.filter(n => !n.targetRole || n.targetRole === 'ALL' || n.targetRole === filter.role);
+    }
+    if (filter.priority) {
+      list = list.filter(n => n.priority === filter.priority);
+    }
+    if (filter.unreadOnly) {
+      list = list.filter(n => n.unread);
+    }
+    return list;
+  }
+
+  broadcastNotification({
+    title,
+    message,
+    category = 'General Laboratory Announcement',
+    priority = 'Medium',
+    targetRole = 'ALL',
+    branch = 'ALL',
+    sender = 'Campus Administration',
+    actionRoute = 'laboratory-management'
+  }) {
+    const newNotif = {
+      id: `NOTIF-BC-${Date.now().toString().slice(-6)}`,
+      title,
+      message,
+      category,
+      priority,
+      targetRole,
+      branch: (branch || 'ALL').toUpperCase(),
+      sender,
+      time: 'Just now',
+      timestamp: new Date().toISOString(),
+      unread: true,
+      isBroadcast: true,
+      actionRoute
+    };
+
+    if (!Array.isArray(this.data.notifications)) {
+      this.data.notifications = [];
+    }
+    this.data.notifications.unshift(newNotif);
+
+    // If critical priority, also log in institutional audit trail
+    if (priority === 'Critical') {
+      this.recordAuditLog({
+        user: sender,
+        role: targetRole === 'ALL' ? 'ADMIN' : targetRole,
+        action: 'Critical Laboratory Broadcast Emitted',
+        target: `${title} [${branch}]`,
+        oldValue: 'Standard Operations',
+        newValue: 'Critical Alert Active',
+        status: 'Broadcasted'
+      });
+    }
+
+    this.save();
+    return newNotif;
   }
 
   markNotificationRead(id) {
-    this.data.notifications = this.data.notifications.map(n => n.id === id ? { ...n, unread: false } : n);
+    this.data.notifications = (this.data.notifications || []).map(n => n.id === id ? { ...n, unread: false } : n);
     this.save();
   }
 
   markAllNotificationsRead() {
-    this.data.notifications = this.data.notifications.map(n => ({ ...n, unread: false }));
+    this.data.notifications = (this.data.notifications || []).map(n => ({ ...n, unread: false }));
+    this.save();
+  }
+
+  deleteNotification(id) {
+    this.data.notifications = (this.data.notifications || []).filter(n => n.id !== id);
     this.save();
   }
 
   getUnreadNotificationsCount() {
-    return this.data.notifications.filter(n => n.unread).length;
+    return (this.data.notifications || []).filter(n => n.unread).length;
   }
 
   // --- Preferences ---
@@ -668,6 +1530,232 @@ class LabStaffStore {
   updatePreferences(pref) {
     this.data.preferences = { ...this.data.preferences, ...pref };
     this.save();
+  }
+
+  // --- Super Admin System-Wide Authority & Cross-Branch Overrides ---
+  recordAuditLog({ user = 'Super Administrator', role = 'SUPER_ADMIN', action, target, oldValue, newValue, status = 'Success' }) {
+    const newLog = {
+      id: `AUD-LAB-${Date.now().toString().slice(-6)}`,
+      user,
+      role,
+      action,
+      target,
+      oldValue: String(oldValue ?? ''),
+      newValue: String(newValue ?? ''),
+      timestamp: new Date().toLocaleString(),
+      ipAddress: '192.168.1.1',
+      status
+    };
+
+    if (!Array.isArray(this.data.auditLogs)) {
+      this.data.auditLogs = [];
+    }
+    this.data.auditLogs.unshift(newLog);
+    this.save();
+    return newLog;
+  }
+
+  getAuditLogs(filter = {}) {
+    let list = this.data.auditLogs || [];
+    if (filter.role && filter.role !== 'ALL') {
+      list = list.filter(a => a.role === filter.role);
+    }
+    if (filter.action && filter.action !== 'ALL') {
+      list = list.filter(a => a.action?.toLowerCase().includes(filter.action.toLowerCase()));
+    }
+    if (filter.target) {
+      list = list.filter(a => a.target?.toLowerCase().includes(filter.target.toLowerCase()));
+    }
+    return list;
+  }
+
+  clearAuditLogs(requestingUserRole = 'STAFF') {
+    if (requestingUserRole !== 'SUPER_ADMIN') {
+      throw new Error('Security Error: Insufficient privileges. Only root SUPER_ADMIN can prune or archive institutional audit logs.');
+    }
+    this.data.auditLogs = [];
+    this.save();
+  }
+
+  superAdminOverrideComplaint(id, { newStatus, adminRemarks = '', overriddenBy = 'Super Administrator' }) {
+    const targetCmp = (this.data.complaints || []).find(c => c.id === id || c.complaintNumber === id);
+    if (!targetCmp) {
+      throw new Error(`Complaint ${id} not found.`);
+    }
+
+    const oldStatus = targetCmp.status;
+    let workOrderNum = targetCmp.workOrderNumber;
+    if (!workOrderNum && (newStatus === 'Approved' || newStatus === 'Assigned' || newStatus === 'In Progress' || newStatus === 'Completed')) {
+      workOrderNum = `WO-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
+    }
+
+    let updatedCmp = null;
+    this.data.complaints = this.data.complaints.map(c => {
+      if (c.id === targetCmp.id) {
+        updatedCmp = {
+          ...c,
+          status: newStatus,
+          workOrderNumber: workOrderNum,
+          adminRemarks: adminRemarks ? `[SUPER_ADMIN OVERRIDE] ${adminRemarks}` : `[SUPER_ADMIN OVERRIDE: ${oldStatus} -> ${newStatus}]`,
+          reviewedBy: overriddenBy,
+          reviewedAt: new Date().toISOString()
+        };
+        return updatedCmp;
+      }
+      return c;
+    });
+
+    // Equipment state transitions
+    if (targetCmp.equipmentId) {
+      if (newStatus === 'Completed' || newStatus === 'Closed') {
+        this.data.equipment = (this.data.equipment || []).map(e =>
+          e.id === targetCmp.equipmentId ? { ...e, status: 'Available', condition: 'Operational / Good' } : e
+        );
+      } else if (newStatus === 'Approved' || newStatus === 'Assigned' || newStatus === 'In Progress' || newStatus === 'Waiting for Parts') {
+        this.data.equipment = (this.data.equipment || []).map(e =>
+          e.id === targetCmp.equipmentId ? { ...e, status: 'Under Maintenance', condition: 'Under Maintenance' } : e
+        );
+      } else if (newStatus === 'Submitted') {
+        this.data.equipment = (this.data.equipment || []).map(e =>
+          e.id === targetCmp.equipmentId ? { ...e, status: 'Damaged', condition: 'Damaged' } : e
+        );
+      }
+    }
+
+    // Record institutional audit log
+    this.recordAuditLog({
+      user: overriddenBy,
+      role: 'SUPER_ADMIN',
+      action: 'Super Admin Complaint Status Override',
+      target: `Complaint #${targetCmp.complaintNumber || targetCmp.id} (${targetCmp.equipmentName})`,
+      oldValue: oldStatus,
+      newValue: newStatus,
+      status: 'Success'
+    });
+
+    if (Array.isArray(this.data.notifications)) {
+      this.data.notifications.unshift({
+        id: `NOTIF-SA-CMP-${Date.now().toString().slice(-4)}`,
+        category: 'Maintenance',
+        title: 'Super Admin Override Applied',
+        message: `${overriddenBy} overrode Complaint #${targetCmp.complaintNumber || targetCmp.id} to "${newStatus}".`,
+        time: 'Just now',
+        unread: true,
+        priority: 'Critical',
+        actionRoute: 'laboratory-management'
+      });
+    }
+
+    this.save();
+    return updatedCmp;
+  }
+
+  superAdminOverrideRequisition(id, { newStatus, adminRemarks = '', overriddenBy = 'Super Administrator' }) {
+    const targetReq = (this.data.requisitions || []).find(r => r.id === id || r.requisitionNo === id);
+    if (!targetReq) {
+      throw new Error(`Requisition ${id} not found.`);
+    }
+
+    const oldStatus = targetReq.status;
+    let updatedReq = null;
+    this.data.requisitions = this.data.requisitions.map(r => {
+      if (r.id === targetReq.id) {
+        const timeline = [...(r.approvalTimeline || [])];
+        timeline.push({
+          step: `Super Admin Override: ${newStatus}`,
+          by: overriddenBy,
+          date: new Date().toLocaleString(),
+          status: newStatus,
+          notes: adminRemarks || 'Direct root authority override executed.'
+        });
+        updatedReq = {
+          ...r,
+          status: newStatus,
+          adminRemarks: adminRemarks ? `[SUPER_ADMIN OVERRIDE] ${adminRemarks}` : `[SUPER_ADMIN OVERRIDE: ${oldStatus} -> ${newStatus}]`,
+          reviewedBy: overriddenBy,
+          reviewedAt: new Date().toISOString(),
+          approvalTimeline: timeline
+        };
+        return updatedReq;
+      }
+      return r;
+    });
+
+    this.recordAuditLog({
+      user: overriddenBy,
+      role: 'SUPER_ADMIN',
+      action: 'Super Admin Requisition Status Override',
+      target: `Requisition #${targetReq.requisitionNo || targetReq.id} (${targetReq.itemName})`,
+      oldValue: oldStatus,
+      newValue: newStatus,
+      status: 'Success'
+    });
+
+    if (Array.isArray(this.data.notifications)) {
+      this.data.notifications.unshift({
+        id: `NOTIF-SA-REQ-${Date.now().toString().slice(-4)}`,
+        category: 'Requisition',
+        title: 'Super Admin Requisition Override',
+        message: `${overriddenBy} overrode Requisition #${targetReq.requisitionNo || targetReq.id} to "${newStatus}".`,
+        time: 'Just now',
+        unread: true,
+        priority: 'High',
+        actionRoute: 'laboratory-management'
+      });
+    }
+
+    this.save();
+    return updatedReq;
+  }
+
+  superAdminDecommissionEquipment(id, { reason = '', decommissionedBy = 'Super Administrator' }) {
+    const targetEq = (this.data.equipment || []).find(e => e.id === id || e.equipmentCode === id);
+    if (!targetEq) {
+      throw new Error(`Equipment ${id} not found.`);
+    }
+
+    let updatedEq = null;
+    this.data.equipment = this.data.equipment.map(e => {
+      if (e.id === targetEq.id) {
+        updatedEq = {
+          ...e,
+          status: 'Decommissioned',
+          condition: 'Decommissioned / Written Off',
+          availableQuantity: 0,
+          decommissionReason: reason || 'End of lifecycle disposal authorized by Super Admin',
+          decommissionedBy,
+          decommissionedAt: new Date().toISOString()
+        };
+        return updatedEq;
+      }
+      return e;
+    });
+
+    this.recordAuditLog({
+      user: decommissionedBy,
+      role: 'SUPER_ADMIN',
+      action: 'Equipment Decommissioned / Purged',
+      target: `Equipment #${targetEq.id} (${targetEq.name || targetEq.equipmentName})`,
+      oldValue: targetEq.status,
+      newValue: 'Decommissioned',
+      status: 'Success'
+    });
+
+    if (Array.isArray(this.data.notifications)) {
+      this.data.notifications.unshift({
+        id: `NOTIF-SA-DEC-${Date.now().toString().slice(-4)}`,
+        category: 'Inventory',
+        title: 'Equipment Decommissioned',
+        message: `${targetEq.name} was formally decommissioned by ${decommissionedBy}. Reason: ${reason || 'Asset lifecycle write-off'}.`,
+        time: 'Just now',
+        unread: true,
+        priority: 'High',
+        actionRoute: 'laboratory-management'
+      });
+    }
+
+    this.save();
+    return updatedEq;
   }
 
   // --- Factory Reset ---

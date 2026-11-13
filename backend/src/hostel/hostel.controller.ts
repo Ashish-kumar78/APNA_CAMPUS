@@ -119,6 +119,31 @@ export class HostelController {
     return { success: true, message: 'Floor deleted successfully', data };
   }
 
+  @Post('beds')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add a bed to a room in a hostel block' })
+  async addHostelBed(@CurrentUser() user: any, @Body() body: any) {
+    this.hostelService.checkWardenPermission(user, 'editHostelConfiguration', 'Edit Hostel Configuration');
+    const data = await this.hostelService.addHostelBed(body);
+    return { success: true, message: 'Bed added successfully', data };
+  }
+
+  @Delete('beds')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reduce / delete a bed from a room in a hostel block' })
+  async deleteHostelBed(
+    @CurrentUser() user: any,
+    @Query('hostelName') hostelName?: string,
+    @Query('roomNumber') roomNumber?: string,
+    @Query('bedNumber') bedNumber?: string,
+  ) {
+    this.hostelService.checkWardenPermission(user, 'editHostelConfiguration', 'Edit Hostel Configuration');
+    const data = await this.hostelService.deleteHostelBed({ hostelName, roomNumber, bedNumber });
+    return { success: true, message: 'Bed removed successfully', data };
+  }
+
   // ==========================================
   // 2. BED ALLOCATION & TRANSFERS
   // ==========================================

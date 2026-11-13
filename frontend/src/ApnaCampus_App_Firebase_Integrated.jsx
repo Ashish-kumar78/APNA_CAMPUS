@@ -359,7 +359,7 @@ const demoCategories = [
     id: 'services',
     categoryCode: 'C',
     title: 'Campus Services',
-    count: '5 Roles',
+    count: '4 Roles',
     color: '#ea580c',
     bg: '#fff7ed',
     border: '#ffedd5',
@@ -369,7 +369,6 @@ const demoCategories = [
       { key: 'hostel_admin', label: 'Hostel Admin' },
       { key: 'transport', label: 'Transport' },
       { key: 'campus_operations', label: 'Campus Operations' },
-      { key: 'canteen', label: 'Canteen' },
     ],
   },
 ]

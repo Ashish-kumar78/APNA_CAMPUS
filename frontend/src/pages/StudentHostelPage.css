@@ -673,5 +673,546 @@
   margin-top: 4px;
 }
 
+/* ══════════════════════════════════════════════════════
+   ROOM ALLOCATION & MAINTENANCE SECTION (MY HOSTEL RESIDENCE)
+   ══════════════════════════════════════════════════════ */
+
+.hostel-residence-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.hostel-header-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.hostel-header-banner h1 {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.25rem 0;
+  letter-spacing: -0.01em;
+}
+
+.hostel-header-banner p {
+  font-size: 0.86rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.btn-lodge-complaint {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #6366f1;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-lodge-complaint:hover {
+  background: #4f46e5;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.45);
+}
+
+/* Top 3 KPI Cards Grid */
+.hostel-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .hostel-kpi-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hostel-kpi-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.15rem 1.35rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 120px;
+}
+
+.hostel-kpi-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+}
+
+.hostel-kpi-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 0.3rem;
+  line-height: 1.2;
+}
+
+.hostel-kpi-sub {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+.hostel-badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.hostel-badge-chip.green {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.hostel-badge-chip.blue {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.warden-phone-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2563eb;
+  text-decoration: none;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 3px 9px;
+  border-radius: 6px;
+  width: fit-content;
+  transition: all 0.15s;
+}
+
+.warden-phone-link:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+/* Middle 2 Cards Grid */
+.hostel-sub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 850px) {
+  .hostel-sub-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hostel-sub-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem 1.4rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.hostel-sub-card h3 {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 1rem 0;
+}
+
+.roommate-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.6rem 0.8rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 0.6rem;
+  border: 1px solid #f1f5f9;
+}
+
+.roommate-avatar-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.roommate-details-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.roommate-details-sub {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.hostel-rules-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.hostel-rules-list li {
+  font-size: 0.82rem;
+  color: #475569;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.hostel-rules-list li::before {
+  content: "•";
+  color: #64748b;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* Complaints Section */
+.hostel-complaints-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.hostel-complaints-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hostel-complaints-header h2 {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.complaint-count-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* Individual Complaint Card matching Image 1 */
+.complaint-ticket-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.15rem 1.35rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.complaint-ticket-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.complaint-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.complaint-title-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.complaint-main-title {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.complaint-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.complaint-pill.high {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
+.complaint-pill.medium {
+  background: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.complaint-pill.low {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.complaint-pill.category {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.complaint-pill.ai {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+.complaint-pill.deadline {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.complaint-status-chip {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.complaint-status-chip.in-progress {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.complaint-status-chip.assigned {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.complaint-status-chip.submitted {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.complaint-status-chip.awaiting {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
+}
+
+.complaint-status-chip.resolved {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.complaint-meta-line {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.complaint-meta-line strong {
+  color: #334155;
+}
+
+.complaint-warden-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #334155;
+  padding-bottom: 0.2rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.warden-call-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.warden-call-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.complaint-desc-box {
+  background: #faf5ff;
+  border: 1px solid #f3e8ff;
+  border-radius: 8px;
+  padding: 0.65rem 0.95rem;
+  font-size: 0.82rem;
+  color: #4b5563;
+  line-height: 1.45;
+}
+
+.complaint-technician-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tech-info-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.tech-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.76rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tech-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.tech-role {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.tech-call-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #10b981;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.tech-call-btn:hover {
+  background: #059669;
+}
+
+/* 5-Step Pipeline Tracker */
+.complaint-pipeline-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  padding: 0.4rem 0;
+  flex-wrap: wrap;
+}
+
+.pipeline-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.pipeline-step.active {
+  color: #6366f1;
+  font-weight: 800;
+  background: #f5f3ff;
+}
+
+.pipeline-step.done {
+  color: #059669;
+  font-weight: 700;
+}
+
+.pipeline-arrow {
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.complaint-status-log {
+  font-size: 0.76rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border-top: 1px dashed #f1f5f9;
+  padding-top: 0.4rem;
+}
+
+
 
 

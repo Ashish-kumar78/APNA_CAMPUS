@@ -419,27 +419,41 @@ export default function SmartComplaintModal({
       const finalDesc = description.trim() || aiResult?.description || finalTitle;
 
       const timestamp = new Date().toISOString();
-      const generatedId = `CMP-2026-${String(Math.floor(100 + Math.random() * 900))}`;
+      const generatedId = `CMP-2026-${String(Math.floor(384 + Math.random() * 600))}`;
       const ticket = {
         id: generatedId,
         title: finalTitle,
         description: finalDesc,
         category: category.charAt(0).toUpperCase() + category.slice(1).toLowerCase(),
+        predictedCategory: category.toLowerCase(),
+        confidence: aiResult?.confidence ? Math.round(aiResult.confidence * 100) : 92,
         location: constructedLocation,
         priority: priority,
-        status: aiResult?.needsReview ? 'Needs Review' : 'Assigned',
-        assignedStaffName: category === 'PLUMBING' ? 'Suresh Mohapatra' : category === 'ELECTRICAL' ? 'Pramod Panda' : 'Campus Maintenance Team',
-        assignedStaffRole: category === 'PLUMBING' ? 'Plumber & Water Works' : 'Maintenance Specialist',
+        status: 'Submitted', // Initial state awaiting Warden approval
+        assignedStaffName: null,
+        assignedStaffRole: null,
+        assignedStaffPhone: null,
         assignedWardenName: building.includes('Girls') ? 'Mrs. Nibedita Das' : 'Mr. Rajesh Jena',
         assignedWardenContact: building.includes('Girls') ? '+91 94370 33445' : '+91 94371 88990',
         resolutionDeadline: new Date(Date.now() + 72 * 3600 * 1000).toISOString(),
         isEscalated: false,
         statusHistory: [
-          { status: 'Submitted', timestamp, note: 'Complaint submitted by student' },
-          { status: 'Assigned', timestamp, note: 'Auto-routed to Resident Warden and technical staff' }
+          {
+            id: `h-${Date.now()}-1`,
+            status: 'Submitted',
+            changedBy: studentName || 'Rakesh Das',
+            role: 'STUDENT',
+            timestamp,
+            note: 'Complaint submitted by student. Auto-routed to Resident Warden. Pending Warden approval.'
+          }
         ],
         filedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        resolutionNotes: 'Pending review and assignment by Resident Warden.',
         imageUrl: imagePreview || null,
+        studentName: studentName || 'Rakesh Das',
+        rollNumber: rollNumber || '01',
+        hostel: building,
+        roomNumber: selectedRoom || roomNumber || '204',
       };
 
       // 1. Immediately persist locally & dispatch events (<5ms)
@@ -448,6 +462,7 @@ export default function SmartComplaintModal({
         localStorage.setItem('bput_hostel_complaints_v1', JSON.stringify([ticket, ...existing.filter(c => c.id !== ticket.id)]));
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('bput_complaint_created', { detail: ticket }));
+          window.dispatchEvent(new CustomEvent('bput_hostel_complaints_updated', { detail: [ticket, ...existing.filter(c => c.id !== ticket.id)] }));
           window.dispatchEvent(new Event('storage'));
         }
       } catch {}

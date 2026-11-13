@@ -179,21 +179,20 @@ export default function QuickActionModal({
       const assetId = formData.maintAssetId || (equipment[0] ? equipment[0].id : 'FACILITY-GENERAL');
       const asset = equipment.find(e => e.id === assetId);
 
-      labStaffStore.createMaintenanceOrder({
+      const complaint = labStaffStore.createComplaint({
+        department: currentBranch,
         labId: activeLabId,
         labName: `Lab ${activeLabId}`,
-        department: currentBranch,
-        assetId: assetId,
-        assetName: asset ? asset.name : 'General Laboratory Infrastructure',
-        category: formData.maintCategory,
-        priority: formData.maintPriority,
+        equipmentId: assetId !== 'FACILITY-GENERAL' ? assetId : null,
+        equipmentName: asset ? asset.name : 'General Laboratory Infrastructure',
+        category: formData.maintCategory || 'Damaged instruments',
+        priority: formData.maintPriority || 'Medium',
         description: formData.maintDesc,
-        targetDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
-        estimatedCost: 1500
       });
-      onSuccessToast?.('Maintenance work order created and dispatched to campus engineering!');
+
+      onSuccessToast?.(`Complaint #${complaint.id} logged for Admin review & work order authorization!`);
       onClose();
-      if (onNavigateTab) onNavigateTab('maintenance');
+      if (onNavigateTab) onNavigateTab('complaints');
       return;
     }
 
@@ -568,16 +567,18 @@ export default function QuickActionModal({
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px' }}>Category</label>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px' }}>Issue Category</label>
                 <select
                   value={formData.maintCategory}
                   onChange={(e) => setFormData({ ...formData, maintCategory: e.target.value })}
                   style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
                 >
-                  <option value="Hardware Breakdown">Hardware Breakdown</option>
-                  <option value="Electrical & Power">Electrical &amp; Power</option>
-                  <option value="Air Conditioning">Air Conditioning / Cooling</option>
-                  <option value="Network Infrastructure">Network Infrastructure</option>
+                  <option value="Damaged instruments">Damaged instruments</option>
+                  <option value="Electrical problems">Electrical problems</option>
+                  <option value="Computer problems">Computer problems</option>
+                  <option value="Network problems">Network problems</option>
+                  <option value="Laboratory furniture">Laboratory furniture</option>
+                  <option value="Other laboratory-related problems">Other laboratory-related problems</option>
                 </select>
               </div>
               <div>

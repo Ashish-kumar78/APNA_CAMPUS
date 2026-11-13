@@ -15,6 +15,20 @@
   flex-direction: column;
 }
 
+.apna-public-timetable-wrapper.is-embedded {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  width: 100%;
+  min-height: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #cbd5e1;
+  margin-top: 12px;
+  margin-bottom: 24px;
+  overflow: visible;
+}
+
 /* ── Top Gray Navigation Bar ────────────────────────────── */
 .apna-tt-top-nav {
   background: #60686f;
@@ -479,7 +493,570 @@
   background: transparent;
 }
 
-/* ── Responsive Rules ───────────────────────────────────── */
+/* ── Student Profile & Live Status Banner ───────────────── */
+.student-profile-timetable-banner {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.15);
+  border: 1px solid #1d4ed8;
+}
+
+.student-banner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.student-banner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #bfdbfe;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.student-banner-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.student-banner-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: #dbeafe;
+}
+
+.student-banner-meta strong {
+  color: #ffffff;
+}
+
+.btn-view-my-routine {
+  background: #f59e0b;
+  color: #78350f;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-view-my-routine:hover {
+  background: #fbbf24;
+  transform: translateY(-1px);
+}
+
+/* ── Today's Live Schedule Strip ───────────────────────── */
+.student-live-schedule-card {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-left: 4px solid #0284c7;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.live-strip-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.live-indicator-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.live-indicator-pill.active {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.live-indicator-pill.break {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.live-indicator-pill.idle {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.next-class-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0369a1;
+  background: #e0f2fe;
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+
+.today-timeline-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 2px;
+}
+
+.timeline-pill {
+  flex-shrink: 0;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 5px 9px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  min-width: 115px;
+}
+
+.timeline-pill.current {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+}
+
+.timeline-pill .tp-time {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.timeline-pill .tp-subj {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 1px 0;
+}
+
+.timeline-pill .tp-room {
+  font-size: 9.5px;
+  color: #0284c7;
+  font-weight: 600;
+}
+
+/* ── My Section Row Badge & View Action ──────────────────── */
+.my-section-badge {
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  margin-left: 8px;
+  display: inline-block;
+  vertical-align: middle;
+  letter-spacing: 0.04em;
+}
+
+.btn-action-view {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-action-view:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+/* ── Timetable Search Bar ───────────────────────────────── */
+.tt-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  background: #ffffff;
+  border: 1px solid #94a3b8;
+  border-radius: 4px;
+  padding: 6px 12px;
+  max-width: 440px;
+}
+
+.tt-search-bar input {
+  border: none;
+  outline: none;
+  font-size: 12.5px;
+  width: 100%;
+  color: #1e293b;
+}
+
+.tt-search-bar input::placeholder {
+  color: #94a3b8;
+}
+
+/* ── Read-Only Notice Badge ─────────────────────────────── */
+.read-only-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* ── Faculty Personal Timetable Styles ──────────────────── */
+.faculty-profile-banner {
+  background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(4, 120, 87, 0.15);
+  border: 1px solid #059669;
+}
+
+.faculty-banner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #a7f3d0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.faculty-banner-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.faculty-banner-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: #d1fae5;
+}
+
+.faculty-banner-meta strong {
+  color: #ffffff;
+}
+
+.faculty-lecture-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.faculty-lecture-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+}
+
+.faculty-lecture-card:hover {
+  border-color: #047857;
+  box-shadow: 0 4px 10px rgba(4, 120, 87, 0.1);
+}
+
+.faculty-lecture-card.is-live {
+  border: 2px solid #16a34a;
+  background: #f0fdf4;
+}
+
+.flc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flc-time {
+  font-size: 11px;
+  font-weight: 700;
+  color: #047857;
+}
+
+.flc-tag {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.flc-tag.lab {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.flc-tag.theory {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.flc-tag.seminar {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.flc-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.flc-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11.5px;
+  color: #475569;
+}
+
+.flc-room {
+  font-weight: 600;
+  color: #0284c7;
+}
+
+.faculty-badge-you {
+  background: #047857;
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 6px;
+}
+
+/* ── HOD Summary KPI Cards ──────────────────────────────── */
+.hod-summary-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.hod-kpi-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-top: 3px solid #2563eb;
+}
+
+.hod-kpi-card.success {
+  border-top-color: #16a34a;
+}
+
+.hod-kpi-card.warning {
+  border-top-color: #f59e0b;
+}
+
+.hod-kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hod-kpi-val {
+  font-size: 19px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+.hod-kpi-sub {
+  font-size: 10px;
+  color: #059669;
+  font-weight: 600;
+}
+
+/* ── HOD Action Toolbar ─────────────────────────────────── */
+.hod-action-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hod-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-hod-generate {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.btn-hod-generate:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.btn-hod-publish {
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.btn-hod-publish:hover {
+  background: #047857;
+  transform: translateY(-1px);
+}
+
+.btn-hod-draft {
+  background: #f59e0b;
+  color: #78350f;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Section Wise Filter Toolbar ────────────────────────── */
+.hod-section-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.hod-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hod-filter-group label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.hod-filter-group select {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #94a3b8;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #1e293b;
+  min-width: 140px;
+}
+
+/* ── Responsive Rules (Optimized down to 360px mobile viewports) ── */
 @media (max-width: 768px) {
   .apna-tt-top-nav {
     padding: 6px 10px;
@@ -487,13 +1064,18 @@
 
   .apna-tt-nav-links {
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
   }
 
   .apna-tt-top-actions {
     width: 100%;
     justify-content: center;
     margin-top: 4px;
+    flex-wrap: wrap;
   }
 
   .apna-tt-card-container {
@@ -511,5 +1093,182 @@
 
   .apna-tt-category-title {
     font-size: 15px;
+  }
+
+  .hod-summary-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hod-section-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .student-profile-timetable-banner,
+  .faculty-profile-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .student-banner-actions {
+    width: 100%;
+  }
+
+  .btn-view-my-routine {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .apna-tt-table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .apna-routine-table {
+    min-width: 720px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hod-summary-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .apna-tt-action-btn {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  .apna-tt-nav-tab {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .flc-details {
+    font-size: 11px;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PRINT STYLESHEET (@media print)
+   Produces clean institutional printouts with college crest & tables
+   ════════════════════════════════════════════════════════════════ */
+@media print {
+  @page {
+    size: landscape;
+    margin: 8mm;
+  }
+
+  /* Reset layout wrapper */
+  .apna-public-timetable-wrapper {
+    position: static !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    height: auto !important;
+    inset: auto !important;
+  }
+
+  /* Hide interactive controls that should not appear on physical paper */
+  .apna-tt-top-nav,
+  .apna-tt-routine-toolbar,
+  .apna-routine-footer-links,
+  .tt-search-bar,
+  .hod-action-toolbar,
+  .hod-section-filter-bar,
+  .student-banner-actions,
+  .btn-action-view,
+  .btn-item-link,
+  .btn-class-link,
+  .btn-back-to-sections {
+    display: none !important;
+  }
+
+  /* Ensure card container expands fully on paper */
+  .apna-tt-card-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Keep header centered and crisp */
+  .apna-tt-header-box {
+    margin-bottom: 14px !important;
+  }
+
+  .apna-tt-college-title {
+    color: #1e578a !important;
+    font-size: 20px !important;
+  }
+
+  .apna-tt-routine-title,
+  .apna-tt-category-title {
+    color: #000000 !important;
+    font-size: 15px !important;
+  }
+
+  /* Table borders must be crisp black/dark gray */
+  .apna-routine-table,
+  .apna-data-table,
+  .apna-list-table {
+    width: 100% !important;
+    border: 1px solid #333333 !important;
+    border-collapse: collapse !important;
+    page-break-inside: avoid !important;
+  }
+
+  .apna-routine-table th,
+  .apna-routine-table td,
+  .apna-data-table th,
+  .apna-data-table td,
+  .apna-list-table td {
+    border: 1px solid #444444 !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .apna-routine-table thead th,
+  .apna-data-table thead th {
+    background: #e2e8f0 !important;
+    color: #000000 !important;
+  }
+
+  /* Student/Faculty Banners on print */
+  .student-profile-timetable-banner,
+  .faculty-profile-banner {
+    background: #f1f5f9 !important;
+    color: #000000 !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+
+  .student-banner-title,
+  .faculty-banner-title {
+    color: #000000 !important;
+  }
+
+  .student-banner-meta,
+  .faculty-banner-meta {
+    color: #334155 !important;
+  }
+
+  .student-banner-meta strong,
+  .faculty-banner-meta strong {
+    color: #000000 !important;
+  }
+
+  /* Footer on print */
+  .apna-tt-bottom-footer {
+    display: block !important;
+    font-size: 9.5px !important;
+    color: #64748b !important;
+    padding: 8px 0 0 !important;
+    margin-top: 10px !important;
+    border-top: 1px solid #e2e8f0 !important;
   }
 }

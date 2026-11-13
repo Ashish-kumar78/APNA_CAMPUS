@@ -33,6 +33,7 @@ import StudentDocumentsTable from './StudentDocumentsTable.jsx';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
 import DigitalAnswerSheetEvaluationSystem from './DigitalEvaluation/DigitalAnswerSheetEvaluationSystem.jsx';
 import TimetableManager from './TimetableManagement/TimetableManager.jsx';
+import PublicTimetable from './PublicTimetable.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import FacultyClassSelector from './FacultyClassSelector.jsx';
 import FacultyComplaintsModule from './FacultyComplaintsModule.jsx';
@@ -1707,113 +1708,6 @@ export default function FacultyPortal({ account, onLogout }) {
                 </div>
               </div>
 
-              {/* ── ROW 2 (2 cards): Upcoming Events & Deadlines | Recent Activities ── */}
-              <div className="fac-dashboard-row-2col">
-                {/* Card 1: Upcoming Events & Deadlines */}
-                <div className="fac-card">
-                  <div className="fac-card-header">
-                    <div className="fac-card-title-wrap">
-                      <CalendarDays size={18} className="fac-card-title-icon text-blue" />
-                      <h3 className="fac-card-title">Upcoming Events &amp; Deadlines</h3>
-                    </div>
-                    <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('timetable')}>
-                      View All →
-                    </button>
-                  </div>
-                  <div className="fac-timeline-list">
-                    <div className="fac-timeline-item">
-                      <div className="fac-timeline-date">
-                        <strong className="tl-day">28</strong>
-                        <span className="tl-mo">Oct</span>
-                      </div>
-                      <div className="fac-timeline-content">
-                        <div className="tl-title">Internal Test - Data Structures</div>
-                        <div className="tl-sub">10:00 AM - 12:00 PM</div>
-                      </div>
-                      <span className="fac-tag-badge tag-exam">Exam</span>
-                    </div>
-
-                    <div className="fac-timeline-item">
-                      <div className="fac-timeline-date">
-                        <strong className="tl-day">30</strong>
-                        <span className="tl-mo">Oct</span>
-                      </div>
-                      <div className="fac-timeline-content">
-                        <div className="tl-title">Assignment Submission (AI/ML)</div>
-                        <div className="tl-sub">11:59 PM</div>
-                      </div>
-                      <span className="fac-tag-badge tag-assignment">Assignment</span>
-                    </div>
-
-                    <div className="fac-timeline-item">
-                      <div className="fac-timeline-date">
-                        <strong className="tl-day">02</strong>
-                        <span className="tl-mo">Nov</span>
-                      </div>
-                      <div className="fac-timeline-content">
-                        <div className="tl-title">Department Seminar</div>
-                        <div className="tl-sub">10:00 AM</div>
-                      </div>
-                      <span className="fac-tag-badge tag-event">Event</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 2: Recent Activities */}
-                <div className="fac-card">
-                  <div className="fac-card-header">
-                    <div className="fac-card-title-wrap">
-                      <Clock size={18} className="fac-card-title-icon text-blue" />
-                      <h3 className="fac-card-title">Recent Activities</h3>
-                    </div>
-                    <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('notifications')}>
-                      View All →
-                    </button>
-                  </div>
-                  <div className="fac-activity-list">
-                    <div className="fac-activity-item">
-                      <div className="fac-act-icon-wrap bg-amber-soft">
-                        🏆
-                      </div>
-                      <div className="fac-act-info">
-                        <div className="fac-act-desc">Marks uploaded for CSE-3B</div>
-                      </div>
-                      <span className="fac-act-time">2 hours ago</span>
-                    </div>
-
-                    <div className="fac-activity-item">
-                      <div className="fac-act-icon-wrap bg-green-soft">
-                        <CheckCircle2 size={16} className="text-green" />
-                      </div>
-                      <div className="fac-act-info">
-                        <div className="fac-act-desc">Attendance marked for CSE-3A</div>
-                      </div>
-                      <span className="fac-act-time">3 hours ago</span>
-                    </div>
-
-                    <div className="fac-activity-item">
-                      <div className="fac-act-icon-wrap bg-red-soft">
-                        <Megaphone size={16} className="text-red" />
-                      </div>
-                      <div className="fac-act-info">
-                        <div className="fac-act-desc">New notice: College Fest 2025</div>
-                      </div>
-                      <span className="fac-act-time">4 hours ago</span>
-                    </div>
-
-                    <div className="fac-activity-item">
-                      <div className="fac-act-icon-wrap bg-green-soft">
-                        ₹
-                      </div>
-                      <div className="fac-act-info">
-                        <div className="fac-act-desc">Fee payment received (₹12,000)</div>
-                      </div>
-                      <span className="fac-act-time">5 hours ago</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* ── ROW 3 (2 cards): Academic Calendar | Holiday & Recess List ── */}
               <div className="fac-dashboard-row-2col">
                 <CalendarWidget account={account} className="fac-calendar-widget-card" />
@@ -2782,7 +2676,7 @@ export default function FacultyPortal({ account, onLogout }) {
 
           {/* TAB: TEACHING TIMETABLE */}
           {activeTab === 'timetable' && (
-            <TimetableManager account={account} />
+            <PublicTimetable account={account} role="faculty" onClose={() => setActiveTab('dashboard')} embedded={true} />
           )}
 
           {/* TAB 5: CLASS PERFORMANCE & ANALYTICS */}

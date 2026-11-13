@@ -42,6 +42,15 @@ export default function EquipmentInventoryTab({
   const [showAddEqModal, setShowAddEqModal] = useState(false);
   const [showStockModal, setShowStockModal] = useState(false);
   const [stockActionItem, setStockActionItem] = useState(null);
+  const [showReqModal, setShowReqModal] = useState(false);
+  const [reqFormData, setReqFormData] = useState({
+    equipmentName: '',
+    category: '',
+    quantity: 1,
+    urgency: 'Normal',
+    labId: activeLabId || '',
+    reason: ''
+  });
 
   // Return asset modal state
   const [returningIssue, setReturningIssue] = useState(null);
@@ -280,6 +289,27 @@ export default function EquipmentInventoryTab({
 
               <button
                 type="button"
+                onClick={() => setShowReqModal(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#ea580c',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '7px 16px',
+                  borderRadius: '6px',
+                  fontSize: '0.84rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(234, 88, 12, 0.25)'
+                }}
+              >
+                <Plus size={16} /> Request New Instrument
+              </button>
+
+              <button
+                type="button"
                 onClick={() => onOpenQuickAction?.('register-equipment')}
                 style={{
                   display: 'flex',
@@ -315,6 +345,8 @@ export default function EquipmentInventoryTab({
                     <th style={{ padding: '12px 14px' }}>Equipment Name &amp; Model</th>
                     <th style={{ padding: '12px 14px' }}>Category</th>
                     <th style={{ padding: '12px 14px' }}>Lab Location</th>
+                    <th style={{ padding: '12px 14px' }}>Qty (Avail/Total)</th>
+                    <th style={{ padding: '12px 14px' }}>Issued</th>
                     <th style={{ padding: '12px 14px' }}>Condition</th>
                     <th style={{ padding: '12px 14px' }}>Calibration Due</th>
                     <th style={{ padding: '12px 14px' }}>Availability Status</th>
@@ -330,11 +362,17 @@ export default function EquipmentInventoryTab({
                       <td style={{ padding: '12px 14px' }}>
                         <div style={{ fontWeight: 700, color: '#0f172a' }}>{eq.name}</div>
                         <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                          Model: {eq.model} · S/N: {eq.serialNo}
+                          Model: {eq.model || 'Standard Enterprise Model'} · S/N: {eq.serialNo || eq.id}
                         </div>
                       </td>
                       <td style={{ padding: '12px 14px', color: '#475569' }}>{eq.category}</td>
                       <td style={{ padding: '12px 14px', fontWeight: 600 }}>{eq.assignedLab}</td>
+                      <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0f172a' }}>
+                        <span style={{ color: '#16a34a' }}>{eq.availableQuantity ?? eq.quantity ?? 1}</span> / {eq.quantity ?? 1}
+                      </td>
+                      <td style={{ padding: '12px 14px', color: '#64748b' }}>
+                        {eq.issuedQuantity || 0}
+                      </td>
                       <td style={{ padding: '12px 14px' }}>
                         <span style={{
                           padding: '2px 8px',
@@ -969,6 +1007,328 @@ export default function EquipmentInventoryTab({
                   style={{ background: '#2563eb', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   Confirm Movement
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* EQUIPMENT DETAILS MODAL (All 11 Required Spec Fields) */}
+      {/* ========================================================================= */}
+      {selectedAssetDetail && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            maxWidth: '620px',
+            width: '100%',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            <div style={{
+              background: '#0b1830',
+              color: '#ffffff',
+              padding: '16px 22px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#93c5fd', textTransform: 'uppercase', fontWeight: 800 }}>
+                  Equipment Specification &amp; Asset Card
+                </span>
+                <h3 style={{ margin: '2px 0 0', fontSize: '1.15rem', fontWeight: 800 }}>
+                  {selectedAssetDetail.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAssetDetail(null)}
+                style={{ background: 'transparent', border: 'none', color: '#ffffff', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '75vh', overflowY: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>1. Equipment ID</div>
+                  <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>{selectedAssetDetail.id}</div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>2. Equipment Name</div>
+                  <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>{selectedAssetDetail.name}</div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>3. Category</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#2563eb', marginTop: '2px' }}>{selectedAssetDetail.category}</div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>4. Branch / Discipline</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{selectedAssetDetail.department || currentBranch}</div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>5. Laboratory</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{selectedAssetDetail.assignedLab}</div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>6. Total Quantity</div>
+                  <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>{selectedAssetDetail.quantity || 1} Units</div>
+                </div>
+
+                <div style={{ background: '#dcfce7', padding: '12px 14px', borderRadius: '8px', border: '1px solid #86efac' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#166534', textTransform: 'uppercase', fontWeight: 700 }}>7. Available Quantity</div>
+                  <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#15803d', marginTop: '2px' }}>{selectedAssetDetail.availableQuantity ?? selectedAssetDetail.quantity ?? 1} Units</div>
+                </div>
+
+                <div style={{ background: '#fef3c7', padding: '12px 14px', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#92400e', textTransform: 'uppercase', fontWeight: 700 }}>8. Issued Quantity</div>
+                  <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#b45309', marginTop: '2px' }}>{selectedAssetDetail.issuedQuantity || 0} Units</div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>9. Condition</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: selectedAssetDetail.condition === 'Damaged' ? '#dc2626' : '#15803d', marginTop: '2px' }}>
+                    {selectedAssetDetail.condition || 'Operational'}
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>10. Current Status</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
+                    {selectedAssetDetail.status || 'Available'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Purchase Information */}
+              <div style={{ background: '#f1f5f9', padding: '12px 16px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                <div style={{ fontSize: '0.72rem', color: '#475569', textTransform: 'uppercase', fontWeight: 800 }}>
+                  11. Purchase Information &amp; Procurement Record
+                </div>
+                <div style={{ fontSize: '0.86rem', color: '#0f172a', marginTop: '4px', fontWeight: 600 }}>
+                  {selectedAssetDetail.purchaseInfo || `PO-${selectedAssetDetail.purchaseDate?.slice(0, 4) || '2024'}-CAMPUS | GeM Government e-Marketplace | Purchased: ${selectedAssetDetail.purchaseDate || '15 Aug 2023'} | Serial: ${selectedAssetDetail.serialNo}`}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAssetDetail(null)}
+                  style={{
+                    background: '#0f172a',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '8px 20px',
+                    borderRadius: '6px',
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Close Asset Card
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* REQUEST NEW INSTRUMENT MODAL (Workflow Step 1) */}
+      {/* ========================================================================= */}
+      {showReqModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            maxWidth: '540px',
+            width: '100%',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+              color: '#ffffff',
+              padding: '16px 22px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#fed7aa', textTransform: 'uppercase', fontWeight: 800 }}>
+                  Equipment &amp; Inventory Workflow
+                </span>
+                <h3 style={{ margin: '2px 0 0', fontSize: '1.15rem', fontWeight: 800 }}>
+                  Request New Instrument ({currentBranch})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReqModal(false)}
+                style={{ background: 'transparent', border: 'none', color: '#ffffff', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!reqFormData.equipmentName) {
+                  alert('Please enter equipment name');
+                  return;
+                }
+                const newReq = labStaffStore.createRequisition({
+                  department: currentBranch,
+                  labId: reqFormData.labId || activeLabId,
+                  itemName: reqFormData.equipmentName,
+                  quantity: Number(reqFormData.quantity),
+                  unit: 'Units',
+                  priority: reqFormData.urgency,
+                  reason: reqFormData.reason || 'Curriculum laboratory expansion and replacement.',
+                  estimatedBudget: Number(reqFormData.quantity) * 15000,
+                  requestingStaff: profile.name,
+                });
+                onSuccessToast?.(`Requisition for ${reqFormData.quantity}x ${reqFormData.equipmentName} submitted to Admin for approval!`);
+                setShowReqModal(false);
+                setReqFormData({
+                  equipmentName: '',
+                  category: '',
+                  quantity: 1,
+                  urgency: 'Normal',
+                  labId: activeLabId || '',
+                  reason: ''
+                });
+              }}
+              style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '14px' }}
+            >
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: '#0f172a' }}>
+                  1. Instrument / Equipment Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Digital Storage Oscilloscope 100MHz / High-Speed Centrifuge"
+                  value={reqFormData.equipmentName}
+                  onChange={(e) => setReqFormData({ ...reqFormData, equipmentName: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.86rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: '#0f172a' }}>
+                    2. Required Quantity *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={reqFormData.quantity}
+                    onChange={(e) => setReqFormData({ ...reqFormData, quantity: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.86rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: '#0f172a' }}>
+                    3. Target Laboratory *
+                  </label>
+                  <select
+                    value={reqFormData.labId || activeLabId}
+                    onChange={(e) => setReqFormData({ ...reqFormData, labId: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.86rem' }}
+                  >
+                    {branchEquipment.map(e => e.assignedLab).filter((v, i, a) => a.indexOf(v) === i).map(lab => (
+                      <option key={lab} value={lab}>{lab}</option>
+                    ))}
+                    {BRANCHES_CONFIG[currentBranch]?.defaultLab && (
+                      <option value={BRANCHES_CONFIG[currentBranch].defaultLab}>
+                        {BRANCHES_CONFIG[currentBranch].defaultLab}
+                      </option>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: '#0f172a' }}>
+                  4. Urgency Level
+                </label>
+                <select
+                  value={reqFormData.urgency}
+                  onChange={(e) => setReqFormData({ ...reqFormData, urgency: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.86rem' }}
+                >
+                  <option value="Normal">Normal (Next procurement cycle)</option>
+                  <option value="High">High (Required for upcoming practicals)</option>
+                  <option value="Critical">Critical (Immediate session blocker)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: '#0f172a' }}>
+                  5. Reason / Justification for Requisition *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Describe academic necessity, student batch size, or replacement of unserviceable units..."
+                  value={reqFormData.reason}
+                  onChange={(e) => setReqFormData({ ...reqFormData, reason: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.86rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowReqModal(false)}
+                  style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '9px 18px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ background: '#ea580c', color: '#ffffff', border: 'none', padding: '9px 22px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Submit Requisition to Admin →
                 </button>
               </div>
             </form>

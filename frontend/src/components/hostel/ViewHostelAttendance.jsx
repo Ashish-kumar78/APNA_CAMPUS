@@ -764,7 +764,7 @@ export default function ViewHostelAttendance({ account, onNavigateTab, isHostelA
               <select
                 value={selectedHostelFilter}
                 onChange={e => handleHostelFilterChange(e.target.value)}
-                style={{ minWidth: '190px' }}
+                style={{ minWidth: '190px', height: '38px', boxSizing: 'border-box' }}
               >
                 <option value="ALL">All Residential Hostels</option>
                 {hostels.map(h => (
@@ -776,7 +776,7 @@ export default function ViewHostelAttendance({ account, onNavigateTab, isHostelA
             {/* 2. Choose Date (Date Picker) according to user choice */}
             <div className="filter-item">
               <label>Choose Date:</label>
-              <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', height: '38px' }}>
                 <input
                   type="date"
                   value={selectedDate}
@@ -785,20 +785,44 @@ export default function ViewHostelAttendance({ account, onNavigateTab, isHostelA
                     setSelectedSubmissionId(null);
                   }}
                   style={{
-                    padding: '6px 10px',
+                    height: '38px',
+                    minHeight: '38px',
+                    maxHeight: '38px',
+                    padding: '0 10px',
                     border: '1px solid #cbd5e1',
                     borderRadius: '6px',
                     fontSize: '0.84rem',
                     background: '#fff',
                     color: '#0f172a',
                     outline: 'none',
-                    fontWeight: 600
+                    fontWeight: 600,
+                    boxSizing: 'border-box',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center'
                   }}
                 />
                 <button
                   type="button"
                   className="had-btn had-btn-secondary"
-                  style={{ padding: '0.3rem 0.55rem', fontSize: '0.72rem' }}
+                  style={{
+                    height: '38px',
+                    minHeight: '38px',
+                    maxHeight: '38px',
+                    padding: '0 10px',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#334155',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxSizing: 'border-box',
+                    whiteSpace: 'nowrap'
+                  }}
                   title="Show All Dates / Historical Registers"
                   onClick={() => {
                     setSelectedDate('');
@@ -810,7 +834,24 @@ export default function ViewHostelAttendance({ account, onNavigateTab, isHostelA
                 <button
                   type="button"
                   className="had-btn had-btn-secondary"
-                  style={{ padding: '0.3rem 0.55rem', fontSize: '0.72rem' }}
+                  style={{
+                    height: '38px',
+                    minHeight: '38px',
+                    maxHeight: '38px',
+                    padding: '0 10px',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#334155',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxSizing: 'border-box',
+                    whiteSpace: 'nowrap'
+                  }}
                   title="Set date to Today"
                   onClick={() => {
                     setSelectedDate(new Date().toISOString().split('T')[0]);
@@ -828,6 +869,7 @@ export default function ViewHostelAttendance({ account, onNavigateTab, isHostelA
               <select
                 value={selectedSessionFilter}
                 onChange={e => setSelectedSessionFilter(e.target.value)}
+                style={{ minWidth: '180px', height: '38px', boxSizing: 'border-box' }}
               >
                 <option value="ALL">All Sessions</option>
                 <option value="Night Roll Call (08:30 PM)">Night Roll Call (08:30 PM)</option>
@@ -841,6 +883,7 @@ export default function ViewHostelAttendance({ account, onNavigateTab, isHostelA
               <select
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
+                style={{ minWidth: '150px', height: '38px', boxSizing: 'border-box' }}
               >
                 <option value="ALL">All Statuses</option>
                 <option value="Present">Present Only</option>
@@ -852,16 +895,19 @@ export default function ViewHostelAttendance({ account, onNavigateTab, isHostelA
             {/* View Mode Toggle */}
             <div className="filter-item">
               <label>View Mode:</label>
-              <div style={{ display: 'flex', gap: '0.25rem', background: '#f1f5f9', padding: '2px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+              <div style={{ display: 'flex', gap: '0.25rem', background: '#f1f5f9', padding: '3px', borderRadius: '6px', border: '1px solid #cbd5e1', height: '38px', boxSizing: 'border-box', alignItems: 'center' }}>
                 <button
                   type="button"
                   style={{
-                    padding: '4px 10px',
+                    height: '30px',
+                    padding: '0 10px',
                     fontSize: '0.75rem',
                     fontWeight: 600,
                     borderRadius: '4px',
                     border: 'none',
                     cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
                     background: viewMode === 'sheet' ? '#2563eb' : 'transparent',
                     color: viewMode === 'sheet' ? '#fff' : '#64748b'
                   }}
@@ -872,12 +918,15 @@ export default function ViewHostelAttendance({ account, onNavigateTab, isHostelA
                 <button
                   type="button"
                   style={{
-                    padding: '4px 10px',
+                    height: '30px',
+                    padding: '0 10px',
                     fontSize: '0.75rem',
                     fontWeight: 600,
                     borderRadius: '4px',
                     border: 'none',
                     cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
                     background: viewMode === 'log' ? '#2563eb' : 'transparent',
                     color: viewMode === 'log' ? '#fff' : '#64748b'
                   }}

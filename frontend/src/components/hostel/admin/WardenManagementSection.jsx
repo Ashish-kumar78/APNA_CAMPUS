@@ -168,8 +168,9 @@ export default function WardenManagementSection({ account, initialTab = 'directo
   const [addHostelForm, setAddHostelForm] = useState({
     name: '',
     type: 'Boys',
-    totalFloors: 3,
+    totalFloors: 2,
     totalRooms: 50,
+    bedsPerRoom: 3,
     totalBeds: 150,
     warden: '',
     contact: ''
@@ -585,22 +586,6 @@ export default function WardenManagementSection({ account, initialTab = 'directo
               ← Back to Directory
             </button>
           )}
-
-          <button
-            className="had-btn had-btn-primary"
-            onClick={() => setIsAddHostelModalOpen(true)}
-            style={{ background: '#2563eb', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Building2 size={14} /> + Add Hostel Complex
-          </button>
-
-          <button
-            className="had-btn had-btn-secondary"
-            onClick={() => handleOpenReassignModal()}
-            style={{ border: '1px solid #cbd5e1' }}
-          >
-            <RotateCcw size={14} /> Assign / Reassign Warden
-          </button>
         </div>
       </div>
       )}
@@ -666,7 +651,6 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                   <th>Assigned Hostel &amp; Blocks</th>
                   <th>Duty Shift</th>
                   <th>Account Status</th>
-                  <th>Attendance Compliance</th>
                   <th>Pending Tasks</th>
                   <th>Actions</th>
                 </tr>
@@ -731,15 +715,6 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                       <div style={{ fontSize: '0.72rem', color: w.dutyStatus === 'On Leave' ? '#d97706' : '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: w.dutyStatus === 'On Leave' ? '#f59e0b' : '#10b981', display: 'inline-block' }} />
                         Duty: {w.dutyStatus || 'On Duty'}
-                      </div>
-                    </td>
-                    <td>
-                      <strong>{w.attendanceCompliance}%</strong>
-                      <div className="had-progress-bar" style={{ width: '90px' }}>
-                        <div
-                          className={`had-progress-fill ${w.attendanceCompliance >= 95 ? 'emerald' : 'amber'}`}
-                          style={{ width: `${w.attendanceCompliance}%` }}
-                        />
                       </div>
                     </td>
                     <td>
@@ -981,74 +956,77 @@ export default function WardenManagementSection({ account, initialTab = 'directo
             </button>
           </div>
 
-          <table className="had-table">
-            <thead>
-              <tr>
-                <th>Warden</th>
-                <th>Hostel Scope</th>
-                <th>Attendance</th>
-                <th>Room Alloc</th>
-                <th>Leaves &amp; Passes</th>
-                <th>Complaints</th>
-                <th>Indents</th>
-                <th>Config / Policy</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {wardens.map(w => {
-                const p = getWardenPermissions(w.id);
-                return (
+          <div style={{ width: '100%', overflowX: 'auto', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '1rem' }}>
+            <table className="had-table" style={{ width: '100%', tableLayout: 'fixed' }}>
+              <thead>
+                <tr>
+                  <th style={{ width: '40%', padding: '0.9rem 1.25rem' }}>Warden</th>
+                  <th style={{ width: '40%', padding: '0.9rem 1.25rem' }}>Hostel Scope</th>
+                  <th style={{ width: '20%', padding: '0.9rem 1.25rem', textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {wardens.map(w => (
                   <tr key={w.id}>
-                    <td>
-                      <strong>{w.name}</strong>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{w.id}</div>
+                    <td style={{ padding: '1rem 1.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '50%',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          border: '2px solid #3b82f6',
+                          background: '#eff6ff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 2px 6px rgba(59, 130, 246, 0.15)'
+                        }}>
+                          {w.avatar || w.photoUrl || w.photo ? (
+                            <img
+                              src={w.avatar || w.photoUrl || w.photo}
+                              alt={w.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                if (e.target.parentElement) {
+                                  e.target.parentElement.innerText = getWardenInitials(w.name);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1d4ed8' }}>
+                              {getWardenInitials(w.name)}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <strong style={{ color: '#0f172a', fontSize: '0.92rem', display: 'block' }}>{w.name}</strong>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>ID: {w.id} · {w.designation}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td>{w.hostelName}</td>
-                    <td>
-                      <span className={`had-badge ${p.submitAttendance ? 'success' : 'neutral'}`}>
-                        {p.submitAttendance ? 'Submit' : 'View Only'}
-                      </span>
+                    <td style={{ padding: '1rem 1.25rem' }}>
+                      <strong style={{ color: '#0f172a', fontSize: '0.9rem', display: 'block' }}>{w.hostelName}</strong>
+                      <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '3px' }}>
+                        {Array.isArray(w.assignedBlocks) ? w.assignedBlocks.join(', ') : (w.assignedBlocks || 'All Blocks & Wings')}
+                      </div>
                     </td>
-                    <td>
-                      <span className={`had-badge ${p.manageRoomAllocations ? 'success' : 'neutral'}`}>
-                        {p.manageRoomAllocations ? 'Manage' : 'View'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`had-badge ${p.manageGatePasses ? 'success' : 'neutral'}`}>
-                        {p.manageGatePasses ? 'Approved' : 'Disabled'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`had-badge ${p.manageComplaints ? 'success' : 'neutral'}`}>
-                        {p.manageComplaints ? 'Active' : 'Disabled'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`had-badge ${p.createInventoryRequisitions ? 'success' : 'neutral'}`}>
-                        {p.createInventoryRequisitions ? 'Can Indent' : 'Read Only'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`had-badge ${p.editHostelConfiguration ? 'danger' : 'neutral'}`}>
-                        {p.editHostelConfiguration ? 'Granted' : 'Admin Only'}
-                      </span>
-                    </td>
-                    <td>
+                    <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
                       <button
                         className="had-btn had-btn-primary"
-                        style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
+                        style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         onClick={() => handleOpenPermissions(w)}
                       >
-                        Edit Matrix
+                        <ShieldCheck size={14} /> Edit Matrix
                       </button>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -1152,9 +1130,7 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                   <th>Warden</th>
                   <th>Designation</th>
                   <th>Assigned Hostel &amp; Blocks</th>
-                  <th>Duty Shift</th>
                   <th>Duty Status</th>
-                  <th>Relieving Official</th>
                   <th>Contact</th>
                   <th>Actions</th>
                 </tr>
@@ -1202,19 +1178,9 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                         </small>
                       </td>
                       <td>
-                        <span className="had-badge neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Clock size={11} /> {w.dutyShift || 'General / 24×7 Resident'}
-                        </span>
-                      </td>
-                      <td>
                         <span className={`wm-status-pill ${w.dutyStatus === 'On Duty' ? 'on-duty' : 'on-leave'}`}>
                           <span className="wm-pulse-dot" />
                           {w.dutyStatus === 'On Duty' ? 'On Duty' : 'On Leave'}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '0.82rem', color: w.relievingWarden && w.relievingWarden !== 'None' ? '#0f172a' : '#94a3b8', fontWeight: w.relievingWarden && w.relievingWarden !== 'None' ? 600 : 400 }}>
-                          {w.relievingWarden || 'None Assigned'}
                         </span>
                       </td>
                       <td>
@@ -2010,22 +1976,56 @@ export default function WardenManagementSection({ account, initialTab = 'directo
                       min="1"
                       className="wm-form-input"
                       value={addHostelForm.totalRooms}
-                      onChange={e => setAddHostelForm({ ...addHostelForm, totalRooms: Number(e.target.value) || 1 })}
+                      onChange={e => {
+                        const roomsVal = Number(e.target.value) || 0;
+                        const bpr = Number(addHostelForm.bedsPerRoom) || 3;
+                        setAddHostelForm({
+                          ...addHostelForm,
+                          totalRooms: roomsVal,
+                          totalBeds: roomsVal * bpr
+                        });
+                      }}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="wm-form-label">Total Bed Capacity *</label>
+                    <label className="wm-form-label">Beds in One Room (Sharing) *</label>
                     <input
                       type="number"
                       min="1"
                       className="wm-form-input"
-                      value={addHostelForm.totalBeds}
-                      onChange={e => setAddHostelForm({ ...addHostelForm, totalBeds: Number(e.target.value) || 1 })}
+                      value={addHostelForm.bedsPerRoom}
+                      onChange={e => {
+                        const bprVal = Number(e.target.value) || 0;
+                        const rooms = Number(addHostelForm.totalRooms) || 0;
+                        setAddHostelForm({
+                          ...addHostelForm,
+                          bedsPerRoom: bprVal,
+                          totalBeds: rooms * bprVal
+                        });
+                      }}
+                      placeholder="e.g. 3"
                       required
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="wm-form-label">Total Bed Capacity *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="wm-form-input"
+                    value={addHostelForm.totalBeds}
+                    onChange={e => setAddHostelForm({ ...addHostelForm, totalBeds: Number(e.target.value) || 1 })}
+                    required
+                  />
+                  <small style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: 600, marginTop: '2px', display: 'block' }}>
+                    {Number(addHostelForm.totalRooms) > 0 && Number(addHostelForm.bedsPerRoom) > 0
+                      ? `✓ Auto-calculated: ${addHostelForm.totalRooms} rooms × ${addHostelForm.bedsPerRoom} beds = ${Number(addHostelForm.totalRooms) * Number(addHostelForm.bedsPerRoom)} beds`
+                      : 'Auto-calculates bed capacity'}
+                  </small>
                 </div>
 
                 <div>

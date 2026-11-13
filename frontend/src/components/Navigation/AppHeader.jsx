@@ -6,6 +6,7 @@ import {
   Bell,
   Sliders,
   User,
+  QrCode,
 } from 'lucide-react';
 import { api } from '../../services/api.js';
 import { notificationsStore } from '../../services/notificationsStore.js';
@@ -20,6 +21,7 @@ export default function AppHeader({
   onNotificationClick,
   onOpenNotifications,
   onViewProfile,
+  onOpenDigitalId,
   portalName = 'Apna Campus',
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -174,6 +176,22 @@ export default function AppHeader({
           )}
         </button>
 
+        {/* Universal 10-Second Dynamic Pass Quick Trigger */}
+        {onOpenDigitalId && (
+          <button
+            type="button"
+            className="apna-topbar-icon-btn apna-digital-id-trigger"
+            onClick={onOpenDigitalId}
+            title="My Digital ID & 10s Dynamic Pass"
+            aria-label="Open My Digital ID & 10s Dynamic Pass"
+            style={{
+              color: '#0284c7',
+            }}
+          >
+            <QrCode size={19} />
+          </button>
+        )}
+
         {/* User Pill Button */}
         <button
           type="button"
@@ -202,6 +220,21 @@ export default function AppHeader({
               <strong>{displayName}</strong>
               <small>{displayDept}</small>
             </div>
+            {onOpenDigitalId && (
+              <button
+                type="button"
+                className="apna-user-menu-item"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  onOpenDigitalId();
+                }}
+                role="menuitem"
+                title="Open My Digital ID & 10s Dynamic Pass"
+              >
+                <QrCode size={16} style={{ color: '#0284c7' }} />
+                <span>My Digital ID & Dynamic Pass</span>
+              </button>
+            )}
             {onViewProfile && (
               <button
                 type="button"

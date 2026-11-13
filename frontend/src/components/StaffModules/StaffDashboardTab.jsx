@@ -49,16 +49,25 @@ export default function StaffDashboardTab({
   onStartSession,
   onCompleteSession
 }) {
-  // Derive real statistics from live data
+  // Derive real statistics dynamically scoped to the selected discipline/branch
   const branchLabs = laboratories.filter(l => l.department === currentBranch);
-  const todaySessions = timetable.filter(t => t.date === '2026-10-24' || t.date === new Date().toISOString().split('T')[0]);
+  const todaySessions = timetable.filter(t => 
+    (t.department === currentBranch || (!t.department && currentBranch === 'CSE')) &&
+    (t.date === '2026-10-24' || t.date === new Date().toISOString().split('T')[0])
+  );
   const branchEquipment = equipment.filter(e => e.department === currentBranch);
   const availableEq = branchEquipment.filter(e => e.status === 'Available');
-  const maintEq = branchEquipment.filter(e => e.status === 'Under Maintenance');
+  const maintEq = branchEquipment.filter(e => e.status === 'Under Maintenance' || e.condition === 'Under Maintenance');
   const branchConsumables = consumables.filter(c => c.department === currentBranch);
   const lowStockItems = branchConsumables.filter(c => c.status === 'Low Stock' || c.status === 'Critical / Out of Stock');
-  const pendingReqs = requisitions.filter(r => r.status === 'Pending Approval' || r.status === 'Submitted');
-  const openTickets = maintenanceOrders.filter(m => m.status === 'Open' || m.status === 'Assigned' || m.status === 'In Progress');
+  const pendingReqs = requisitions.filter(r => 
+    r.department === currentBranch &&
+    (r.status === 'Pending Approval' || r.status === 'Submitted' || r.status === 'Pending Admin Review')
+  );
+  const openTickets = maintenanceOrders.filter(m => 
+    m.department === currentBranch &&
+    (m.status === 'Open' || m.status === 'Assigned' || m.status === 'In Progress' || m.status === 'Submitted' || m.status === 'Pending Admin Approval')
+  );
 
   // Attendance metrics
   const totalExpected = todaySessions.reduce((acc, s) => acc + (s.expectedStudents || 0), 0);
@@ -121,7 +130,7 @@ export default function StaffDashboardTab({
             Welcome back, {profile.name}
           </h2>
           <p style={{ margin: 0, fontSize: '0.86rem', color: '#475569' }}>
-            {profile.designation} · Assigned Scope: <strong>{branchLabs.map(l => l.name).join(' & ')}</strong>
+            {profile.designation} · Assigned Scope: <strong>{branchLabs.map(l => l.name).join(' & ') || `${currentBranch} Laboratory Complex`}</strong>
           </p>
         </div>
 

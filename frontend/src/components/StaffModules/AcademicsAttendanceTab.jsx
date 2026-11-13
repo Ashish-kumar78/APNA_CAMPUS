@@ -742,7 +742,24 @@ export default function AcademicsAttendanceTab({
             </div>
             <button
               type="button"
-              onClick={() => onSuccessToast?.('Evaluation marks recorded in academic registry!')}
+              onClick={() => {
+                evaluationData.forEach(ev => {
+                  labStaffStore.saveEvaluation({
+                    id: ev.id,
+                    roll: ev.roll,
+                    name: ev.name,
+                    experiment: ev.experiment,
+                    experimentation: ev.experimentation,
+                    viva: ev.viva,
+                    recordWork: ev.recordWork,
+                    timeliness: ev.timeliness,
+                    totalScore: ev.total,
+                    remarks: ev.remarks,
+                    date: new Date().toISOString().split('T')[0]
+                  });
+                });
+                onSuccessToast?.('Continuous evaluation marks synchronized with academic registry!');
+              }}
               style={{
                 background: '#2563eb',
                 color: '#ffffff',
@@ -754,7 +771,7 @@ export default function AcademicsAttendanceTab({
                 cursor: 'pointer'
               }}
             >
-              + Evaluate Student
+              + Record &amp; Sync Evaluations
             </button>
           </div>
 

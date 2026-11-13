@@ -21,7 +21,9 @@ import {
   Send,
   MessageSquare,
   ShieldAlert,
-  Building
+  Building,
+  Trash2,
+  Edit3
 } from 'lucide-react';
 import {
   getAllResidentLeaves,
@@ -29,7 +31,9 @@ import {
   rejectResidentLeave,
   markResidentReturned,
   fetchResidentLeavesFromBackend,
-  normalizeLeaveStatus
+  normalizeLeaveStatus,
+  deleteResidentLeave,
+  updateResidentLeave
 } from '../../services/hostelResidentLeaveStore.js';
 import { isWardenSuspended, getWardenPermissions, getWardenIdFromAccount, getWardenAssignedHostel } from '../../services/wardenManagementStore.js';
 import './HostelExtraSections.css';
@@ -55,6 +59,19 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
   const [rejectionReasonText, setRejectionReasonText] = useState('');
   const [rejectionError, setRejectionError] = useState('');
 
+  // Admin Edit and Delete modal states
+  const [editModalTarget, setEditModalTarget] = useState(null);
+  const [editForm, setEditForm] = useState({
+    status: 'Pending',
+    rejectionReason: '',
+    startDate: '',
+    endDate: '',
+    days: 1,
+    reason: '',
+    guardianStatus: ''
+  });
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
+
   const isHostelAdmin = typeof propIsHostelAdmin === 'boolean'
     ? propIsHostelAdmin
     : Boolean(
@@ -64,6 +81,14 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
         account?.identity === 'WRD-ADM-01' ||
         account?.detail?.toLowerCase().includes('administrator')
       );
+
+  const isAdminRole = Boolean(
+    account?.role === 'admin' ||
+    account?.role === 'super_admin' ||
+    account?.role === 'hostel_admin' ||
+    isHostelAdmin ||
+    account?.identity === 'WRD-ADM-01'
+  );
 
   // Listen to storage events for real-time synchronization with Student Portal
   const [wardenStatusTick, setWardenStatusTick] = useState(0);
@@ -239,6 +264,50 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
       setSelectedLeaveModal(updated.find(l => l.id === id));
     }
     showToast(`✓ Student recorded as returned to hostel`);
+  };
+
+  const handleOpenEdit = (leave) => {
+    setEditModalTarget(leave);
+    setEditForm({
+      status: normalizeLeaveStatus(leave.status),
+      rejectionReason: leave.rejectionReason || '',
+      startDate: leave.startDate || '',
+      endDate: leave.endDate || '',
+      days: leave.days || 1,
+      reason: leave.reason || '',
+      guardianStatus: leave.guardianStatus || 'Consent Form Submitted Online'
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editModalTarget) return;
+    const finalStatus = normalizeLeaveStatus(editForm.status);
+    const updates = {
+      ...editForm,
+      status: finalStatus,
+      rejectionReason: finalStatus === 'Rejected' ? (editForm.rejectionReason || 'Declined by administration.') : '',
+      approvedBy: finalStatus === 'Approved' ? (account?.name || 'Hostel Administration') : editModalTarget.approvedBy,
+      rejectedBy: finalStatus === 'Rejected' ? (account?.name || 'Hostel Administration') : editModalTarget.rejectedBy,
+      returned: finalStatus === 'Approved' ? Boolean(editModalTarget.returned) : false
+    };
+
+    const updated = updateResidentLeave(editModalTarget.id, updates);
+    setLeaves(updated);
+    if (selectedLeaveModal?.id === editModalTarget.id) {
+      setSelectedLeaveModal(updated.find(l => l.id === editModalTarget.id));
+    }
+    setEditModalTarget(null);
+    showToast(`✓ Leave application ${editModalTarget.id} updated successfully by Admin`);
+  };
+
+  const handleDeleteLeave = (id) => {
+    const updated = deleteResidentLeave(id);
+    setLeaves(updated);
+    if (selectedLeaveModal?.id === id) {
+      setSelectedLeaveModal(null);
+    }
+    setDeleteConfirmTarget(null);
+    showToast(`✓ Leave application ${id} permanently deleted.`);
   };
 
   return (
@@ -489,51 +558,76 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
                         </span>
                       </td>
                       <td>
-                        {st === 'Pending' && <span className="h-badge h-badge-pending">Pending Review</span>}
-                        {st === 'Approved' && (
-                          <div>
-                            <span className="h-badge h-badge-approved">Approved</span>
-                            <div style={{ marginTop: '4px' }}>
-                              {leave.returned ? (
-                                <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 700 }}>✓ Returned</span>
-                              ) : (
-                                <span style={{ fontSize: '0.7rem', color: '#d97706', fontWeight: 700 }}>⏳ Away</span>
-                              )}
+                        {(() => {
+                          const raw = leave.status || 'Pending';
+                          const normalized = normStatus(raw);
+                          const isRejected = normalized === 'Rejected' || raw === 'Rejected';
+                          const isApproved = normalized === 'Approved' || raw === 'Approved' || raw === 'Returned' || Boolean(leave.returned);
+
+                          if (isRejected) {
+                            return (
+                              <div>
+                                <span className="h-badge h-badge-rejected" style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0.25rem 0.65rem', borderRadius: '9999px', fontWeight: 700, fontSize: '0.78rem' }}>
+                                  <XCircle size={12} /> Rejected
+                                </span>
+                                <div
+                                  className="leave-rejection-chip"
+                                  title={leave.rejectionReason}
+                                  style={{
+                                    background: '#fff1f2',
+                                    border: '1px solid #fecdd3',
+                                    borderRadius: '6px',
+                                    padding: '5px 8px',
+                                    marginTop: '4px',
+                                    fontSize: '0.74rem',
+                                    color: '#9f1239',
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: '5px',
+                                    lineHeight: '1.3'
+                                  }}
+                                >
+                                  <AlertCircle size={12} color="#e11d48" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                  <span><strong>Reason:</strong> {leave.rejectionReason || 'Parent / Guardian telephonic consent could not be verified by hostel office.'}</span>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (isApproved) {
+                            return (
+                              <div>
+                                <span className="h-badge h-badge-approved" style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0.25rem 0.65rem', borderRadius: '9999px', fontWeight: 700, fontSize: '0.78rem' }}>
+                                  <CheckCircle2 size={12} /> Approved
+                                </span>
+                                <div style={{ marginTop: '4px' }}>
+                                  {leave.returned || raw === 'Returned' ? (
+                                    <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>✓ Returned</span>
+                                  ) : (
+                                    <span style={{ fontSize: '0.7rem', color: '#d97706', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>⏳ Away</span>
+                                  )}
+                                </div>
+                                {leave.approvedBy && (
+                                  <div style={{ fontSize: '0.69rem', color: '#166534', marginTop: '2px', fontWeight: 500 }}>
+                                    Sanctioned: {leave.approvedBy}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          // Default to Pending Review (GUARANTEED NEVER BLANK!)
+                          return (
+                            <div>
+                              <span className="h-badge h-badge-pending" style={{ background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0.25rem 0.65rem', borderRadius: '9999px', fontWeight: 700, fontSize: '0.78rem' }}>
+                                <Clock size={12} /> Pending Review
+                              </span>
+                              <div style={{ fontSize: '0.69rem', color: '#92400e', marginTop: '3px' }}>
+                                Awaiting Warden Review
+                              </div>
                             </div>
-                            {leave.approvedBy && (
-                              <div style={{ fontSize: '0.69rem', color: '#166534', marginTop: '2px', fontWeight: 500 }}>
-                                Sanctioned: {leave.approvedBy}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {st === 'Rejected' && (
-                          <div>
-                            <span className="h-badge h-badge-rejected">Rejected</span>
-                            {leave.rejectionReason && (
-                              <div
-                                className="leave-rejection-chip"
-                                title={leave.rejectionReason}
-                                style={{
-                                  background: '#fff1f2',
-                                  border: '1px solid #fecdd3',
-                                  borderRadius: '6px',
-                                  padding: '4px 8px',
-                                  marginTop: '4px',
-                                  fontSize: '0.74rem',
-                                  color: '#9f1239',
-                                  display: 'flex',
-                                  alignItems: 'flex-start',
-                                  gap: '5px',
-                                  lineHeight: '1.3'
-                                }}
-                              >
-                                <AlertCircle size={12} color="#e11d48" style={{ flexShrink: 0, marginTop: '2px' }} />
-                                <span><strong>Reason:</strong> {leave.rejectionReason}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                          );
+                        })()}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -541,15 +635,16 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
                             className="h-btn h-btn-secondary"
                             style={{ padding: '4px 8px', fontSize: '0.74rem' }}
                             onClick={() => setSelectedLeaveModal(leave)}
+                            title="View full dossier"
                           >
                             <Eye size={13} /> View
                           </button>
                           {st === 'Pending' && (
-                            isSuspended ? (
+                            isSuspended && !isAdminRole ? (
                               <span className="had-badge neutral" style={{ fontSize: '0.72rem', padding: '3px 7px' }} title="Approvals locked while warden account is suspended">
                                 Read Only (Suspended)
                               </span>
-                            ) : !canReviewLeaves ? (
+                            ) : (!canReviewLeaves && !isAdminRole) ? (
                               <span
                                 className="had-badge neutral"
                                 style={{ fontSize: '0.72rem', padding: '3px 7px', cursor: 'pointer' }}
@@ -578,7 +673,7 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
                               </>
                             )
                           )}
-                          {st === 'Approved' && !leave.returned && !isSuspended && canReviewLeaves && (
+                          {st === 'Approved' && !leave.returned && (isAdminRole || (!isSuspended && canReviewLeaves)) && (
                             <button
                               className="h-btn h-btn-primary"
                               style={{ padding: '4px 8px', fontSize: '0.74rem' }}
@@ -586,6 +681,26 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
                             >
                               Mark Returned
                             </button>
+                          )}
+                          {isAdminRole && (
+                            <>
+                              <button
+                                className="h-btn h-btn-secondary"
+                                style={{ padding: '4px 8px', fontSize: '0.74rem', background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1' }}
+                                onClick={() => handleOpenEdit(leave)}
+                                title="Update leave details & status (Admin)"
+                              >
+                                <Edit3 size={13} /> Edit
+                              </button>
+                              <button
+                                className="h-btn h-btn-danger"
+                                style={{ padding: '4px 8px', fontSize: '0.74rem', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}
+                                onClick={() => setDeleteConfirmTarget(leave)}
+                                title="Permanently delete leave record (Admin)"
+                              >
+                                <Trash2 size={13} /> Delete
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -811,6 +926,201 @@ export default function HostelLeaveSection({ onNavigateApplyLeave, account, isHo
                 onClick={handleConfirmReject}
               >
                 <X size={15} /> Confirm &amp; Reject Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: ADMIN EDIT & UPDATE LEAVE APPLICATION */}
+      {editModalTarget && (
+        <div className="reject-modal-backdrop" onClick={() => setEditModalTarget(null)}>
+          <div className="reject-modal-card" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>
+            <div className="reject-modal-header" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ background: '#eff6ff', padding: '8px', borderRadius: '8px', color: '#2563eb' }}>
+                  <Edit3 size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>
+                    Edit Leave Application · {editModalTarget.id}
+                  </h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                    Administrative update for <strong>{editModalTarget.studentName}</strong> ({editModalTarget.rollNumber || editModalTarget.regNo})
+                  </p>
+                </div>
+              </div>
+              <button className="admin-table-action-btn" onClick={() => setEditModalTarget(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="reject-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  Application Status *
+                </label>
+                <select
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.88rem', background: '#ffffff', color: '#0f172a' }}
+                  value={editForm.status}
+                  onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                >
+                  <option value="Pending">Pending (Under Review)</option>
+                  <option value="Approved">Approved (Sanctioned for Campus Exit)</option>
+                  <option value="Rejected">Rejected (Declined with Reason)</option>
+                </select>
+              </div>
+
+              {editForm.status === 'Rejected' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#b91c1c', marginBottom: '4px', textTransform: 'uppercase' }}>
+                    Rejection Reason *
+                  </label>
+                  <textarea
+                    rows={3}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fff1f2', fontSize: '0.85rem', color: '#9f1239', boxSizing: 'border-box' }}
+                    placeholder="Provide specific reason for rejection..."
+                    value={editForm.rejectionReason}
+                    onChange={e => setEditForm({ ...editForm, rejectionReason: e.target.value })}
+                  />
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+                    {PRESET_REJECTION_REASONS.slice(0, 3).map((r, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '4px', border: '1px solid #fecdd3', background: '#ffffff', color: '#9f1239', cursor: 'pointer' }}
+                        onClick={() => setEditForm({ ...editForm, rejectionReason: r })}
+                      >
+                        + {r.slice(0, 38)}...
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                    START DATE
+                  </label>
+                  <input
+                    type="date"
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                    value={editForm.startDate}
+                    onChange={e => setEditForm({ ...editForm, startDate: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                    END DATE
+                  </label>
+                  <input
+                    type="date"
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                    value={editForm.endDate}
+                    onChange={e => setEditForm({ ...editForm, endDate: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  PURPOSE / REASON FOR LEAVE
+                </label>
+                <input
+                  type="text"
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  value={editForm.reason}
+                  onChange={e => setEditForm({ ...editForm, reason: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  GUARDIAN VERIFICATION STATUS
+                </label>
+                <select
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', background: '#ffffff' }}
+                  value={editForm.guardianStatus}
+                  onChange={e => setEditForm({ ...editForm, guardianStatus: e.target.value })}
+                >
+                  <option value="Consent Form Submitted Online">Consent Form Submitted Online</option>
+                  <option value="Verified via Phone Call">Verified via Phone Call</option>
+                  <option value="SMS Awaiting Confirmation">SMS Awaiting Confirmation</option>
+                  <option value="Faculty & Guardian Consent Letter Attached">Faculty & Guardian Consent Letter Attached</option>
+                  <option value="Guardian Disapproved">Guardian Disapproved</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="reject-modal-footer" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                type="button"
+                className="h-btn h-btn-secondary"
+                onClick={() => setEditModalTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="h-btn h-btn-primary"
+                style={{ background: '#2563eb', color: '#ffffff', padding: '8px 18px', fontSize: '0.88rem' }}
+                onClick={handleSaveEdit}
+              >
+                <Check size={15} /> Save &amp; Update Application
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: ADMIN DELETE CONFIRMATION */}
+      {deleteConfirmTarget && (
+        <div className="reject-modal-backdrop" onClick={() => setDeleteConfirmTarget(null)}>
+          <div className="reject-modal-card" style={{ maxWidth: '440px' }} onClick={e => e.stopPropagation()}>
+            <div className="reject-modal-header" style={{ borderBottom: '1px solid #fee2e2' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ background: '#fee2e2', padding: '8px', borderRadius: '8px', color: '#b91c1c' }}>
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#991b1b' }}>
+                    Delete Leave Application?
+                  </h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                    Application ID: <strong>{deleteConfirmTarget.id}</strong>
+                  </p>
+                </div>
+              </div>
+              <button className="admin-table-action-btn" onClick={() => setDeleteConfirmTarget(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="reject-modal-body" style={{ paddingTop: '14px', fontSize: '0.88rem', color: '#334155', lineHeight: '1.5' }}>
+              <p style={{ margin: '0 0 10px 0' }}>
+                Are you sure you want to permanently delete the outstation leave application for <strong>{deleteConfirmTarget.studentName}</strong> ({deleteConfirmTarget.hostelName})?
+              </p>
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '8px 12px', fontSize: '0.78rem', color: '#991b1b' }}>
+                ⚠️ <strong>Permanent Action:</strong> This record will be removed from Warden, Hostel Admin, Executive Admin, and Security Guard registers.
+              </div>
+            </div>
+
+            <div className="reject-modal-footer" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                type="button"
+                className="h-btn h-btn-secondary"
+                onClick={() => setDeleteConfirmTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="h-btn h-btn-danger"
+                style={{ padding: '8px 18px', fontSize: '0.88rem' }}
+                onClick={() => handleDeleteLeave(deleteConfirmTarget.id)}
+              >
+                <Trash2 size={15} /> Confirm &amp; Delete
               </button>
             </div>
           </div>

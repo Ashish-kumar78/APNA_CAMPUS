@@ -52,6 +52,8 @@ import StaffPortal from './components/StaffPortal.jsx'
 import AdmissionsPortal from './components/AdmissionsPortal.jsx'
 import ScholarshipPortal from './components/ScholarshipPortal.jsx'
 import CampusOperationsPortal from './components/CampusOperations/CampusOperationsPortal.jsx'
+import SecurityPortal from './components/SecurityPortal.jsx'
+import MessManagerPortal from './components/MessManagerPortal.jsx'
 import AccountActivationModal from './components/AccountActivationModal.jsx'
 import ForgotPasswordModal from './components/ForgotPasswordModal.jsx'
 import UniversalWhatsAppLauncher from './components/CampusConnect/UniversalWhatsAppLauncher.jsx'
@@ -254,12 +256,54 @@ const accounts = {
     department: 'Hostel Administration Office',
     detail: 'Hostel Chief Administrator & Housing Ops',
   },
+  'security': {
+    role: 'security',
+    name: 'Dillip Kumar Pradhan',
+    identity: 'SEC-101',
+    department: 'Campus Security & Gate Vigilance',
+    detail: 'Main Campus Gate 1 (Front Entrance) · Badge SG-OD-4421',
+  },
+  'sec-101': {
+    role: 'security',
+    name: 'Dillip Kumar Pradhan',
+    identity: 'SEC-101',
+    department: 'Campus Security & Gate Vigilance',
+    detail: 'Main Campus Gate 1 (Front Entrance) · Badge SG-OD-4421',
+  },
+  'sec-102': {
+    role: 'security',
+    name: 'Bhuban Mohan Senapati',
+    identity: 'SEC-102',
+    department: 'Campus Security & Gate Vigilance',
+    detail: 'Girls Hostel Gate & Boundary Checkpoint · Badge SG-OD-4422',
+  },
   'wrd-adm-01': {
     role: 'hostel_admin',
     name: 'Mr. Rajesh Jena',
     identity: 'WRD-ADM-01',
     department: 'Hostel Administration Office',
     detail: 'Hostel Chief Administrator & Housing Ops',
+  },
+  'mess_manager': {
+    role: 'mess_manager',
+    name: 'Mr. Kailash Chandra Nayak',
+    identity: 'MESS-101',
+    department: 'Hostel Dining & Food Logistics',
+    detail: 'Chief Mess Manager & Food Safety Officer',
+  },
+  'mess': {
+    role: 'mess_manager',
+    name: 'Mr. Kailash Chandra Nayak',
+    identity: 'MESS-101',
+    department: 'Hostel Dining & Food Logistics',
+    detail: 'Chief Mess Manager & Food Safety Officer',
+  },
+  'mess-101': {
+    role: 'mess_manager',
+    name: 'Mr. Kailash Chandra Nayak',
+    identity: 'MESS-101',
+    department: 'Hostel Dining & Food Logistics',
+    detail: 'Chief Mess Manager & Food Safety Officer',
   },
   'scholarship': {
     role: 'scholarship',
@@ -364,9 +408,12 @@ const roleCopy = {
   scholarship: { label: 'Scholarship', icon: Award },
   warden: { label: 'Warden', icon: Home },
   hostel_admin: { label: 'Hostel Admin', icon: Home },
+  security: { label: 'Campus Security', icon: ShieldCheck },
   transport: { label: 'Transport', icon: ShieldCheck },
   campus_operations: { label: 'Campus Operations', icon: HardHat },
   canteen: { label: 'Canteen', icon: Utensils },
+  mess_manager: { label: 'Mess Manager', icon: Utensils },
+  mess: { label: 'Mess Manager', icon: Utensils },
 }
 
 const demoCategories = [
@@ -420,9 +467,9 @@ const demoCategories = [
     roles: [
       { key: 'warden', label: 'Warden' },
       { key: 'hostel_admin', label: 'Hostel Admin' },
+      { key: 'security', label: 'Campus Security' },
       { key: 'transport', label: 'Transport' },
-      { key: 'campus_operations', label: 'Campus Operations' },
-      { key: 'canteen', label: 'Canteen' },
+      { key: 'mess_manager', label: 'Mess Manager' },
     ],
   },
 ]
@@ -482,6 +529,18 @@ function App() {
       password: 'gift123',
       label: 'Principal',
       roleName: 'Office of the Principal',
+    },
+    security: {
+      identifier: 'SEC-101',
+      password: 'gift123',
+      label: 'Campus Security',
+      roleName: 'Head Security Guard · Gate Vigilance',
+    },
+    mess_manager: {
+      identifier: 'MESS-101',
+      password: 'gift123',
+      label: 'Mess Manager',
+      roleName: 'Chief Mess Manager & Food Safety Officer',
     },
   }
 
@@ -769,12 +828,16 @@ function App() {
       portal = <TransportPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'placement') {
       portal = <PlacementPortal account={account} onLogout={handleLogout} />
-    } else if (account.role === 'staff') {
+    } else if (account.role === 'staff' || account.role === 'technician' || account.role === 'lab_assistant' || account.role === 'lab_incharge' || account.role === 'lab_staff') {
       portal = <StaffPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'canteen') {
       portal = <CanteenPortal account={account} onLogout={handleLogout} />
+    } else if (account.role === 'mess_manager' || account.role === 'mess') {
+      portal = <MessManagerPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'campus_operations') {
       portal = <CampusOperationsPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
+    } else if (account.role === 'security' || account.role === 'security_guard') {
+      portal = <SecurityPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'admissions') {
       portal = <AdmissionsPortal account={account} onLogout={handleLogout} onSwitchRole={handleQuickLogin} />
     } else if (account.role === 'student') {

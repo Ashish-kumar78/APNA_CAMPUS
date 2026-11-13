@@ -59,7 +59,70 @@ export default function HostelMaintenanceSection({ account, isHostelAdmin = fals
     const perms = getWardenPermissions(wardenId);
     return perms.manageComplaints !== false;
   }, [isHostelAdmin, isSuspended, wardenId, permsTick]);
-  const [requests, setRequests] = useState(mockMaintenanceRequests);
+  const [requests, setRequests] = useState(() => {
+    try {
+      const raw = localStorage.getItem('bput_hostel_complaints_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const adapted = parsed.map(c => ({
+            id: c.id,
+            category: c.category || 'General',
+            title: c.title,
+            hostelName: c.hostel || 'Sarojini Girls Residence (Block A)',
+            roomOrArea: c.location || `Room ${c.roomNumber || '204'}`,
+            priority: c.priority || 'Medium',
+            assignedStaff: c.assignedStaffName || 'Pending Warden Approval',
+            status: (c.status === 'Submitted' || c.status === 'Pending Warden Approval' || c.status === 'Pending') ? 'Pending' : (c.status === 'Resolved' || c.status === 'Completed' ? 'Completed' : 'In Progress'),
+            filedDate: c.filedDate || 'Today',
+            completionTarget: '72 Hours SLA',
+            notes: c.resolutionNotes || c.description,
+            attachmentUrl: c.imageUrl || c.attachmentUrl || null
+          }));
+          const existingIds = new Set(adapted.map(a => a.id));
+          return [...adapted, ...mockMaintenanceRequests.filter(m => !existingIds.has(m.id))];
+        }
+      }
+    } catch {}
+    return mockMaintenanceRequests;
+  });
+
+  React.useEffect(() => {
+    const handleComplaintsSync = () => {
+      try {
+        const raw = localStorage.getItem('bput_hostel_complaints_v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const adapted = parsed.map(c => ({
+              id: c.id,
+              category: c.category || 'General',
+              title: c.title,
+              hostelName: c.hostel || 'Sarojini Girls Residence (Block A)',
+              roomOrArea: c.location || `Room ${c.roomNumber || '204'}`,
+              priority: c.priority || 'Medium',
+              assignedStaff: c.assignedStaffName || 'Pending Warden Approval',
+              status: (c.status === 'Submitted' || c.status === 'Pending Warden Approval' || c.status === 'Pending') ? 'Pending' : (c.status === 'Resolved' || c.status === 'Completed' ? 'Completed' : 'In Progress'),
+              filedDate: c.filedDate || 'Today',
+              completionTarget: '72 Hours SLA',
+              notes: c.resolutionNotes || c.description,
+              attachmentUrl: c.imageUrl || c.attachmentUrl || null
+            }));
+            const existingIds = new Set(adapted.map(a => a.id));
+            setRequests([...adapted, ...mockMaintenanceRequests.filter(m => !existingIds.has(m.id))]);
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener('bput_hostel_complaints_updated', handleComplaintsSync);
+    window.addEventListener('bput_complaint_created', handleComplaintsSync);
+    window.addEventListener('storage', handleComplaintsSync);
+    return () => {
+      window.removeEventListener('bput_hostel_complaints_updated', handleComplaintsSync);
+      window.removeEventListener('bput_complaint_created', handleComplaintsSync);
+      window.removeEventListener('storage', handleComplaintsSync);
+    };
+  }, []);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,6 +181,19 @@ export default function HostelMaintenanceSection({ account, isHostelAdmin = fals
     if (selectedRequestModal?.id === id) {
       setSelectedRequestModal(prev => ({ ...prev, status: newStatus }));
     }
+
+    try {
+      const raw = localStorage.getItem('bput_hostel_complaints_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const mappedStatus = newStatus === 'In Progress' ? 'Assigned' : (newStatus === 'Completed' ? 'Awaiting Student Verification' : newStatus);
+        const updated = parsed.map(c => c.id === id ? { ...c, status: mappedStatus } : c);
+        localStorage.setItem('bput_hostel_complaints_v1', JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('bput_hostel_complaints_updated', { detail: updated }));
+        window.dispatchEvent(new Event('storage'));
+      }
+    } catch {}
+
     showToast(`Work order ${id} marked as ${newStatus}`);
   };
 

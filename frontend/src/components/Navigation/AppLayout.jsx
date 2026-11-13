@@ -7,6 +7,7 @@ import { getMenuConfigForRole } from '../../config/menuConfig/index.js';
 import BreadcrumbRow from './BreadcrumbRow.jsx';
 import PageHeader from './PageHeader.jsx';
 import InstitutionalNotificationDrawer from './InstitutionalNotificationDrawer.jsx';
+import UniversalDigitalIdModal from '../Security/UniversalDigitalIdModal.jsx';
 import AccessibilityPanel from '../Accessibility/AccessibilityPanel.jsx';
 import ScreenReaderAnnouncer from '../Accessibility/ScreenReaderAnnouncer.jsx';
 import { useAccessibility } from '../../context/AccessibilityContext.jsx';
@@ -43,11 +44,15 @@ export default function AppLayout({
   // Mobile drawer open state
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [digitalIdOpen, setDigitalIdOpen] = useState(false);
   const mainWorkspaceRef = React.useRef(null);
 
   // Close mobile drawer on navigation / activeTab change & reset workspace scroll
   useEffect(() => {
     setMobileOpen(false);
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = '';
+    }
     if (mainWorkspaceRef.current) {
       try {
         mainWorkspaceRef.current.scrollTo({ top: 0, behavior: 'instant' });
@@ -197,6 +202,7 @@ export default function AppLayout({
         onLogout={onLogout}
         onOpenNotifications={() => setNotificationsOpen(true)}
         onViewProfile={() => onTabChange && onTabChange('profile')}
+        onOpenDigitalId={() => setDigitalIdOpen(true)}
         portalName={portalName}
       />
 
@@ -251,6 +257,15 @@ export default function AppLayout({
         account={account}
         onNavigateTab={onTabChange}
       />
+
+      {/* Universal 10-Second Dynamic QR & Digital ID Modal Accessible From Any Portal View */}
+      {account && (
+        <UniversalDigitalIdModal
+          isOpen={digitalIdOpen}
+          onClose={() => setDigitalIdOpen(false)}
+          user={account}
+        />
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import PublicTimetable from '../components/PublicTimetable.jsx';
  * TimetablePage directly renders the institutional Apna Campus Timetables
  * matching the official class routine system.
  */
-export default function TimetablePage({ onClose }) {
+export default function TimetablePage({ account, role = 'student', onClose }) {
   const handleClose = () => {
     if (typeof onClose === 'function') {
       onClose();
@@ -14,5 +14,5 @@ export default function TimetablePage({ onClose }) {
     }
   };
 
-  return <PublicTimetable onClose={handleClose} />;
+  return <PublicTimetable account={account} role={role} onClose={handleClose} embedded={true} />;
 }

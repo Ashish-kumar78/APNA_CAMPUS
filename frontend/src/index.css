@@ -185,6 +185,33 @@ select:focus-visible {
   border-radius: var(--radius-sm);
 }
 
+/* Universal Native Select & Date Picker Option Visibility Fix for Chromium / Windows Dark Mode */
+select {
+  color-scheme: light;
+}
+
+select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+input[type="date"] {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] select,
+html.dark-mode select,
+html.dark select {
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] select option,
+html.dark-mode select option,
+html.dark select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: var(--radius-full); }

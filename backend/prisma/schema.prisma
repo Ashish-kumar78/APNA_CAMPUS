@@ -28,6 +28,8 @@ enum Role {
   ADMISSIONS
   MAINTENANCE
   NON_TEACHING
+  SECURITY
+  MESS_MANAGER
 }
 
 enum AccountStatus {
@@ -631,16 +633,220 @@ model HostelComplaint {
 }
 
 model HostelVisitor {
-  id          String   @id @default(cuid())
-  visitorName String
-  relation    String
-  studentName String
-  rollNumber  String
-  inTime      String
-  outTime     String?  @default("Pending Sign-out")
-  passNumber  String   @unique
-  purpose     String
-  createdAt   DateTime @default(now())
+  id                     String    @id @default(cuid())
+  visitorName            String
+  relation               String
+  studentName            String
+  rollNumber             String
+  inTime                 String
+  outTime                String?   @default("Pending Sign-out")
+  passNumber             String    @unique
+  purpose                String
+  phone                  String?
+  idProofNumber          String?
+  badgeNumber            String?
+  verificationCode       String?
+  verificationCodeHash   String?   @map("verification_code_hash")
+  visitDate              String?   @map("visit_date")
+  expectedArrival        String?   @map("expected_arrival")
+  actualEntry            DateTime? @map("actual_entry")
+  actualExit             DateTime? @map("actual_exit")
+  studentId              String?   @map("student_id")
+  status                 String?   @default("Approved") // "Pre-Approved", "Checked In", "Checked Out"
+  preApprovedByStudentId String?
+  registeredByGuardId    String?
+  hostelName             String?
+  gateNumber             String?   @default("Gate 1")
+  checkInTime            DateTime?
+  checkOutTime           DateTime?
+  visitType              String?   @default("PRE_REGISTERED") // "PRE_REGISTERED" or "WALK_IN"
+  hostType               String?   @default("STUDENT") // "STUDENT" or "STAFF"
+  hostUserId             String?
+  hostApprovalStatus     String?   @default("APPROVED") // "PENDING_HOST_APPROVAL", "APPROVED", "REJECTED"
+  hostApprovedAt         DateTime?
+  hostRemarks            String?
+  qrToken                String?
+  createdAt              DateTime  @default(now())
+
+  @@index([rollNumber])
+  @@index([verificationCode])
+  @@index([status])
+}
+
+model CampusGateMovement {
+  id             String    @id @default(cuid())
+  movementCode   String    @unique @default(cuid())
+  eventId        String?   @map("event_id")
+  passId         String    // Reference to gate pass (e.g. GP-2026-1042 or WorkflowRequest.id)
+  studentId      String?   @map("student_id")
+  rollNumber     String
+  studentName    String
+  department     String?
+  hostelName     String?
+  roomNumber     String?
+  direction      String    // "EXIT" or "ENTRY"
+  method         String?   @default("QR") // "QR" or "MANUAL"
+  movementTime   DateTime  @default(now())
+  gateName       String    @default("Main Campus Gate 1")
+  checkpointType String?   @default("MAIN_CAMPUS") // "MAIN_CAMPUS" or "HOSTEL_GATE"
+  identityType   String?   @default("STUDENT") // "STUDENT", "FACULTY", "STAFF", "VISITOR"
+  qrTokenId      String?
+  decisionStatus String?   @default("ENTRY_APPROVED") // "ENTRY_APPROVED", "EXIT_RECORDED", "ACCESS_DENIED", etc.
+  guardId        String    @default("SEC-101")
+  guardName      String    @default("Dillip Kumar Pradhan")
+  status         String    @default("CONFIRMED") // "CONFIRMED" or "PROVISIONAL"
+  isLate         Boolean   @default(false)
+  lateDuration   String?   // e.g. "45 mins late"
+  remarks        String?
+  parentNotified Boolean   @default(true)
+  offlineSyncId  String?   @unique
+  syncedAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([rollNumber])
+  @@index([passId])
+  @@index([direction])
+  @@index([movementTime])
+  @@index([status])
+  @@index([checkpointType])
+  @@map("campus_gate_movements")
+}
+
+model DynamicQrToken {
+  id           String    @id @default(cuid())
+  tokenHash    String    @unique
+  userId       String
+  userRole     String
+  identityType String    // "STUDENT", "FACULTY", "TEACHING_STAFF", "NON_TEACHING_STAFF", "VISITOR"
+  identifier   String?   // rollNumber or employeeId
+  nonce        String
+  issuedAt     DateTime  @default(now())
+  expiresAt    DateTime
+  usedAt       DateTime?
+  isUsed       Boolean   @default(false)
+  gateId       String?
+  createdAt    DateTime  @default(now())
+
+  @@index([tokenHash])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([isUsed])
+  @@map("dynamic_qr_tokens")
+}
+
+model GateCheckpoint {
+  id                   String    @id @default(cuid())
+  gateCode             String    @unique // e.g. "GATE-01", "GATE-HOSTEL-01"
+  name                 String
+  type                 String    // "MAIN_CAMPUS", "HOSTEL_GATE", "ENGINEERING_BLOCK", "ACADEMIC_BLOCK", "ADMIN_BLOCK", "PERIMETER"
+  assignedGuardId      String?
+  assignedGuardName    String?
+  currentShift         String?   @default("Morning Shift (06:00 - 14:00)")
+  isOnline             Boolean   @default(true)
+  allowsStudent        Boolean   @default(true)
+  allowsFaculty        Boolean   @default(true)
+  allowsStaff          Boolean   @default(true)
+  allowsVisitor        Boolean   @default(true)
+  allowsVehicle        Boolean   @default(false)
+  hardwareStatus       String?   @default("Optical Turnstiles Active")
+  totalMovementsToday  Int       @default(0)
+  createdAt            DateTime  @default(now())
+
+  @@map("gate_checkpoints")
+}
+
+model StudentMovementRequest {
+  id                     String    @id @default(cuid())
+  requestCode            String    @unique // e.g. "SMR-2026-1042"
+  studentId              String
+  studentRoll            String
+  studentName            String
+  department             String?
+  hostelName             String?
+  roomNumber             String?
+  movementType           String    // "ROUTINE_ENTRY", "ROUTINE_EXIT", "DAY_OUT", "LEAVE", "OVERNIGHT_LEAVE", "LATE_RETURN", "EMERGENCY_LEAVE"
+  reason                 String
+  destination            String
+  outDateTime            DateTime
+  expectedInDateTime     DateTime
+  actualOutDateTime      DateTime?
+  actualInDateTime       DateTime?
+  status                 String    @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED", "COMPLETED", "OVERDUE"
+  wardenId               String?
+  wardenName             String?
+  wardenRemarks          String?
+  parentApprovalRequired Boolean   @default(false)
+  parentApproved         Boolean   @default(false)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([studentRoll])
+  @@index([status])
+  @@index([movementType])
+  @@map("student_movement_requests")
+}
+
+model OverdueReturnRecord {
+  id                 String    @id @default(cuid())
+  movementRequestId  String?
+  studentRoll        String
+  studentName        String
+  hostelName         String?
+  roomNumber         String?
+  destination        String?
+  expectedReturnTime DateTime
+  actualReturnTime   DateTime?
+  overdueMinutes     Int       @default(0)
+  status             String    @default("OVERDUE") // "NOT_DEPARTED", "OUTSIDE_CAMPUS", "RETURNED", "OVERDUE", "APPROVED_LATE_RETURN", "NEEDS_FOLLOW_UP", "UNDER_REVIEW", "RESOLVED"
+  wardenAlertSent    Boolean   @default(true)
+  resolutionNotes    String?
+  resolvedBy         String?
+  resolvedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([studentRoll])
+  @@index([status])
+  @@map("overdue_return_records")
+}
+
+model ShiftHandoverLog {
+  id                     String    @id @default(cuid())
+  shiftCode              String    @unique
+  gateName               String
+  outgoingGuardId        String
+  outgoingGuardName      String
+  incomingGuardId        String
+  incomingGuardName      String
+  shiftType              String    // "Morning", "Evening", "Night"
+  gateCondition          String    @default("Operational & Secure")
+  scannerCondition       String    @default("Calibrated & Online")
+  pendingIncidentsCount  Int       @default(0)
+  pendingVisitorsCount   Int       @default(0)
+  unresolvedOverdueCount Int       @default(0)
+  equipmentStatus        String    @default("All radios, batons, optical sensors intact")
+  handoverRemarks        String?
+  acknowledgedByIncoming Boolean   @default(true)
+  acknowledgedAt         DateTime  @default(now())
+  createdAt              DateTime  @default(now())
+
+  @@map("shift_handover_logs")
+}
+
+model SecurityShiftNote {
+  id             String    @id @default(cuid())
+  securityUserId String    @map("security_user_id")
+  guardName      String?   @map("guard_name")
+  gateName       String?   @default("Main Campus Gate 1") @map("gate_name")
+  shiftDate      String    @map("shift_date")
+  shiftType      String?   @default("Morning") @map("shift_type")
+  note           String    @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([securityUserId])
+  @@index([shiftDate])
+  @@map("security_shift_notes")
 }
 
 model FoodFeedback {
@@ -967,16 +1173,117 @@ model TransportRoute {
 }
 
 model LabEquipment {
-  id            String   @id @default(cuid())
-  equipmentCode String   @unique
-  equipmentName String
-  labName       String
-  department    String
-  condition     String   @default("Operational")
-  lastServiced  String
-  inCharge      String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default(cuid())
+  equipmentCode     String   @unique
+  equipmentName     String
+  category          String   @default("Instruments")
+  labName           String
+  labCode           String?
+  department        String
+  quantity          Int      @default(1)
+  availableQuantity Int      @default(1)
+  issuedQuantity    Int      @default(0)
+  condition         String   @default("Available")
+  purchaseInfo      String?
+  unitPrice         Float    @default(0)
+  status            String   @default("Available")
+  lastServiced      String   @default("Never")
+  inCharge          String   @default("Lab In-Charge")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Laboratory {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  name           String
+  department     String
+  building       String
+  room           String
+  capacity       Int      @default(40)
+  inChargeId     String?
+  inChargeName   String?
+  assignedStaff  String?
+  status         String   @default("Operational")
+  safetyStatus   String   @default("Compliant")
+  operatingHours String?  @default("08:30 AM – 05:00 PM")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model LabRequisition {
+  id                String    @id @default(cuid())
+  requisitionNumber String    @unique
+  department        String
+  labCode           String
+  equipmentName     String
+  category          String    @default("Instruments")
+  requestedQuantity Int       @default(1)
+  estimatedCost     Float     @default(0)
+  urgency           String    @default("Normal")
+  reason            String    @db.Text
+  requesterId       String
+  requesterName     String
+  requesterRole     String    @default("STAFF")
+  status            String    @default("Submitted")
+  adminRemarks      String?   @db.Text
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  issuedBy          String?
+  issuedAt          DateTime?
+  history           Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model LabComplaintWorkOrder {
+  id                 String    @id @default(cuid())
+  complaintNumber    String    @unique
+  workOrderNumber    String?   @unique
+  department         String
+  labCode            String
+  equipmentCode      String?
+  equipmentName      String
+  issueType          String    @default("Damaged Instrument")
+  priority           String    @default("Medium")
+  description        String    @db.Text
+  photoUrl           String?
+  reporterId         String
+  reporterName       String
+  reporterRole       String    @default("STAFF")
+  status             String    @default("Submitted")
+  adminRemarks       String?   @db.Text
+  assignedTechnician String?
+  assignedAt         DateTime?
+  resolutionNotes    String?   @db.Text
+  completedAt        DateTime?
+  closedAt           DateTime?
+  history            Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model LabPracticalSession {
+  id               String   @id @default(cuid())
+  sessionCode      String   @unique
+  department       String
+  labCode          String
+  subjectCode      String
+  subjectName      String
+  facultyName      String
+  facultyId        String?
+  semester         String   @default("5th Semester")
+  section          String   @default("A")
+  batch            String   @default("Batch A1")
+  sessionDate      String
+  timeSlot         String
+  experimentTitle  String
+  expectedStudents Int      @default(30)
+  presentStudents  Int      @default(0)
+  status           String   @default("Scheduled")
+  attendanceTaken  Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model SystemSetting {
@@ -1890,8 +2197,13 @@ model SecurityIncident {
   category        String
   severity        String    // low, medium, high, critical
   status          String    @default("open") // open, investigating, resolved, closed
-  affectedAccount String
-  sourceIp        String?
+  affectedAccount     String
+  reportedByGuardId   String?   @map("reported_by_guard_id")
+  reportedByGuardName String?   @map("reported_by_guard_name")
+  hostelName          String?   @map("hostel_name")
+  studentRoll         String?   @map("student_roll")
+  location            String?   @default("Main Campus Gate 1")
+  sourceIp            String?
   detectedAt      DateTime  @default(now())
   evidence        String?
   resolutionNotes String?

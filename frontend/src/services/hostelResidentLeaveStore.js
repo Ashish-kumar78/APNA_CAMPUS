@@ -8,15 +8,15 @@ const STORAGE_KEY = 'bput_hostel_resident_leaves_v2';
 let isSyncingLeaves = false;
 
 /**
- * Normalizes any variant of status to 'Pending', 'Approved', 'Rejected', or 'Returned'
+ * Normalizes any variant of status strictly to 'Pending', 'Approved', or 'Rejected'
  */
 export function normalizeLeaveStatus(s) {
   if (!s) return 'Pending';
   const str = String(s).toLowerCase().trim();
-  if (str.includes('reject')) return 'Rejected';
-  if (str.includes('pending') || str.includes('awaiting')) return 'Pending';
-  if (str.includes('return')) return 'Returned';
-  if (str.includes('approv') || str.includes('sanction')) return 'Approved';
+  if (str.includes('reject') || str.includes('decline') || str.includes('deni')) return 'Rejected';
+  if (str.includes('return')) return 'Approved'; // Return is a completed approved leave
+  if (str.includes('approv') || str.includes('sanction') || str.includes('pass') || str.includes('permit') || str.includes('valid')) return 'Approved';
+  if (str.includes('pend') || str.includes('await') || str.includes('review') || str.includes('submit') || str.includes('open')) return 'Pending';
   return 'Pending';
 }
 

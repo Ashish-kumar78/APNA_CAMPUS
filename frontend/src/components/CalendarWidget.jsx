@@ -8,6 +8,7 @@ import {
   Edit2,
   Trash2,
   CheckCircle2,
+  Check,
   Clock,
   X,
   Calendar as CalendarIcon,
@@ -19,6 +20,11 @@ import {
   createCalendarNote,
   updateCalendarNote,
   deleteCalendarNote,
+  submitCalendarNote,
+  clearSessionDismissal,
+  resolveUserId,
+  getLocalNotesForUser,
+  saveLocalNotesForUser,
   subscribeToCalendarNotes,
   formatEventTimeRange,
   sortNotesByTime,
@@ -515,10 +521,9 @@ export default function CalendarWidget({ account, className = '' }) {
   // Lock background scroll when modal is active to keep popup centered in current viewport
   useEffect(() => {
     if (selectedDay || showAddModal) {
-      const prevOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
-        document.body.style.overflow = prevOverflow;
+        document.body.style.overflow = '';
       };
     }
   }, [selectedDay, showAddModal]);
@@ -682,6 +687,7 @@ export default function CalendarWidget({ account, className = '' }) {
           endTime: eTime,
         });
       }
+      clearSessionDismissal(resolveUserId(account));
       await loadNotes();
     } catch (err) {
       console.warn('Calendar note save sync error:', err);
@@ -698,6 +704,31 @@ export default function CalendarWidget({ account, className = '' }) {
       await loadNotes();
     } catch (err) {
       alert(`Could not delete note: ${err?.message || 'Unknown error'}`);
+    }
+  };
+
+  // Toggle Note Completion Status (Pending <-> Completed)
+  const handleToggleComplete = async (note) => {
+    try {
+      if (note.status === 'COMPLETED') {
+        const notes = getLocalNotesForUser(account);
+        const idx = notes.findIndex(n => n.id === note.id);
+        if (idx !== -1) {
+          notes[idx] = {
+            ...notes[idx],
+            status: 'PENDING',
+            completedAt: null,
+            updatedAt: new Date().toISOString()
+          };
+          saveLocalNotesForUser(account, notes);
+        }
+        clearSessionDismissal(resolveUserId(account));
+      } else {
+        await submitCalendarNote(account, note.id);
+      }
+      await loadNotes();
+    } catch (err) {
+      console.warn('Could not toggle note completion status:', err);
     }
   };
 
@@ -1059,8 +1090,27 @@ export default function CalendarWidget({ account, className = '' }) {
                           )}
                         </div>
 
-                        {/* Action buttons: Edit & Delete */}
+                        {/* Action buttons: Complete Toggle, Edit & Delete */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleComplete(note)}
+                            title={isCompleted ? 'Mark as Incomplete / Pending' : 'Mark as Completed'}
+                            aria-label={isCompleted ? 'Mark as Incomplete' : 'Mark as Completed'}
+                            style={{
+                              padding: '6px',
+                              background: isCompleted ? '#dcfce7' : '#e0e7ff',
+                              border: isCompleted ? '1px solid #86efac' : '1px solid #c7d2fe',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              color: isCompleted ? '#15803d' : '#4338ca',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Check size={13} strokeWidth={2.6} />
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleOpenEditNote(note)}
@@ -1400,6 +1450,11 @@ export default function CalendarWidget({ account, className = '' }) {
                   min={todayIST.dateStr}
                   value={formDate}
                   onChange={(e) => setFormDate(e.target.value)}
+                  onClick={(e) => {
+                    try {
+                      if (typeof e.target.showPicker === 'function') e.target.showPicker();
+                    } catch {}
+                  }}
                   style={{
                     width: '100%',
                     padding: '9px 12px',
@@ -1408,6 +1463,7 @@ export default function CalendarWidget({ account, className = '' }) {
                     fontSize: '13.5px',
                     outline: 'none',
                     boxSizing: 'border-box',
+                    cursor: 'pointer',
                   }}
                 />
               </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Boxes,
   Package,
@@ -42,6 +42,8 @@ import {
   resetIndentsToDefault,
   PRESET_MATERIALS
 } from '../../services/hostelIndentStore.js';
+import { getAllHostelComplexes } from '../../services/hostelComplexStore.js';
+import { getAllWardens } from '../../services/wardenManagementStore.js';
 import { mockInventoryAssets } from './hostelData.js';
 import './HostelIndentSection.css';
 import WardenInventoryRequisition from './WardenInventoryRequisition.jsx';
@@ -74,8 +76,52 @@ export default function HostelInventorySection({ account, isHostelAdmin: propIsH
   const [filterSearch, setFilterSearch] = useState('');
   const [filterRaisedBy, setFilterRaisedBy] = useState('ALL');
 
+  // Dynamic Hostel Complexes & Wardens Directory
+  const [hostelComplexes, setHostelComplexes] = useState(() => getAllHostelComplexes());
+  const [wardensList, setWardensList] = useState(() => getAllWardens());
+
+  // Listen to hostel complex & warden updates in real-time
+  useEffect(() => {
+    const handleHostelSync = () => {
+      setHostelComplexes(getAllHostelComplexes());
+    };
+    const handleWardenSync = () => {
+      setWardensList(getAllWardens());
+    };
+
+    window.addEventListener('bput_hostel_complexes_updated', handleHostelSync);
+    window.addEventListener('bput_hostels_updated', handleHostelSync);
+    window.addEventListener('bput_wardens_updated', handleWardenSync);
+    window.addEventListener('bput_warden_created', handleWardenSync);
+    window.addEventListener('storage', () => {
+      handleHostelSync();
+      handleWardenSync();
+    });
+
+    return () => {
+      window.removeEventListener('bput_hostel_complexes_updated', handleHostelSync);
+      window.removeEventListener('bput_hostels_updated', handleHostelSync);
+      window.removeEventListener('bput_wardens_updated', handleWardenSync);
+      window.removeEventListener('bput_warden_created', handleWardenSync);
+    };
+  }, []);
+
+  const defaultWardenName = useMemo(() => {
+    const matched = account?.name
+      ? wardensList.find(w => w.name.toLowerCase() === account.name.toLowerCase())
+      : null;
+    return matched?.name || account?.name || wardensList[0]?.name || 'Mr. Tanmaya Kumar Routray';
+  }, [account, wardensList]);
+
+  const defaultHostelName = useMemo(() => {
+    const matchedWarden = wardensList.find(w => w.name === defaultWardenName);
+    if (matchedWarden?.hostelName && hostelComplexes.some(h => h.name === matchedWarden.hostelName)) {
+      return matchedWarden.hostelName;
+    }
+    return hostelComplexes[0]?.name || 'Gandhi Boys Residence (Hostel 1)';
+  }, [defaultWardenName, wardensList, hostelComplexes]);
+
   // Form State for [RAISE IND]
-  const defaultWardenName = account?.name || 'Mr. Tanmaya Kumar Routray';
   const [formData, setFormData] = useState({
     materialSelect: PRESET_MATERIALS[0].name,
     isCustom: false,
@@ -84,12 +130,46 @@ export default function HostelInventorySection({ account, isHostelAdmin: propIsH
     quantity: '4',
     unit: 'pcs',
     approxCost: '82.18',
-    purpose: 'bh-1,bh-2',
+    purpose: 'Gandhi Boys Residence (Hostel 1)',
+    hostelComplex: 'Gandhi Boys Residence (Hostel 1)',
     expectedDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
-    raisedBy: defaultWardenName,
+    raisedBy: 'Mr. Tanmaya Kumar Routray',
     priority: 'Normal',
     remarks: ''
   });
+
+  // Sync defaults when wardensList or hostelComplexes load
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      raisedBy: prev.raisedBy === 'Mr. Tanmaya Kumar Routray' ? defaultWardenName : (prev.raisedBy || defaultWardenName),
+      purpose: (prev.purpose === 'bh-1,bh-2' || !prev.purpose) ? defaultHostelName : prev.purpose,
+      hostelComplex: (prev.hostelComplex === 'bh-1,bh-2' || !prev.hostelComplex) ? defaultHostelName : prev.hostelComplex
+    }));
+  }, [defaultWardenName, defaultHostelName]);
+
+  const handleHostelComplexChange = (complexName) => {
+    setFormData(prev => ({
+      ...prev,
+      hostelComplex: complexName,
+      purpose: complexName
+    }));
+  };
+
+  const handleWardenChange = (wardenName) => {
+    const wardenObj = wardensList.find(w => w.name === wardenName);
+    const assignedHostel = wardenObj?.hostelName;
+    const hasMatchingComplex = assignedHostel && hostelComplexes.some(h => h.name === assignedHostel);
+
+    setFormData(prev => ({
+      ...prev,
+      raisedBy: wardenName,
+      ...(hasMatchingComplex ? {
+        hostelComplex: assignedHostel,
+        purpose: assignedHostel
+      } : {})
+    }));
+  };
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -148,13 +228,13 @@ export default function HostelInventorySection({ account, isHostelAdmin: propIsH
     const { newIndent, updated } = raiseNewIndent({
       materialName: finalMaterialName,
       isCustom: formData.isCustom,
-      code: formData.code,
+      code: formData.code || (formData.isCustom ? 'CUST-HST' : 'S-GEN'),
       quantity: formData.quantity,
       unit: formData.unit,
       approxCost: formData.approxCost,
-      purpose: formData.purpose,
+      purpose: formData.hostelComplex || formData.purpose || defaultHostelName,
       expectedDate: formData.expectedDate,
-      raisedBy: formData.raisedBy,
+      raisedBy: formData.raisedBy || defaultWardenName,
       remarks: formData.remarks
     });
 
@@ -562,9 +642,9 @@ export default function HostelInventorySection({ account, isHostelAdmin: propIsH
                     onChange={e => setFilterRaisedBy(e.target.value)}
                   >
                     <option value="ALL">All Requisitioners</option>
-                    <option value="Tanmaya">Tanmaya Kumar Routray</option>
-                    <option value="Nibedita">Mrs. Nibedita Das</option>
-                    <option value="Debendra">Mr. Debendra Sahoo</option>
+                    {wardensList.map(w => (
+                      <option key={w.id || w.name} value={w.name}>{w.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -1055,18 +1135,8 @@ export default function HostelInventorySection({ account, isHostelAdmin: propIsH
                 </div>
               )}
 
-              {/* Code & Quantity Row */}
+              {/* Quantity & Approx Cost Row */}
               <div className="iform-row two-col">
-                <div className="iform-group">
-                  <label>Material Code</label>
-                  <input
-                    type="text"
-                    value={formData.code}
-                    onChange={e => setFormData({ ...formData, code: e.target.value })}
-                    required
-                  />
-                </div>
-
                 <div className="iform-group">
                   <label className="required">Quantity</label>
                   <div style={{ display: 'flex', gap: '6px' }}>
@@ -1093,10 +1163,7 @@ export default function HostelInventorySection({ account, isHostelAdmin: propIsH
                     </select>
                   </div>
                 </div>
-              </div>
 
-              {/* Approx Cost & Expected Date */}
-              <div className="iform-row two-col">
                 <div className="iform-group">
                   <label className="required">Estimated Approx Cost (RS.)</label>
                   <input
@@ -1107,40 +1174,69 @@ export default function HostelInventorySection({ account, isHostelAdmin: propIsH
                     required
                   />
                 </div>
-
-                <div className="iform-group">
-                  <label className="required">Expected Requirement Date</label>
-                  <input
-                    type="date"
-                    value={formData.expectedDate}
-                    onChange={e => setFormData({ ...formData, expectedDate: e.target.value })}
-                    required
-                  />
-                </div>
               </div>
 
-              {/* Purpose & Hostel Block */}
+              {/* Expected Requirement Date */}
               <div className="iform-group">
-                <label className="required">Purpose / Hostel Block</label>
+                <label className="required">Expected Requirement Date</label>
                 <input
-                  type="text"
-                  placeholder="e.g. bh-1,bh-2 / Gandhi Block Rooms 101-106 / Sarojini Girls Residence / Dining Hall"
-                  value={formData.purpose}
-                  onChange={e => setFormData({ ...formData, purpose: e.target.value })}
+                  type="date"
+                  value={formData.expectedDate}
+                  onChange={e => setFormData({ ...formData, expectedDate: e.target.value })}
                   required
                 />
               </div>
 
-              {/* Raised By */}
+              {/* Hostel Complex Dropdown */}
+              <div className="iform-group">
+                <label className="required">Hostel Complex</label>
+                <select
+                  className="iform-select"
+                  value={formData.hostelComplex || formData.purpose}
+                  onChange={e => handleHostelComplexChange(e.target.value)}
+                  required
+                >
+                  <option value="" disabled>-- Select Hostel Complex --</option>
+                  {hostelComplexes.map(h => (
+                    <option key={h.id || h.name} value={h.name}>
+                      {h.name} {h.type ? `(${h.type})` : ''}
+                    </option>
+                  ))}
+                  <option value="Central Hostel Complex (Common Mess & Facilities)">
+                    Central Hostel Complex (Common Mess & Facilities)
+                  </option>
+                  <option value="All Hostel Complexes (Central Store Allocation)">
+                    All Hostel Complexes (Central Store Allocation)
+                  </option>
+                  {formData.purpose &&
+                    !hostelComplexes.some(h => h.name === formData.purpose) &&
+                    formData.purpose !== 'Central Hostel Complex (Common Mess & Facilities)' &&
+                    formData.purpose !== 'All Hostel Complexes (Central Store Allocation)' && (
+                      <option value={formData.purpose}>{formData.purpose}</option>
+                  )}
+                </select>
+              </div>
+
+              {/* Raised By Warden & Priority Row */}
               <div className="iform-row two-col">
                 <div className="iform-group">
-                  <label>Raised By</label>
-                  <input
-                    type="text"
+                  <label className="required">Hostel Warden (Raised By)</label>
+                  <select
+                    className="iform-select"
                     value={formData.raisedBy}
-                    onChange={e => setFormData({ ...formData, raisedBy: e.target.value })}
+                    onChange={e => handleWardenChange(e.target.value)}
                     required
-                  />
+                  >
+                    <option value="" disabled>-- Select Hostel Warden --</option>
+                    {wardensList.map(w => (
+                      <option key={w.id || w.name} value={w.name}>
+                        {w.name} {w.hostelName ? `(${w.hostelName})` : (w.designation ? `(${w.designation})` : '')}
+                      </option>
+                    ))}
+                    {formData.raisedBy && !wardensList.some(w => w.name === formData.raisedBy) && (
+                      <option value={formData.raisedBy}>{formData.raisedBy}</option>
+                    )}
+                  </select>
                 </div>
 
                 <div className="iform-group">

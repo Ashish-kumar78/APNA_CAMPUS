@@ -20,7 +20,10 @@ import {
   FileCheck,
   Phone,
   Sparkles,
-  Download
+  Download,
+  LogOut,
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 import './StudentGatePassSection.css';
 import HandwrittenApplicationLetter from './HandwrittenApplicationLetter.jsx';
@@ -32,11 +35,16 @@ import {
 import { getActiveStudent } from '../services/studentStore.js';
 import { getAllHostels } from '../services/hostelAttendanceStore.js';
 import { getRoomsForHostelAndFloor, getFloorsForHostel } from '../services/hostelRoomStore.js';
+import UniversalDigitalIdModal from './Security/UniversalDigitalIdModal.jsx';
+import QrSvgRenderer from './Common/QrSvgRenderer.jsx';
+import dynamicQrService from '../services/dynamicQrService.js';
+import api from '../services/api.js';
 
-export default function StudentGatePassSection({ student: propStudent }) {
+export default function StudentGatePassSection({ student: propStudent, onOpenVisitorRegistration }) {
   const currentStudent = propStudent || getActiveStudent();
   const [gatePasses, setGatePasses] = useState([]);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [digitalModalOpen, setDigitalModalOpen] = useState(false);
   const [selectedDigitalPass, setSelectedDigitalPass] = useState(null);
   const [viewDocModal, setViewDocModal] = useState(null);
   const [selectedRejectionNotice, setSelectedRejectionNotice] = useState(null);
@@ -73,10 +81,63 @@ export default function StudentGatePassSection({ student: propStudent }) {
     }
   });
 
+  const [movementLogs, setMovementLogs] = useState([]);
+
+  const loadMovements = async (currentPassList) => {
+    try {
+      const roll = currentStudent?.rollNumber || currentStudent?.registrationNumber;
+      if (api.getSecurityMovementsHistory && roll) {
+        const res = await api.getSecurityMovementsHistory({ search: roll });
+        if (res && res.data && res.data.length > 0) {
+          setMovementLogs(res.data);
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // Derive movement history from student's gate passes
+    const derived = [];
+    const passes = currentPassList || gatePasses || [];
+    passes.forEach(pass => {
+      const isOut = pass.status === 'Exited Campus' || pass.status === 'Exited' || pass.status === 'Returned to Hostel' || pass.status === 'Returned';
+      const isRet = pass.status === 'Returned to Hostel' || pass.status === 'Returned';
+
+      if (isOut) {
+        const exitTime = pass.actualExitTime || pass.outDateTime || '2026-10-08T09:30';
+        derived.push({
+          id: `MOV-EX-${pass.id}`,
+          direction: 'EXIT',
+          gateName: pass.gateName || 'Main Campus Gate 1',
+          movementTime: exitTime,
+          expectedReturnTime: pass.inDateTime,
+          isLate: false,
+          status: 'Recorded',
+          passId: pass.id,
+        });
+      }
+      if (isRet) {
+        const retTime = pass.actualReturnTime || pass.inDateTime || '2026-10-12T17:45';
+        const isLate = Boolean(pass.isLate || (pass.inDateTime && new Date(retTime).getTime() > new Date(pass.inDateTime).getTime()));
+        derived.push({
+          id: `MOV-EN-${pass.id}`,
+          direction: 'ENTRY',
+          gateName: pass.gateName || 'Main Campus Gate 1',
+          movementTime: retTime,
+          expectedReturnTime: pass.inDateTime,
+          isLate,
+          status: isLate ? 'Late Return' : 'Recorded',
+          passId: pass.id,
+        });
+      }
+    });
+    setMovementLogs(derived);
+  };
+
   const loadPasses = () => {
     const studentId = currentStudent?.id || currentStudent?.registrationNumber || 'std-1';
     const passes = getStudentGatePasses(studentId);
     setGatePasses(passes);
+    loadMovements(passes);
   };
 
   useEffect(() => {
@@ -185,6 +246,31 @@ export default function StudentGatePassSection({ student: propStudent }) {
     setIsApplyModalOpen(false);
     loadPasses();
     showToast(`✓ Gate Pass application ${newPass.id} submitted! It is automatically forwarded to the Hostel Warden for clearance.`);
+
+    // Asynchronously synchronize with backend PostgreSQL / Prisma
+    const movementTypeMap = {
+      'Outstation Leave': 'OVERNIGHT_LEAVE',
+      'Day Outing': 'DAY_OUT',
+      'Home Visit': 'LEAVE',
+      'Emergency Leave': 'EMERGENCY_LEAVE',
+    };
+    const movementType = movementTypeMap[effectivePurpose] || 'DAY_OUT';
+
+    api.submitStudentMovementRequest({
+      movementType,
+      reason: effectivePurpose,
+      destination: formData.destination,
+      outDateTime: formData.outDateTime ? new Date(formData.outDateTime).toISOString() : new Date().toISOString(),
+      expectedInDateTime: formData.inDateTime ? new Date(formData.inDateTime).toISOString() : new Date().toISOString(),
+      hostelName: formData.hostelName,
+      roomNumber: effectiveRoom,
+      studentName: currentStudent?.name || 'Rakesh Das',
+      studentRoll: currentStudent?.rollNumber || currentStudent?.registrationNumber || '01',
+      department: currentStudent?.department || 'Computer Science & Engineering',
+      parentApprovalRequired: false,
+    }).catch((err) => {
+      console.warn('Backend movement request sync note:', err?.message);
+    });
   };
 
   const pendingCount = gatePasses.filter(p => p.status === 'Pending Warden Approval').length;
@@ -228,12 +314,36 @@ export default function StudentGatePassSection({ student: propStudent }) {
             Once submitted, your application is automatically forwarded to the <strong>Hostel Warden</strong> for instant digital clearance.
           </p>
         </div>
-        <button
-          className="gate-pass-apply-hero-btn"
-          onClick={() => setIsApplyModalOpen(true)}
-        >
-          <Plus size={18} /> Apply for New Gate Pass
-        </button>
+        <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+          <button
+            className="gate-pass-apply-hero-btn"
+            style={{
+              background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)',
+            }}
+            onClick={() => setDigitalModalOpen(true)}
+          >
+            <QrCode size={18} /> My Digital ID & Dynamic Pass
+          </button>
+          {onOpenVisitorRegistration && (
+            <button
+              className="gate-pass-apply-hero-btn"
+              style={{
+                background: '#0284c7',
+                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)',
+              }}
+              onClick={onOpenVisitorRegistration}
+            >
+              <UserPlus size={18} /> Pre-Register Visitor
+            </button>
+          )}
+          <button
+            className="gate-pass-apply-hero-btn"
+            onClick={() => setIsApplyModalOpen(true)}
+          >
+            <Plus size={18} /> Apply for New Gate Pass
+          </button>
+        </div>
       </div>
 
       {/* Stats Counter */}
@@ -308,9 +418,12 @@ export default function StudentGatePassSection({ student: propStudent }) {
             </thead>
             <tbody>
               {gatePasses.map(pass => {
-                const isApproved = pass.status === 'Approved';
-                const isPending = pass.status === 'Pending Warden Approval';
-                const isRejected = pass.status === 'Rejected';
+                const isApproved = pass.status === 'Approved' || pass.status === 'Approved by Warden';
+                const isPending = pass.status === 'Pending Warden Approval' || pass.status === 'Pending' || pass.status === 'PENDING';
+                const isRejected = pass.status === 'Rejected' || pass.status === 'REJECTED';
+                const isExited = pass.status === 'Exited Campus' || pass.status === 'Exited' || pass.status === 'EXITED' || pass.status === 'Outside Campus';
+                const isReturned = pass.status === 'Returned to Hostel' || pass.status === 'Returned' || pass.status === 'RETURNED';
+                const isLate = Boolean(pass.isLate || pass.status === 'Late Return' || pass.status === 'LATE_RETURN');
 
                 return (
                   <tr key={pass.id}>
@@ -389,6 +502,26 @@ export default function StudentGatePassSection({ student: propStudent }) {
                           </div>
                         </div>
                       )}
+                      {isExited && (
+                        <div>
+                          <span className="gp-badge" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                            <LogOut size={12} /> Outside Campus
+                          </span>
+                          <div style={{ fontSize: '0.72rem', color: '#0369a1', marginTop: '2px' }}>
+                            Exit: {pass.actualExitTime ? pass.actualExitTime.replace('T', ' ') : 'Logged at Gate'}
+                          </div>
+                        </div>
+                      )}
+                      {isReturned && (
+                        <div>
+                          <span className="gp-badge" style={{ background: isLate ? '#fee2e2' : '#dcfce7', color: isLate ? '#b91c1c' : '#15803d', border: isLate ? '1px solid #fecaca' : '1px solid #bbf7d0' }}>
+                            <CheckCircle2 size={12} /> {isLate ? 'Late Return Recorded' : 'Returned to Campus'}
+                          </span>
+                          <div style={{ fontSize: '0.72rem', color: isLate ? '#b91c1c' : '#15803d', marginTop: '2px' }}>
+                            Return: {pass.actualReturnTime ? pass.actualReturnTime.replace('T', ' ') : 'Confirmed'}
+                          </div>
+                        </div>
+                      )}
                       {isPending && (
                         <div>
                           <span className="gp-badge gp-badge-pending">
@@ -420,12 +553,12 @@ export default function StudentGatePassSection({ student: propStudent }) {
                     </td>
 
                     <td style={{ textAlign: 'right' }}>
-                      {isApproved ? (
+                      {(isApproved || isExited || isReturned) ? (
                         <button
                           type="button"
                           className="admin-action-btn-primary"
                           style={{
-                            background: '#16a34a',
+                            background: isExited ? '#0284c7' : '#16a34a',
                             fontSize: '0.78rem',
                             padding: '0.4rem 0.75rem',
                             display: 'inline-flex',
@@ -433,8 +566,9 @@ export default function StudentGatePassSection({ student: propStudent }) {
                             gap: '5px'
                           }}
                           onClick={() => setSelectedDigitalPass(pass)}
+                          title="Open official approved QR pass for gate check-in/out"
                         >
-                          <QrCode size={14} /> View Official Pass
+                          <QrCode size={14} /> {isExited ? 'Show Return QR' : 'View Official Pass'}
                         </button>
                       ) : isRejected ? (
                         <button
@@ -482,6 +616,132 @@ export default function StudentGatePassSection({ student: propStudent }) {
                     <ShieldCheck size={40} style={{ color: '#cbd5e1', marginBottom: '0.5rem' }} />
                     <p style={{ margin: 0, fontWeight: 600 }}>No gate passes applied yet.</p>
                     <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem' }}>Click "Apply for New Gate Pass" above to submit your outstation request.</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* SECTION 4.D: GATE MOVEMENT HISTORY (TURNSTILE / SECURITY SCANS) */}
+      <div className="gate-pass-section-card" style={{ marginTop: '1.5rem' }}>
+        <div className="gate-pass-section-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div style={{ background: '#e0f2fe', padding: '6px', borderRadius: '8px', color: '#0369a1' }}>
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: 800 }}>
+                Gate Movement History
+              </h3>
+              <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+                Physical security turnstile scan events. Showing verified exit time, actual return time, expected return time, and late-return status.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="gate-pass-table-responsive">
+          <table className="gate-pass-table">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Gate</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Expected Return</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movementLogs.map((log) => {
+                const isExit = log.direction === 'EXIT';
+                const timeObj = log.movementTime ? new Date(log.movementTime) : null;
+                const dateStr = timeObj && !isNaN(timeObj.getTime())
+                  ? timeObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                  : (log.movementTime ? log.movementTime.slice(0, 10) : 'Today');
+                const timeStr = timeObj && !isNaN(timeObj.getTime())
+                  ? timeObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                  : (log.movementTime ? log.movementTime.slice(11, 16) : 'N/A');
+
+                const expObj = log.expectedReturnTime ? new Date(log.expectedReturnTime) : null;
+                const expStr = expObj && !isNaN(expObj.getTime())
+                  ? expObj.toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })
+                  : (log.expectedReturnTime || 'N/A');
+
+                return (
+                  <tr key={log.id}>
+                    <td>
+                      <span
+                        className="gp-badge"
+                        style={{
+                          background: isExit ? '#eff6ff' : '#f0fdf4',
+                          color: isExit ? '#1d4ed8' : '#15803d',
+                          border: isExit ? '1px solid #bfdbfe' : '1px solid #bbf7d0',
+                          fontWeight: 700,
+                          fontSize: '0.78rem',
+                          padding: '4px 10px',
+                        }}
+                      >
+                        {isExit ? <LogOut size={13} style={{ display: 'inline', marginRight: '4px' }} /> : <LogIn size={13} style={{ display: 'inline', marginRight: '4px' }} />}
+                        {isExit ? 'Exit' : 'Entry'}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{log.gateName || 'Main Gate'}</div>
+                      <small style={{ color: '#64748b' }}>RFID / Biometric Turnstile</small>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 600, color: '#334155' }}>{dateStr}</div>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 700, color: '#0f172a', fontFamily: 'monospace' }}>{timeStr}</div>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{expStr}</span>
+                    </td>
+                    <td>
+                      {log.isLate || log.status === 'Late Return' ? (
+                        <span
+                          className="gp-badge"
+                          style={{
+                            background: '#fef2f2',
+                            color: '#b91c1c',
+                            border: '1px solid #fecaca',
+                            fontWeight: 700,
+                            fontSize: '0.74rem',
+                          }}
+                        >
+                          <AlertCircle size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                          Late Return
+                        </span>
+                      ) : (
+                        <span
+                          className="gp-badge"
+                          style={{
+                            background: '#f0fdf4',
+                            color: '#166534',
+                            border: '1px solid #bbf7d0',
+                            fontWeight: 700,
+                            fontSize: '0.74rem',
+                          }}
+                        >
+                          <CheckCircle2 size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                          Recorded
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {movementLogs.length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b' }}>
+                    <ShieldCheck size={32} style={{ color: '#cbd5e1', marginBottom: '0.35rem' }} />
+                    <p style={{ margin: 0, fontWeight: 600 }}>No physical gate movements recorded yet.</p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem' }}>When security scans your approved pass at the gate turnstile, departure and entry logs appear here.</p>
                   </td>
                 </tr>
               )}
@@ -970,6 +1230,24 @@ export default function StudentGatePassSection({ student: propStudent }) {
                     {selectedDigitalPass.inDateTime ? selectedDigitalPass.inDateTime.replace('T', ' ') : 'N/A'}
                   </div>
                 </div>
+
+                {/* Gate Security Checkpoint Verification Timestamps */}
+                {(selectedDigitalPass.actualExitTime || selectedDigitalPass.actualReturnTime) && (
+                  <div style={{ gridColumn: '1 / -1', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '0.65rem 0.85rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.68rem', color: '#047857', textTransform: 'uppercase', fontWeight: 800 }}>Campus Gate Exit Recorded</span>
+                      <div style={{ fontWeight: 800, color: '#065f46', fontSize: '0.86rem' }}>
+                        {selectedDigitalPass.actualExitTime || 'Pending Exit Scan'}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.68rem', color: '#047857', textTransform: 'uppercase', fontWeight: 800 }}>Campus Gate Return Recorded</span>
+                      <div style={{ fontWeight: 800, color: '#065f46', fontSize: '0.86rem' }}>
+                        {selectedDigitalPass.actualReturnTime || (selectedDigitalPass.actualExitTime ? 'Outside Campus (Pending Return)' : 'Pending')}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Endorsements & Official Stamps */}
@@ -1002,6 +1280,52 @@ export default function StudentGatePassSection({ student: propStudent }) {
                   <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
                     Approved on {selectedDigitalPass.approvedAt}
                   </div>
+                </div>
+              </div>
+
+              {/* Official Secure QR Code Display (Section 4.C) */}
+              <div style={{
+                marginTop: '1.25rem',
+                padding: '1.25rem',
+                background: '#ffffff',
+                border: '2px solid #e0e7ff',
+                borderRadius: '14px',
+                textAlign: 'center',
+                boxShadow: '0 4px 15px rgba(99, 102, 241, 0.08)'
+              }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#4338ca', fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+                  <ShieldCheck size={18} /> OFFICIAL SECURE GATE PASS QR CODE
+                </div>
+                <div>
+                  <div style={{
+                    display: 'inline-block',
+                    padding: '0.85rem',
+                    background: '#ffffff',
+                    border: '2px solid #cbd5e1',
+                    borderRadius: '14px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
+                  }}>
+                    <QrSvgRenderer
+                      value={selectedDigitalPass.qrCodeString || dynamicQrService.generateGatePassToken(selectedDigitalPass, currentStudent)}
+                      size={170}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    background: '#dcfce7',
+                    color: '#15803d',
+                    padding: '3px 12px',
+                    borderRadius: '999px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700
+                  }}>
+                    ✓ Server-Verifiable Single-Use Pass Token · Request ID: {selectedDigitalPass.id}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    Present this screen directly to the security guard's optical scanner at Campus Gate 1 or 2 upon departure and return.
+                  </span>
                 </div>
               </div>
 
@@ -1186,6 +1510,13 @@ export default function StudentGatePassSection({ student: propStudent }) {
           </div>
         </div>
       )}
+
+      {/* Universal 10-Second Dynamic QR & Digital ID Modal */}
+      <UniversalDigitalIdModal
+        isOpen={digitalModalOpen}
+        onClose={() => setDigitalModalOpen(false)}
+        user={currentStudent}
+      />
 
     </div>
   );

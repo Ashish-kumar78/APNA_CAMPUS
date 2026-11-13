@@ -1,10 +1,11 @@
 /**
  * Central User Preferences Store
- * Standardizes default Light Theme and English across all role dashboards.
+ * Synchronizes Theme and Global Language across all role dashboards and sessions.
  */
 
 import { api } from './api.js';
-import { applyLanguageToDOM } from './languageStore.js';
+import { getStoredTheme, setTheme, applyThemeToDOM, THEME_MODES } from './themeStore.js';
+import { getCurrentLanguage, setLanguage, applyLanguageToDOM, SUPPORTED_LANGUAGES } from './languageStore.js';
 
 const PREF_EVENT = 'collegeflow_preferences_updated';
 
@@ -28,20 +29,32 @@ const memoryPrefCache = new Map();
 
 /**
  * Get current stored preferences for a user
- * Defaults: theme: 'light', language: 'en'
  */
 export function getUserPreferences(account) {
-  return { theme: 'light', language: 'en' };
+  const currentTheme = getStoredTheme();
+  const currentLang = getCurrentLanguage();
+  return { theme: currentTheme, language: currentLang };
 }
 
 /**
  * Save user preferences locally and dispatch update event
  */
-export function saveLocalUserPreferences(account, prefs) {
+export function saveLocalUserPreferences(account, prefs = {}) {
   const key = getStorageKey(account);
+  
+  const targetTheme = prefs.theme || getStoredTheme();
+  const targetLanguage = prefs.language || getCurrentLanguage();
+
+  if (prefs.theme) {
+    setTheme(prefs.theme);
+  }
+  if (prefs.language) {
+    setLanguage(prefs.language);
+  }
+
   const normalized = {
-    theme: 'light',
-    language: 'en',
+    theme: targetTheme,
+    language: targetLanguage,
   };
 
   memoryPrefCache.set(key, normalized);
@@ -69,62 +82,44 @@ export function saveLocalUserPreferences(account, prefs) {
 
 /**
  * Apply Theme and Language attributes to the document DOM
- * Ensures clean standard light theme and English across all roles
  */
 export function applyPreferencesToDOM(prefs) {
-  if (typeof document === 'undefined') return;
+  const theme = prefs?.theme || getStoredTheme();
+  const lang = prefs?.language || getCurrentLanguage();
 
-  const docEl = document.documentElement;
-  const body = document.body;
-
-  // Check if user has an accessibility theme setting
-  try {
-    const acc = localStorage.getItem('apna_accessibility_settings');
-    if (acc) {
-      const parsed = JSON.parse(acc);
-      if (parsed.theme === 'dark' || (parsed.theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        docEl.setAttribute('data-theme', 'dark');
-        docEl.classList.add('dark');
-        if (body) body.classList.add('dark-theme');
-        docEl.setAttribute('lang', 'en');
-        applyLanguageToDOM('en');
-        return;
-      }
-    }
-  } catch (_) {}
-
-  // 1. Standard Light Theme fallback
-  docEl.setAttribute('data-theme', 'light');
-  docEl.classList.remove('dark-mode', 'dark');
-  if (body) {
-    body.classList.remove('dark-theme', 'dark-mode');
-  }
-
-  // 2. Standard English Language
-  docEl.setAttribute('lang', 'en');
-  applyLanguageToDOM('en');
+  applyThemeToDOM(theme);
+  applyLanguageToDOM(lang);
 }
 
 /**
  * Initialize / Hydrate preferences for the logged-in user
  */
 export async function hydrateUserPreferences(account) {
-  applyPreferencesToDOM({ theme: 'light', language: 'en' });
-  return { theme: 'light', language: 'en' };
+  const currentTheme = getStoredTheme();
+  const currentLang = getCurrentLanguage();
+  const current = { theme: currentTheme, language: currentLang };
+  applyPreferencesToDOM(current);
+  return current;
 }
 
 /**
  * Update Theme preference for the current user
  */
 export async function setUserTheme(account, theme) {
-  return { theme: 'light', language: 'en' };
+  setTheme(theme);
+  const updated = { theme: getStoredTheme(), language: getCurrentLanguage() };
+  saveLocalUserPreferences(account, updated);
+  return updated;
 }
 
 /**
  * Update Language preference for the current user
  */
 export async function setUserLanguage(account, language) {
-  return { theme: 'light', language: 'en' };
+  setLanguage(language);
+  const updated = { theme: getStoredTheme(), language: getCurrentLanguage() };
+  saveLocalUserPreferences(account, updated);
+  return updated;
 }
 
 /**

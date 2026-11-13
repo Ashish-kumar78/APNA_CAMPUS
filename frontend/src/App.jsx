@@ -1,7 +1,7 @@
 import { hydrateUserPreferences } from './services/userPreferencesStore.js';
 import CalendarReminderModal, { clearSessionDismissal } from './components/CalendarReminderModal.jsx';
 import { resolveUserId } from './services/calendarNotesStore.js';
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   ArrowRight,
   BookOpen,
@@ -29,8 +29,23 @@ import {
   Loader2,
   HardHat,
   Wrench,
+  Sun,
+  Moon,
+  Globe,
 } from 'lucide-react'
 import './App.css'
+import {
+  getStoredTheme,
+  setTheme,
+  subscribeTheme,
+  THEME_MODES,
+} from './services/themeStore.js';
+import {
+  getCurrentLanguage,
+  setLanguage,
+  subscribeLanguage,
+  SUPPORTED_LANGUAGES,
+} from './services/languageStore.js';
 import AccessibilityPanel from './components/Accessibility/AccessibilityPanel.jsx'
 import ScreenReaderAnnouncer from './components/Accessibility/ScreenReaderAnnouncer.jsx'
 import StudentPortal from './StudentPortal.jsx'
@@ -480,10 +495,33 @@ function App() {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [account, setAccount] = useState(null)
+  const [currentTheme, setCurrentTheme] = useState(() => getStoredTheme())
+  const [currentLang, setCurrentLang] = useState(() => getCurrentLanguage())
+  const [landingLangOpen, setLandingLangOpen] = useState(false)
+  const landingLangRef = useRef(null)
 
   useEffect(() => {
     hydrateUserPreferences(account)
   }, [account])
+
+  useEffect(() => {
+    const unsubTheme = subscribeTheme((t) => setCurrentTheme(t))
+    const unsubLang = subscribeLanguage((l) => setCurrentLang(l))
+    return () => {
+      if (typeof unsubTheme === 'function') unsubTheme()
+      if (typeof unsubLang === 'function') unsubLang()
+    }
+  }, [])
+
+  useEffect(() => {
+    function handleOutside(e) {
+      if (landingLangRef.current && !landingLangRef.current.contains(e.target)) {
+        setLandingLangOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [])
   const [error, setError] = useState('')
   const [autoFillNotice, setAutoFillNotice] = useState('')
   const [resetRequested, setResetRequested] = useState(false)
@@ -1000,6 +1038,74 @@ function App() {
 
         {/* Right login panel: Clean White Floating Card */}
         <section className="erp-login-section" aria-label="Sign In">
+          {/* Top Landing Controls: Theme Customization (Light Mode / Dark Mode) & Language Selection */}
+          <div className="landing-top-controls-bar">
+            {/* Theme Customization Toggle: Light Mode / Dark Mode */}
+            <div className="landing-theme-toggle-group" role="radiogroup" aria-label="Theme Customization">
+              <button
+                type="button"
+                className={`landing-theme-btn ${currentTheme === THEME_MODES.LIGHT ? 'active' : ''}`}
+                onClick={() => setTheme(THEME_MODES.LIGHT)}
+                role="radio"
+                aria-checked={currentTheme === THEME_MODES.LIGHT}
+                title="Light Mode: Bright interface with clean light backgrounds and dark readable text"
+              >
+                <Sun size={15} />
+                <span>Light Mode</span>
+              </button>
+              <button
+                type="button"
+                className={`landing-theme-btn ${currentTheme === THEME_MODES.DARK ? 'active' : ''}`}
+                onClick={() => setTheme(THEME_MODES.DARK)}
+                role="radio"
+                aria-checked={currentTheme === THEME_MODES.DARK}
+                title="Dark Mode: Dark interface with contrasting elements for comfortable viewing"
+              >
+                <Moon size={15} />
+                <span>Dark Mode</span>
+              </button>
+            </div>
+
+            {/* Language Selection Dropdown on Landing Page */}
+            <div className="landing-lang-container" ref={landingLangRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className="landing-lang-btn"
+                onClick={() => setLandingLangOpen((prev) => !prev)}
+                aria-expanded={landingLangOpen}
+                aria-haspopup="true"
+                title={`Language: ${SUPPORTED_LANGUAGES.find((l) => l.code === currentLang)?.nativeLabel || 'English'}`}
+              >
+                <Globe size={15} style={{ color: '#2563eb' }} />
+                <span>{SUPPORTED_LANGUAGES.find((l) => l.code === currentLang)?.nativeLabel || 'English'}</span>
+                <ChevronDown size={13} />
+              </button>
+              {landingLangOpen && (
+                <div className="landing-lang-menu" role="menu">
+                  {SUPPORTED_LANGUAGES.map((lang) => {
+                    const isActive = currentLang === lang.code;
+                    return (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        className={`landing-lang-item ${isActive ? 'active' : ''}`}
+                        onClick={() => {
+                          setLanguage(lang.code);
+                          setLandingLangOpen(false);
+                        }}
+                        role="menuitem"
+                      >
+                        <span style={{ fontWeight: isActive ? 700 : 500 }}>{lang.nativeLabel}</span>
+                        <span style={{ fontSize: '0.72rem', opacity: 0.7, marginLeft: '6px' }}>({lang.label})</span>
+                        {isActive && <Check size={14} style={{ color: '#2563eb', marginLeft: 'auto' }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="erp-login-card" id="main-login-card">
             <div className="erp-card-brand-header" style={{ marginBottom: '18px' }}>
               <div>

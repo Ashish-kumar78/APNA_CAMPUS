@@ -1,8 +1,14 @@
 /**
- * Multi-Language (English / Hindi) Translation Store & Engine
+ * Multi-Language (English / Hindi / Odia) Translation Store & Engine
  * Supports seamless, instant switching across the entire CMS interface without page reloads.
  * Preserves user-entered data (names, notes, IDs, numbers, records).
  */
+
+export const SUPPORTED_LANGUAGES = [
+  { code: 'en', label: 'English', nativeLabel: 'English', flag: '🇬🇧' },
+  { code: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी', flag: '🇮🇳' },
+  { code: 'or', label: 'Odia', nativeLabel: 'ଓଡ଼ିଆ', flag: '🇮🇳' },
+];
 
 export const HINDI_DICTIONARY = {
   // Navigation & Sections
@@ -172,14 +178,18 @@ export const HINDI_DICTIONARY = {
   'Campus Notifications': 'परिसर सूचनाएं',
   'Search anything... (e.g. students, marks, notices)': 'कुछ भी खोजें... (उदा. छात्र, अंक, नोटिस)',
   'Search anything...': 'कुछ भी खोजें...',
+  'Sign In': 'साइन इन',
   'Sign Out': 'साइन आउट',
   'Logout': 'लॉग आउट',
+  'Log Out': 'लॉग आउट',
   'Language': 'भाषा',
   'Select Language': 'भाषा चुनें',
   'Select Language (Current: English)': 'भाषा चुनें (वर्तमान: English)',
   'Select Language (Current: Hindi)': 'भाषा चुनें (वर्तमान: हिंदी)',
+  'Select Language (Current: Odia)': 'भाषा चुनें (वर्तमान: ଓଡ଼ିଆ)',
   'English': 'English',
-  'Hindi': 'हिंदी',
+  'Hindi': 'हिन्दी',
+  'Odia': 'ଓଡ଼ିଆ',
   'Theme': 'थीम',
   'Light Mode': 'लाइट मोड',
   'Dark Mode': 'डार्क मोड',
@@ -241,71 +251,56 @@ export const HINDI_DICTIONARY = {
   'Raise Indent': 'मांग पत्र बनाएं',
   'Quick Connect': 'त्वरित संपर्क',
   'Save Note / Schedule Task': 'नोट सहेजें / कार्य निर्धारित करें',
+  'Lodge Maintenance Request': 'रखरखाव अनुरोध दर्ज करें',
+  'Confirm Resolved': 'समाधान की पुष्टि करें',
+  'Reopen Issue': 'समस्या पुनः खोलें',
+  'Approve & Assign': 'स्वीकृत करें एवं सौंपें',
 
-  // Campus Security & Turnstile Access
-  'Students Currently Outside': 'परिसर से बाहर छात्र',
-  "Today's Gate Movements": 'आज के गेट आवागमन',
-  'Overdue / Late Returns': 'देर से वापसी / कर्फ्यू उल्लंघन',
-  'Active Visitors Inside': 'परिसर के अंदर सक्रिय आगंतुक',
-  'VERIFY & LOG CAMPUS EXIT': 'सत्यापित करें एवं परिसर निकास दर्ज करें',
-  'VERIFY & LOG CAMPUS ENTRY': 'सत्यापित करें एवं परिसर प्रवेश दर्ज करें',
-  'Saved, will sync': 'स्थानीय रूप से सहेजा गया (सिंक प्रतीक्षित)',
-  'Report Security Incident': 'सुरक्षा घटना रिपोर्ट करें',
-  'Turnstile Camera Scanner': 'टर्नस्टाइल कैमरा स्कैनर',
+  // Hostel Residence & Maintenance
+  'My Hostel Residence & Accommodation': 'मेरा छात्रावास निवास एवं आवास',
+  'Room allocation, roommates, hostel guidelines, and 24/7 maintenance desk': 'कमरा आवंटन, रूममेट्स, छात्रावास दिशानिर्देश और 24/7 रखरखाव डेस्क',
+  'ALLOCATED ROOM': 'आवंटित कमरा',
+  'RESIDENCE COMPLEX': 'आवासीय परिसर',
+  'HOSTEL FEE STATUS': 'छात्रावास शुल्क स्थिति',
+  'Partially Paid': 'आंशिक भुगतान',
+  'Paid': 'भुगतान किया गया',
+  'Balance Due': 'शेष देय',
+  'Mess Clearance: Active': 'मेस क्लीयरेंस: सक्रिय',
+  'Roommates': 'कमरे के साथी',
+  'Hostel Regulations & Code of Conduct': 'छात्रावास नियम एवं आचार संहिता',
+  'My Maintenance Complaints': 'मेरी रखरखाव शिकायतें',
+  'Details Recorded': 'विवरण दर्ज',
+  'Assigned Resident Warden': 'आवंटित आवासीय वार्डन',
+  'Auto-routed by Hostel & Block': 'छात्रावास एवं ब्लॉक द्वारा स्वतः अग्रेषित',
+  'Auto-assigned by workload': 'कार्यभार के आधार पर स्वतः आवंटित',
+  'Awaiting Resident Warden approval and technician assignment': 'आवासीय वार्डन अनुमोदन एवं तकनीशियन आवंटन प्रतीक्षित',
+  'Status Log': 'स्थिति लॉग',
 
-  // Calendar & Reminders
-  'Calendar': 'कैलेंडर',
-  'Holiday List': 'अवकाश सूची',
-  'Holiday': 'अवकाश',
-  'Sunday': 'रविवार',
-  'Today': 'आज',
-  'Has Notes': 'नोट्स उपलब्ध हैं',
-  'Sun': 'रवि',
-  'Mon': 'सोम',
-  'Tue': 'मंगल',
-  'Wed': 'बुध',
-  'Thu': 'गुरु',
-  'Fri': 'शुक्र',
-  'Sat': 'शनि',
-  'SUN': 'रवि',
-  'MON': 'सोम',
-  'TUE': 'मंगल',
-  'WED': 'बुध',
-  'THU': 'गुरु',
-  'FRI': 'शुक्र',
-  'SAT': 'शनि',
-  'January': 'जनवरी',
-  'February': 'फरवरी',
-  'March': 'मार्च',
-  'April': 'अप्रैल',
-  'May': 'मई',
-  'June': 'जून',
-  'July': 'जुलाई',
-  'August': 'अगस्त',
-  'September': 'सितंबर',
-  'October': 'अक्टूबर',
-  'November': 'नवंबर',
-  'December': 'दिसंबर',
-  'November 2026': 'नवंबर 2026',
-  'October 2026': 'अक्टूबर 2026',
-  'December 2026': 'दिसंबर 2026',
-  'Pending Calendar Reminders & Tasks': 'लंबित कैलेंडर अनुस्मारक और कार्य',
-  'Mandatory Notice': 'अनिवार्य सूचना',
-  'Overdue (Pending)': 'अतिदेय (लंबित)',
-  "Today's Task": 'आज का कार्य',
-  'Upcoming Task': 'आगामी कार्य',
-  'Completed Tasks': 'पूर्ण कार्य',
-  'No notes scheduled for this date.': 'इस तिथि के लिए कोई नोट निर्धारित नहीं है।',
-  'Click "+ Add Note" below to schedule your task or reminder.': 'अपना कार्य या अनुस्मारक निर्धारित करने के लिए नीचे "+ नोट जोड़ें" पर क्लिक करें।',
-  'Title': 'शीर्षक',
-  'Description': 'विवरण',
-  'Selected Date': 'चयनित तिथि',
-  'Close (Review Later)': 'बंद करें (बाद में समीक्षा करें)',
-  'Supporting Document': 'सहायक दस्तावेज़',
-  'View Supporting Document': 'सहायक दस्तावेज़ देखें',
-  'Document Preview': 'दस्तावेज़ पूर्वावलोकन',
-  'Upload Supporting Document': 'सहायक दस्तावेज़ अपलोड करें',
-  'No supporting document uploaded': 'कोई सहायक दस्तावेज़ अपलोड नहीं किया गया',
+  // Landing Page
+  'Welcome Back': 'वापसी पर स्वागत है',
+  'Sign in to your Apna Campus account': 'अपने अपना कैंपस खाते में साइन इन करें',
+  'College ID or Registration Number': 'कॉलेज आईडी या पंजीकरण संख्या',
+  'Password': 'पासवर्ड',
+  'Remember my credentials on this device': 'इस उपकरण पर मेरा विवरण याद रखें',
+  'Need help signing in? Contact Campus IT Desk': 'साइन इन करने में सहायता चाहिए? कैंपस आईटी डेस्क से संपर्क करें',
+  'APNA CAMPUS': 'अपना कैंपस',
+  'COLLEGE MANAGEMENT ERP': 'कॉलेज प्रबंधन ईआरपी',
+  'AUTONOMOUS HIGHER EDUCATION PORTAL': 'स्वायत्त उच्च शिक्षा पोर्टल',
+  'NAAC A++ ACCREDITED': 'नैक ए++ मान्यता प्राप्त',
+  'LEARN': 'सीखें',
+  'GROW': 'बढ़ें',
+  'CONNECT': 'जुड़ें',
+  'A Smarter': 'एक अधिक स्मार्ट',
+  'Campus Experience.': 'कैंपस अनुभव।',
+  'People': 'लोग',
+  'Administration': 'प्रशासन',
+  'Opportunities': 'अवसर',
+  'Smart Timetable': 'स्मार्ट समय सारणी',
+  'Digital Evaluations': 'डिजिटल मूल्यांकन',
+  'Smart Attendance': 'स्मार्ट उपस्थिति',
+  'STUDENTS': 'छात्र',
+  'FACULTY': 'संकाय',
+  'PROGRAMS': 'कार्यक्रम',
 
   // Statuses & Table Headers
   'Status': 'स्थिति',
@@ -315,238 +310,356 @@ export const HINDI_DICTIONARY = {
   'Completed': 'पूर्ण',
   'Approved': 'स्वीकृत',
   'Rejected': 'अस्वीकृत',
+  'Submitted': 'जमा किया गया',
+  'In Progress': 'प्रगति पर',
+  'Awaiting Student Verification': 'छात्र सत्यापन प्रतीक्षित',
+  'Awaiting Verification': 'सत्यापन प्रतीक्षित',
+  'Resolved': 'समाधान हो गया',
+  'Reopened': 'पुनः खोला गया',
+  'Overdue': 'अतिदेय',
+  'High': 'उच्च',
+  'Medium': 'मध्यम',
+  'Low': 'कम',
+  'Urgent': 'अति आवश्यक',
+  'Plumbing': 'नलसाजी (प्लंबिंग)',
+  'Electrical': 'विद्युत (इलेक्ट्रिकल)',
+  'Cleaning': 'सफाई (क्लीनिंग)',
+  'Furniture': 'फर्नीचर',
+  'Civil': 'सिविल निर्माण',
   'Present': 'उपस्थित',
   'Absent': 'अनुपस्थित',
   'On Leave': 'अवकाश पर',
   'On Duty': 'ड्यूटी पर',
-  'Present On Duty': 'ड्यूटी पर उपस्थित',
-  'On Authorized Leave': 'अधिकृत अवकाश पर',
-  'Relief Active': 'राहत सक्रिय',
-  'Total Staff': 'कुल कर्मचारी',
-  'TOTAL STAFF': 'कुल कर्मचारी',
-  'PRESENT ON DUTY': 'ड्यूटी पर उपस्थित',
-  'ON AUTHORIZED LEAVE': 'अधिकृत अवकाश पर',
-  '24X7 RESIDENT WARDENS': '24x7 निवासी वार्डन',
-  'Operational Hostel Cadre': 'सक्रिय छात्रावास संवर्ग',
-  'Active across shifts': 'शिफ्टों में सक्रिय',
-  'Campus Quarters In-House': 'परिसर क्वार्टर आंतरिक',
-  'Staff Directory': 'कर्मचारी निर्देशिका',
-  'Weekly Shift Schedule': 'साप्ताहिक शिफ्ट समय सारणी',
-  'Rooms': 'कमरे',
-  'Occupied': 'अधिकृत',
-  'Vacant': 'रिक्त',
-  'Bed Position': 'बेड स्थिति',
-  'Resident Student': 'आवासीय छात्र',
-  'Roll / Reg Number': 'रोल / पंजीकरण संख्या',
-  'Department & Sem': 'विभाग और सत्र',
-  'Emergency Contact': 'आपातकालीन संपर्क',
-  'Biometric Status': 'बायोमेट्रिक स्थिति',
   'Action': 'कार्रवाई',
   'Actions': 'कार्रवाइयां',
-  'Indent Status': 'मांग स्थिति',
-  'Material Name': 'सामग्री का नाम',
-  'Quantity': 'मात्रा',
-  'Approx Cost': 'अनुमानित लागत',
-  'Purpose': 'उद्देश्य',
-  'Expected Date': 'अपेक्षित तिथि',
-  'Raised By': 'द्वारा उठाया गया',
-  'Current Level': 'वर्तमान स्तर',
-  'Is Approved': 'स्वीकृत है?',
-  'Issued?': 'जारी हुआ?',
-  'Hostel Admin Action': 'छात्रावास एडमिन कार्रवाई',
-  'Select Hostel': 'छात्रावास चुनें',
-  'Attendance Date': 'उपस्थिति तिथि',
-  'Roll Call Session': 'रोल कॉल सत्र',
-  'Search Resident': 'निवासी खोजें',
-  'Attendance Submitted & Verified': 'उपस्थिति जमा एवं सत्यापित',
-  'Alert Parents of Absent Students': 'अनुपस्थित छात्रों के अभिभावकों को सूचित करें',
-  'All residents present': 'सभी निवासी उपस्थित',
-  'Official Photograph & Identity Badge': 'आधिकारिक तस्वीर और पहचान बैज',
-  'ADMIN UPLOAD ONLY': 'केवल एडमिन अपलोड',
-  'Click to Upload or Drag & Drop Photo': 'तस्वीर अपलोड करने के लिए क्लिक करें या खींचें',
-  'Supports PNG, JPG, WebP up to 5MB (Official passport photograph)': '5MB तक PNG, JPG, WebP समर्थित (आधिकारिक पासपोर्ट फोटो)',
-  'Or select a preset professional resident avatar:': 'या एक पूर्व निर्धारित पेशेवर निवासी अवतार चुनें:',
-  'Male Warden 1': 'पुरुष वार्डन 1',
-  'Male Warden 2': 'पुरुष वार्डन 2',
-  'Female Warden 1': 'महिला वार्डन 1',
-  'Female Warden 2': 'महिला वार्डन 2',
-  'Gender': 'लिंग',
-  'Select Gender': 'लिंग चुनें',
-  'Male': 'पुरुष',
-  'Female': 'महिला',
-  'Other': 'अन्य',
-  'STAFF MGMT': 'कर्मचारी प्रबंधन',
-  'Office of the Chief Warden & Residential Affairs': 'मुख्य वार्डन एवं आवासीय मामले कार्यालय',
-  'Hostel Staff & Warden Duty Roster': 'छात्रावास कर्मचारी एवं वार्डन ड्यूटी रोस्टर',
-  'Wardens · Caretakers · Security Sergeants · Housekeeping & Kitchen Personnel': 'वार्डन · केयरटेकर · सुरक्षा सार्जेंट · हाउसकीपिंग एवं रसोई कर्मचारी',
-  'Search staff by name, designation, or...': 'नाम, पदनाम द्वारा कर्मचारी खोजें...',
-  'Search staff by name, designation, or phone...': 'नाम, पदनाम या फोन द्वारा कर्मचारी खोजें...',
-  'Official contact records protected under BPUT Staff Privacy Code': 'आधिकारिक संपर्क रिकॉर्ड BPUT कर्मचारी गोपनीयता कोड के तहत सुरक्षित हैं',
-  'Chief Resident Warden (Boys)': 'मुख्य आवासीय वार्डन (छात्र)',
-  'Chief Resident Warden (Girls)': 'मुख्य आवासीय वार्डन (छात्रा)',
-  'Assistant Warden': 'सहायक वार्डन',
-  'Hostel Maintenance Plumber': 'छात्रावास रखरखाव प्लम्बर',
-  'Hostel Senior Electrician': 'छात्रावास वरिष्ठ इलेक्ट्रीशियन',
-  'Hostel Caretaker & Matron': 'छात्रावास केयरटेकर एवं मैट्रन',
-  'Head Cook & Mess In-Charge': 'प्रधान रसोइया एवं मेस प्रभारी',
-  'Security Gate Sergeant': 'सुरक्षा गेट सार्जेंट',
-  'Assigned Hostel': 'आवंटित छात्रावास',
-  'Duty Shift': 'ड्यूटी शिफ्ट',
-  'Official Phone': 'आधिकारिक फोन',
-  'Official Email': 'आधिकारिक ईमेल',
-  'Staff ID': 'कर्मचारी आईडी',
-  'On Leave (Relief On Duty)': 'अवकाश पर (राहत ड्यूटी पर)',
-  'Hostel Inventory & Requisition Management': 'छात्रावास इन्वेंट्री एवं मांग प्रबंधन',
-  'Raise Indent / View Status, Custom Materials Requisition, and Recommendation Log.': 'मांग पत्र उठाएं / स्थिति देखें, कस्टम सामग्री मांग एवं सिफारिश लॉग।',
-  'Home / Inventory / Indent Status': 'होम / इन्वेंट्री / मांग स्थिति',
-  'Raise Indent / View Status': 'मांग पत्र उठाएं / स्थिति देखें',
-  'My Recommendation Log': 'मेरी सिफारिश लॉग',
-  'Hostel Admin (Sanction Authority)': 'छात्रावास एडमिन (स्वीकृति प्राधिकरण)',
-  'Hostel Warden (Requisitioner)': 'छात्रावास वार्डन (मांगकर्ता)',
-  'RAISE IND': 'मांग पत्र उठाएं',
-  'RAISE INDENT': 'मांग पत्र उठाएं',
-  'PDF': 'पीडीएफ',
-  'EXCEL': 'एक्सेल',
-  'Warning! Seems like you have 3 pending requisition(s) awaiting Hostel Admin review!': 'चेतावनी! ऐसा लगता है कि आपके पास छात्रावास एडमिन समीक्षा की प्रतीक्षा कर रही 3 लंबित मांगें हैं!',
-  'Search Indent No, Material Name, Code, Purpose, Raised By...': 'मांग संख्या, सामग्री का नाम, कोड, उद्देश्य, द्वारा खोजें...',
-  'All Materials': 'सभी सामग्रियां',
-  'Store Dispatched': 'स्टोर से प्रेषित',
-  'Level-1 (Pending Review)': 'स्तर-1 (समीक्षा लंबित)',
-  'Level-2 (Store Issued)': 'स्तर-2 (स्टोर जारी)',
-  'Pending Review': 'समीक्षा लंबित',
-  'Custom Warden Requisition': 'कस्टम वार्डन मांग',
-  'Rejected by Admin: Budget constraint or alternative item in store': 'एडमिन द्वारा अस्वीकृत: बजट बाधा या स्टोर में वैकल्पिक वस्तु',
-  '1 Pieces': '1 पीस',
-  '4.00 pcs': '4.00 पीस',
-  '2.00 pcs': '2.00 पीस',
-  '1.00 pcs': '1.00 पीस',
-  '12.00 pcs': '12.00 पीस',
-  '8.00 pcs': '8.00 पीस',
-  'Pieces': 'पीस',
-  'pcs': 'पीस',
-
-  // Common UI labels
-  'Filter...': 'फ़िल्टर...',
-  'Filter by material...': 'सामग्री द्वारा फ़िल्टर करें...',
-  'All': 'सभी',
-  'Issued': 'जारी किया गया',
-  'Name': 'नाम',
-  'Department': 'विभाग',
-  'Branch': 'शाखा',
-  'Phone': 'फ़ोन',
-  'Email': 'ईमेल',
-  'Address': 'पता',
-  'Date': 'तिथि',
-  'Type': 'प्रकार',
-  'Category': 'श्रेणी',
-  'Role': 'भूमिका',
-  'Amount': 'राशि',
-  'Remarks': 'टिप्पणी',
-  'Comments': 'टिप्पणियां',
-  'Success': 'सफल',
-  'Error': 'त्रुटि',
-  'Warning': 'चेतावनी',
-  'Info': 'सूचना',
-  'Are you sure?': 'क्या आप निश्चित हैं?',
-  'Operation completed successfully': 'कार्य सफलतापूर्वक पूर्ण हुआ',
-  'Record saved successfully': 'रिकॉर्ड सफलतापूर्वक सहेजा गया',
-  'Record deleted successfully': 'रिकॉर्ड सफलतापूर्वक हटाया गया',
-  'Loading...': 'लोड हो रहा है...',
-  'No records found': 'कोई रिकॉर्ड नहीं मिला',
-  'Please fill all required fields': 'कृपया सभी आवश्यक फ़ील्ड भरें',
-  'Access Denied': 'पहुंच अस्वीकृत',
-  'You do not have permission to perform this action': 'आपके पास यह क्रिया करने की अनुमति नहीं है',
-  'System Online': 'सिस्टम ऑनलाइन',
-  'Authorized Scope': 'अधिकृत कार्यक्षेत्र',
 };
 
-// Subphrase / token mapping for multi-part sentences
-export const SUBPHRASE_MAPPINGS = [
-  ['STAFF MGMT', 'कर्मचारी प्रबंधन'],
-  ['Office of the Chief Warden & Residential Affairs', 'मुख्य वार्डन एवं आवासीय मामले कार्यालय'],
-  ['Hostel Staff & Warden Duty Roster', 'छात्रावास कर्मचारी एवं वार्डन ड्यूटी रोस्टर'],
-  ['Wardens · Caretakers · Security Sergeants · Housekeeping & Kitchen Personnel', 'वार्डन · केयरटेकर · सुरक्षा सार्जेंट · हाउसकीपिंग एवं रसोई कर्मचारी'],
-  ['TOTAL STAFF', 'कुल कर्मचारी'],
-  ['Operational Hostel Cadre', 'सक्रिय छात्रावास संवर्ग'],
-  ['PRESENT ON DUTY', 'ड्यूटी पर उपस्थित'],
-  ['Active across shifts', 'शिफ्टों में सक्रिय'],
-  ['ON AUTHORIZED LEAVE', 'अधिकृत अवकाश पर'],
-  ['Relief Active', 'राहत सक्रिय'],
-  ['24X7 RESIDENT WARDENS', '24x7 निवासी वार्डन'],
-  ['Campus Quarters In-House', 'परिसर क्वार्टर आंतरिक'],
-  ['Weekly Shift Schedule', 'साप्ताहिक शिफ्ट समय सारणी'],
-  ['Staff Directory', 'कर्मचारी निर्देशिका'],
-  ['Official contact records protected under BPUT Staff Privacy Code', 'आधिकारिक संपर्क रिकॉर्ड BPUT कर्मचारी गोपनीयता कोड के तहत सुरक्षित हैं'],
-  ['Chief Resident Warden (Boys)', 'मुख्य आवासीय वार्डन (छात्र)'],
-  ['Chief Resident Warden (Girls)', 'मुख्य आवासीय वार्डन (छात्रा)'],
-  ['Chief Resident Warden', 'मुख्य आवासीय वार्डन'],
-  ['Hostel Maintenance Plumber', 'छात्रावास रखरखाव प्लम्बर'],
-  ['Hostel Senior Electrician', 'छात्रावास वरिष्ठ इलेक्ट्रीशियन'],
-  ['Hostel Caretaker & Matron', 'छात्रावास केयरटेकर एवं मैट्रन'],
-  ['Head Cook & Mess In-Charge', 'प्रधान रसोइया एवं मेस प्रभारी'],
-  ['Security Gate Sergeant', 'सुरक्षा गेट सार्जेंट'],
-  ['Assistant Warden', 'सहायक वार्डन'],
-  ['Assigned Hostel:', 'आवंटित छात्रावास:'],
-  ['Assigned Hostel', 'आवंटित छात्रावास'],
-  ['Duty Shift:', 'ड्यूटी शिफ्ट:'],
-  ['Duty Shift', 'ड्यूटी शिफ्ट'],
-  ['Official Phone:', 'आधिकारिक फोन:'],
-  ['Official Phone', 'आधिकारिक फोन'],
-  ['Official Email:', 'आधिकारिक ईमेल:'],
-  ['Official Email', 'आधिकारिक ईमेल'],
-  ['Staff ID:', 'कर्मचारी आईडी:'],
-  ['Staff ID', 'कर्मचारी आईडी'],
-  ['Present On Duty', 'ड्यूटी पर उपस्थित'],
-  ['Quick Connect', 'त्वरित संपर्क'],
-  ['On Leave (Relief On Duty)', 'अवकाश पर (राहत ड्यूटी पर)'],
-  ['Hostel Inventory & Requisition Management', 'छात्रावास इन्वेंट्री एवं मांग प्रबंधन'],
-  ['Raise Indent / View Status, Custom Materials Requisition, and Recommendation Log.', 'मांग पत्र उठाएं / स्थिति देखें, कस्टम सामग्री मांग एवं सिफारिश लॉग।'],
-  ['Home / Inventory / Indent Status', 'होम / इन्वेंट्री / मांग स्थिति'],
-  ['Raise Indent / View Status', 'मांग पत्र उठाएं / स्थिति देखें'],
-  ['My Recommendation Log', 'मेरी सिफारिश लॉग'],
-  ['Indent Status', 'मांग स्थिति'],
-  ['Hostel Admin (Sanction Authority)', 'छात्रावास एडमिन (स्वीकृति प्राधिकरण)'],
-  ['Hostel Warden (Requisitioner)', 'छात्रावास वार्डन (मांगकर्ता)'],
-  ['Warning! Seems like you have', 'चेतावनी! ऐसा लगता है कि आपके पास'],
-  ['pending requisition(s) awaiting Hostel Admin review!', 'छात्रावास एडमिन समीक्षा की प्रतीक्षा कर रही लंबित मांगें हैं!'],
-  ['Total Indents:', 'कुल मांगें:'],
-  ['Total Indents', 'कुल मांगें'],
-  ['Pending Approval:', 'लंबित स्वीकृति:'],
-  ['Pending Approval', 'लंबित स्वीकृति'],
-  ['Estimated Requisition Value:', 'अनुमानित मांग मूल्य:'],
-  ['Estimated Requisition Value', 'अनुमानित मांग मूल्य'],
-  ['Requisition/Indent No.', 'मांग/इंडेंट संख्या'],
-  ['Requisition/Indent No', 'मांग/इंडेंट संख्या'],
-  ['Material Name', 'सामग्री का नाम'],
-  ['Approx Cost', 'अनुमानित लागत'],
-  ['Expected Date', 'अपेक्षित तिथि'],
-  ['Raised By', 'द्वारा उठाया गया'],
-  ['Current Level', 'वर्तमान स्तर'],
-  ['Is Approved', 'स्वीकृत है?'],
-  ['Issued?', 'जारी हुआ?'],
-  ['Hostel Admin Action', 'छात्रावास एडमिन कार्रवाई'],
-  ['All Materials', 'सभी सामग्रियां'],
-  ['Store Dispatched', 'स्टोर से प्रेषित'],
-  ['Level-1 (Pending Review)', 'स्तर-1 (समीक्षा लंबित)'],
-  ['Level-2 (Store Issued)', 'स्तर-2 (स्टोर जारी)'],
-  ['Pending Review', 'समीक्षा लंबित'],
-  ['Custom Warden Requisition', 'कस्टम वार्डन मांग'],
-  ['Rejected by Admin: Budget constraint or alternative item in store', 'एडमिन द्वारा अस्वीकृत: बजट बाधा या स्टोर में वैकल्पिक वस्तु'],
-  ['Official Photograph & Identity Badge', 'आधिकारिक तस्वीर और पहचान बैज'],
-  ['ADMIN UPLOAD ONLY', 'केवल एडमिन अपलोड'],
-  ['Click to Upload or Drag & Drop Photo', 'तस्वीर अपलोड करने के लिए क्लिक करें या खींचें'],
-  ['Supports PNG, JPG, WebP up to 5MB (Official passport photograph)', '5MB तक PNG, JPG, WebP समर्थित (आधिकारिक पासपोर्ट फोटो)'],
-  ['Or select a preset professional resident avatar:', 'या एक पूर्व निर्धारित पेशेवर निवासी अवतार चुनें:'],
-  ['Male Warden 1', 'पुरुष वार्डन 1'],
-  ['Male Warden 2', 'पुरुष वार्डन 2'],
-  ['Female Warden 1', 'महिला वार्डन 1'],
-  ['Female Warden 2', 'महिला वार्डन 2'],
-  ['Supporting Document', 'सहायक दस्तावेज़'],
-  ['View Supporting Document', 'सहायक दस्तावेज़ देखें'],
-  ['View Document', 'दस्तावेज़ देखें'],
-  ['Document Preview', 'दस्तावेज़ पूर्वावलोकन'],
-  ['Upload Supporting Document', 'सहायक दस्तावेज़ अपलोड करें'],
-  ['No supporting document uploaded', 'कोई सहायक दस्तावेज़ अपलोड नहीं किया गया'],
+export const ODIA_DICTIONARY = {
+  // Navigation & Sections
+  'OVERVIEW': 'ସମୀକ୍ଷା',
+  'HOSTEL': 'ଛାତ୍ରାବାସ',
+  'RESIDENTIAL OPERATIONS': 'ଆବାସିକ କାର୍ଯ୍ୟକଳାପ',
+  'LEAVES & DIGITAL PASSES': 'ଛୁଟି ଏବଂ ଡିଜିଟାଲ୍ ପାସ୍',
+  'SERVICES & ASSETS': 'ସେବା ଏବଂ ସମ୍ପତ୍ତି',
+  'POLICIES & REPORTS': 'ନୀତି ଏବଂ ବିବରଣୀ',
+  'REPORTS & POLICIES': 'ବିବରଣୀ ଏବଂ ନୀତି',
+  'WARDEN MANAGEMENT': 'ୱାର୍ଡେନ୍ ପରିଚାଳନା',
+  'ATTENDANCE & MOVEMENT': 'ଉପସ୍ଥିତି ଏବଂ ଚଳପ୍ରଚଳ',
+  'SAFETY & DISCIPLINE': 'ସୁରକ୍ଷା ଏବଂ ଶୃଙ୍ଖଳା',
+  'ACADEMICS': 'ଶିକ୍ଷାଗତ',
+  'EXAMINATION': 'ପରୀକ୍ଷା',
+  'FEES & ACCOUNTS': 'ଫିସ୍ ଏବଂ ହିସାବ',
+  'CAMPUS OPERATIONS': 'କ୍ୟାମ୍ପସ କାର୍ଯ୍ୟକଳାପ',
+  'ADMISSIONS': 'ନାମଲେଖା',
+  'LIBRARY': 'ଗ୍ରନ୍ଥାଗାର',
+  'TRANSPORT': 'ପରିବହନ',
+  'PLACEMENT': 'ନିଯୁକ୍ତି',
+  'FACULTY MANAGEMENT': 'ଅଧ୍ୟାପକ ପରିଚାଳନା',
+  'STUDENT AFFAIRS': 'ଛାତ୍ର ବ୍ୟାପାର',
+
+  // Dashboards & Portals
+  'Dashboard': 'ଡ୍ୟାସବୋର୍ଡ',
+  'Super Admin dashboard': 'ମୁଖ୍ୟ ପ୍ରଶାସକ ଡ୍ୟାସବୋର୍ଡ',
+  'Super Admin Dashboard': 'ମୁଖ୍ୟ ପ୍ରଶାସକ ଡ୍ୟାସବୋର୍ଡ',
+  'Admin Dashboard': 'ପ୍ରଶାସକ ଡ୍ୟାସବୋର୍ଡ',
+  'Hostel Admin Dashboard': 'ଛାତ୍ରାବାସ ପ୍ରଶାସକ ଡ୍ୟାସବୋର୍ଡ',
+  'Warden Dashboard': 'ୱାର୍ଡେନ୍ ଡ୍ୟାସବୋର୍ଡ',
+  'Principal Dashboard': 'ଅଧ୍ୟକ୍ଷ ଡ୍ୟାସବୋର୍ଡ',
+  "Principal's Executive Dashboard": 'ଅଧ୍ୟକ୍ଷଙ୍କ କାର୍ଯ୍ୟନିର୍ବାହୀ ଡ୍ୟାସବୋର୍ଡ',
+  'Faculty Dashboard': 'ଅଧ୍ୟାପକ ଡ୍ୟାସବୋର୍ଡ',
+  'Student Dashboard': 'ଛାତ୍ର ଡ୍ୟାସବୋର୍ଡ',
+  'HOD Dashboard': 'ବିଭାଗୀୟ ମୁଖ୍ୟ ଡ୍ୟାସବୋର୍ଡ',
+  'Management Dashboard': 'ପରିଚାଳନା ଡ୍ୟାସବୋର୍ଡ',
+  'Examination Dashboard': 'ପରୀକ୍ଷା ଡ୍ୟାସବୋର୍ଡ',
+  'Library Dashboard': 'ଗ୍ରନ୍ଥାଗାର ଡ୍ୟାସବୋର୍ଡ',
+  'Transport Dashboard': 'ପରିବହନ ଡ୍ୟାସବୋର୍ଡ',
+  'Placement Dashboard': 'ନିଯୁକ୍ତି ଡ୍ୟାସବୋର୍ଡ',
+  'Security Dashboard': 'ସୁରକ୍ଷା ଡ୍ୟାସବୋର୍ଡ',
+  'Campus Security': 'କ୍ୟାମ୍ପସ ସୁରକ୍ଷା',
+  'Gate Overview': 'ଗେଟ୍ ସମୀକ୍ଷା',
+  'QR Scanner & Roll Lookup': 'କ୍ୟୁଆର୍ ସ୍କାନର୍ ଓ ରୋଲ୍ ସନ୍ଧାନ',
+  'Approved Gate Passes': 'ଅନୁମୋଦିତ ଗେଟ୍ ପାସ୍',
+  'Visitor Management': 'ଦର୍ଶକ ପରିଚାଳନା',
+  'Movement History': 'ଗମନାଗମନ ଇତିହାସ',
+  'Security Alerts': 'ସୁରକ୍ଷା ସତର୍କତା',
+  'Mess Manager': 'ମେସ୍ ପରିଚାଳକ',
+  'Mess Management': 'ମେସ୍ ପରିଚାଳନା',
+  'Mess Dashboard': 'ମେସ୍ ଡ୍ୟାସବୋର୍ଡ',
+  'Weekly Menu': 'ସାପ୍ତାହିକ ଖାଦ୍ୟ ତାଲିକା',
+  'Meal Feedback': 'ଭୋଜନ ମତାମତ',
+  'Complaints & Issues': 'ଅଭିଯୋଗ ଓ ସମସ୍ୟା',
+  'Meal Count / Attendance': 'ଭୋଜନ ଗଣନା / ଉପସ୍ଥିତି',
+  'Mess Notices': 'ମେସ୍ ନୋଟିସ୍',
+  'Overview': 'ସମୀକ୍ଷା',
+
+  // Sidebar Menu Items
+  'Take Hostel Attendance': 'ଛାତ୍ରାବାସ ଉପସ୍ଥିତି ନିଅନ୍ତୁ',
+  'View Hostel Attendance': 'ଛାତ୍ରାବାସ ଉପସ୍ଥିତି ଦେଖନ୍ତୁ',
+  'Room Allotment': 'କୋଠରୀ ବଣ୍ଟନ',
+  'Hostel Blocks & Wings': 'ଛାତ୍ରାବାସ ବ୍ଲକ୍ ଓ ୱିଙ୍ଗ୍',
+  'Rooms & Bed Allotment': 'କୋଠରୀ ଓ ଶଯ୍ୟା ବଣ୍ଟନ',
+  'Hostel Leaves': 'ଛାତ୍ରାବାସ ଛୁଟି',
+  'Apply Leave': 'ଛୁଟି ଆବେଦନ',
+  'Digital Gate Passes': 'ଡିଜିଟାଲ୍ ଗେଟ୍ ପାସ୍',
+  'Visitor Logs': 'ଦର୍ଶକ ଲଗ୍',
+  'Visitor Register': 'ଦର୍ଶକ ରେଜିଷ୍ଟର',
+  'Disciplinary Records': 'ଶୃଙ୍ଖଳାଗତ ରେକର୍ଡ',
+  'Disciplinary Reviews': 'ଶୃଙ୍ଖଳାଗତ ସମୀକ୍ଷା',
+  'Emergency Contacts': 'ଜରୁରୀକାଳୀନ ସମ୍ପର୍କ',
+  'Mess & Food Feedback': 'ମେସ୍ ଓ ଭୋଜନ ମତାମତ',
+  'Mess & Food Feedback Management': 'ମେସ୍ ଓ ଭୋଜନ ମତାମତ ପରିଚାଳନା',
+  'Room Cleanliness Complaints': 'କୋଠରୀ ସ୍ୱଚ୍ଛତା ଅଭିଯୋଗ',
+  'Room Cleanliness Complaints & SLA': 'କୋଠରୀ ସ୍ୱଚ୍ଛତା ଅଭିଯୋଗ ଓ ଏସ୍.ଏଲ୍.ଏ.',
+  'Room Maintenance Complaints': 'କୋଠରୀ ରକ୍ଷଣାବେକ୍ଷଣ ଅଭିଯୋଗ',
+  'Maintenance Complaints & SLA': 'ରକ୍ଷଣାବେକ୍ଷଣ ଅଭିଯୋଗ ଓ ଏସ୍.ଏଲ୍.ଏ.',
+  'Furniture & Inventory': 'ଆସବାବପତ୍ର ଓ ସାମଗ୍ରୀ',
+  'Furniture & Inventory Requisitions': 'ଆସବାବପତ୍ର ଓ ସାମଗ୍ରୀ ଚାହିଦା',
+  'Warden & Caretaker Roster': 'ୱାର୍ଡେନ୍ ଓ ତତ୍ତ୍ୱାବଧାରକ ତାଲିକା',
+  'Staff & Caretaker Roster': 'କର୍ମଚାରୀ ଓ ତତ୍ତ୍ୱାବଧାରକ ତାଲିକା',
+  'Hostel Rules & Curfew': 'ଛାତ୍ରାବାସ ନିୟମ ଓ ସନ୍ଧ୍ୟା ସମୟ',
+  'Hostel Fee Ledger': 'ଛାତ୍ରାବାସ ଫିସ୍ ଖାତା',
+  'Warden Directory': 'ୱାର୍ଡେନ୍ ନିର୍ଦ୍ଦେଶିକା',
+  'Warden Assignments': 'ୱାର୍ଡେନ୍ ଦାୟିତ୍ୱ',
+  'Warden Permissions': 'ୱାର୍ଡେନ୍ ଅନୁମତି',
+  'Duty & Leave Management': 'କର୍ତ୍ତବ୍ୟ ଓ ଛୁଟି ପରିଚାଳନା',
+  'Warden Performance': 'ୱାର୍ଡେନ୍ କାର୍ଯ୍ୟଦକ୍ଷତା',
+  'Add New Warden': 'ନୂତନ ୱାର୍ଡେନ୍ ଯୋଡ଼ନ୍ତୁ',
+  'Hostel Buildings & Blocks': 'ଛାତ୍ରାବାସ ଭବନ ଓ ବ୍ଲକ୍',
+  'Rooms & Bed Capacity': 'କୋଠରୀ ଓ ଶଯ୍ୟା କ୍ଷମତା',
+  'Attendance Monitoring': 'ଉପସ୍ଥିତି ନିରୀକ୍ଷଣ',
+  'Attendance Verification & Override': 'ଉପସ୍ଥିତି ଯାଞ୍ଚ ଓ ପରିବର୍ତ୍ତନ',
+  'Student Leave Approvals': 'ଛାତ୍ର ଛୁଟି ଅନୁମୋଦନ',
+  'Central Approval Center': 'କେନ୍ଦ୍ରୀୟ ଅନୁମୋଦନ କେନ୍ଦ୍ର',
+  'Reports & Compliance Analytics': 'ବିବରଣୀ ଓ ଅନୁପାଳନ ବିଶ୍ଳେଷଣ',
+  'Administrative Audit Logs': 'ପ୍ରଶାସନିକ ଅଡିଟ୍ ଲଗ୍',
+
+  // Core CMS Modules & Portals
+  'Students': 'ଛାତ୍ରଛାତ୍ରୀ',
+  'Student': 'ଛାତ୍ର',
+  'Student Directory': 'ଛାତ୍ର ନିର୍ଦ୍ଦେଶିକା',
+  'Faculty': 'ଅଧ୍ୟାପକ ବୃନ୍ଦ',
+  'Faculty Directory': 'ଅଧ୍ୟାପକ ନିର୍ଦ୍ଦେଶିକା',
+  'Teachers': 'ଶିକ୍ଷକ ବୃନ୍ଦ',
+  'Attendance': 'ଉପସ୍ଥିତି',
+  'Take Attendance': 'ଉପସ୍ଥିତି ନିଅନ୍ତୁ',
+  'View Attendance': 'ଉପସ୍ଥିତି ଦେଖନ୍ତୁ',
+  'Examination': 'ପରୀକ୍ଷା',
+  'Exam Cell': 'ପରୀକ୍ଷା ବିଭାଗ',
+  'Marks & Grades': 'ମାର୍କ ଓ ଗ୍ରେଡ୍',
+  'Fees & Payments': 'ଫିସ୍ ଓ ଦେୟ',
+  'Fee Management': 'ଫିସ୍ ପରିଚାଳନା',
+  'Hostel': 'ଛାତ୍ରାବାସ',
+  'Library': 'ଗ୍ରନ୍ଥାଗାର',
+  'Transport': 'ପରିବହନ',
+  'Placement': 'ନିଯୁକ୍ତି',
+  'Placement Cell': 'ନିଯୁକ୍ତି ସେଲ୍',
+  'Admissions': 'ନାମଲେଖା',
+  'Complaints': 'ଅଭିଯୋଗ',
+  'Cleanliness': 'ସ୍ୱଚ୍ଛତା',
+  'Maintenance': 'ରକ୍ଷଣାବେକ୍ଷଣ',
+  'Staff': 'କର୍ମଚାରୀ',
+  'Settings': 'ସେଟିଙ୍ଗ୍ସ',
+  'Reports': 'ବିବରଣୀ',
+  'Notices': 'ବିଜ୍ଞପ୍ତି',
+  'Official College Notices': 'ସରକାରୀ କଲେଜ ବିଜ୍ଞପ୍ତି',
+  'My Classes & Sections': 'ମୋର କ୍ଲାସ୍ ଓ ସେକ୍ସନ୍',
+  "Today's Schedule": 'ଆଜିର କାର୍ଯ୍ୟସୂଚୀ',
+  'Marks Entry': 'ମାର୍କ ପ୍ରବେଶ',
+  'Internal Assessment': 'ଆଭ୍ୟନ୍ତରୀଣ ମୂଲ୍ୟାୟନ',
+  'Assignment Management': 'ଅସାଇନ୍‌ମେଣ୍ଟ୍ ପରିଚାଳନା',
+  'Student Mentoring': 'ଛାତ୍ର ପରାମର୍ଶ',
+  'Lesson Plans': 'ପାଠ୍ୟ ଯୋଜନା',
+  'Research & Publications': 'ଗବେଷଣା ଓ ପ୍ରକାଶନ',
+  'Apply For Leave': 'ଛୁଟି ପାଇଁ ଆବେଦନ କରନ୍ତୁ',
+  'Class Timetable': 'କ୍ଲାସ୍ ସମୟ ସାରଣୀ',
+  'Subject': 'ବିଷୟ',
+  'Semester': 'ସେମିଷ୍ଟାର୍',
+  'Section': 'ସେକ୍ସନ୍',
+  'Time': 'ସମୟ',
+  'Room': 'କୋଠରୀ',
+  'Mark Attendance': 'ଉପସ୍ଥିତି ଦିଅନ୍ତୁ',
+  'Enter Marks': 'ମାର୍କ ଦିଅନ୍ତୁ',
+  'Upload Material': 'ପାଠ୍ୟ ଉପକରଣ ଅପଲୋଡ୍ କରନ୍ତୁ',
+  'Submitted Assignments': 'ଦାଖଲ ହୋଇଥିବା ଅସାଇନ୍‌ମେଣ୍ଟ୍',
+  'Attendance Summary': 'ଉପସ୍ଥିତି ସାରାଂଶ',
+  'Upcoming Examinations': 'ଆଗାମୀ ପରୀକ୍ଷା',
+  'Fee Dues & Receipts': 'ବାକି ଫିସ୍ ଓ ରସିଦ',
+  'Hostel & Room Allotment': 'ଛାତ୍ରାବାସ ଓ କୋଠରୀ ବଣ୍ଟନ',
+  'Hostel Leave Application': 'ଛାତ୍ରାବାସ ଛୁଟି ଆବେଦନ',
+  'Digital Gate Pass': 'ଡିଜିଟାଲ୍ ଗେଟ୍ ପାସ୍',
+  'Library Books Issued': 'ପ୍ରଦତ୍ତ ପୁସ୍ତକ',
+  'Assignments & Submissions': 'ଅସାଇନ୍‌ମେଣ୍ଟ୍ ଓ ଦାଖଲ',
+  'Report a Complaint': 'ଅଭିଯୋଗ ଦାଖଲ କରନ୍ତୁ',
+  'Food Feedback': 'ଭୋଜନ ମତାମତ',
+  'Maintenance Requests': 'ରକ୍ଷଣାବେକ୍ଷଣ ଅନୁରୋଧ',
+  'Bonafide Certificate Apply': 'ବୋନାଫାଇଡ୍ ପ୍ରମାଣପତ୍ର ଆବେଦନ',
+  'My Grades & CGPA': 'ମୋର ଗ୍ରେଡ୍ ଓ ସିଜିପିଏ',
+  'Download Hall Ticket': 'ପ୍ରବେଶ ପତ୍ର ଡାଉନଲୋଡ୍ କରନ୍ତୁ',
+  'Pay Fees Online': 'ଅନଲାଇନ୍ ଫିସ୍ ପ୍ରଦାନ କରନ୍ତୁ',
+
+  // Topbar / Header
+  'Notifications': 'ବିଜ୍ଞପ୍ତି',
+  'Campus Notifications': 'କ୍ୟାମ୍ପସ ବିଜ୍ଞପ୍ତି',
+  'Search anything... (e.g. students, marks, notices)': 'ସନ୍ଧାନ କରନ୍ତୁ... (ଉଦା. ଛାତ୍ର, ମାର୍କ, ନୋଟିସ୍)',
+  'Search anything...': 'ସନ୍ଧାନ କରନ୍ତୁ...',
+  'Sign In': 'ଲଗ୍ ଇନ୍ କରନ୍ତୁ',
+  'Sign Out': 'ଲଗ୍ ଆଉଟ୍ କରନ୍ତୁ',
+  'Logout': 'ଲଗ୍ ଆଉଟ୍',
+  'Log Out': 'ଲଗ୍ ଆଉଟ୍',
+  'Language': 'ଭାଷା',
+  'Select Language': 'ଭାଷା ଚୟନ କରନ୍ତୁ',
+  'Select Language (Current: English)': 'ଭାଷା ଚୟନ (ବର୍ତ୍ତମାନ: English)',
+  'Select Language (Current: Hindi)': 'ଭାଷା ଚୟନ (ବର୍ତ୍ତମାନ: हिन्दी)',
+  'Select Language (Current: Odia)': 'ଭାଷା ଚୟନ (ବର୍ତ୍ତମାନ: ଓଡ଼ିଆ)',
+  'English': 'English',
+  'Hindi': 'हिन्दी',
+  'Odia': 'ଓଡ଼ିଆ',
+  'Theme': 'ଥିମ୍',
+  'Light Mode': 'ଲାଇଟ୍ ମୋଡ୍',
+  'Dark Mode': 'ଡାର୍କ ମୋଡ୍',
+  'Switch to Light Mode': 'ଲାଇଟ୍ ମୋଡ୍ ବଦଳାନ୍ତୁ',
+  'Switch to Dark Mode': 'ଡାର୍କ ମୋଡ୍ ବଦଳାନ୍ତୁ',
+  'NAAC A++ AUTONOMOUS INSTITUTION': 'ନ୍ୟାକ୍ ଏ++ ସ୍ୱୟଂଶାସିତ ଅନୁଷ୍ଠାନ',
+  'User Account Menu': 'ବ୍ୟବହାରକାରୀ ଖାତା ମେନୁ',
+  'User Profile': 'ବ୍ୟବହାରକାରୀ ପ୍ରୋଫାଇଲ୍',
+  'Profile': 'ପ୍ରୋଫାଇଲ୍',
+  'Role & Access': 'ଭୂମିକା ଓ ଅନୁମତି',
+  'Preferences': 'ପସନ୍ଦ',
+  'No new notifications': 'କୌଣସି ନୂତନ ବିଜ୍ଞପ୍ତି ନାହିଁ',
+  'Mark all as read': 'ସମସ୍ତ ପଠିତ ଚିହ୍ନିତ କରନ୍ତୁ',
+
+  // Common Buttons & Actions
+  'Add': 'ଯୋଡ଼ନ୍ତୁ',
+  'Add Note': 'ନୋଟ୍ ଯୋଡ଼ନ୍ତୁ',
+  'Edit': 'ସମ୍ପାଦନା କରନ୍ତୁ',
+  'Edit Note': 'ନୋଟ୍ ସମ୍ପାଦନା କରନ୍ତୁ',
+  'Delete': 'ହଟାନ୍ତୁ',
+  'Delete Note': 'ନୋଟ୍ ହଟାନ୍ତୁ',
+  'Save': 'ସାଇତନ୍ତୁ',
+  'Save Note': 'ନୋଟ୍ ସାଇତନ୍ତୁ',
+  'Submit': 'ଦାଖଲ କରନ୍ତୁ',
+  'Submit Note': 'ନୋଟ୍ ଦାଖଲ କରନ୍ତୁ',
+  'Submit (Complete)': 'ଦାଖଲ କରନ୍ତୁ (ସମ୍ପୂର୍ଣ୍ଣ)',
+  'Submit (Complete Task)': 'ଦାଖଲ କରନ୍ତୁ (କାର୍ଯ୍ୟ ସମ୍ପୂର୍ଣ୍ଣ)',
+  'Update': 'ଅଦ୍ୟତନ କରନ୍ତୁ',
+  'Close': 'ବନ୍ଦ କରନ୍ତୁ',
+  'Cancel': 'ବାତିଲ୍ କରନ୍ତୁ',
+  'Confirm': 'ନିଶ୍ଚିତ କରନ୍ତୁ',
+  'View': 'ଦେଖନ୍ତୁ',
+  'View Full Details': 'ସମ୍ପୂର୍ଣ୍ଣ ବିବରଣୀ ଦେଖନ୍ତୁ',
+  'View Document': 'ଦସ୍ତାବିଜ୍ ଦେଖନ୍ତୁ',
+  'Download': 'ଡାଉନଲୋଡ୍ କରନ୍ତୁ',
+  'Export': 'ରପ୍ତାନି କରନ୍ତୁ',
+  'Print': 'ମୁଦ୍ରଣ କରନ୍ତୁ',
+  'Search': 'ସନ୍ଧାନ କରନ୍ତୁ',
+  'Filter': 'ଫିଲ୍ଟର୍',
+  'Reset': 'ପୁନଃସ୍ଥାପନ କରନ୍ତୁ',
+  'Verify': 'ଯାଞ୍ଚ କରନ୍ତୁ',
+  'Approve': 'ଅନୁମୋଦନ କରନ୍ତୁ',
+  'Reject': 'ଅଗ୍ରାହ୍ୟ କରନ୍ତୁ',
+  'Inspect': 'ପରୀକ୍ଷଣ କରନ୍ତୁ',
+  'Vacate': 'ଖାଲି କରନ୍ତୁ',
+  'Apply': 'ଆବେଦନ କରନ୍ତୁ',
+  'Register': 'ପଞ୍ଜୀକରଣ କରନ୍ତୁ',
+  'Back': 'ପଛକୁ',
+  'Next': 'ପରବର୍ତ୍ତୀ',
+  'Previous': 'ପୂର୍ବବର୍ତ୍ତୀ',
+  'Refresh': 'ପୁନର୍ତାଜା କରନ୍ତୁ',
+  'Add Floor': 'ମହଲା ଯୋଡ଼ନ୍ତୁ',
+  'Add Room': 'କୋଠରୀ ଯୋଡ଼ନ୍ତୁ',
+  'Add Bed': 'ଶଯ୍ୟା ଯୋଡ଼ନ୍ତୁ',
+  'Allocate New Bed': 'ନୂତନ ଶଯ୍ୟା ବଣ୍ଟନ କରନ୍ତୁ',
+  'Add Complex': 'ପରିସର ଯୋଡ଼ନ୍ତୁ',
+  'Add Hostel Complex': 'ଛାତ୍ରାବାସ ପରିସର ଯୋଡ଼ନ୍ତୁ',
+  'Print Duty Roster': 'କର୍ତ୍ତବ୍ୟ ତାଲିକା ପ୍ରିଣ୍ଟ୍ କରନ୍ତୁ',
+  'Raise Indent': 'ଚାହିଦା ପତ୍ର ଦିଅନ୍ତୁ',
+  'Quick Connect': 'ଶୀଘ୍ର ସମ୍ପର୍କ',
+  'Save Note / Schedule Task': 'ନୋଟ୍ ସାଇତନ୍ତୁ / କାର୍ଯ୍ୟ ନିର୍ଦ୍ଧାରଣ କରନ୍ତୁ',
+  'Lodge Maintenance Request': 'ରକ୍ଷଣାବେକ୍ଷଣ ଅନୁରୋଧ କରନ୍ତୁ',
+  'Confirm Resolved': 'ସମାଧାନ ନିଶ୍ଚିତ କରନ୍ତୁ',
+  'Reopen Issue': 'ସମସ୍ୟା ପୁନଃ ଖୋଲନ୍ତୁ',
+  'Approve & Assign': 'ଅନୁମୋଦନ ଓ ଦାୟିତ୍ୱ ପ୍ରଦାନ',
+
+  // Hostel Residence & Maintenance
+  'My Hostel Residence & Accommodation': 'ମୋର ଛାତ୍ରାବାସ ନିବାସ ଓ ରହଣି',
+  'Room allocation, roommates, hostel guidelines, and 24/7 maintenance desk': 'କୋଠରୀ ବଣ୍ଟନ, ରୁମମେଟ୍ସ, ଛାତ୍ରାବାସ ନିୟମାବଳୀ ଏବଂ ୨୪/୭ ରକ୍ଷଣାବେକ୍ଷଣ ଡେସ୍କ',
+  'ALLOCATED ROOM': 'ଆବଣ୍ଟିତ କୋଠରୀ',
+  'RESIDENCE COMPLEX': 'ଆବାସିକ ପରିସର',
+  'HOSTEL FEE STATUS': 'ଛାତ୍ରାବାସ ଫିସ୍ ସ୍ଥିତି',
+  'Partially Paid': 'ଆଂଶିକ ପୈଠ',
+  'Paid': 'ପୈଠ ହୋଇଛି',
+  'Balance Due': 'ବାକି ରାଶି',
+  'Mess Clearance: Active': 'ମେସ୍ କ୍ଲିୟରାନ୍ସ: ସକ୍ରିୟ',
+  'Roommates': 'ରୁମମେଟ୍ସ',
+  'Hostel Regulations & Code of Conduct': 'ଛାତ୍ରାବାସ ନିୟମ ଓ ଆଚରଣ ବିଧି',
+  'My Maintenance Complaints': 'ମୋର ରକ୍ଷଣାବେକ୍ଷଣ ଅଭିଯୋଗ',
+  'Details Recorded': 'ବିବରଣୀ ଲିପିବଦ୍ଧ',
+  'Assigned Resident Warden': 'ନିଯୁକ୍ତ ଆବାସିକ ୱାର୍ଡେନ୍',
+  'Auto-routed by Hostel & Block': 'ଛାତ୍ରାବାସ ଓ ବ୍ଲକ୍ ଦ୍ୱାରା ସ୍ୱୟଂଚାଳିତ',
+  'Auto-assigned by workload': 'କାର୍ଯ୍ୟଭାର ଅନୁଯାୟୀ ସ୍ୱୟଂଚାଳିତ ନିଯୁକ୍ତ',
+  'Awaiting Resident Warden approval and technician assignment': 'ଆବାସିକ ୱାର୍ଡେନ୍ ଅନୁମୋଦନ ଓ ଟେକ୍ନିସିଆନ୍ ନିଯୁକ୍ତି ଅପେକ୍ଷାରେ',
+  'Status Log': 'ସ୍ଥିତି ଲଗ୍',
+
+  // Landing Page
+  'Welcome Back': 'ସ୍ୱାଗତମ୍',
+  'Sign in to your Apna Campus account': 'ଆପଣଙ୍କ ଆପଣା କ୍ୟାମ୍ପସ ଖାତାରେ ଲଗ୍ ଇନ୍ କରନ୍ତୁ',
+  'College ID or Registration Number': 'କଲେଜ ଆଇଡି କିମ୍ବା ପଞ୍ଜୀକରଣ ସଂଖ୍ୟା',
+  'Password': 'ପାସୱାର୍ଡ',
+  'Remember my credentials on this device': 'ଏହି ଡିଭାଇସରେ ମୋର ତଥ୍ୟ ମନେ ରଖନ୍ତୁ',
+  'Need help signing in? Contact Campus IT Desk': 'ଲଗ୍ ଇନ୍ କରିବାରେ ସାହାଯ୍ୟ ଦରକାର? କ୍ୟାମ୍ପସ ଆଇଟି ଡେସ୍କ ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ',
+  'APNA CAMPUS': 'ଆପଣା କ୍ୟାମ୍ପସ',
+  'COLLEGE MANAGEMENT ERP': 'କଲେଜ ପରିଚାଳନା ଇଆରପି',
+  'AUTONOMOUS HIGHER EDUCATION PORTAL': 'ସ୍ୱୟଂଶାସିତ ଉଚ୍ଚଶିକ୍ଷା ପୋର୍ଟାଲ୍',
+  'NAAC A++ ACCREDITED': 'ନ୍ୟାକ୍ ଏ++ ମାନ୍ୟତାପ୍ରାପ୍ତ',
+  'LEARN': 'ଶିଖନ୍ତୁ',
+  'GROW': 'ବଢ଼ନ୍ତୁ',
+  'CONNECT': 'ଯୋଡ଼ି ହୁଅନ୍ତୁ',
+  'A Smarter': 'ଏକ ଉନ୍ନତତର',
+  'Campus Experience.': 'କ୍ୟାମ୍ପସ ଅନୁଭୂତି।',
+  'People': 'ଲୋକମାନେ',
+  'Administration': 'ପ୍ରଶାସନ',
+  'Opportunities': 'ସୁଯୋଗ',
+  'Smart Timetable': 'ସ୍ମାର୍ଟ ସମୟ ସାରଣୀ',
+  'Digital Evaluations': 'ଡିଜିଟାଲ୍ ମୂଲ୍ୟାୟନ',
+  'Smart Attendance': 'ସ୍ମାର୍ଟ ଉପସ୍ଥିତି',
+  'STUDENTS': 'ଛାତ୍ରଛାତ୍ରୀ',
+  'FACULTY': 'ଅଧ୍ୟାପକ',
+  'PROGRAMS': 'ପାଠ୍ୟକ୍ରମ',
+
+  // Statuses & Table Headers
+  'Status': 'ସ୍ଥିତି',
+  'Active': 'ସକ୍ରିୟ',
+  'Inactive': 'ନିଷ୍କ୍ରିୟ',
+  'Pending': 'ବିଚାରାଧୀନ',
+  'Completed': 'ସମ୍ପୂର୍ଣ୍ଣ',
+  'Approved': 'ଅନୁମୋଦିତ',
+  'Rejected': 'ଅଗ୍ରାହ୍ୟ',
+  'Submitted': 'ଦାଖଲ ହୋଇଛି',
+  'In Progress': 'ଚାଲୁ ରହିଛି',
+  'Awaiting Student Verification': 'ଛାତ୍ର ଯାଞ୍ଚ ଅପେକ୍ଷାରେ',
+  'Awaiting Verification': 'ଯାଞ୍ଚ ଅପେକ୍ଷାରେ',
+  'Resolved': 'ସମାହିତ',
+  'Reopened': 'ପୁନର୍ବାର ଖୋଲାଯାଇଛି',
+  'Overdue': 'ସମୟାତୀତ',
+  'High': 'ଉଚ୍ଚ',
+  'Medium': 'ମଧ୍ୟମ',
+  'Low': 'ନିମ୍ନ',
+  'Urgent': 'ଜରୁରୀ',
+  'Plumbing': 'ପାଇପ୍ କାମ (ପ୍ଲମ୍ବିଙ୍ଗ୍)',
+  'Electrical': 'ବିଦ୍ୟୁତ୍ (ଇଲେକ୍ଟ୍ରିକାଲ୍)',
+  'Cleaning': 'ସଫେଇ (କ୍ଲିନିଙ୍ଗ୍)',
+  'Furniture': 'ଆସବାବପତ୍ର (ଫର୍ନିଚର୍)',
+  'Civil': 'ନିର୍ମାଣ (ସିଭିଲ୍)',
+  'Present': 'ଉପସ୍ଥିତ',
+  'Absent': 'ଅନୁପସ୍ଥିତ',
+  'On Leave': 'ଛୁଟିରେ',
+  'On Duty': 'କର୍ତ୍ତବ୍ୟରତ',
+  'Action': 'କାର୍ଯ୍ୟାନୁଷ୍ଠାନ',
+  'Actions': 'କାର୍ଯ୍ୟାନୁଷ୍ଠାନ',
+};
+
+// Subphrase token mappings
+export const SUBPHRASE_MAPPINGS_HINDI = [
   ['Pending Calendar Reminders & Tasks', 'लंबित कैलेंडर अनुस्मारक और कार्य'],
   ['Close (Review Later)', 'बंद करें (बाद में समीक्षा करें)'],
   ['Submit (Complete Task)', 'जमा करें (कार्य पूर्ण करें)'],
@@ -559,12 +672,6 @@ export const SUBPHRASE_MAPPINGS = [
   ['Click "+ Add Note" below to schedule your task or reminder.', 'अपना कार्य या अनुस्मारक निर्धारित करने के लिए नीचे "+ नोट जोड़ें" पर क्लिक करें।'],
   ['Save Note / Schedule Task', 'नोट सहेजें / कार्य निर्धारित करें'],
   ['General / 24x7 Resident', 'सामान्य / 24x7 निवासी'],
-  ['Morning (07:00 AM - 03:00 PM)', 'प्रातः (07:00 AM - 03:00 PM)'],
-  ['Morning (08:00 AM - 04:00 PM)', 'प्रातः (08:00 AM - 04:00 PM)'],
-  ['Evening (02:00 PM - 10:00 PM)', 'सायं (02:00 PM - 10:00 PM)'],
-  ['Night Shift (10:00 PM - 06:00 AM)', 'रात्रि शिफ्ट (10:00 PM - 06:00 AM)'],
-  ['Day Shift (08:00 AM - 03:00 PM)', 'दिन शिफ्ट (08:00 AM - 03:00 PM)'],
-  ['Split Shift (06:00 AM - 02:00 PM / 06:00 PM - 10:00 PM)', 'स्प्लिट शिफ्ट (06:00 AM - 02:00 PM / 06:00 PM - 10:00 PM)'],
   ['Central Dining Hall', 'केंद्रीय भोजन कक्ष'],
   ['Boys Residence', 'छात्र निवास'],
   ['Girls Residence', 'छात्रा निवास'],
@@ -575,13 +682,39 @@ export const SUBPHRASE_MAPPINGS = [
   ['500 Mbps Wi-Fi', '500 Mbps वाई-फ़ाई'],
 ];
 
+export const SUBPHRASE_MAPPINGS_ODIA = [
+  ['Pending Calendar Reminders & Tasks', 'ବିଚାରାଧୀନ କ୍ୟାଲେଣ୍ଡର ସ୍ମାରକୀ ଓ କାର୍ଯ୍ୟ'],
+  ['Close (Review Later)', 'ବନ୍ଦ କରନ୍ତୁ (ପରେ ଦେଖନ୍ତୁ)'],
+  ['Submit (Complete Task)', 'ଦାଖଲ କରନ୍ତୁ (କାର୍ଯ୍ୟ ସମ୍ପୂର୍ଣ୍ଣ)'],
+  ['Submit (Complete)', 'ଦାଖଲ କରନ୍ତୁ (ସମ୍ପୂର୍ଣ୍ଣ)'],
+  ['Overdue (Pending)', 'ସମୟାତୀତ (ବିଚାରାଧୀନ)'],
+  ["Today's Task", 'ଆଜିର କାର୍ଯ୍ୟ'],
+  ['Upcoming Task', 'ଆଗାମୀ କାର୍ଯ୍ୟ'],
+  ['Completed Tasks', 'ସମ୍ପୂର୍ଣ୍ଣ କାର୍ଯ୍ୟ'],
+  ['No notes scheduled for this date.', 'ଏହି ତାରିଖ ପାଇଁ କୌଣସି ଟିପ୍ପଣୀ ନିର୍ଦ୍ଧାରିତ ନାହିଁ।'],
+  ['Click "+ Add Note" below to schedule your task or reminder.', 'ଆପଣଙ୍କ କାର୍ଯ୍ୟ ବା ସ୍ମାରକୀ ନିର୍ଦ୍ଧାରଣ କରିବା ପାଇଁ ତଳେ "+ ନୋଟ୍ ଯୋଡ଼ନ୍ତୁ" କ୍ଲିକ୍ କରନ୍ତୁ।'],
+  ['Save Note / Schedule Task', 'ନୋଟ୍ ସାଇତନ୍ତୁ / କାର୍ଯ୍ୟ ନିର୍ଦ୍ଧାରଣ କରନ୍ତୁ'],
+  ['General / 24x7 Resident', 'ସାଧାରଣ / ୨୪x୭ ଆବାସିକ'],
+  ['Central Dining Hall', 'କେନ୍ଦ୍ରୀୟ ଭୋଜନ ଶାଳା'],
+  ['Boys Residence', 'ଛାତ୍ର ନିବାସ'],
+  ['Girls Residence', 'ଛାତ୍ରୀ ନିବାସ'],
+  ['All Hostels', 'ସମସ୍ତ ଛାତ୍ରାବାସ'],
+  ['Floors', 'ମହଲାଗୁଡ଼ିକ'],
+  ['Rooms', 'କୋଠରୀଗୁଡ଼ିକ'],
+  ['Central Dining Mess Hall', 'କେନ୍ଦ୍ରୀୟ ମେସ୍ ଭୋଜନ ଶାଳା'],
+  ['500 Mbps Wi-Fi', '୫୦୦ ଏମବିପିଏସ ୱାଇ-ଫାଇ'],
+];
+
 // Build reverse dictionaries for restoring English
 export const REVERSE_HINDI_DICTIONARY = {};
 for (const [en, hi] of Object.entries(HINDI_DICTIONARY)) {
   REVERSE_HINDI_DICTIONARY[hi] = en;
 }
 
-export const REVERSE_SUBPHRASE_MAPPINGS = SUBPHRASE_MAPPINGS.map(([en, hi]) => [hi, en]);
+export const REVERSE_ODIA_DICTIONARY = {};
+for (const [en, od] of Object.entries(ODIA_DICTIONARY)) {
+  REVERSE_ODIA_DICTIONARY[od] = en;
+}
 
 /**
  * Checks if a string looks like user-entered personal content
@@ -602,11 +735,11 @@ export function isUserEnteredContent(str) {
   // Phone number (e.g. +91 94370 11223)
   if (/^\+?\d[\d\s\-]{8,}\d$/.test(trimmed)) return true;
 
-  // Currency (e.g. Rs. 3,063.04 or Rs. 500)
-  if (/^Rs\.\s*[\d\.\,]+/i.test(trimmed)) return true;
+  // Currency (e.g. Rs. 3,063.04 or ₹20,000)
+  if (/^(Rs\.|₹)\s*[\d\.\,]+/i.test(trimmed)) return true;
 
-  // System IDs and codes (e.g. STF-101, REQ-MAT, S-211, F-301)
-  if (/^[A-Z]{1,5}\-[\d]+[A-Za-z0-9\-]*$/.test(trimmed)) return true;
+  // System IDs and codes (e.g. STF-101, REQ-MAT, S-211, F-301, CMP-2026-381)
+  if (/^[A-Z]{1,6}\-[\d]+[A-Za-z0-9\-]*$/.test(trimmed)) return true;
 
   // Personal human names with salutations: Mr. Rajesh Jena, Mrs. Nibedita Das, Dr. S. Mohanty
   if (/^(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.)\s+[A-Z][a-z]+(\s+[A-Z][a-z]+)+$/.test(trimmed)) return true;
@@ -615,7 +748,7 @@ export function isUserEnteredContent(str) {
 }
 
 /**
- * Translate a single text string (2-tier translation)
+ * Translate a single text string into targetLang ('en' | 'hi' | 'or')
  */
 export function translateText(text, targetLang = 'en') {
   if (!text || typeof text !== 'string') return text;
@@ -625,38 +758,52 @@ export function translateText(text, targetLang = 'en') {
   const leading = text.match(/^\s*/)[0];
   const trailing = text.match(/\s*$/)[0];
 
-  if (targetLang !== 'hi') {
-    // English restoration: check reverse dictionary and subphrase mappings
+  // If restoring to English
+  if (targetLang === 'en') {
     if (REVERSE_HINDI_DICTIONARY[trimmed]) {
       return `${leading}${REVERSE_HINDI_DICTIONARY[trimmed]}${trailing}`;
     }
+    if (REVERSE_ODIA_DICTIONARY[trimmed]) {
+      return `${leading}${REVERSE_ODIA_DICTIONARY[trimmed]}${trailing}`;
+    }
     let restored = trimmed;
-    for (const [hi, en] of REVERSE_SUBPHRASE_MAPPINGS) {
-      if (restored.includes(hi)) {
-        restored = restored.replaceAll(hi, en);
-      }
+    for (const [hi, en] of SUBPHRASE_MAPPINGS_HINDI.map(([en, hi]) => [hi, en])) {
+      if (restored.includes(hi)) restored = restored.replaceAll(hi, en);
+    }
+    for (const [od, en] of SUBPHRASE_MAPPINGS_ODIA.map(([en, od]) => [od, en])) {
+      if (restored.includes(od)) restored = restored.replaceAll(od, en);
     }
     return `${leading}${restored}${trailing}`;
   }
 
-  // Target is Hindi:
   // Strict check: preserve user personal content
   if (isUserEnteredContent(text)) {
     return text;
   }
 
+  const dict = targetLang === 'hi' ? HINDI_DICTIONARY : ODIA_DICTIONARY;
+  const subphrases = targetLang === 'hi' ? SUBPHRASE_MAPPINGS_HINDI : SUBPHRASE_MAPPINGS_ODIA;
+
+  // 1. First, if incoming text is in the other language, convert back to English base first
+  let enBase = trimmed;
+  if (targetLang === 'or' && REVERSE_HINDI_DICTIONARY[trimmed]) {
+    enBase = REVERSE_HINDI_DICTIONARY[trimmed];
+  } else if (targetLang === 'hi' && REVERSE_ODIA_DICTIONARY[trimmed]) {
+    enBase = REVERSE_ODIA_DICTIONARY[trimmed];
+  }
+
   // Tier 1: Exact dictionary match
-  if (HINDI_DICTIONARY[trimmed]) {
-    return `${leading}${HINDI_DICTIONARY[trimmed]}${trailing}`;
+  if (dict[enBase]) {
+    return `${leading}${dict[enBase]}${trailing}`;
   }
 
   // Tier 2: Subphrase & token replacement
-  let transformed = trimmed;
+  let transformed = enBase;
   let hasReplaced = false;
 
-  for (const [en, hi] of SUBPHRASE_MAPPINGS) {
+  for (const [en, translation] of subphrases) {
     if (transformed.includes(en)) {
-      transformed = transformed.replaceAll(en, hi);
+      transformed = transformed.replaceAll(en, translation);
       hasReplaced = true;
     }
   }
@@ -665,10 +812,10 @@ export function translateText(text, targetLang = 'en') {
     return `${leading}${transformed}${trailing}`;
   }
 
-  // Check lowercase / titlecase variants in dictionary
-  for (const [enKey, hiVal] of Object.entries(HINDI_DICTIONARY)) {
-    if (enKey.toLowerCase() === trimmed.toLowerCase()) {
-      return `${leading}${hiVal}${trailing}`;
+  // Case-insensitive fallback
+  for (const [enKey, transVal] of Object.entries(dict)) {
+    if (enKey.toLowerCase() === enBase.toLowerCase()) {
+      return `${leading}${transVal}${trailing}`;
     }
   }
 
@@ -705,12 +852,13 @@ function walkAndTranslate(node, targetLang) {
       return;
     }
 
-    if (targetLang === 'hi') {
+    if (targetLang === 'hi' || targetLang === 'or' || targetLang === 'od') {
+      const lang = targetLang === 'od' ? 'or' : targetLang;
       if (!originalTextMap.has(node)) {
         originalTextMap.set(node, val);
       }
       const original = originalTextMap.get(node);
-      const translated = translateText(original, 'hi');
+      const translated = translateText(original, lang);
       if (translated !== val) {
         node.nodeValue = translated;
       }
@@ -744,12 +892,13 @@ function walkAndTranslate(node, targetLang) {
     if (tag === 'INPUT' || tag === 'TEXTAREA') {
       const ph = node.getAttribute('placeholder');
       if (ph) {
-        if (targetLang === 'hi') {
+        if (targetLang === 'hi' || targetLang === 'or' || targetLang === 'od') {
+          const lang = targetLang === 'od' ? 'or' : targetLang;
           if (!node.hasAttribute('data-orig-placeholder')) {
             node.setAttribute('data-orig-placeholder', ph);
           }
           const orig = node.getAttribute('data-orig-placeholder');
-          const translated = translateText(orig, 'hi');
+          const translated = translateText(orig, lang);
           if (ph !== translated) {
             node.setAttribute('placeholder', translated);
           }
@@ -767,12 +916,13 @@ function walkAndTranslate(node, targetLang) {
     // Translate title attribute
     const title = node.getAttribute('title');
     if (title && !isUserEnteredContent(title)) {
-      if (targetLang === 'hi') {
+      if (targetLang === 'hi' || targetLang === 'or' || targetLang === 'od') {
+        const lang = targetLang === 'od' ? 'or' : targetLang;
         if (!node.hasAttribute('data-orig-title')) {
           node.setAttribute('data-orig-title', title);
         }
         const orig = node.getAttribute('data-orig-title');
-        node.setAttribute('title', translateText(orig, 'hi'));
+        node.setAttribute('title', translateText(orig, lang));
       } else {
         if (node.hasAttribute('data-orig-title')) {
           node.setAttribute('title', node.getAttribute('data-orig-title'));
@@ -793,21 +943,22 @@ function walkAndTranslate(node, targetLang) {
 export function applyLanguageToDOM(targetLang = 'en') {
   if (typeof document === 'undefined') return;
 
-  currentActiveLang = targetLang;
+  const validLang = (targetLang === 'od' ? 'or' : targetLang) || 'en';
+  currentActiveLang = validLang;
   const docEl = document.documentElement;
-  docEl.setAttribute('lang', targetLang);
+  docEl.setAttribute('lang', validLang);
 
   // 1. Initial full-page sweep
-  walkAndTranslate(document.body, targetLang);
+  walkAndTranslate(document.body, validLang);
 
   // 2. Setup dynamic MutationObserver so tab switching, modals, and React re-renders automatically stay translated
   if (!globalObserver && typeof MutationObserver !== 'undefined') {
     globalObserver = new MutationObserver((mutations) => {
-      if (currentActiveLang === 'hi') {
+      if (currentActiveLang === 'hi' || currentActiveLang === 'or') {
         for (const m of mutations) {
           if (m.type === 'childList') {
             for (const added of m.addedNodes) {
-              walkAndTranslate(added, 'hi');
+              walkAndTranslate(added, currentActiveLang);
             }
           }
         }
@@ -818,5 +969,100 @@ export function applyLanguageToDOM(targetLang = 'en') {
       childList: true,
       subtree: true,
     });
+  }
+}
+
+/**
+ * Get current stored language ('en' | 'hi' | 'or')
+ */
+export function getCurrentLanguage() {
+  if (typeof localStorage !== 'undefined') {
+    const saved = localStorage.getItem('apna_language') || localStorage.getItem('collegeflow_user_lang');
+    if (saved && (saved === 'en' || saved === 'hi' || saved === 'or' || saved === 'od')) {
+      return saved === 'od' ? 'or' : saved;
+    }
+  }
+  return currentActiveLang || 'en';
+}
+
+/**
+ * Switch global language across entire project
+ */
+export function setLanguage(langCode = 'en') {
+  const code = (langCode === 'od' ? 'or' : langCode) || 'en';
+  if (!['en', 'hi', 'or'].includes(code)) return;
+
+  currentActiveLang = code;
+
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem('apna_language', code);
+      localStorage.setItem('collegeflow_user_lang', code);
+    } catch (e) {
+      console.warn('Failed to save language setting:', e);
+    }
+  }
+
+  // Apply to DOM immediately
+  applyLanguageToDOM(code);
+
+  // Notify listeners
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    try {
+      window.dispatchEvent(new CustomEvent('apna_language_changed', { detail: { language: code } }));
+      window.dispatchEvent(new Event('storage'));
+    } catch (e) {}
+  }
+
+  return code;
+}
+
+/**
+ * Helper function for translating any specific string in components
+ */
+export function t(text) {
+  return translateText(text, getCurrentLanguage());
+}
+
+/**
+ * Subscribe to language changes
+ */
+export function subscribeLanguage(callback) {
+  if (typeof window === 'undefined') return () => {};
+
+  const handleCustom = (e) => {
+    callback(e.detail?.language || getCurrentLanguage());
+  };
+
+  const handleStorage = (e) => {
+    if (!e || e.key === 'apna_language' || e.key === 'collegeflow_user_lang') {
+      callback(getCurrentLanguage());
+    }
+  };
+
+  window.addEventListener('apna_language_changed', handleCustom);
+  window.addEventListener('storage', handleStorage);
+
+  return () => {
+    window.removeEventListener('apna_language_changed', handleCustom);
+    window.removeEventListener('storage', handleStorage);
+  };
+}
+
+/**
+ * Initialize language from storage and apply to DOM
+ */
+export function initLanguage() {
+  const initLang = getCurrentLanguage();
+  applyLanguageToDOM(initLang);
+  return initLang;
+}
+
+// Initialize stored language on load
+if (typeof window !== 'undefined') {
+  const initLang = getCurrentLanguage();
+  if (initLang && initLang !== 'en') {
+    // Run after initial DOM load
+    setTimeout(() => applyLanguageToDOM(initLang), 100);
   }
 }

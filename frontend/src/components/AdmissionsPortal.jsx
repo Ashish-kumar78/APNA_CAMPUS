@@ -912,11 +912,13 @@ export default function AdmissionsPortal({ account, onLogout, onSwitchRole }) {
       />
 
       {/* OFFICIAL PROVISIONAL ADMISSION OFFER LETTER & SMART ID CARD MODAL */}
-      <AdmissionLetterModal
-        isOpen={!!letterApplicant}
-        onClose={() => setLetterApplicant(null)}
-        applicant={letterApplicant}
-      />
+      {Boolean(letterApplicant) && (
+        <AdmissionLetterModal
+          isOpen={true}
+          onClose={() => setLetterApplicant(null)}
+          applicant={letterApplicant}
+        />
+      )}
 
       {/* ONBOARDING CREDENTIAL MODAL (Preserved from existing portal) */}
       {enrolledStudentInfo && typeof document !== 'undefined' && createPortal(

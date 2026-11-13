@@ -53,6 +53,7 @@ import AdmissionsPortal from './components/AdmissionsPortal.jsx'
 import ScholarshipPortal from './components/ScholarshipPortal.jsx'
 import CampusOperationsPortal from './components/CampusOperations/CampusOperationsPortal.jsx'
 import AccountActivationModal from './components/AccountActivationModal.jsx'
+import ForgotPasswordModal from './components/ForgotPasswordModal.jsx'
 import UniversalWhatsAppLauncher from './components/CampusConnect/UniversalWhatsAppLauncher.jsx'
 import ApnaAIChatbot from './components/Chatbot/ApnaAIChatbot.jsx'
 import UnifiedFloatingAssistant from './components/Common/UnifiedFloatingAssistant.jsx'
@@ -445,6 +446,7 @@ function App() {
   const [digitalEvalRole, setDigitalEvalRole] = useState('faculty')
   const [activationModalOpen, setActivationModalOpen] = useState(false)
   const [activationTokenInput, setActivationTokenInput] = useState('')
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false)
   const [showPublicTimetable, setShowPublicTimetable] = useState(false)
   const [showPublicApplyModal, setShowPublicApplyModal] = useState(false)
   const [showPublicTrackModal, setShowPublicTrackModal] = useState(false)
@@ -1012,7 +1014,11 @@ function App() {
                 <button
                   type="button"
                   className="erp-text-link"
-                  onClick={() => { setResetRequested((prev) => !prev); setError(''); }}
+                  onClick={() => {
+                    setError('');
+                    setAutoFillNotice('');
+                    setShowForgotPasswordModal(true);
+                  }}
                 >
                   Forgot password?
                 </button>
@@ -1218,6 +1224,18 @@ function App() {
       <PublicApplicationTrackingModal
         isOpen={showPublicTrackModal}
         onClose={() => setShowPublicTrackModal(false)}
+      />
+
+      {/* Self-Service Forgot Password Recovery Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        initialIdentifier={identifier}
+        onClose={() => setShowForgotPasswordModal(false)}
+        onResetSuccess={(resetId, newPass) => {
+          if (resetId) setIdentifier(resetId);
+          if (newPass) setPassword(newPass);
+          setAutoFillNotice('✓ Password updated! You can now click "Sign in to portal".');
+        }}
       />
     </>
   )

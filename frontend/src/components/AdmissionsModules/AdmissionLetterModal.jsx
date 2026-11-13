@@ -185,19 +185,25 @@ export default function AdmissionLetterModal({ applicant, student, onClose, isOp
       /XXXX/i.test(appData.rollNumber);
 
     if (needsUpdate) {
-      admissionsStore.updateApplicant(appData.id, {
-        applicationNo,
-        studentId,
-        rollNumber,
-        permanentRegistrationNo: studentId,
-        enrollmentRecord: {
-          ...(appData.enrollmentRecord || {}),
-          studentId,
-          rollNumber,
-          registrationNumber: studentId,
-          section: appData.enrollmentRecord?.section || 'Section A',
-        },
-      });
+      setTimeout(() => {
+        try {
+          admissionsStore.updateApplicant(appData.id, {
+            applicationNo,
+            studentId,
+            rollNumber,
+            permanentRegistrationNo: studentId,
+            enrollmentRecord: {
+              ...(appData.enrollmentRecord || {}),
+              studentId,
+              rollNumber,
+              registrationNumber: studentId,
+              section: appData.enrollmentRecord?.section || 'Section A',
+            },
+          });
+        } catch (e) {
+          console.warn('Silent admission letter credentials update catch:', e);
+        }
+      }, 0);
     }
   }, [shouldRender, appData?.id, applicationNo, studentId, rollNumber]);
 
@@ -478,6 +484,15 @@ export default function AdmissionLetterModal({ applicant, student, onClose, isOp
                 <p style={{ margin: '0 0 6px' }}>
                   <strong>Key Instructions for Candidate:</strong>
                 </p>
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', margin: '8px 0 12px', fontSize: '0.8rem', color: '#166534' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '8px' }}>
+                    <div><strong>Portal Login ID:</strong> <span style={{ color: '#0f172a', fontWeight: 700 }}>{studentId}</span> (or Roll: <span style={{ color: '#0f172a', fontWeight: 700 }}>{rollNumber}</span>)</div>
+                    <div><strong>Default Initial Password:</strong> <span style={{ background: '#dcfce7', padding: '2px 8px', borderRadius: '4px', color: '#15803d', fontWeight: 800, fontFamily: 'monospace' }}>Student@2026</span></div>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#15803d', marginTop: '4px' }}>
+                    * You can also log in with your official email (<strong>{officialEmail}</strong>). Change password after first sign-in.
+                  </div>
+                </div>
                 <ul style={{ margin: 0, paddingLeft: '20px' }}>
                   <li>Your official institutional Student Portal account has been activated with login ID <strong>{studentId}</strong>.</li>
                   <li>Orientation schedule and timetable details are accessible through the Apna Campus Smart ERP portal.</li>

@@ -391,11 +391,15 @@ if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
       throw new BadRequestException('Email or registration identifier is required.');
     }
     const rawKey = emailOrIdentifier.trim().toLowerCase();
-const user = await this.prisma.user.findFirst({
+    const user = await this.prisma.user.findFirst({
       where: {
         OR: [
           { identifier: { equals: rawKey, mode: 'insensitive' } },
           { email: { equals: rawKey, mode: 'insensitive' } },
+          { student: { studentId: { equals: rawKey, mode: 'insensitive' } } },
+          { student: { rollNumber: { equals: rawKey, mode: 'insensitive' } } },
+          { student: { email: { equals: rawKey, mode: 'insensitive' } } },
+          { student: { personalEmail: { equals: rawKey, mode: 'insensitive' } } },
         ],
       },
     });

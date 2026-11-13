@@ -603,6 +603,7 @@ export default function FacultyPortal({ account, onLogout }) {
 
   // Daily Attendance Session State
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+  const [activeAttendanceTarget, setActiveAttendanceTarget] = useState(null);
   const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [attendancePeriod, setAttendancePeriod] = useState('Period 2 (10:00 - 11:00 AM)');
   const [attendanceMap, setAttendanceMap] = useState({});
@@ -914,6 +915,11 @@ export default function FacultyPortal({ account, onLogout }) {
   const handleOpenAttendanceModal = (targetAssignment) => {
     if (targetAssignment?.id) {
       setSelectedAssignmentId(targetAssignment.id);
+      setActiveAttendanceTarget(targetAssignment);
+    } else if (targetAssignment) {
+      setActiveAttendanceTarget(targetAssignment);
+    } else {
+      setActiveAttendanceTarget(currentAssignment || facultyAssignments[0] || null);
     }
     const initialMap = {};
     scopedStudents.forEach(s => {
@@ -1349,14 +1355,38 @@ export default function FacultyPortal({ account, onLogout }) {
                     <div className="fac-profile-intro">
                       <div className="fac-profile-name-row">
                         <h3 className="fac-profile-name">{account?.name || 'Dr. S. Mohanty'}</h3>
-                        <button
-                          type="button"
-                          className="fac-view-profile-btn"
-                          onClick={() => setActiveTab('profile')}
-                          title="View full faculty official CMS profile"
-                        >
-                          View Profile <ArrowRight size={13} />
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="fac-action-solid-btn"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '5px 12px',
+                              borderRadius: '8px',
+                              fontSize: '0.8rem',
+                              fontWeight: 700,
+                              background: '#2563eb',
+                              color: '#ffffff',
+                              border: 'none',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
+                            }}
+                            onClick={() => handleOpenAttendanceModal()}
+                            title="Take attendance and record academic session details"
+                          >
+                            <ClipboardCheck size={14} /> Take Attendance
+                          </button>
+                          <button
+                            type="button"
+                            className="fac-view-profile-btn"
+                            onClick={() => setActiveTab('profile')}
+                            title="View full faculty official CMS profile"
+                          >
+                            View Profile <ArrowRight size={13} />
+                          </button>
+                        </div>
                       </div>
                       <div className="fac-profile-id-pill">
                         Faculty ID: {account?.identity || 'FAC037'}
@@ -1565,9 +1595,20 @@ export default function FacultyPortal({ account, onLogout }) {
                       <ClipboardCheck size={18} className="fac-card-title-icon text-blue" />
                       <h3 className="fac-card-title">Today's Teaching &amp; Assessment Schedule</h3>
                     </div>
-                    <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('timetable')}>
-                      View All →
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        className="fac-action-solid-btn"
+                        style={{ padding: '4px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                        onClick={() => handleOpenAttendanceModal()}
+                        title="Take class attendance"
+                      >
+                        <ClipboardCheck size={13} /> Take Attendance
+                      </button>
+                      <button type="button" className="fac-view-all-link" onClick={() => setActiveTab('timetable')}>
+                        View All →
+                      </button>
+                    </div>
                   </div>
                   <div className="fac-table-responsive">
                     <table className="fac-mini-schedule-table">
@@ -1593,13 +1634,23 @@ export default function FacultyPortal({ account, onLogout }) {
                             <span className="fac-status-pill pill-completed">Completed</span>
                           </td>
                           <td>
-                            <button
-                              type="button"
-                              className="fac-action-outline-btn"
-                              onClick={() => { setSelectedSubject('Data Structures'); setActiveTab('subjects'); }}
-                            >
-                              View
-                            </button>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                type="button"
+                                className="fac-action-outline-btn"
+                                onClick={() => { setSelectedSubject('Data Structures'); setActiveTab('subjects'); }}
+                              >
+                                View
+                              </button>
+                              <button
+                                type="button"
+                                className="fac-action-solid-btn"
+                                style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                onClick={() => handleOpenAttendanceModal({ subjectCode: 'CS501', subjectName: 'Data Structures', section: 'Section A', course: 'B.Tech', semester: 'Semester 3', time: '09:00 - 10:00' })}
+                              >
+                                Take
+                              </button>
+                            </div>
                           </td>
                         </tr>
                         <tr>
@@ -1615,9 +1666,9 @@ export default function FacultyPortal({ account, onLogout }) {
                             <button
                               type="button"
                               className="fac-action-solid-btn"
-                              onClick={handleOpenAttendanceModal}
+                              onClick={() => handleOpenAttendanceModal({ subjectCode: 'CS502', subjectName: 'Operating Systems', section: 'Section B', course: 'B.Tech', semester: 'Semester 5', time: '11:15 - 12:15' })}
                             >
-                              Take
+                              Take Attendance
                             </button>
                           </td>
                         </tr>
@@ -1631,13 +1682,23 @@ export default function FacultyPortal({ account, onLogout }) {
                             <span className="fac-status-pill pill-upcoming">Upcoming</span>
                           </td>
                           <td>
-                            <button
-                              type="button"
-                              className="fac-action-outline-btn"
-                              onClick={() => { setSelectedSubject('Web Technologies'); setActiveTab('subjects'); }}
-                            >
-                              View
-                            </button>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                type="button"
+                                className="fac-action-outline-btn"
+                                onClick={() => { setSelectedSubject('Web Technologies'); setActiveTab('subjects'); }}
+                              >
+                                View
+                              </button>
+                              <button
+                                type="button"
+                                className="fac-action-solid-btn"
+                                style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                onClick={() => handleOpenAttendanceModal({ subjectCode: 'CS503', subjectName: 'Web Technologies', section: 'Section C', course: 'B.Tech', semester: 'Semester 3', time: '02:00 - 03:00' })}
+                              >
+                                Take
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       </tbody>
@@ -3754,136 +3815,25 @@ export default function FacultyPortal({ account, onLogout }) {
         </div>
       </div>
     )}
-    {/* DAILY ATTENDANCE MARKING MODAL */}
+    {/* COMPREHENSIVE ATTENDANCE MODAL (CLASS ATTENDANCE & ACADEMIC ACTIVITY SYSTEM) */}
     {isAttendanceModalOpen && (
-      <div className="admin-modal-backdrop" style={{ zIndex: 10000 }}>
-        <div className="admin-modal-card" style={{ maxWidth: '640px', width: '95vw', maxHeight: '88vh' }}>
-          <div className="admin-modal-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Calendar size={18} color="#2563eb" />
-              <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a' }}>
-                Record Class Attendance — {currentAssignment.subjectName} ({currentAssignment.subjectCode})
-              </h3>
-            </div>
-            <button
-              className="admin-table-action-btn"
-              type="button"
-              onClick={() => setIsAttendanceModalOpen(false)}
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <div style={{ padding: '0.9rem 1.25rem', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div>
-                <small style={{ display: 'block', color: '#64748b', fontSize: '0.7rem', fontWeight: 700 }}>DATE</small>
-                <input
-                  type="date"
-                  className="admin-form-input"
-                  value={attendanceDate}
-                  onChange={e => setAttendanceDate(e.target.value)}
-                  style={{ padding: '4px 8px', fontSize: '0.8rem' }}
-                />
-              </div>
-              <div>
-                <small style={{ display: 'block', color: '#64748b', fontSize: '0.7rem', fontWeight: 700 }}>PERIOD</small>
-                <select
-                  className="admin-form-select"
-                  value={attendancePeriod}
-                  onChange={e => setAttendancePeriod(e.target.value)}
-                  style={{ padding: '4px 8px', fontSize: '0.8rem' }}
-                >
-                  <option value="Period 1 (09:00 - 10:00 AM)">Period 1 (09:00 - 10:00 AM)</option>
-                  <option value="Period 2 (10:00 - 11:00 AM)">Period 2 (10:00 - 11:00 AM)</option>
-                  <option value="Period 3 (11:15 - 12:15 PM)">Period 3 (11:15 - 12:15 PM)</option>
-                  <option value="Period 4 (02:00 - 04:00 PM - Lab)">Period 4 (02:00 - 04:00 PM - Lab)</option>
-                </select>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="admin-action-btn-secondary"
-              style={{ fontSize: '0.75rem', padding: '5px 10px', background: '#fff' }}
-              onClick={handleMarkAllPresent}
-            >
-              ✓ Mark All Present
-            </button>
-          </div>
-
-          <div style={{ maxHeight: '360px', overflowY: 'auto', padding: '0.75rem 1.25rem' }}>
-            <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '0.65rem', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Assigned Cohort: <strong>{currentAssignment.semester} · {currentAssignment.section}</strong> ({scopedStudents.length} Students)</span>
-              <span>Present: <strong style={{ color: '#059669' }}>{Object.values(attendanceMap).filter(Boolean).length}</strong> / {scopedStudents.length}</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {scopedStudents.map(st => {
-                const isPresent = !!attendanceMap[st.rollNumber];
-                return (
-                  <div
-                    key={st.id}
-                    onClick={() => handleToggleAttendance(st.rollNumber)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid',
-                      borderColor: isPresent ? '#bbf7d0' : '#fecaca',
-                      background: isPresent ? '#f0fdf4' : '#fef2f2',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <strong style={{ minWidth: '28px', color: '#334155', fontSize: '0.82rem' }}>#{st.rollNumber}</strong>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.86rem', color: '#0f172a' }}>{st.name}</div>
-                        <small style={{ color: '#64748b', fontSize: '0.72rem' }}>{st.studentId} · Record: {st.attendance}%</small>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{
-                        fontSize: '0.74rem',
-                        fontWeight: 700,
-                        color: isPresent ? '#15803d' : '#b91c1c'
-                      }}>
-                        {isPresent ? 'PRESENT' : 'ABSENT'}
-                      </span>
-                      {isPresent ? (
-                        <CheckSquare size={18} color="#16a34a" />
-                      ) : (
-                        <Square size={18} color="#dc2626" />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="admin-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', padding: '1rem 1.25rem', borderTop: '1px solid #f1f5f9' }}>
-            <button
-              type="button"
-              className="admin-action-btn-secondary"
-              onClick={() => setIsAttendanceModalOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="admin-action-btn-primary"
-              onClick={handleSubmitAttendance}
-            >
-              Submit Attendance &amp; Log Period
-            </button>
-          </div>
-        </div>
-      </div>
+      <TakeAttendanceModule
+        account={account}
+        role="faculty"
+        isModal={true}
+        onClose={() => setIsAttendanceModalOpen(false)}
+        initialAssignment={activeAttendanceTarget || currentAssignment}
+        initialSubjectCode={activeAttendanceTarget?.subjectCode || currentAssignment?.subjectCode || 'CS501'}
+        initialSubjectName={activeAttendanceTarget?.subjectName || currentAssignment?.subjectName || 'Data Structures & Algorithms'}
+        initialSection={activeAttendanceTarget?.section || currentAssignment?.section || 'Section A'}
+        initialCourse={activeAttendanceTarget?.assignedCourse || activeAttendanceTarget?.course || currentAssignment?.course || 'B.Tech'}
+        initialBatch={activeAttendanceTarget?.batch || currentAssignment?.batch || '2023–2027'}
+        initialBranch={activeAttendanceTarget?.assignedBranch || activeAttendanceTarget?.branch || currentAssignment?.branch || 'CSE'}
+        onAttendanceSubmitted={(submittedSession) => {
+          triggerToast(`✓ Attendance and ${submittedSession.activityType} details recorded successfully!`);
+          setIsAttendanceModalOpen(false);
+        }}
+      />
     )}
 
     {/* MODAL 1: SUBJECT DETAILS MODAL (6 TABS) */}

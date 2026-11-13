@@ -203,8 +203,9 @@ const ACADEMIC_PROGRAMS = {
   }
 };
 
-// Realistic Fictional Student Roster Data
+// Realistic Student Roster Data
 const STUDENT_NAMES_POOL = [
+  'Somesh Baliarsingh', 'Ashish Mohapatra', 'Bishnu Prasad Sahoo', 'Abhijit Rout',
   'Aarav Sharma', 'Rakesh Das', 'Priya Patra', 'Amit Nayak', 'Sneha Mohanty',
   'Sourav Sahoo', 'Pooja Jena', 'Bikash Verma', 'Swati Mishra', 'Monika Rout',
   'Subham Panda', 'Ipsita Ray', 'Alok Tripathy', 'Smruti Parida', 'Chandan Swain',
@@ -237,7 +238,21 @@ function generateStudentsForSection(course, batch, branch, section) {
   return list.sort((a, b) => Number(a.rollNumber) - Number(b.rollNumber));
 }
 
-export default function TakeAttendanceModule({ account, role = 'faculty', onBackToDashboard }) {
+export default function TakeAttendanceModule({
+  account,
+  role = 'faculty',
+  onBackToDashboard,
+  isModal = false,
+  onClose,
+  initialAssignment = null,
+  initialSubjectCode = null,
+  initialSubjectName = null,
+  initialSection = null,
+  initialCourse = null,
+  initialBatch = null,
+  initialBranch = null,
+  onAttendanceSubmitted = null
+}) {
   // Navigation Tab State inside Module: 'register' | 'history'
   const [activeModuleTab, setActiveModuleTab] = useState('register');
 
@@ -245,15 +260,15 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
   const [activityType, setActivityType] = useState('Regular Class');
   const [activityDetails, setActivityDetails] = useState('');
 
-  // Subject State
-  const [subjectCode, setSubjectCode] = useState('CS501');
-  const [subjectName, setSubjectName] = useState('Data Structures & Algorithms');
+  // Subject State initialized with props or defaults
+  const [subjectCode, setSubjectCode] = useState(() => initialSubjectCode || initialAssignment?.subjectCode || 'CS501');
+  const [subjectName, setSubjectName] = useState(() => initialSubjectName || initialAssignment?.subjectName || 'Data Structures & Algorithms');
 
-  // Form State
-  const [course, setCourse] = useState('B.Tech');
-  const [batch, setBatch] = useState('2023–2027');
-  const [branch, setBranch] = useState('CSE');
-  const [section, setSection] = useState('Section A');
+  // Form State initialized with props or defaults
+  const [course, setCourse] = useState(() => initialCourse || initialAssignment?.assignedCourse || initialAssignment?.course || 'B.Tech');
+  const [batch, setBatch] = useState(() => initialBatch || initialAssignment?.batch || '2023–2027');
+  const [branch, setBranch] = useState(() => initialBranch || initialAssignment?.assignedBranch || initialAssignment?.branch || 'CSE');
+  const [section, setSection] = useState(() => initialSection || initialAssignment?.section || 'Section A');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [fromTime, setFromTime] = useState('10:30 AM');
   const [toTime, setToTime] = useState('11:30 AM');
@@ -273,6 +288,16 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
   // Workflow State: 'draft' | 'confirm_modal' | 'submitted' | 'update_confirm_modal'
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Synchronize state when initial props update
+  useEffect(() => {
+    if (initialSubjectCode) setSubjectCode(initialSubjectCode);
+    if (initialSubjectName) setSubjectName(initialSubjectName);
+    if (initialSection) setSection(initialSection);
+    if (initialCourse) setCourse(initialCourse);
+    if (initialBatch) setBatch(initialBatch);
+    if (initialBranch) setBranch(initialBranch);
+  }, [initialSubjectCode, initialSubjectName, initialSection, initialCourse, initialBatch, initialBranch]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showUpdateConfirmModal, setShowUpdateConfirmModal] = useState(false);
   const [submittedSession, setSubmittedSession] = useState(null);
@@ -602,6 +627,10 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
       console.warn('API sync warning:', err);
     }
 
+    try {
+      onAttendanceSubmitted?.(sessionRecord);
+    } catch {}
+
     const activityLabel = activityType !== 'Regular Class' ? ` [Activity: ${activityType}]` : '';
     setAlertBanner({
       type: 'success',
@@ -662,6 +691,10 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
 
     try {
       await facultyApi.submitAttendanceSession(updatedRecord);
+    } catch {}
+
+    try {
+      onAttendanceSubmitted?.(updatedRecord);
     } catch {}
 
     setAlertBanner({
@@ -741,8 +774,8 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
   // Role display label
   const roleLabel = role === 'hod' ? 'HOD Department Console' : role === 'staff' ? 'Lab & Operations Staff' : 'Faculty Classroom Workspace';
 
-  return (
-    <div className="take-attendance-wrapper">
+  const content = (
+    <div className={`take-attendance-wrapper ${isModal ? 'take-attendance-modal-inner' : ''}`}>
       {/* Page Header */}
       <div className="take-attendance-header">
         <div className="take-attendance-title-area">
@@ -1852,6 +1885,34 @@ export default function TakeAttendanceModule({ account, role = 'faculty', onBack
       )}
     </div>
   );
+
+  if (isModal) {
+    return (
+      <div className="admin-modal-backdrop take-attendance-modal-backdrop" style={{ zIndex: 10000 }} onClick={onClose}>
+        <div className="take-attendance-modal-card-window" onClick={(e) => e.stopPropagation()}>
+          <div className="take-attendance-modal-header-bar">
+            <div className="take-attendance-modal-title">
+              <ClipboardCheck size={20} color="#2563eb" />
+              <span>Record Class Attendance &amp; Academic Session Details</span>
+            </div>
+            <button
+              type="button"
+              className="take-attendance-modal-close-btn"
+              onClick={onClose}
+              aria-label="Close Attendance Modal"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="take-attendance-modal-scroll-body">
+            {content}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return content;
 }
 
 // --------------------------------------------------------------------------

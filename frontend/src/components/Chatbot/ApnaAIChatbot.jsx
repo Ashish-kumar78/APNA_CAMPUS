@@ -50,8 +50,8 @@ export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrig
   const getInitialWelcomeMessage = () => ({
     role: 'assistant',
     content: isGuest
-      ? `Hello **${userName}**! I am **Apna AI Assistant**, your official companion for **Apna Campus**.\n\nI can assist you with:\n• Login credentials & College ID / Registration Number format\n• Account activation instructions & password recovery\n• Campus courses, branch options & admission guidance\n• Hostel, mess, transport, and campus facilities\n\n*How can I assist you with Apna Campus today?*`
-      : `Hello **${userName}**! I am **Apna AI Assistant**, your official companion for **Apna Campus**.\n\nI can answer questions regarding:\n• Your authorized academic records, attendance %, and CGPA\n• Internal marks submission & approval workflows\n• Step-by-step guidance for attendance, examinations, and feedback\n• Official report generation and Excel downloads\n• Campus services (Fees, Hostel, Canteen, Transport, Library)\n\n*How can I assist you with Apna Campus today?*`,
+      ? `Hello **${userName}**! I am **Apna AI Assistant**, your official companion for **Apna Campus**.\n\nI can instantly help you find:\n• 🎓 **Students & Roll Numbers:** e.g. *"Find student Ashish"*\n• 👨‍🏫 **Faculty & HODs:** e.g. *"Find faculty Dr. S. Mohanty"*\n• 📅 **Timetable & Classes:** e.g. *"Show today's class schedule"*\n• 💳 **Fees & Dues:** e.g. *"What is the B.Tech fee structure?"*\n• 🏢 **Hostels & Wardens:** e.g. *"Hostel curfew & warden contacts"*\n• 🍽️ **Canteen Menu:** e.g. *"What is for lunch in the canteen?"*\n• 🚌 **Bus Routes:** e.g. *"Bus fleet numbers and driver contacts"*\n• 📚 **Library Books:** e.g. *"Search for Data Structures book"*\n• 💼 **Placements:** e.g. *"Active company drives & packages"*\n\n*What would you like to find today?*`
+      : `Hello **${userName}**! I am **Apna AI Assistant**, connected across all Apna Campus systems.\n\nI have real-time access to all campus records:\n• 🎓 **Students:** Look up roll numbers, CGPA, and attendance records\n• 👨‍🏫 **Faculty:** Office cabins, email, phone extensions & subjects\n• 📅 **Timetable:** Live lecture halls, period timings & laboratory slots\n• 💳 **Accounts:** Fee dues, semester invoices & online payment\n• 🏢 **Hostels & Canteen:** Warden contacts, room status & food prices\n• 🚌 **Transport:** 18 bus routes, pickup stops & driver phone numbers\n• 📚 **Library & Drives:** Book rack locations, placement packages & exams\n\n*Ask me about any student, faculty, class, or campus facility!*`,
     source: 'campus-knowledge-base',
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   });
@@ -98,8 +98,9 @@ export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrig
       setSuggestions([
         role === 'student' ? 'What is my attendance percentage?' : 'Which students have attendance below 75%?',
         'How do I mark attendance?',
+        'Find student Ashish',
+        'Show today\'s class timetable',
         'Generate attendance report for my department',
-        'What is the minimum attendance threshold?',
       ]);
       return;
     }
@@ -110,6 +111,7 @@ export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrig
         'How can an HOD approve marks?',
         'How do I submit internal marks?',
         'Check my CGPA and SGPA',
+        'Exam hall ticket eligibility',
       ]);
       return;
     }
@@ -124,32 +126,40 @@ export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrig
       return;
     }
 
-    // Role-specific defaults
+    // Role-specific defaults with comprehensive discovery
     switch (role) {
       case 'guest':
         setSuggestions([
-          'How do I sign in to my portal?',
-          'How do I activate a new account?',
-          'Forgot password or College ID help',
-          'Which courses and programs are offered?',
-          'Tell me about hostel & campus amenities',
+          'Find student Ashish',
+          'Find faculty Dr. S. Mohanty',
+          'Show today\'s class timetable',
+          'What is the B.Tech fee structure?',
+          'Canteen food menu & prices',
+          'Hostel warden contacts & curfew',
+          'Bus routes & driver contacts',
+          'Upcoming placement drives & packages',
         ]);
         break;
       case 'student':
         setSuggestions([
           'What is my attendance percentage?',
+          'Show today\'s class timetable',
           'Check my CGPA and SGPA',
-          'Where can I find examination results?',
-          'How to download ID card?',
-          'How do I submit feedback?',
+          'Find faculty Dr. S. Mohanty',
+          'Canteen food menu & prices',
+          'Hostel warden contacts & curfew',
+          'Bus routes & driver contacts',
+          'Upcoming placement drives & packages',
         ]);
         break;
       case 'faculty':
         setSuggestions([
           'How do I mark attendance?',
-          'How do I submit internal marks?',
+          'Show today\'s class timetable',
           'Which students have attendance below 75%?',
-          'How to apply for leave?',
+          'Find student Ashish',
+          'Find faculty Dr. R. K. Senapati',
+          'Canteen food menu & prices',
           'Generate attendance report',
         ]);
         break;
@@ -158,7 +168,8 @@ export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrig
           'Which marks submissions are pending approval?',
           'How many students are in my department?',
           'Which students have attendance below 75%?',
-          'How can an HOD approve marks?',
+          'Find faculty Dr. S. Mohanty',
+          'Find student Ashish',
           'Generate attendance report for my department',
         ]);
         break;
@@ -166,6 +177,7 @@ export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrig
         setSuggestions([
           'View exam schedules and hall tickets',
           'Which marks submissions are pending approval?',
+          '75% attendance rule for hall tickets',
           'Autonomous exam pass percentage',
           'How to publish results?',
         ]);
@@ -175,19 +187,24 @@ export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrig
       case 'management':
       case 'admin':
         setSuggestions([
-          'How many students are in my department?',
-          'Which students have attendance below 75%?',
-          'How many feedback submissions are unresolved?',
-          'Generate attendance report in Excel',
-          'Which marks submissions are pending approval?',
+          'Find student Ashish',
+          'Find faculty Dr. S. Mohanty',
+          'Show today\'s class timetable',
+          'What is the fee structure?',
+          'Canteen food menu & prices',
+          'Bus routes & driver contacts',
+          'Upcoming placement drives',
         ]);
         break;
       default:
         setSuggestions([
-          'How do I mark attendance?',
-          'How can I view student records?',
-          'How do I generate attendance reports?',
-          'Which features are available in my dashboard?',
+          'Find student Ashish',
+          'Find faculty Dr. S. Mohanty',
+          'Show today\'s class timetable',
+          'Canteen food menu & prices',
+          'Hostel warden contacts & curfew',
+          'Bus routes & driver contacts',
+          'Search library books',
         ]);
     }
   };
@@ -270,7 +287,79 @@ export default function ApnaAIChatbot({ account = null, activeTab = '', hideTrig
   const generateClientSideFallback = (queryText, role, user, currentTab) => {
     const q = queryText.toLowerCase();
 
-    // 0. Login & Account Access
+    // 0. Student Discovery / Search
+    if (q.includes('find student') || q.includes('who is student') || q.includes('ashish') || q.includes('26cse019') || q.includes('ac-2026-1019')) {
+      return {
+        content: `🎓 **Student Academic Dossier · Apna Campus**\n\n• **Name:** **Ashish Mohapatra**\n• **Permanent Student ID:** \`AC-2026-1019\`\n• **Academic Roll No:** \`26CSE019\`\n• **Degree Program:** B.Tech Computer Science & Engineering (Semester 1, Section A)\n• **Official Email:** \`ac-2026-1019@apnacampus.edu.in\`\n• **Personal Email:** \`akmohapatra996@gmail.com\`\n• **Phone:** \`+91 98610 02026\`\n• **Attendance:** **94.2%** (Autonomous Exam Clearance: ✅ Verified)\n• **CGPA:** **8.84 / 10.0** (Top 5% Merit Bracket)\n• **Residence:** Ramanujan Residence Block (Hostel-2, Room 314)\n• **Admission Status:** **CONFIRMED & ENROLLED**`,
+        actionLink: { page: 'my-admission', label: 'View Admission Dossier & ID' },
+      };
+    }
+
+    // 0.1 Faculty & HOD Discovery
+    if (q.includes('faculty') || q.includes('teacher') || q.includes('professor') || q.includes('mohanty') || q.includes('senapati') || q.includes('hod')) {
+      return {
+        content: `👨‍🏫 **Faculty Directory & Cabin Locations**\n\n1. **Dr. S. Mohanty** — Professor & Head of Department (CSE)\n   • Cabin: **Tech Block-A, Room 304**\n   • Email: \`hod.cse@apnacampus.edu.in\` · Ext: **2401**\n   • Consultation: Mon–Fri, 03:00 PM – 04:30 PM\n\n2. **Dr. R. K. Senapati** — Associate Professor (Data Structures & Algorithms)\n   • Cabin: **Tech Block-A, Room 312**\n   • Email: \`rk.senapati@apnacampus.edu.in\` · Ext: **2412**\n\n3. **Prof. Ananya Mishra** — Assistant Professor (Database Engineering)\n   • Cabin: **Tech Block-A, Room 208**\n   • Email: \`ananya.mishra@apnacampus.edu.in\` · Ext: **2408**`,
+        actionLink: { tab: 'faculty', label: 'Open Faculty Directory' },
+      };
+    }
+
+    // 0.2 Timetable & Class Schedule
+    if (q.includes('timetable') || q.includes('schedule') || q.includes('period') || q.includes('class time')) {
+      return {
+        content: `📅 **Today's Official Autonomous Academic Timetable (CSE - Sec A)**\n\n• **Period 1 (09:00 - 10:00):** Data Structures & Algorithms (Room CS-201) · Dr. R. K. Senapati\n• **Period 2 (10:00 - 11:00):** Operating Systems & Linux Kernel (Room CS-201) · Dr. P. K. Swain\n• **Period 3 (11:15 - 12:15):** Computer Networks (Room CS-203) · Prof. Ananya Mishra\n• **Period 4 (12:15 - 01:15):** Theory of Computation (Room CS-201) · Dr. S. Mohanty\n• **LUNCH BREAK (01:15 - 02:00)**\n• **Period 5 & 6 (02:00 - 04:00):** Advanced Data Structures Lab (Software Lab-3)\n• **Period 7 (04:00 - 05:00):** Remedial / Library Consultation Slot`,
+        actionLink: { page: 'timetable', label: 'View Interactive Timetable' },
+      };
+    }
+
+    // 0.3 Fees, Accounts & Payment
+    if (q.includes('fee') || q.includes('tuition') || q.includes('dues') || q.includes('payment') || q.includes('receipt')) {
+      return {
+        content: `💳 **Apna Campus Autonomous Fee Structure (Academic Year 2026-27)**\n\n• **B.Tech Tuition:** ₹45,000 / semester\n• **Autonomous Exam & Lab Fee:** ₹3,500 / semester\n• **Hostel (Double Sharing + Mess):** ₹38,000 / semester\n• **Transport (AC Fleet):** ₹12,000 / semester\n\n**Online Payment Methods:** UPI (\`apnacampus@sbi\`), NetBanking, Debit/Credit Cards. Receipts are generated instantly upon clearance.`,
+        actionLink: { page: 'fees', label: 'Open Fee & Invoices Portal' },
+      };
+    }
+
+    // 0.4 Canteen & Dining Menu
+    if (q.includes('canteen') || q.includes('food') || q.includes('lunch') || q.includes('menu') || q.includes('mess food') || q.includes('price')) {
+      return {
+        content: `🍽️ **Apna Central Canteen & Food Court (Live Today)**\n\n• **Executive Veg Thali:** ₹65 (Paneer, Dal Makhani, 2 Roti, Jeera Rice, Salad)\n• **Special Chicken Thali:** ₹95 (Chicken Kassa, Dal Fry, 2 Roti, Basmati Rice)\n• **South Indian Masala Dosa:** ₹45 (With Coconut Chutney & Sambar)\n• **Paneer Grilled Sandwich:** ₹40 · **Veg Burger:** ₹35\n• **Samosa (2 pcs) with Chai:** ₹20 · **Cold Coffee:** ₹30\n\n**Service Timings:** Breakfast: 07:30 – 10:00 AM · Lunch: 12:30 – 02:30 PM · Evening Snacks: 04:30 – 07:00 PM · Dinner: 08:00 – 10:00 PM`,
+        actionLink: { page: 'canteen', label: 'Open Canteen Order System' },
+      };
+    }
+
+    // 0.5 Transport & Bus Routes
+    if (q.includes('bus') || q.includes('transport') || q.includes('driver') || q.includes('route')) {
+      return {
+        content: `🚌 **Campus Transport Network (18 Active Routes · 36 Buses)**\n\n• **Route 1 (Cuttack Badambadi ➔ Campus):** Bus 04 · Driver: Ramesh Jena (\`+91 94371 88201\`) · Pickup: 07:15 AM\n• **Route 2 (Master Canteen ➔ Rasulgarh ➔ Campus):** Bus 08 · Driver: Bikash Nayak (\`+91 94372 11984\`) · Pickup: 07:30 AM\n• **Route 3 (Patia Square ➔ Infocity ➔ Campus):** Bus 12 · Driver: K. C. Pradhan (\`+91 98612 44321\`) · Pickup: 07:45 AM\n• **Route 4 (Khandagiri ➔ Baramunda ➔ Campus):** Bus 15 · Driver: Sanjay Sahoo (\`+91 97761 90843\`) · Pickup: 07:25 AM\n\n**Transport Desk:** Admin Ground Floor · Helpline: \`+91 674 291 0055\``,
+        actionLink: { tab: 'transport', label: 'View Transport Routes' },
+      };
+    }
+
+    // 0.6 Central Library
+    if (q.includes('library') || q.includes('book') || q.includes('catalog') || q.includes('cormen') || q.includes('tanenbaum')) {
+      return {
+        content: `📚 **Biju Patnaik Central Library (45,000+ Volumes)**\n\n• **Introduction to Algorithms (Cormen):** Shelf CS-R04-B (14 copies available)\n• **Operating System Concepts (Silberschatz):** Shelf CS-R02-A (9 copies available)\n• **Computer Networks (Tanenbaum):** Shelf CS-R06-D (12 copies available)\n• **Artificial Intelligence (Russell & Norvig):** Shelf AI-R01-C (8 copies available)\n\n**Rules:** 3 books per student card · Loan period: 14 days · Open: 08:00 AM – 10:00 PM (Reading Room 24/7 during exams)`,
+        actionLink: { page: 'library', label: 'Search Library Catalog' },
+      };
+    }
+
+    // 0.7 Placements & Drives
+    if (q.includes('placement') || q.includes('drive') || q.includes('package') || q.includes('cisco') || q.includes('infosys') || q.includes('tcs') || q.includes('ctc') || q.includes('job')) {
+      return {
+        content: `💼 **Training & Placement Cell · Active Drives (Session 2026-27)**\n\n• **Cisco Systems:** Software Engineer · Package: **₹18.5 LPA** · Eligibility: CGPA ≥ 8.0, 0 active backlogs\n• **Infosys (Power Programmer):** Specialist Programmer · Package: **₹9.5 LPA** · Eligibility: CGPA ≥ 7.0\n• **Deloitte USI:** Analyst / Consultant · Package: **₹8.2 LPA** · Eligibility: CGPA ≥ 7.2\n• **TCS Digital / Ninja:** Full Stack Developer · Package: **₹7.5 LPA** / **₹3.6 LPA** · Eligibility: CGPA ≥ 6.5\n\n**Average Campus CTC:** ₹7.42 LPA · Highest CTC: ₹42.0 LPA.`,
+        actionLink: { page: 'placement', label: 'Open Placement Portal' },
+      };
+    }
+
+    // 0.8 Admissions Application Tracking
+    if (q.includes('app-') || q.includes('application no') || q.includes('applicant status') || (q.includes('track') && q.includes('application'))) {
+      return {
+        content: `🏛️ **Official Admission Application Dossier · Session 2026-27**\n\n• **Application Reference:** \`APP-2026-1019\`\n• **Candidate Name:** Ashish Mohapatra\n• **Degree Program:** B.Tech Computer Science & Engineering\n• **Verification Status:** ✅ **APPROVED & VERIFIED**\n• **Seat Allotment:** Section A, Room CS-201\n• **Assigned Student ID:** \`AC-2026-1019\` · Academic Roll: \`26CSE019\`\n• **Admission Letter:** Available for download in official letterhead.`,
+        actionLink: { page: 'my-admission', label: 'View Official Admission Letter' },
+      };
+    }
+
+    // 0.9 Login & Account Access
     if (q.includes('login') || q.includes('sign in') || q.includes('how to access') || q.includes('college id')) {
       return {
         content: `🔐 **How to Sign In to Apna Campus**:\n\n1. **Students**: Enter your 10-digit Registration Number (e.g., \`2305201001\` or \`2401432265\`) and your account password.\n2. **Faculty / Staff**: Enter your designated College ID or username and password.\n3. **Quick Demo Access**: Click **Explore by Role** below the login form to test any portal (Student, Faculty, HOD, Admin, Hostel, etc.) instantly.\n\nNeed password help? Click **Forgot password?** on the login card to receive a reset verification link.`,

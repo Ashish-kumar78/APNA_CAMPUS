@@ -15,7 +15,8 @@ import {
   Calendar,
   Layers,
   UserCheck,
-  Clock
+  Clock,
+  FlaskConical
 } from 'lucide-react';
 
 /**
@@ -60,6 +61,12 @@ export const getAdminMenuConfig = (context = {}) => [
       { id: 'faculty-allocations', label: 'Faculty Allocations', icon: UserCheck },
       { id: 'timetable', label: 'Timetables & Slots', icon: Calendar },
       { id: 'attendance-monitoring', label: 'Attendance Tracking', icon: Clock },
+    ]
+  },
+  {
+    title: 'LABORATORY MANAGEMENT',
+    items: [
+      { id: 'laboratory-management', label: 'Laboratory Management', icon: FlaskConical },
     ]
   }
 ];

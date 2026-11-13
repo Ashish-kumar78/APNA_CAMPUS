@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldCheck,
   QrCode,
@@ -17,30 +17,184 @@ import {
 import dynamicQrService from '../../services/dynamicQrService.js';
 import QrSvgRenderer from '../Common/QrSvgRenderer.jsx';
 
+function getRoleMeta(user) {
+  const rawRole = (user?.role || user?.identityType || 'STUDENT').toUpperCase();
+  const isStudent = rawRole === 'STUDENT';
+  const isFaculty = rawRole === 'FACULTY';
+  const isSecurity = rawRole === 'SECURITY' || rawRole === 'GUARD';
+  const isWarden = rawRole === 'WARDEN' || rawRole === 'HOSTEL' || rawRole === 'HOSTEL_ADMIN';
+  const isAdmin = rawRole === 'ADMIN' || rawRole === 'SUPER_ADMIN';
+
+  let roleLabel = rawRole.replace(/_/g, ' ');
+  let badgeBg = '#8b5cf6';
+  let authorizedZones = 'Campus Main Gate, Turnstiles & Common Areas';
+  let defaultDept = 'Administration';
+
+  switch (rawRole) {
+    case 'STUDENT':
+      badgeBg = '#0284c7';
+      roleLabel = 'STUDENT';
+      defaultDept = user?.program ? `${user.program} · Computer Science` : 'Computer Science & Engineering';
+      authorizedZones = 'Hostel Residences, Academic Blocks, Central Library, Mess Hall & Main Gates';
+      break;
+    case 'FACULTY':
+      badgeBg = '#059669';
+      roleLabel = 'FACULTY';
+      defaultDept = 'Computer Science & Engineering';
+      authorizedZones = 'Academic Buildings, Faculty Chambers, Research Labs, Central Library & All Gates';
+      break;
+    case 'SECURITY':
+    case 'GUARD':
+      badgeBg = '#7c3aed';
+      roleLabel = 'SECURITY';
+      defaultDept = 'Campus Security & Access Control';
+      authorizedZones = 'Main Gates 1 & 2, Security Booths, Turnstiles, Surveillance HQ & Perimeter';
+      break;
+    case 'WARDEN':
+    case 'HOSTEL':
+    case 'HOSTEL_ADMIN':
+      badgeBg = '#e11d48';
+      roleLabel = 'WARDEN';
+      defaultDept = 'Hostel Administration & Residential Life';
+      authorizedZones = 'Hostel Blocks 1–4, Warden Office, Dining Hall & Campus Security Gates';
+      break;
+    case 'ADMIN':
+      badgeBg = '#0f172a';
+      roleLabel = 'ADMIN';
+      defaultDept = 'General Administration';
+      authorizedZones = 'Administrative Complex, Examination Vault, Faculty Chambers & All Gates';
+      break;
+    case 'SUPER_ADMIN':
+      badgeBg = '#0f172a';
+      roleLabel = 'SUPER ADMIN';
+      defaultDept = 'Enterprise IT & Cyber Governance';
+      authorizedZones = 'Full Institutional Clearance — Data Center, Server Rooms, All Buildings & Gates';
+      break;
+    case 'PRINCIPAL':
+      badgeBg = '#9333ea';
+      roleLabel = 'PRINCIPAL';
+      defaultDept = 'Office of the Principal';
+      authorizedZones = 'Executive Headquarters, Academic Senate, Faculty Chambers & All Gates';
+      break;
+    case 'HOD':
+      badgeBg = '#0d9488';
+      roleLabel = 'HOD';
+      defaultDept = 'Computer Science & Engineering';
+      authorizedZones = 'Department Complex, Faculty Suites, Laboratories & Campus Gates';
+      break;
+    case 'EXAM_CELL':
+      badgeBg = '#be123c';
+      roleLabel = 'EXAM CELL';
+      defaultDept = 'Examination Affairs & Evaluation';
+      authorizedZones = 'Confidential Exam Vault, Evaluation Center & Administrative Gates';
+      break;
+    case 'ACCOUNTS':
+    case 'SCHOLARSHIP':
+      badgeBg = '#16a34a';
+      roleLabel = 'ACCOUNTS';
+      defaultDept = 'Finance & Accounts Division';
+      authorizedZones = 'Cash & Bursar Counters, Central Accounts Office & Gates';
+      break;
+    case 'LIBRARY':
+      badgeBg = '#0891b2';
+      roleLabel = 'LIBRARY';
+      defaultDept = 'Central University Library';
+      authorizedZones = 'Central Library Stack Rooms, Digital Repository & Turnstiles';
+      break;
+    case 'TRANSPORT':
+      badgeBg = '#d97706';
+      roleLabel = 'TRANSPORT';
+      defaultDept = 'Transport Logistics & Fleet Division';
+      authorizedZones = 'Vehicle Depot, Bus Terminal, Fuel Bay & Campus Gates';
+      break;
+    case 'MESS_MANAGER':
+    case 'MESS':
+      badgeBg = '#ea580c';
+      roleLabel = 'MESS MANAGER';
+      defaultDept = 'Central Dining & Hospitality Services';
+      authorizedZones = 'Hostel Kitchens, Dining Halls, Food Storage & Supply Gates';
+      break;
+    case 'PLACEMENT':
+      badgeBg = '#4f46e5';
+      roleLabel = 'PLACEMENT';
+      defaultDept = 'Corporate Relations & Placement Cell';
+      authorizedZones = 'Corporate Interview Suites, Auditorium, Placement Office & Gates';
+      break;
+    case 'ADMISSIONS':
+      badgeBg = '#2563eb';
+      roleLabel = 'ADMISSIONS';
+      defaultDept = 'Admissions & Outreach Division';
+      authorizedZones = 'Visitor Welcome Center, Counseling Halls & Campus Gates';
+      break;
+    case 'MANAGEMENT':
+      badgeBg = '#3b82f6';
+      roleLabel = 'MANAGEMENT';
+      defaultDept = 'Board of Governors & Institutional Trust';
+      authorizedZones = 'Executive Board Room, Guest Suites & All Campus Zones';
+      break;
+    default:
+      badgeBg = '#475569';
+      roleLabel = rawRole;
+      defaultDept = 'Campus Operations';
+      authorizedZones = 'Designated Duty Stations, Operational Offices & Campus Gates';
+      break;
+  }
+
+  const identifier =
+    user?.rollNumber ||
+    user?.registrationNumber ||
+    user?.identifier ||
+    user?.employeeId ||
+    user?.employeeCode ||
+    user?.id ||
+    'N/A';
+
+  const name = user?.name || 'Verified Member';
+  const department = user?.department || defaultDept;
+  const designation = user?.designation || roleLabel;
+
+  return {
+    role: rawRole,
+    roleLabel,
+    badgeBg,
+    isStudent,
+    isFaculty,
+    isSecurity,
+    isWarden,
+    isAdmin,
+    identifier,
+    name,
+    department,
+    designation,
+    authorizedZones,
+  };
+}
+
 export default function UniversalDigitalIdModal({ isOpen, onClose, user, extraContext = {} }) {
   const [qrState, setQrState] = useState(dynamicQrService.getCurrentState());
   const [activeTab, setActiveTab] = useState('qr'); // 'qr' | 'history' | 'permission'
 
-  useEffect(() => {
-    if (!isOpen || !user) return;
+  const userRef = useRef(user);
+  userRef.current = user;
+  const userIdKey = user
+    ? `${user.id || user.identifier || user.employeeId || user.rollNumber || user.registrationNumber || ''}_${user.role || ''}`
+    : '';
 
-    const cleanup = dynamicQrService.startLiveSession(user, (state) => {
+  useEffect(() => {
+    if (!isOpen || !userIdKey) return;
+
+    const cleanup = dynamicQrService.startLiveSession(userRef.current, (state) => {
       setQrState(state);
     });
 
     return () => {
       cleanup();
     };
-  }, [isOpen, user]);
+  }, [isOpen, userIdKey]);
 
   if (!isOpen || !user) return null;
 
-  const role = (user.role || 'STUDENT').toUpperCase();
-  const isStudent = role === 'STUDENT';
-  const isFaculty = role === 'FACULTY';
-  const identifier = user.rollNumber || user.identifier || user.employeeId || user.id || 'N/A';
-  const name = user.name || 'Campus Member';
-  const department = user.department || 'Computer Science & Engineering';
+  const meta = getRoleMeta(user);
   const campusStatus = extraContext.campusStatus || 'INSIDE_CAMPUS';
 
   const remaining = qrState.remainingSecs ?? 10;
@@ -158,8 +312,8 @@ export default function UniversalDigitalIdModal({ isOpen, onClose, user, extraCo
                 fontWeight: 700,
               }}
             >
-              {user.avatar ? (
-                <img src={user.avatar} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {user.avatar || user.photo ? (
+                <img src={user.avatar || user.photo} alt={meta.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <User size={24} />
               )}
@@ -167,7 +321,7 @@ export default function UniversalDigitalIdModal({ isOpen, onClose, user, extraCo
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {name}
+                  {meta.name}
                 </h3>
                 <span
                   style={{
@@ -175,15 +329,19 @@ export default function UniversalDigitalIdModal({ isOpen, onClose, user, extraCo
                     fontWeight: 700,
                     padding: '0.1rem 0.45rem',
                     borderRadius: '999px',
-                    background: isStudent ? '#0284c7' : isFaculty ? '#10b981' : '#8b5cf6',
+                    background: meta.badgeBg,
                     color: '#ffffff',
+                    letterSpacing: '0.04em',
                   }}
                 >
-                  {role}
+                  {meta.roleLabel}
                 </span>
               </div>
               <div style={{ fontSize: '0.76rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
-                {isStudent ? `Regd / Roll No: ${identifier}` : `Employee ID: ${identifier}`} • {department}
+                {meta.isStudent ? `Regd / Roll No: ${meta.identifier}` : `Employee ID: ${meta.identifier}`} • {meta.department}
+                {meta.designation && meta.designation !== meta.roleLabel && (
+                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '1px' }}>{meta.designation}</div>
+                )}
               </div>
             </div>
           </div>
@@ -268,31 +426,11 @@ export default function UniversalDigitalIdModal({ isOpen, onClose, user, extraCo
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                   position: 'relative',
                   marginBottom: '1rem',
+                  transition: 'border-color 0.3s ease',
+                  borderColor: remaining <= 2 ? '#f43f5e' : '#e2e8f0',
                 }}
               >
                 <QrSvgRenderer value={qrState.token || ''} size={190} />
-
-                {qrState.isRefreshing && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      background: 'rgba(255, 255, 255, 0.85)',
-                      backdropFilter: 'blur(2px)',
-                      borderRadius: '14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <RefreshCw size={24} className="spin" color="#0284c7" />
-                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#0f172a' }}>
-                      Rotating QR Token...
-                    </span>
-                  </div>
-                )}
               </div>
 
               {/* 10-Second Countdown Meter */}
@@ -307,18 +445,26 @@ export default function UniversalDigitalIdModal({ isOpen, onClose, user, extraCo
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Clock size={14} color="#0284c7" /> Validity Countdown
+                    <Clock size={14} color={remaining <= 3 ? '#e11d48' : '#0284c7'} /> Validity Countdown
                   </span>
-                  <span
-                    style={{
-                      fontSize: '0.86rem',
-                      fontWeight: 800,
-                      color: remaining <= 3 ? '#e11d48' : '#0284c7',
-                      fontFamily: 'monospace',
-                    }}
-                  >
-                    {remaining}s remaining
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <RefreshCw
+                      size={12}
+                      className={remaining <= 2 ? 'spin' : ''}
+                      color={remaining <= 3 ? '#e11d48' : '#0284c7'}
+                      style={{ opacity: 0.8 }}
+                    />
+                    <span
+                      style={{
+                        fontSize: '0.86rem',
+                        fontWeight: 800,
+                        color: remaining <= 3 ? '#e11d48' : '#0284c7',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      {remaining}s remaining
+                    </span>
+                  </div>
                 </div>
 
                 {/* Live progress bar */}
@@ -424,8 +570,25 @@ export default function UniversalDigitalIdModal({ isOpen, onClose, user, extraCo
                 </div>
               </div>
 
-              {/* Leave / Gate Pass Context */}
-              {isStudent && (
+              {/* Authorized Campus Zones */}
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '0.85rem',
+                }}
+              >
+                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
+                  Authorized Clearance Zones
+                </div>
+                <div style={{ marginTop: '0.35rem', fontSize: '0.82rem', color: '#1e293b', lineHeight: 1.45 }}>
+                  {meta.authorizedZones}
+                </div>
+              </div>
+
+              {/* Leave / Gate Pass Context for Students */}
+              {meta.isStudent && (
                 <div
                   style={{
                     background: '#f8fafc',
@@ -549,7 +712,7 @@ export default function UniversalDigitalIdModal({ isOpen, onClose, user, extraCo
           }}
         >
           <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-            ID: {identifier} • Apna Campus v2.5
+            ID: {meta.identifier} • Apna Campus v2.5
           </span>
           <button
             onClick={onClose}

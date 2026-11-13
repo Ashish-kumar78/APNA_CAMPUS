@@ -20,7 +20,7 @@ describe('STEP 3: Backend Security Module (SecurityService & SecurityController)
 
     const moduleContent = fs.readFileSync(modulePath, 'utf8');
     expect(moduleContent).toContain('controllers: [SecurityController]');
-    expect(moduleContent).toContain('providers: [SecurityService]');
+    expect(moduleContent).toMatch(/providers:\s*\[[^\]]*SecurityService[^\]]*\]/);
   });
 
   it('SecurityController defines required REST endpoints with Role.SECURITY guards', () => {

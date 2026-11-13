@@ -50,7 +50,8 @@ import {
   FileCheck,
   GitCompare,
   UserPlus,
-  Utensils
+  Utensils,
+  FlaskConical
 } from 'lucide-react';
 import { api } from '../services/api.js';
 import ReportGenerationModule from './ReportGenerationModule.jsx';
@@ -58,6 +59,7 @@ import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 import TransportManagementModule from './transport/TransportManagementModule.jsx';
 import CanteenManagementModule from './canteen/CanteenManagementModule.jsx';
 import HostelManagementModule from './hostel/HostelManagementModule.jsx';
+import AdminLaboratoryManagementModule from './laboratory/AdminLaboratoryManagementModule.jsx';
 import './SuperAdminPortal.css';
 import CampusConnect from './CampusConnect/CampusConnect.jsx';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
@@ -907,6 +909,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
       items: [
         { label: 'User Management', icon: Users, id: 'users' },
         { label: 'RBAC & Permissions', icon: KeyRound, id: 'rbac' },
+        { label: 'Laboratory Management', icon: FlaskConical, id: 'laboratory-management' },
         { label: 'Transport Management', icon: Bus, id: 'transport-management' },
         { label: 'Canteen & Mess Management', icon: Utensils, id: 'canteen-management' },
         { label: 'Hostel & Warden Management', icon: Building, id: 'hostel-management' },
@@ -936,6 +939,7 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
       users: { title: 'User Management', subtitle: 'Account provisioning, roles, and access control' },
       rbac: { title: 'RBAC & Permissions', subtitle: 'Role-based access control and policy management' },
       'transport-management': { title: 'Transport Management System', subtitle: 'Universal fleet logistics, compliance certificates, and RBAC policy governance' },
+      'laboratory-management': { title: 'Laboratory Management System', subtitle: 'Universal multi-discipline laboratories, equipment inventory, repair work orders & governance overrides' },
       'canteen-management': { title: 'Canteen & Mess Operations ERP', subtitle: 'Institution-wide meal verification, hostellers, kitchen inventory, and accounts' },
       'hostel-management': { title: 'Hostel & Warden Management System', subtitle: 'Universal residential life governance, wardens directory, room allocations, student leaves, and compliance governance' },
       'wardens': { title: 'Hostel Wardens Administration', subtitle: 'Supervise residential hostel administration, student welfare, room allocation, and night curfew enforcement' },
@@ -3190,6 +3194,13 @@ export default function SuperAdminPortal({ account, onLogout, onSwitchRole }) {
           {activeTab === 'canteen-management' && (
             <div style={{ marginTop: '1rem' }}>
               <CanteenManagementModule account={account} />
+            </div>
+          )}
+
+          {/* TAB: LABORATORY MANAGEMENT (SUPER ADMIN GOVERNANCE) */}
+          {activeTab === 'laboratory-management' && (
+            <div style={{ marginTop: '1rem' }}>
+              <AdminLaboratoryManagementModule account={account} isSuperAdmin={true} />
             </div>
           )}
         </div>

@@ -18,6 +18,7 @@ import { getCampusOpsMenuConfig } from './menuConfig.campusOps.js';
 import { getManagementMenuConfig } from './menuConfig.management.js';
 import { getScholarshipMenuConfig } from './menuConfig.scholarship.js';
 import { getStaffMenuConfig } from './menuConfig.staff.js';
+import { getSecurityMenuConfig } from './menuConfig.security.js';
 
 export {
   getFacultyMenuConfig,
@@ -37,7 +38,8 @@ export {
   getCampusOpsMenuConfig,
   getManagementMenuConfig,
   getScholarshipMenuConfig,
-  getStaffMenuConfig
+  getStaffMenuConfig,
+  getSecurityMenuConfig
 };
 
 /**
@@ -119,7 +121,15 @@ export function getMenuConfigForRole(role, context = {}) {
     case 'staff':
     case 'technician':
     case 'lab_assistant':
+    case 'lab_incharge':
+    case 'lab_technician':
+    case 'lab_staff':
       return getStaffMenuConfig(context);
+
+    case 'security':
+    case 'security_guard':
+    case 'guard':
+      return getSecurityMenuConfig(context);
 
     default:
       return [];

@@ -12,12 +12,30 @@ import {
   Eye,
   Printer,
   Settings,
-  Utensils,
-  Sparkles
+  Sparkles,
+  UserPlus,
+  Phone,
+  Shield,
+  Info,
+  Home,
+  Check,
+  RotateCcw,
+  Building,
+  Wrench,
+  User,
+  Users
 } from 'lucide-react';
 import './StudentHostelPage.css';
 import StudentGatePassSection from '../components/StudentGatePassSection.jsx';
+import StudentVisitorRegistrationSection from '../components/StudentVisitorRegistrationSection.jsx';
+import SmartComplaintModal from '../components/SmartComplaintModal.jsx';
 import { getStudentGatePasses } from '../services/gatePassStore.js';
+import {
+  getAllHostelComplaints,
+  getStudentComplaints,
+  updateComplaintStatusInStore,
+  subscribeHostelComplaints
+} from '../services/hostelMaintenanceStore.js';
 import {
   getAllResidentLeaves,
   getResidentLeavesByStudent,
@@ -31,9 +49,20 @@ import StudentCleanlinessSection from '../components/hostel/StudentCleanlinessSe
 import { getAllHostels } from '../services/hostelAttendanceStore.js';
 import { getStudentRulesList, subscribeHostelRules } from '../services/hostelRulesStore.js';
 
-export default function StudentHostelPage({ defaultTab = 'gate-pass', account }) {
-  const [activeSubTab, setActiveSubTab] = useState(defaultTab === 'overview' ? 'gate-pass' : (defaultTab || 'gate-pass'));
+export default function StudentHostelPage({ defaultTab = 'room-maintenance', account }) {
+  const [activeSubTab, setActiveSubTab] = useState(defaultTab === 'overview' ? 'room-maintenance' : (defaultTab || 'room-maintenance'));
   const [pendingGatePassCount, setPendingGatePassCount] = useState(0);
+
+  // Complaints state & synchronization
+  const [complaints, setComplaints] = useState(() => getAllHostelComplaints());
+  const [isSmartComplaintModalOpen, setIsSmartComplaintModalOpen] = useState(false);
+
+  useEffect(() => {
+    const unsub = subscribeHostelComplaints((updated) => {
+      setComplaints(updated);
+    });
+    return unsub;
+  }, []);
 
   // Live Admin Policy for Hostel Regulations & Code of Conduct live sync
   const [liveRules, setLiveRules] = useState(() => getStudentRulesList());
@@ -148,8 +177,47 @@ export default function StudentHostelPage({ defaultTab = 'gate-pass', account })
     showLeaveToast(`✓ Leave Application ${created.id} submitted successfully to Resident Warden & Hostel Administrator.`);
   };
 
+  const myComplaints = useMemo(() => {
+    return getStudentComplaints(currentRollNumber);
+  }, [complaints, currentRollNumber]);
+
+  const handleStudentVerify = (complaintId, isResolved) => {
+    if (isResolved) {
+      updateComplaintStatusInStore(complaintId, 'Resolved', currentStudentName, 'STUDENT', 'Verified and confirmed resolved by resident student.');
+      showLeaveToast('✓ Ticket marked as Resolved! Feedback recorded.');
+    } else {
+      updateComplaintStatusInStore(complaintId, 'Reopened', currentStudentName, 'STUDENT', 'Reopened by student: Issue was not resolved.');
+      showLeaveToast('⚠️ Ticket Reopened and re-routed to Resident Warden & Technical Team.');
+    }
+  };
+
+  const getDeadlineInfo = (complaint) => {
+    const deadlineMs = complaint.resolutionDeadline
+      ? new Date(complaint.resolutionDeadline).getTime()
+      : (new Date(complaint.filedDate || Date.now()).getTime() + 72 * 3600 * 1000);
+    const now = Date.now();
+    const diffHours = Math.round((deadlineMs - now) / (1000 * 60 * 60));
+    const deadlineDate = new Date(deadlineMs);
+    const deadlineStr = `${deadlineDate.getDate()} ${deadlineDate.toLocaleString('en-US', { month: 'short' })}, ${deadlineDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+    return {
+      diffHours,
+      diffText: diffHours > 0 ? `${diffHours} hours remaining` : 'Deadline exceeded',
+      deadlineStr
+    };
+  };
+
+  const getStepIndex = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s.includes('submi') || s.includes('pend')) return 1;
+    if (s === 'assigned') return 2;
+    if (s.includes('progress')) return 3;
+    if (s.includes('awaiting') || s.includes('verif')) return 4;
+    if (s.includes('resolv') || s.includes('close')) return 5;
+    return 1;
+  };
+
   useEffect(() => {
-    setActiveSubTab(defaultTab === 'overview' ? 'gate-pass' : (defaultTab || 'gate-pass'));
+    setActiveSubTab(defaultTab === 'overview' ? 'room-maintenance' : (defaultTab || 'room-maintenance'));
   }, [defaultTab]);
 
   useEffect(() => {
@@ -167,6 +235,28 @@ export default function StudentHostelPage({ defaultTab = 'gate-pass', account })
     <div className="student-hostel-page">
       {/* Sub Tabs */}
       <div style={{ display: 'flex', gap: '0.75rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('room-maintenance')}
+          style={{
+            padding: '0.6rem 1.2rem',
+            borderRadius: '10px',
+            border: 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: activeSubTab === 'room-maintenance' ? '#4f46e5' : '#f1f5f9',
+            color: activeSubTab === 'room-maintenance' ? '#ffffff' : '#475569',
+            boxShadow: activeSubTab === 'room-maintenance' ? '0 4px 12px rgba(79, 70, 229, 0.25)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Home size={17} /> Room Allocation &amp; Maintenance
+        </button>
+
         <button
           type="button"
           onClick={() => setActiveSubTab('gate-pass')}
@@ -203,7 +293,7 @@ export default function StudentHostelPage({ defaultTab = 'gate-pass', account })
         </button>
         <button
           type="button"
-          onClick={() => setActiveSubTab('leaves')}
+          onClick={() => setActiveSubTab('visitors')}
           style={{
             padding: '0.6rem 1.2rem',
             borderRadius: '10px',
@@ -214,28 +304,15 @@ export default function StudentHostelPage({ defaultTab = 'gate-pass', account })
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            background: activeSubTab === 'leaves' ? '#dc2626' : '#f1f5f9',
-            color: activeSubTab === 'leaves' ? '#ffffff' : '#475569',
-            boxShadow: activeSubTab === 'leaves' ? '0 4px 12px rgba(220, 38, 38, 0.25)' : 'none',
+            background: activeSubTab === 'visitors' ? '#0284c7' : '#f1f5f9',
+            color: activeSubTab === 'visitors' ? '#ffffff' : '#475569',
+            boxShadow: activeSubTab === 'visitors' ? '0 4px 12px rgba(2, 132, 199, 0.25)' : 'none',
             transition: 'all 0.2s ease'
           }}
         >
-          <Calendar size={17} /> Overnight Leave Applications
-          {rejectedLeavesCount > 0 && (
-            <span style={{
-              background: activeSubTab === 'leaves' ? '#fef2f2' : '#fee2e2',
-              color: '#991b1b',
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              padding: '2px 7px',
-              borderRadius: '9999px',
-              marginLeft: '4px',
-              border: '1px solid #fca5a5'
-            }}>
-              {rejectedLeavesCount} Notice
-            </span>
-          )}
+          <UserPlus size={17} /> Visitor Registration
         </button>
+
         <button
           type="button"
           onClick={() => setActiveSubTab('rules')}
@@ -256,28 +333,6 @@ export default function StudentHostelPage({ defaultTab = 'gate-pass', account })
           }}
         >
           <Settings size={17} /> Hostel Rules &amp; Curfew
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('food-feedback')}
-          style={{
-            padding: '0.6rem 1.2rem',
-            borderRadius: '10px',
-            border: 'none',
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: activeSubTab === 'food-feedback' ? '#059669' : '#f1f5f9',
-            color: activeSubTab === 'food-feedback' ? '#ffffff' : '#475569',
-            boxShadow: activeSubTab === 'food-feedback' ? '0 4px 12px rgba(5, 150, 105, 0.25)' : 'none',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <Utensils size={17} /> Mess &amp; Food Menu
         </button>
 
         <button
@@ -303,8 +358,266 @@ export default function StudentHostelPage({ defaultTab = 'gate-pass', account })
         </button>
       </div>
 
-      {activeSubTab === 'gate-pass' ? (
-        <StudentGatePassSection />
+      {activeSubTab === 'room-maintenance' ? (
+        <div className="hostel-residence-container">
+          {/* Header Banner */}
+          <div className="hostel-header-banner">
+            <div>
+              <h1>My Hostel Residence &amp; Accommodation</h1>
+              <p>Room allocation, roommates, hostel guidelines, and 24/7 maintenance desk</p>
+            </div>
+            <button
+              type="button"
+              className="btn-lodge-complaint"
+              onClick={() => setIsSmartComplaintModalOpen(true)}
+            >
+              <Plus size={16} /> Lodge Maintenance Request
+            </button>
+          </div>
+
+          {/* Top 3 KPI Cards */}
+          <div className="hostel-kpi-row">
+            {/* Card 1: ALLOCATED ROOM */}
+            <div className="hostel-kpi-box">
+              <div>
+                <div className="hostel-kpi-label">ALLOCATED ROOM</div>
+                <div className="hostel-kpi-title">{currentRoom ? `Room ${currentRoom}` : 'Room 204'}</div>
+                <div className="hostel-kpi-sub">Bed 01 (Window Side) · Floor 2</div>
+              </div>
+              <div>
+                <span className="hostel-badge-chip green">
+                  ✓ AC Triple Deluxe Accommodation
+                </span>
+              </div>
+            </div>
+
+            {/* Card 2: RESIDENCE COMPLEX */}
+            <div className="hostel-kpi-box">
+              <div>
+                <div className="hostel-kpi-label">RESIDENCE COMPLEX</div>
+                <div className="hostel-kpi-title" style={{ fontSize: '1.12rem' }}>
+                  {currentHostel || 'Sarojini Girls Residence (Block A)'}
+                </div>
+                <div className="hostel-kpi-sub">
+                  Resident Warden: Mrs. Nibedita Das
+                </div>
+              </div>
+              <div>
+                <a href="tel:+919437033445" className="warden-phone-link">
+                  <Phone size={12} /> +91 94370 33445
+                </a>
+              </div>
+            </div>
+
+            {/* Card 3: HOSTEL FEE STATUS */}
+            <div className="hostel-kpi-box">
+              <div>
+                <div className="hostel-kpi-label">HOSTEL FEE STATUS</div>
+                <div className="hostel-kpi-title" style={{ color: '#16a34a' }}>Partially Paid</div>
+                <div className="hostel-kpi-sub">₹20,000 Paid · ₹12,000 Balance Due</div>
+              </div>
+              <div>
+                <span className="hostel-badge-chip green">
+                  Mess Clearance: Active
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle 2 Cards Grid */}
+          <div className="hostel-sub-grid">
+            {/* Left: Room 204 Roommates */}
+            <div className="hostel-sub-card">
+              <h3>Room {currentRoom || '204'} Roommates</h3>
+              <div className="roommate-row">
+                <div className="roommate-avatar-circle" style={{ background: '#8b5cf6' }}>P</div>
+                <div>
+                  <div className="roommate-details-name">Priya Patra</div>
+                  <div className="roommate-details-sub">Roll 02 · CSE · Sem 1 · Bed 02</div>
+                </div>
+              </div>
+              <div className="roommate-row">
+                <div className="roommate-avatar-circle" style={{ background: '#7c3aed' }}>S</div>
+                <div>
+                  <div className="roommate-details-name">Sneha Mohanty</div>
+                  <div className="roommate-details-sub">Roll 03 · CSE · Sem 1 · Bed 03</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Hostel Regulations & Code of Conduct */}
+            <div className="hostel-sub-card">
+              <h3>Hostel Regulations &amp; Code of Conduct</h3>
+              <ul className="hostel-rules-list">
+                <li>Night curfew strictly implemented at 6:30 PM.</li>
+                <li>Biometric attendance check-in compulsory before 6:45 PM.</li>
+                <li>Mess timings: Breakfast 7:30 - 9:00 AM, Dinner 7:30 - 8:30 PM.</li>
+                <li>Electric heating appliances and immersion rods strictly prohibited.</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Complaints Section */}
+          <div className="hostel-complaints-section">
+            <div className="hostel-complaints-header">
+              <h2>My Maintenance Complaints</h2>
+              <span className="complaint-count-badge">
+                {myComplaints.length} Details Recorded
+              </span>
+            </div>
+
+            {myComplaints.length === 0 ? (
+              <div style={{ background: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: '12px', padding: '2.5rem 1rem', textAlign: 'center', color: '#64748b' }}>
+                <p style={{ margin: '0 0 0.75rem 0', fontWeight: 600 }}>No maintenance requests logged yet.</p>
+                <button
+                  type="button"
+                  className="btn-lodge-complaint"
+                  onClick={() => setIsSmartComplaintModalOpen(true)}
+                  style={{ fontSize: '0.82rem', padding: '0.5rem 1rem' }}
+                >
+                  <Plus size={14} /> Lodge Maintenance Request
+                </button>
+              </div>
+            ) : (
+              myComplaints.map(c => {
+                const deadline = getDeadlineInfo(c);
+                const stepIdx = getStepIndex(c.status);
+                const isPendingApproval = c.status === 'Submitted' || c.status === 'Pending' || c.status === 'Pending Warden Approval';
+                const isAssigned = c.status === 'Assigned';
+                const isInProgress = c.status === 'In Progress';
+                const isAwaitingVerif = c.status === 'Awaiting Student Verification' || c.status === 'Awaiting Verification';
+                const isResolved = c.status === 'Resolved';
+
+                const statusLabel = isPendingApproval ? 'Submitted' : c.status;
+                const statusClass = isResolved ? 'resolved' : isAwaitingVerif ? 'awaiting' : isInProgress ? 'in-progress' : isAssigned ? 'assigned' : 'submitted';
+                const priorityClass = (c.priority || 'Medium').toLowerCase();
+
+                return (
+                  <div key={c.id} className="complaint-ticket-card">
+                    {/* Title & Tags Row */}
+                    <div className="complaint-title-row">
+                      <div className="complaint-title-group">
+                        <span className="complaint-main-title">{c.title}</span>
+                        <span className={`complaint-pill ${priorityClass}`}>{c.priority || 'Medium'}</span>
+                        <span className="complaint-pill category">{c.category || 'Maintenance'}</span>
+                        <span className="complaint-pill ai">
+                          <Sparkles size={11} /> AI: {c.predictedCategory || (c.category ? c.category.toLowerCase() : 'defect')} ({c.confidence ? (c.confidence <= 1 ? Math.round(c.confidence * 100) : c.confidence) : 92}%)
+                        </span>
+                        <span className="complaint-pill deadline">
+                          <Clock size={11} /> {deadline.diffText}
+                        </span>
+                      </div>
+                      <span className={`complaint-status-chip ${statusClass}`}>
+                        {statusLabel}
+                      </span>
+                    </div>
+
+                    {/* Meta Line */}
+                    <div className="complaint-meta-line">
+                      <strong>Ticket: {c.id}</strong> · Filed: {c.filedDate || 'Today'} · {c.location || 'Room 204 Attached Bathroom'} · 72h Deadline: {deadline.deadlineStr}
+                    </div>
+
+                    {/* Warden Strip */}
+                    <div className="complaint-warden-strip">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Shield size={14} color="#6366f1" />
+                        <span>Assigned Resident Warden: <strong>{c.assignedWardenName || 'Mrs. Nibedita Das'}</strong> (Auto-routed by Hostel &amp; Block)</span>
+                      </div>
+                      <a href={`tel:${c.assignedWardenContact || '+919437033445'}`} className="warden-call-btn">
+                        <Phone size={11} /> {c.assignedWardenContact || '+91 94370 33445'}
+                      </a>
+                    </div>
+
+                    {/* Description Box */}
+                    <div className="complaint-desc-box">
+                      {c.description || c.title}
+                    </div>
+
+                    {/* Technician Strip (if assigned) */}
+                    {c.assignedStaffName ? (
+                      <div className="complaint-technician-strip">
+                        <div className="tech-info-left">
+                          <div className="tech-avatar">
+                            {c.assignedStaffName.split(' ').map(w => w[0]).filter(Boolean).slice(-2).join('').toUpperCase() || 'ST'}
+                          </div>
+                          <div>
+                            <div className="tech-name">{c.assignedStaffName}</div>
+                            <div className="tech-role">{c.assignedStaffRole || 'Technician'} · Auto-assigned by workload</div>
+                          </div>
+                        </div>
+                        <a href={`tel:${c.assignedStaffPhone || '+919437911231'}`} className="tech-call-btn">
+                          <Phone size={12} /> {c.assignedStaffPhone || '+91 94379 11231'}
+                        </a>
+                      </div>
+                    ) : (
+                      <div style={{ background: '#fffbeb', border: '1px dashed #fde68a', borderRadius: '8px', padding: '0.5rem 0.85rem', fontSize: '0.78rem', color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Clock size={13} /> Awaiting Resident Warden approval and technician assignment
+                      </div>
+                    )}
+
+                    {/* 5-Step Pipeline Tracker */}
+                    <div className="complaint-pipeline-stepper">
+                      <span className={`pipeline-step ${stepIdx === 1 ? 'active' : stepIdx > 1 ? 'done' : ''}`}>
+                        1. Submitted
+                      </span>
+                      <span className="pipeline-arrow">→</span>
+                      <span className={`pipeline-step ${stepIdx === 2 ? 'active' : stepIdx > 2 ? 'done' : ''}`}>
+                        2. Assigned
+                      </span>
+                      <span className="pipeline-arrow">→</span>
+                      <span className={`pipeline-step ${stepIdx === 3 ? 'active' : stepIdx > 3 ? 'done' : ''}`}>
+                        3. In Progress
+                      </span>
+                      <span className="pipeline-arrow">→</span>
+                      <span className={`pipeline-step ${stepIdx === 4 ? 'active' : stepIdx > 4 ? 'done' : ''}`}>
+                        4. Awaiting Verification
+                      </span>
+                      <span className="pipeline-arrow">→</span>
+                      <span className={`pipeline-step ${stepIdx === 5 ? 'active' : ''}`}>
+                        5. Resolved
+                      </span>
+                    </div>
+
+                    {/* Status Log line */}
+                    <div className="complaint-status-log">
+                      <Info size={12} color="#6366f1" />
+                      <span>Status Log: {c.resolutionNotes || (c.statusHistory && c.statusHistory[c.statusHistory.length - 1]?.note) || 'Complaint lodged.'}</span>
+                    </div>
+
+                    {/* Verification Actions */}
+                    {isAwaitingVerif && (
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '4px', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '8px 12px', borderRadius: '8px', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#065f46', fontWeight: 600 }}>
+                          Technician marked work done. Please verify if the issue is resolved:
+                        </span>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleStudentVerify(c.id, true)}
+                            style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            <Check size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> Confirm Resolved
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleStudentVerify(c.id, false)}
+                            style={{ background: '#ffffff', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '6px', padding: '5px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            <RotateCcw size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> Reopen Issue
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      ) : activeSubTab === 'gate-pass' ? (
+        <StudentGatePassSection onOpenVisitorRegistration={() => setActiveSubTab('visitors')} />
+      ) : activeSubTab === 'visitors' ? (
+        <StudentVisitorRegistrationSection />
       ) : activeSubTab === 'leaves' ? (
         <div className="student-leaves-container">
           {/* Toast message */}
@@ -428,8 +741,8 @@ export default function StudentHostelPage({ defaultTab = 'gate-pass', account })
                   {studentFilteredLeaves.map(leave => {
                     const st = normStatus(leave.status);
                     const isRejected = st === 'Rejected';
-                    const isApproved = st === 'Approved';
-                    const isPending = st === 'Pending';
+                    const isApproved = st === 'Approved' || Boolean(leave.returned);
+                    const isPending = !isRejected && !isApproved;
 
                     return (
                       <tr key={leave.id} style={{ borderBottom: '1px solid #f1f5f9', background: isRejected ? '#fffbfb' : '#ffffff' }}>
@@ -889,6 +1202,16 @@ export default function StudentHostelPage({ defaultTab = 'gate-pass', account })
       ) : (
         <StudentGatePassSection />
       )}
+
+      {/* Lodge Smart Maintenance Complaint Modal */}
+      <SmartComplaintModal
+        isOpen={isSmartComplaintModalOpen}
+        onClose={() => setIsSmartComplaintModalOpen(false)}
+        hostelName={currentHostel}
+        roomNumber={currentRoom}
+        studentName={currentStudentName}
+        rollNumber={currentRollNumber}
+      />
     </div>
   );
 }

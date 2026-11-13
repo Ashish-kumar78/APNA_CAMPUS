@@ -29,6 +29,7 @@ import { CalendarNotesModule } from './calendar-notes/calendar-notes.module';
 import { TransportModule } from './transport/transport.module';
 import { ClassNotesModule } from './class-notes/class-notes.module';
 import { SecurityModule } from './security/security.module';
+import { LaboratoryModule } from './laboratory/laboratory.module';
 import { AppController } from './app.controller';
 
 import * as path from 'path';
@@ -73,6 +74,7 @@ import * as path from 'path';
     TransportModule,
     ClassNotesModule,
     SecurityModule,
+    LaboratoryModule,
   ],
   controllers: [AppController],
 })

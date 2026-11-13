@@ -809,7 +809,7 @@ function App() {
       portal = <TransportPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'placement') {
       portal = <PlacementPortal account={account} onLogout={handleLogout} />
-    } else if (account.role === 'staff') {
+    } else if (account.role === 'staff' || account.role === 'technician' || account.role === 'lab_assistant' || account.role === 'lab_incharge' || account.role === 'lab_staff') {
       portal = <StaffPortal account={account} onLogout={handleLogout} />
     } else if (account.role === 'canteen') {
       portal = <CanteenPortal account={account} onLogout={handleLogout} />

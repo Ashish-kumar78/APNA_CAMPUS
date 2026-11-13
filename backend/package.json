@@ -10,7 +10,7 @@
     "start:prod": "node dist/main.js",
     "lint": "tsc --noEmit",
     "test:admin": "node test_admin_endpoints.cjs",
-    "prisma:clean": "node -e \"const fs=require('fs'); const path=require('path'); const base=path.join(process.cwd(),'node_modules','.prisma','client'); if (fs.existsSync(base)) { for (const entry of fs.readdirSync(base)) { const full=path.join(base, entry); if (entry.endsWith('.tmp') || entry.includes('.tmp')) { try { fs.rmSync(full, { recursive: true, force: true }); } catch (error) { console.warn('Failed to remove stale Prisma temp file:', full, error.message); } } } }\"",
+    "prisma:clean": "node -e \"const fs=require('fs'); const path=require('path'); const base=path.join(process.cwd(),'node_modules','.prisma','client'); if (fs.existsSync(base)) { for (const entry of fs.readdirSync(base)) { const full=path.join(base, entry); if (entry.endsWith('.tmp') || entry.includes('.tmp') || entry.endsWith('.old')) { try { fs.rmSync(full, { recursive: true, force: true }); } catch (error) {} } } const qe=path.join(base,'query_engine-windows.dll.node'); if (fs.existsSync(qe)) { try { const old=qe+'.old'; if (fs.existsSync(old)) fs.rmSync(old, { force: true }); fs.renameSync(qe, old); try { fs.rmSync(old, { force: true }); } catch (e) {} } catch (e) {} } }\"",
     "prisma:generate": "npm run prisma:clean && npx prisma generate",
     "prisma:migrate": "npx prisma migrate deploy",
     "prisma:status": "npx prisma migrate status",

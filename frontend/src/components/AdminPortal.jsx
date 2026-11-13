@@ -11,6 +11,7 @@ import {
   Layers,
   Settings,
   FileText,
+  FileDown,
   ShieldCheck,
   Search,
   Plus,
@@ -65,6 +66,7 @@ import {
   TrendingDown,
   Building,
   DollarSign,
+  FlaskConical,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -122,6 +124,7 @@ import TimetableManager from './TimetableManagement/TimetableManager.jsx';
 import TransportManagementModule from './transport/TransportManagementModule.jsx';
 import CanteenManagementModule from './canteen/CanteenManagementModule.jsx';
 import HostelManagementModule from './hostel/HostelManagementModule.jsx';
+import AdminLaboratoryManagementModule from './laboratory/AdminLaboratoryManagementModule.jsx';
 import RegisterStudentWizard from './RegisterStudentWizard.jsx';
 
 const defaultStudentFormState = {
@@ -486,6 +489,43 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
   });
 
   const [securityGuards, setSecurityGuards] = useState(initialSecurityGuards);
+  const [gateTelemetry, setGateTelemetry] = useState({
+    studentsOutside: 1,
+    todayMovements: 4,
+    todayExits: 2,
+    todayEntries: 2,
+    curfewAlerts: 0,
+    activeVisitors: 2,
+    totalStudents: 2480,
+    studentsInside: 2479,
+  });
+
+  useEffect(() => {
+    const fetchTelemetry = async () => {
+      try {
+        const stats = await api.getSecurityOverviewStats();
+        if (stats) {
+          setGateTelemetry(prev => ({
+            ...prev,
+            studentsOutside: stats.studentsOutside ?? prev.studentsOutside,
+            todayMovements: (stats.todayExits ?? 2) + (stats.todayEntries ?? 2),
+            todayExits: stats.todayExits ?? prev.todayExits,
+            todayEntries: stats.todayEntries ?? prev.todayEntries,
+            curfewAlerts: stats.lateReturns ?? prev.curfewAlerts,
+            activeVisitors: stats.activeVisitors ?? stats.visitorsInside ?? prev.activeVisitors,
+            totalStudents: stats.totalStudents ?? prev.totalStudents,
+            studentsInside: stats.studentsInside ?? prev.studentsInside,
+          }));
+        }
+      } catch (err) {}
+    };
+
+    fetchTelemetry();
+    window.addEventListener('bput_gate_passes_changed', fetchTelemetry);
+    return () => {
+      window.removeEventListener('bput_gate_passes_changed', fetchTelemetry);
+    };
+  }, []);
   const [securitySearch, setSecuritySearch] = useState('');
   const [securityFilterShift, setSecurityFilterShift] = useState('All');
   const [securityFilterStatus, setSecurityFilterStatus] = useState('All');
@@ -1474,6 +1514,12 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
       ]
     },
     {
+      title: 'LABORATORY MANAGEMENT',
+      items: [
+        { id: 'laboratory-management', label: 'Laboratory Management', icon: FlaskConical },
+      ]
+    },
+    {
       title: 'FINANCE & SERVICES',
       items: [
         { id: 'accounts-fees', label: 'Accounts & Fees', icon: CreditCard },
@@ -1499,6 +1545,11 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
 
   const getAdminHeading = () => {
     switch (activeTab) {
+      case 'laboratory-management':
+        return {
+          title: 'Central Laboratory Administration & Governance Console',
+          subtitle: 'Institutional laboratory oversight, cross-branch equipment inventory, approval workflows, safety compliance, and academic practical monitoring.'
+        };
       case 'canteen-management':
         return {
           title: 'Campus Canteen & Mess Directorate ERP',
@@ -2242,39 +2293,76 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
                       </p>
                     </div>
                   </div>
-                  {onSwitchRole && (
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <button
-                      className="admin-action-btn-primary"
-                      style={{ fontSize: '0.78rem', padding: '0.4rem 0.8rem', background: '#2563eb', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                      onClick={() => onSwitchRole('security')}
+                      className="admin-action-btn-secondary"
+                      style={{ fontSize: '0.78rem', padding: '0.4rem 0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                      onClick={async () => {
+                        try {
+                          const res = await api.getDailySecurityReport();
+                          if (res && res.success) {
+                            const rows = [
+                              { Metric: 'Report Date', Value: res.reportDate },
+                              { Metric: 'Total Movements', Value: res.summary.totalMovements },
+                              { Metric: 'Curfew Compliance Rate', Value: res.summary.curfewComplianceRate },
+                              { Metric: 'Late Curfew Violations', Value: res.summary.lateReturns },
+                              { Metric: 'Peak Outbound Rush', Value: res.summary.peakExitHour },
+                              { Metric: 'Peak Inbound Return', Value: res.summary.peakEntryHour },
+                              { Metric: 'Security Incidents', Value: res.incidentSummary.total },
+                              { Metric: 'Visitors On Campus', Value: res.visitorSummary.currentlyInside },
+                            ];
+                            const csvContent = 'Metric,Value\n' + rows.map(r => `"${r.Metric}","${r.Value}"`).join('\n');
+                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.setAttribute('href', url);
+                            link.setAttribute('download', `ApnaCampus_Admin_Daily_Gate_Report_${res.reportDate}.csv`);
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            showToast('Daily Security Report exported.');
+                          }
+                        } catch (err) {
+                          showToast('Failed to export daily gate report.');
+                        }
+                      }}
                     >
-                      <Shield size={14} /> Open Security Guard Portal
+                      <FileDown size={14} /> Export Daily Gate Report (CSV)
                     </button>
-                  )}
+                    {onSwitchRole && (
+                      <button
+                        className="admin-action-btn-primary"
+                        style={{ fontSize: '0.78rem', padding: '0.4rem 0.8rem', background: '#2563eb', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                        onClick={() => onSwitchRole('security')}
+                      >
+                        <Shield size={14} /> Open Security Guard Portal
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                   <div style={{ background: '#1e293b', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #334155' }}>
                     <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Students Outside Campus</div>
-                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#38bdf8', marginTop: '0.2rem' }}>1</div>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#38bdf8', marginTop: '0.2rem' }}>{gateTelemetry.studentsOutside}</div>
                     <small style={{ fontSize: '0.7rem', color: '#64748b' }}>Warden-authorized gate pass</small>
                   </div>
 
                   <div style={{ background: '#1e293b', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #334155' }}>
                     <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Today Gate Movements</div>
-                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#34d399', marginTop: '0.2rem' }}>4</div>
-                    <small style={{ fontSize: '0.7rem', color: '#64748b' }}>2 verified exits, 2 entries</small>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#34d399', marginTop: '0.2rem' }}>{gateTelemetry.todayMovements}</div>
+                    <small style={{ fontSize: '0.7rem', color: '#64748b' }}>{gateTelemetry.todayExits} verified exits, {gateTelemetry.todayEntries} entries</small>
                   </div>
 
                   <div style={{ background: '#1e293b', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #334155' }}>
                     <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Curfew Overdue Alerts</div>
-                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#f87171', marginTop: '0.2rem' }}>0</div>
-                    <small style={{ fontSize: '0.7rem', color: '#64748b' }}>Curfew violation alerts: 0</small>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#f87171', marginTop: '0.2rem' }}>{gateTelemetry.curfewAlerts}</div>
+                    <small style={{ fontSize: '0.7rem', color: '#64748b' }}>Curfew violation alerts: {gateTelemetry.curfewAlerts}</small>
                   </div>
 
                   <div style={{ background: '#1e293b', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #334155' }}>
                     <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Active Campus Visitors</div>
-                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#fbbf24', marginTop: '0.2rem' }}>2</div>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#fbbf24', marginTop: '0.2rem' }}>{gateTelemetry.activeVisitors}</div>
                     <small style={{ fontSize: '0.7rem', color: '#64748b' }}>Badged at Gate 1</small>
                   </div>
                 </div>
@@ -4197,6 +4285,13 @@ export default function AdminPortal({ account, onLogout, onSwitchRole, initialTa
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB: LABORATORY MANAGEMENT */}
+          {activeTab === 'laboratory-management' && (
+            <div className="admin-tab-pane">
+              <AdminLaboratoryManagementModule account={account} />
             </div>
           )}
 

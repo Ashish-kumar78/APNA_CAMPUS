@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Calendar,
   CalendarCheck,
   CheckCircle2,
   XCircle,
@@ -20,10 +19,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Building2,
-  User,
   Info,
   Layers,
-  Sparkles,
   UserCheck,
   ShieldAlert
 } from 'lucide-react';
@@ -229,27 +226,9 @@ export default function HostelApplyLeaveModule({
         </div>
       )}
 
-      {/* Top Hero Banner with Active Role Indicator */}
+      {/* Top Hero Banner */}
       <div className="hal-hero-banner">
         <div className="hal-hero-left">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
-            <div className="hal-hero-tag">
-              <Sparkles size={13} />
-              <span>INSTITUTIONAL HUMAN RESOURCES &amp; RESIDENCE WELFARE</span>
-            </div>
-
-            {/* Role indicator tag */}
-            {isHostelAdmin ? (
-              <span className="hal-role-indicator admin" title="Operating with Hostel Admin sanction authority">
-                <ShieldCheck size={13} /> Active Role: <strong>Hostel Admin (Sanction Authority)</strong>
-              </span>
-            ) : (
-              <span className="hal-role-indicator warden" title="Operating with Warden staff leave privileges">
-                <User size={13} /> Active Role: <strong>Warden (Applicant)</strong>
-              </span>
-            )}
-          </div>
-
           <h1 className="hal-hero-title">
             {isHostelAdmin
               ? 'Hostel Admin — Leave Approvals & Sanction Registry'
@@ -282,18 +261,6 @@ export default function HostelApplyLeaveModule({
             >
               <ShieldCheck size={14} />
               <span>Switch to {isHostelAdmin ? 'Warden View' : 'Hostel Admin View'}</span>
-            </button>
-          )}
-
-          {onNavigateLeaves && (
-            <button
-              type="button"
-              className="hal-btn hal-btn-outline"
-              onClick={onNavigateLeaves}
-              title="Return to Student Resident Outstation Leaves"
-            >
-              <Calendar size={15} />
-              <span>Resident Leaves</span>
             </button>
           )}
 

@@ -14,7 +14,8 @@ import {
   Plug,
   Database,
   FileSpreadsheet,
-  Settings
+  Settings,
+  FlaskConical
 } from 'lucide-react';
 
 /**
@@ -41,6 +42,7 @@ export const getSuperAdminMenuConfig = (context = {}) => [
     items: [
       { id: 'users', label: 'User Management', icon: Users },
       { id: 'rbac', label: 'RBAC & Permissions', icon: KeyRound },
+      { id: 'laboratory-management', label: 'Laboratory Management', icon: FlaskConical },
       { id: 'transport-management', label: 'Transport Management', icon: Bus },
       { id: 'canteen-management', label: 'Canteen & Mess Management', icon: Utensils },
       { id: 'hostel-management', label: 'Hostel & Warden Management', icon: Building },

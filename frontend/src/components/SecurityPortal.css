@@ -1003,4 +1003,50 @@
     flex-direction: column;
     align-items: stretch;
   }
+
+  .sec-modal-card,
+  .sec-modal-content {
+    width: calc(100vw - 1.5rem);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 1rem;
+    margin: 0.5rem;
+  }
+
+  .sec-filters-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .sec-filters-row .sec-input,
+  .sec-filters-row select {
+    max-width: 100% !important;
+    width: 100%;
+  }
+
+  .sec-btn-primary,
+  .sec-btn-secondary,
+  .sec-btn-emerald,
+  .sec-btn-indigo,
+  .sec-btn-rose {
+    min-height: 42px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 375px) {
+  .sec-portal-wrapper {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .sec-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .sec-card-title {
+    font-size: 0.95rem;
+  }
 }

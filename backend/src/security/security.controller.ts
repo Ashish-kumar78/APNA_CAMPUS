@@ -27,6 +27,7 @@ import {
   StudentMovementRequestDto,
   InviteVisitorDto,
   ShiftHandoverAckDto,
+  CorrectSecurityRecordDto,
 } from './dto/security-movement.dto';
 
 @ApiTags('Campus Gate Security Operations')
@@ -88,8 +89,9 @@ export class SecurityController {
   async getMovementsHistory(
     @Query('direction') direction?: string,
     @Query('search') search?: string,
+    @Query('hostel') hostel?: string,
   ) {
-    return this.securityService.getMovementsHistory({ direction, search });
+    return this.securityService.getMovementsHistory({ direction, search, hostel });
   }
 
   // 7. VERIFY VISITOR 6-DIGIT PRE-APPROVAL CODE
@@ -128,12 +130,28 @@ export class SecurityController {
     return this.securityService.checkOutVisitor(id, req?.user);
   }
 
+  // 10b. STUDENT APPROVE WALK-IN VISITOR
+  @Patch('visitors/:id/student-approve')
+  @Roles(Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN, Role.WARDEN)
+  @ApiOperation({ summary: 'Host student approves walk-in visitor arrival' })
+  async studentApproveVisitor(@Param('id') id: string, @Req() req: any) {
+    return this.securityService.studentApproveVisitor(id, req?.user);
+  }
+
+  // 10c. STUDENT REJECT WALK-IN VISITOR
+  @Patch('visitors/:id/student-reject')
+  @Roles(Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN, Role.WARDEN)
+  @ApiOperation({ summary: 'Host student rejects walk-in visitor arrival' })
+  async studentRejectVisitor(@Param('id') id: string, @Body('remarks') remarks: string, @Req() req: any) {
+    return this.securityService.studentRejectVisitor(id, remarks, req?.user);
+  }
+
   // 11. GET VISITORS LIST
   @Get('visitors')
   @Roles(Role.SECURITY, Role.ADMIN, Role.SUPER_ADMIN, Role.WARDEN)
   @ApiOperation({ summary: 'Get all visitor logs at the gate' })
   async getVisitors() {
-    return this.securityService.getApprovedPasses({ status: 'ALL' });
+    return this.securityService.getVisitorsList();
   }
 
   // 12. REPORT SECURITY INCIDENT / UNAPPROVED EXIT ATTEMPT
@@ -142,6 +160,14 @@ export class SecurityController {
   @ApiOperation({ summary: 'Dispatch gate perimeter alert or unapproved exit incident' })
   async reportIncident(@Body() body: ReportSecurityIncidentDto, @Req() req: any) {
     return this.securityService.reportIncident(body, req.user);
+  }
+
+  // 12b. GET ALL SECURITY INCIDENTS / ALERTS
+  @Get('incidents')
+  @Roles(Role.SECURITY, Role.ADMIN, Role.SUPER_ADMIN, Role.WARDEN)
+  @ApiOperation({ summary: 'Get all security alerts and gate perimeter incidents' })
+  async getIncidents() {
+    return this.securityService.getIncidentsList();
   }
 
   // 13. IDEMPOTENT OFFLINE QUEUE SYNCHRONIZATION
@@ -183,25 +209,25 @@ export class SecurityController {
     return this.securityService.getMyMovementRequests(req?.user);
   }
 
-  // 18. GET PENDING MOVEMENT REQUESTS (WARDEN REVIEW)
+  // 18. GET PENDING MOVEMENT REQUESTS (WARDEN & HOSTEL ADMIN REVIEW)
   @Get('movement/pending-warden')
-  @Roles(Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN, Role.HOSTEL)
   @ApiOperation({ summary: 'Get pending student movement requests for warden approval' })
   async getPendingWardenRequests(@Req() req: any) {
     return this.securityService.getPendingWardenRequests(req?.user);
   }
 
-  // 19. WARDEN APPROVE MOVEMENT REQUEST
+  // 19. WARDEN / HOSTEL ADMIN APPROVE MOVEMENT REQUEST
   @Patch('movement/:id/approve')
-  @Roles(Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN, Role.HOSTEL)
   @ApiOperation({ summary: 'Warden approves student movement pass' })
   async approveMovementRequest(@Param('id') id: string, @Body('remarks') remarks: string, @Req() req: any) {
     return this.securityService.approveMovementRequest(id, remarks, req?.user);
   }
 
-  // 20. WARDEN REJECT MOVEMENT REQUEST
+  // 20. WARDEN / HOSTEL ADMIN REJECT MOVEMENT REQUEST
   @Patch('movement/:id/reject')
-  @Roles(Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN, Role.HOSTEL)
   @ApiOperation({ summary: 'Warden rejects student movement pass' })
   async rejectMovementRequest(@Param('id') id: string, @Body('remarks') remarks: string, @Req() req: any) {
     return this.securityService.rejectMovementRequest(id, remarks, req?.user);
@@ -209,7 +235,7 @@ export class SecurityController {
 
   // 21. GET OVERDUE & LATE RETURN RECORDS
   @Get('overdue-returns')
-  @Roles(Role.SECURITY, Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.SECURITY, Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN, Role.HOSTEL)
   @ApiOperation({ summary: 'Get overdue student return tracking list' })
   async getOverdueReturns() {
     return this.securityService.getOverdueReturns();
@@ -217,10 +243,27 @@ export class SecurityController {
 
   // 22. RESOLVE OVERDUE RETURN
   @Patch('overdue-returns/:id/resolve')
-  @Roles(Role.SECURITY, Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.SECURITY, Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN, Role.HOSTEL)
   @ApiOperation({ summary: 'Record resolution notes for overdue student return' })
-  async resolveOverdueReturn(@Param('id') id: string, @Body('notes') notes: string, @Req() req: any) {
-    return this.securityService.resolveOverdueReturn(id, notes, req?.user);
+  async resolveOverdueReturn(
+    @Param('id') id: string,
+    @Body('notes') notes?: string,
+    @Body('resolutionStatus') resolutionStatus?: string,
+    @Req() req?: any,
+  ) {
+    return this.securityService.resolveOverdueReturn(id, notes, resolutionStatus, req?.user);
+  }
+
+  // 22b. ESCALATE OVERDUE ALERT (WARDEN, PARENT SMS & CHIEF SECURITY OFFICER)
+  @Post('overdue-returns/:id/escalate')
+  @Roles(Role.SECURITY, Role.WARDEN, Role.ADMIN, Role.SUPER_ADMIN, Role.HOSTEL)
+  @ApiOperation({ summary: 'Escalate overdue return alert to parent via SMS and notify Warden & Admin' })
+  async escalateOverdueAlert(
+    @Param('id') id: string,
+    @Body('channel') channel?: string,
+    @Req() req?: any,
+  ) {
+    return this.securityService.escalateOverdueAlert(id, channel, req?.user);
   }
 
   // 23. GET GATE CHECKPOINTS
@@ -232,7 +275,7 @@ export class SecurityController {
 
   // 24. INVITE PRE-REGISTERED VISITOR
   @Post('visitors/invite')
-  @Roles(Role.STUDENT, Role.FACULTY, Role.STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN, Role.WARDEN)
   @ApiOperation({ summary: 'Pre-register visitor invitation with 6-digit gate verification code' })
   async inviteVisitor(@Body() body: InviteVisitorDto, @Req() req: any) {
     return this.securityService.inviteVisitor(body, req?.user);
@@ -244,6 +287,42 @@ export class SecurityController {
   @ApiOperation({ summary: 'Incoming security guard digital signature and shift handover acknowledgement' })
   async acknowledgeShiftHandover(@Body() body: ShiftHandoverAckDto, @Req() req: any) {
     return this.securityService.acknowledgeShiftHandover(body, req?.user);
+  }
+
+  // 26. ADMIN & WARDEN CAMPUS GATE ANALYTICS
+  @Get('admin/analytics')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.WARDEN)
+  @ApiOperation({ summary: 'Campus-wide movement telemetry, peak hours, and guard operational analytics' })
+  async getAdminGateAnalytics(@Query('hostel') hostel?: string) {
+    return this.securityService.getAdminGateAnalytics(hostel);
+  }
+
+  // 27. DAILY SECURITY REPORT (MOVEMENT SUMMARIES, PEAK HOURS, INCIDENTS, EXPORT DATA)
+  @Get('reports/daily')
+  @Roles(Role.SECURITY, Role.ADMIN, Role.SUPER_ADMIN, Role.WARDEN)
+  @ApiOperation({ summary: 'Daily gate security movement report, peak hours breakdown, and incident logs' })
+  async getDailySecurityReport(
+    @Query('date') date?: string,
+    @Query('hostel') hostel?: string,
+    @Req() req?: any,
+  ) {
+    return this.securityService.getDailySecurityReport(date, hostel, req?.user);
+  }
+
+  // 28. AUDIT HISTORY & IMMUTABLE SECURITY AUDIT TRAIL
+  @Get('audit-trail')
+  @Roles(Role.SECURITY, Role.ADMIN, Role.SUPER_ADMIN, Role.WARDEN)
+  @ApiOperation({ summary: 'Retrieve immutable security audit trail and history' })
+  async getSecurityAuditTrail(@Query() query: any) {
+    return this.securityService.getSecurityAuditTrail(query);
+  }
+
+  // 29. AUDITED RECORD CORRECTION WORKFLOW
+  @Post('audit/correct-record')
+  @Roles(Role.SECURITY, Role.ADMIN, Role.SUPER_ADMIN, Role.WARDEN)
+  @ApiOperation({ summary: 'Submit audited correction with mandatory reason and trace tracking' })
+  async correctSecurityRecord(@Body() body: CorrectSecurityRecordDto, @Req() req: any) {
+    return this.securityService.correctSecurityRecord(body, req?.user);
   }
 }
 

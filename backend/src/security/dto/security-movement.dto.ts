@@ -55,6 +55,11 @@ export class RecordMovementDto {
   @IsOptional()
   remarks?: string;
 
+  @ApiPropertyOptional({ description: 'Student Full Name' })
+  @IsString()
+  @IsOptional()
+  studentName?: string;
+
   @ApiPropertyOptional({ description: 'Unique UUID for offline queue synchronization deduplication' })
   @IsString()
   @IsOptional()
@@ -106,6 +111,10 @@ export class WalkInVisitorDto {
   @IsString()
   @IsOptional()
   gateNumber?: string;
+
+  @ApiPropertyOptional({ description: 'Require live host student approval before entry' })
+  @IsOptional()
+  requiresStudentApproval?: boolean;
 }
 
 export class VerifyVisitorCodeDto {
@@ -185,6 +194,31 @@ export class GenerateDynamicQrDto {
   @IsString()
   @IsOptional()
   identifier?: string;
+
+  @ApiPropertyOptional({ description: 'Full Name' })
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @ApiPropertyOptional({ description: 'Department or Branch' })
+  @IsString()
+  @IsOptional()
+  department?: string;
+
+  @ApiPropertyOptional({ description: 'Designation or Job Title' })
+  @IsString()
+  @IsOptional()
+  designation?: string;
+
+  @ApiPropertyOptional({ description: 'Hostel Name' })
+  @IsString()
+  @IsOptional()
+  hostelName?: string;
+
+  @ApiPropertyOptional({ description: 'Room Number' })
+  @IsString()
+  @IsOptional()
+  roomNumber?: string;
 }
 
 export class VerifyDynamicQrDto {
@@ -248,6 +282,31 @@ export class StudentMovementRequestDto {
   @ApiPropertyOptional({ description: 'Parent approval requirement flag' })
   @IsOptional()
   parentApprovalRequired?: boolean;
+
+  @ApiPropertyOptional({ description: 'Hostel Name' })
+  @IsString()
+  @IsOptional()
+  hostelName?: string;
+
+  @ApiPropertyOptional({ description: 'Room Number' })
+  @IsString()
+  @IsOptional()
+  roomNumber?: string;
+
+  @ApiPropertyOptional({ description: 'Department' })
+  @IsString()
+  @IsOptional()
+  department?: string;
+
+  @ApiPropertyOptional({ description: 'Student Name' })
+  @IsString()
+  @IsOptional()
+  studentName?: string;
+
+  @ApiPropertyOptional({ description: 'Student Roll Number' })
+  @IsString()
+  @IsOptional()
+  studentRoll?: string;
 }
 
 export class InviteVisitorDto {
@@ -275,6 +334,30 @@ export class InviteVisitorDto {
   @IsString()
   @IsOptional()
   expectedArrival?: string;
+
+  @ApiPropertyOptional({ description: 'Expected visit date' })
+  @IsString()
+  @IsOptional()
+  expectedVisitDate?: string;
+
+  @ApiPropertyOptional({ description: 'Expected arrival time' })
+  @IsString()
+  @IsOptional()
+  expectedArrivalTime?: string;
+
+  @ApiPropertyOptional({ description: 'Expected departure time' })
+  @IsString()
+  @IsOptional()
+  expectedDepartureTime?: string;
+
+  @ApiPropertyOptional({ description: 'Number of accompanying visitors' })
+  @IsOptional()
+  numberOfVisitors?: number;
+
+  @ApiPropertyOptional({ description: 'ID verification status' })
+  @IsString()
+  @IsOptional()
+  idVerificationStatus?: string;
 }
 
 export class ShiftHandoverAckDto {
@@ -298,5 +381,38 @@ export class ShiftHandoverAckDto {
   @IsOptional()
   remarks?: string;
 }
+
+export class CorrectSecurityRecordDto {
+  @ApiProperty({ description: 'Unique identifier of the record to correct', example: 'mov-1001' })
+  @IsString()
+  @IsNotEmpty()
+  recordId!: string;
+
+  @ApiProperty({ description: 'Type of security record', enum: ['MOVEMENT', 'PASS', 'VISITOR', 'INCIDENT'], example: 'MOVEMENT' })
+  @IsString()
+  @IsNotEmpty()
+  recordType!: 'MOVEMENT' | 'PASS' | 'VISITOR' | 'INCIDENT';
+
+  @ApiProperty({ description: 'Field to correct', example: 'gateName' })
+  @IsString()
+  @IsNotEmpty()
+  fieldToCorrect!: string;
+
+  @ApiPropertyOptional({ description: 'Current or old value before correction', example: 'Main Campus Gate 1' })
+  @IsString()
+  @IsOptional()
+  oldValue?: string;
+
+  @ApiProperty({ description: 'New corrected value', example: 'Hostel Complex Gate 2' })
+  @IsString()
+  @IsNotEmpty()
+  newValue!: string;
+
+  @ApiProperty({ description: 'Mandatory reason and explanation for the record correction', example: 'Optical barrier turnstile 2 logged wrong gate assignment due to physical sensor mis-sync' })
+  @IsString()
+  @IsNotEmpty()
+  reason!: string;
+}
+
 
 

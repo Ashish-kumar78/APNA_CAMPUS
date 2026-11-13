@@ -24,7 +24,6 @@ import { downloadSyllabusPdf, downloadGiftAdmitCardPdf, openGiftAdmitCardPdf } f
 import { notesApi } from '../services/notesApi'
 import { api } from '../services/api'
 import ClassNotesPage from './ClassNotesPage.jsx'
-import PublicTimetable from '../components/PublicTimetable.jsx'
 import './AcademicsPage.css'
 
 export const defaultAdmitCardExams = [
@@ -293,7 +292,6 @@ export default function AcademicsPage({ account }) {
       <div className="academics-tabs" role="tablist">
         {[
           { id: 'subjects', label: 'Enrolled Subjects' },
-          { id: 'timetable', label: 'Smart Timetable' },
           { id: 'progression', label: 'Programme & Term History' },
           { id: 'notes', label: 'Class Notes Sharing', count: classNotes.length },
           { id: 'admit-card', label: 'Download Admit Card' }
@@ -459,13 +457,6 @@ export default function AcademicsPage({ account }) {
               )}
             </div>
           ))}
-        </div>
-      )}
-
-      {/* TAB 2: SMART TIMETABLE (Institutional Routine & Real-time Class Tracking) */}
-      {activeTab === 'timetable' && (
-        <div className="academics-timetable-embed-wrap" style={{ marginTop: '16px' }}>
-          <PublicTimetable account={account} role="student" embedded={true} />
         </div>
       )}
 

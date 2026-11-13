@@ -300,6 +300,21 @@ export const api = {
       method: 'DELETE',
     });
   },
+  createHostelBed: (payload) =>
+    request('/hostel/beds', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  deleteHostelBed: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.hostelName) q.append('hostelName', params.hostelName);
+    if (params.roomNumber) q.append('roomNumber', params.roomNumber);
+    if (params.bedNumber) q.append('bedNumber', params.bedNumber);
+    const qs = q.toString();
+    return request(`/hostel/beds${qs ? '?' + qs : ''}`, {
+      method: 'DELETE',
+    });
+  },
   allocateBed: (payload) =>
     request('/hostel/allocate', {
       method: 'POST',
@@ -2769,7 +2784,17 @@ export const api = {
     request(`/security/visitors/${id}/checkout`, {
       method: 'PATCH',
     }),
+  studentApproveSecurityVisitor: (id) =>
+    request(`/security/visitors/${id}/student-approve`, {
+      method: 'PATCH',
+    }),
+  studentRejectSecurityVisitor: (id, remarks) =>
+    request(`/security/visitors/${id}/student-reject`, {
+      method: 'PATCH',
+      body: JSON.stringify({ remarks }),
+    }),
   getSecurityVisitors: () => request('/security/visitors'),
+  getSecurityIncidents: () => request('/security/incidents'),
   reportSecurityIncident: (payload) =>
     request('/security/incidents', {
       method: 'POST',
@@ -2808,10 +2833,15 @@ export const api = {
       body: JSON.stringify({ remarks }),
     }),
   getSecurityOverdueReturns: () => request('/security/overdue-returns'),
-  resolveSecurityOverdueReturn: (id, notes) =>
+  resolveSecurityOverdueReturn: (id, payload) =>
     request(`/security/overdue-returns/${id}/resolve`, {
       method: 'PATCH',
-      body: JSON.stringify({ notes }),
+      body: JSON.stringify(typeof payload === 'string' ? { notes: payload } : payload),
+    }),
+  escalateSecurityOverdueReturn: (id, channel) =>
+    request(`/security/overdue-returns/${id}/escalate`, {
+      method: 'POST',
+      body: JSON.stringify({ channel }),
     }),
   getSecurityCheckpoints: () => request('/security/checkpoints'),
   inviteSecurityVisitor: (payload) =>
@@ -2821,6 +2851,30 @@ export const api = {
     }),
   acknowledgeShiftHandover: (payload) =>
     request('/security/shift-handover/acknowledge', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getSecurityAdminAnalytics: (hostel) =>
+    request(`/security/admin/analytics${hostel ? '?hostel=' + encodeURIComponent(hostel) : ''}`),
+  getDailySecurityReport: (date, hostel) => {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    if (hostel) params.append('hostel', hostel);
+    const q = params.toString();
+    return request(`/security/reports/daily${q ? '?' + q : ''}`);
+  },
+  getSecurityAuditTrail: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.search) q.append('search', params.search);
+    if (params.action) q.append('action', params.action);
+    if (params.role) q.append('role', params.role);
+    if (params.limit) q.append('limit', params.limit);
+    if (params.page) q.append('page', params.page);
+    const qs = q.toString();
+    return request(`/security/audit-trail${qs ? '?' + qs : ''}`);
+  },
+  correctSecurityRecord: (payload) =>
+    request('/security/audit/correct-record', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),

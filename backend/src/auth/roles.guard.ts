@@ -22,7 +22,8 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Access denied. No user role identified.');
     }
 
-    const hasRole = requiredRoles.includes(user.role);
+    const userRole = user.role === 'HOSTEL_ADMIN' ? Role.HOSTEL : user.role;
+    const hasRole = requiredRoles.includes(user.role) || requiredRoles.includes(userRole);
     if (!hasRole) {
       throw new ForbiddenException(`Access restricted to roles: [${requiredRoles.join(', ')}]. Current role: ${user.role}`);
     }

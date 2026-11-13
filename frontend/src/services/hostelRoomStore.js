@@ -1,9 +1,40 @@
 // Centralized Persistent Hostel Room, Bed & Floor Store
 // Synchronizes room structure and bed allocations between Hostel Admin and Hostel Warden
+import api from './api.js';
 
 const ROOMS_STORAGE_KEY = 'apna_campus_hostel_rooms_matrix_v1';
 const DELETED_ROOMS_KEY = 'apna_campus_hostel_deleted_rooms_v1';
 const DELETED_FLOORS_KEY = 'apna_campus_hostel_deleted_floors_v1';
+
+export function normalizeHostelKey(name) {
+  if (!name) return '';
+  return String(name)
+    .replace(/\s*\(hostel\s*\d+\)/i, '')
+    .replace(/\s*\([a-z0-9\-]+\)/gi, '')
+    .trim()
+    .toLowerCase();
+}
+
+function resolveHostelKey(store, hostelName) {
+  if (!hostelName) return 'Gandhi Boys Residence';
+  if (store && store[hostelName]) return hostelName;
+  const target = normalizeHostelKey(hostelName);
+  if (store) {
+    for (const k of Object.keys(store)) {
+      const normK = normalizeHostelKey(k);
+      if (normK === target || (normK && target && (normK.includes(target) || target.includes(normK)))) {
+        return k;
+      }
+    }
+  }
+  for (const k of Object.keys(DEFAULT_INITIAL_ROOMS)) {
+    const normK = normalizeHostelKey(k);
+    if (normK === target || (normK && target && (normK.includes(target) || target.includes(normK)))) {
+      return k;
+    }
+  }
+  return hostelName;
+}
 
 function getDeletedRoomsStore() {
   if (typeof window === 'undefined' || !window.localStorage) return {};
@@ -214,7 +245,8 @@ function saveStoredData(data) {
  */
 export function getRoomsForHostel(hostelName) {
   const store = getStoredData();
-  const rooms = store[hostelName] || DEFAULT_INITIAL_ROOMS[hostelName];
+  const key = resolveHostelKey(store, hostelName);
+  const rooms = store[key] || DEFAULT_INITIAL_ROOMS[key] || store[hostelName] || DEFAULT_INITIAL_ROOMS[hostelName];
   if (rooms) return [...rooms];
 
   // If a new hostel has no custom rooms yet, create initial default rooms
@@ -232,7 +264,8 @@ export function getRoomsForHostel(hostelName) {
       ]
     }
   ];
-  store[hostelName] = initial;
+  store[key] = initial;
+  if (key !== hostelName) store[hostelName] = initial;
   saveStoredData(store);
   return initial;
 }
@@ -242,7 +275,8 @@ export function getRoomsForHostel(hostelName) {
  */
 export function addRoomToHostel(hostelName, { roomNo, floor, type, capacity = 4 }) {
   const store = getStoredData();
-  const currentRooms = store[hostelName] ? [...store[hostelName]] : [...(DEFAULT_INITIAL_ROOMS[hostelName] || [])];
+  const key = resolveHostelKey(store, hostelName);
+  const currentRooms = store[key] ? [...store[key]] : [...(DEFAULT_INITIAL_ROOMS[key] || [])];
 
   const trimmedRoomNo = String(roomNo).trim();
   const existingIdx = currentRooms.findIndex(r => r.roomNo === trimmedRoomNo);
@@ -252,6 +286,10 @@ export function addRoomToHostel(hostelName, { roomNo, floor, type, capacity = 4 
 
   // Remove room from deleted rooms if previously deleted
   const delRoomsStore = getDeletedRoomsStore();
+  if (delRoomsStore[key]) {
+    delRoomsStore[key] = delRoomsStore[key].filter(r => r !== trimmedRoomNo);
+    saveDeletedRoomsStore(delRoomsStore);
+  }
   if (delRoomsStore[hostelName]) {
     delRoomsStore[hostelName] = delRoomsStore[hostelName].filter(r => r !== trimmedRoomNo);
     saveDeletedRoomsStore(delRoomsStore);
@@ -278,8 +316,21 @@ export function addRoomToHostel(hostelName, { roomNo, floor, type, capacity = 4 
   };
 
   currentRooms.push(newRoom);
-  store[hostelName] = currentRooms;
+  store[key] = currentRooms;
+  if (key !== hostelName) store[hostelName] = currentRooms;
   saveStoredData(store);
+
+  // Sync with backend API
+  if (api && typeof api.createHostelRoom === 'function') {
+    api.createHostelRoom({
+      hostelName: key || hostelName,
+      roomNumber: trimmedRoomNo,
+      floor: floor || 'Floor 1',
+      type: type || '4-Bed Standard AC',
+      capacity: numBeds,
+    }).catch(err => console.warn('Backend sync createHostelRoom warning:', err?.message));
+  }
+
   return currentRooms;
 }
 
@@ -289,17 +340,29 @@ export function addRoomToHostel(hostelName, { roomNo, floor, type, capacity = 4 
 export function deleteRoomFromHostel(hostelName, roomNo, floor) {
   const trimmedRoomNo = String(roomNo).trim();
   const store = getStoredData();
-  const currentRooms = store[hostelName] ? [...store[hostelName]] : [...(DEFAULT_INITIAL_ROOMS[hostelName] || [])];
+  const key = resolveHostelKey(store, hostelName);
+  const currentRooms = store[key] ? [...store[key]] : [...(DEFAULT_INITIAL_ROOMS[key] || [])];
 
   const updatedRooms = currentRooms.filter(r => String(r.roomNo).trim() !== trimmedRoomNo);
-  store[hostelName] = updatedRooms;
+  store[key] = updatedRooms;
+  if (key !== hostelName) store[hostelName] = updatedRooms;
   saveStoredData(store);
 
   const delRoomsStore = getDeletedRoomsStore();
-  const deletedList = new Set(delRoomsStore[hostelName] || []);
+  const deletedList = new Set(delRoomsStore[key] || []);
   deletedList.add(trimmedRoomNo);
+  delRoomsStore[key] = Array.from(deletedList);
   delRoomsStore[hostelName] = Array.from(deletedList);
   saveDeletedRoomsStore(delRoomsStore);
+
+  // Sync with backend API
+  if (api && typeof api.deleteHostelRoom === 'function') {
+    api.deleteHostelRoom({
+      hostelName: key || hostelName,
+      roomNumber: trimmedRoomNo,
+      floor,
+    }).catch(err => console.warn('Backend sync deleteHostelRoom warning:', err?.message));
+  }
 
   return updatedRooms;
 }
@@ -310,18 +373,29 @@ export function deleteRoomFromHostel(hostelName, roomNo, floor) {
 export function deleteFloorFromHostel(hostelName, floorName) {
   const floorNum = parseFloorNumber(floorName);
   const store = getStoredData();
-  const currentRooms = store[hostelName] ? [...store[hostelName]] : [...(DEFAULT_INITIAL_ROOMS[hostelName] || [])];
+  const key = resolveHostelKey(store, hostelName);
+  const currentRooms = store[key] ? [...store[key]] : [...(DEFAULT_INITIAL_ROOMS[key] || [])];
 
   const updatedRooms = currentRooms.filter(r => parseFloorNumber(r.floor) !== floorNum);
-  store[hostelName] = updatedRooms;
+  store[key] = updatedRooms;
+  if (key !== hostelName) store[hostelName] = updatedRooms;
   saveStoredData(store);
 
   const delFloorsStore = getDeletedFloorsStore();
-  const deletedList = new Set(delFloorsStore[hostelName] || []);
+  const deletedList = new Set(delFloorsStore[key] || []);
   deletedList.add(floorNum);
   deletedList.add(floorName);
+  delFloorsStore[key] = Array.from(deletedList);
   delFloorsStore[hostelName] = Array.from(deletedList);
   saveDeletedFloorsStore(delFloorsStore);
+
+  // Sync with backend API
+  if (api && typeof api.deleteHostelFloor === 'function') {
+    api.deleteHostelFloor({
+      hostelName: key || hostelName,
+      floor: floorName,
+    }).catch(err => console.warn('Backend sync deleteHostelFloor warning:', err?.message));
+  }
 
   return updatedRooms;
 }
@@ -331,9 +405,10 @@ export function deleteFloorFromHostel(hostelName, floorName) {
  */
 export function addBedToRoom(hostelName, roomNo, customBedNo = null) {
   const store = getStoredData();
-  const currentRooms = store[hostelName] ? [...store[hostelName]] : [...(DEFAULT_INITIAL_ROOMS[hostelName] || [])];
+  const key = resolveHostelKey(store, hostelName);
+  const currentRooms = store[key] ? [...store[key]] : [...(DEFAULT_INITIAL_ROOMS[key] || [])];
 
-  const room = currentRooms.find(r => r.roomNo === String(roomNo).trim());
+  const room = currentRooms.find(r => String(r.roomNo).trim() === String(roomNo).trim());
   if (!room) {
     throw new Error(`Room ${roomNo} not found in ${hostelName}.`);
   }
@@ -350,8 +425,79 @@ export function addBedToRoom(hostelName, roomNo, customBedNo = null) {
   });
   room.capacity = room.beds.length;
 
-  store[hostelName] = currentRooms;
+  store[key] = currentRooms;
+  if (key !== hostelName) store[hostelName] = currentRooms;
   saveStoredData(store);
+
+  // Sync with backend API
+  if (api && typeof api.createHostelBed === 'function') {
+    api.createHostelBed({
+      hostelName: key || hostelName,
+      roomNumber: String(roomNo).trim(),
+      bedNumber: bedNo,
+    }).catch(err => console.warn('Backend sync createHostelBed warning:', err?.message));
+  }
+
+  return currentRooms;
+}
+
+/**
+ * Reduce / remove a bed from an existing room in a hostel.
+ */
+export function reduceBedFromRoom(hostelName, roomNo, bedNo = null) {
+  const store = getStoredData();
+  const key = resolveHostelKey(store, hostelName);
+  const currentRooms = store[key] ? [...store[key]] : [...(DEFAULT_INITIAL_ROOMS[key] || [])];
+
+  const room = currentRooms.find(r => String(r.roomNo).trim() === String(roomNo).trim());
+  if (!room) {
+    throw new Error(`Room ${roomNo} not found in ${hostelName}.`);
+  }
+
+  if (room.beds.length <= 1) {
+    throw new Error(`Cannot reduce bed in Room ${roomNo}: room must retain at least 1 bed.`);
+  }
+
+  let targetBedIndex = -1;
+  if (bedNo) {
+    targetBedIndex = room.beds.findIndex(b => b.bedNo === bedNo);
+    if (targetBedIndex === -1) {
+      throw new Error(`Bed ${bedNo} not found in Room ${roomNo}.`);
+    }
+    const targetBed = room.beds[targetBedIndex];
+    if (targetBed.status === 'Occupied') {
+      throw new Error(`Cannot remove ${bedNo}: it is currently occupied by ${targetBed.resident}. Please vacate or transfer the resident first.`);
+    }
+  } else {
+    // Find the last vacant bed
+    for (let i = room.beds.length - 1; i >= 0; i--) {
+      if (room.beds[i].status !== 'Occupied') {
+        targetBedIndex = i;
+        break;
+      }
+    }
+    if (targetBedIndex === -1) {
+      throw new Error(`Cannot reduce bed capacity in Room ${roomNo}: all ${room.beds.length} beds are currently occupied by students.`);
+    }
+  }
+
+  const removedBed = room.beds[targetBedIndex];
+  room.beds.splice(targetBedIndex, 1);
+  room.capacity = room.beds.length;
+
+  store[key] = currentRooms;
+  if (key !== hostelName) store[hostelName] = currentRooms;
+  saveStoredData(store);
+
+  // Sync with backend API
+  if (api && typeof api.deleteHostelBed === 'function') {
+    api.deleteHostelBed({
+      hostelName: key || hostelName,
+      roomNumber: String(roomNo).trim(),
+      bedNumber: removedBed?.bedNo,
+    }).catch(err => console.warn('Backend sync deleteHostelBed warning:', err?.message));
+  }
+
   return currentRooms;
 }
 
@@ -360,7 +506,8 @@ export function addBedToRoom(hostelName, roomNo, customBedNo = null) {
  */
 export function addFloorToHostel(hostelName, { floorName, roomCount = 2, startRoomNumber = '301', roomType = '4-Bed Standard AC', bedsPerRoom = 4 }) {
   const store = getStoredData();
-  const currentRooms = store[hostelName] ? [...store[hostelName]] : [...(DEFAULT_INITIAL_ROOMS[hostelName] || [])];
+  const key = resolveHostelKey(store, hostelName);
+  const currentRooms = store[key] ? [...store[key]] : [...(DEFAULT_INITIAL_ROOMS[key] || [])];
 
   const parsedRoomCount = Math.max(1, parseInt(roomCount, 10) || 2);
   const parsedBeds = Math.max(1, parseInt(bedsPerRoom, 10) || 4);
@@ -369,19 +516,22 @@ export function addFloorToHostel(hostelName, { floorName, roomCount = 2, startRo
   // Un-tombstone floor and room numbers
   const floorNum = parseFloorNumber(floorName);
   const delFloorsStore = getDeletedFloorsStore();
+  if (delFloorsStore[key]) {
+    delFloorsStore[key] = delFloorsStore[key].filter(f => f !== floorNum && f !== floorName);
+    saveDeletedFloorsStore(delFloorsStore);
+  }
   if (delFloorsStore[hostelName]) {
     delFloorsStore[hostelName] = delFloorsStore[hostelName].filter(f => f !== floorNum && f !== floorName);
     saveDeletedFloorsStore(delFloorsStore);
   }
 
   const delRoomsStore = getDeletedRoomsStore();
-  if (delRoomsStore[hostelName]) {
-    for (let r = 0; r < parsedRoomCount; r++) {
-      const rmNo = String(baseNum + r);
-      delRoomsStore[hostelName] = delRoomsStore[hostelName].filter(num => num !== rmNo);
-    }
-    saveDeletedRoomsStore(delRoomsStore);
+  for (let r = 0; r < parsedRoomCount; r++) {
+    const rmNo = String(baseNum + r);
+    if (delRoomsStore[key]) delRoomsStore[key] = delRoomsStore[key].filter(num => num !== rmNo);
+    if (delRoomsStore[hostelName]) delRoomsStore[hostelName] = delRoomsStore[hostelName].filter(num => num !== rmNo);
   }
+  saveDeletedRoomsStore(delRoomsStore);
 
   for (let r = 0; r < parsedRoomCount; r++) {
     const rmNo = String(baseNum + r);
@@ -406,8 +556,22 @@ export function addFloorToHostel(hostelName, { floorName, roomCount = 2, startRo
     }
   }
 
-  store[hostelName] = currentRooms;
+  store[key] = currentRooms;
+  if (key !== hostelName) store[hostelName] = currentRooms;
   saveStoredData(store);
+
+  // Sync with backend API
+  if (api && typeof api.createHostelFloor === 'function') {
+    api.createHostelFloor({
+      hostelName: key || hostelName,
+      floor: floorName || 'Floor 3',
+      roomCount: parsedRoomCount,
+      startRoomNumber: String(baseNum),
+      roomType,
+      capacity: parsedBeds,
+    }).catch(err => console.warn('Backend sync createHostelFloor warning:', err?.message));
+  }
+
   return currentRooms;
 }
 
@@ -416,7 +580,9 @@ export function addFloorToHostel(hostelName, { floorName, roomCount = 2, startRo
  */
 export function updateRoomsForHostel(hostelName, updatedRooms) {
   const store = getStoredData();
-  store[hostelName] = updatedRooms;
+  const key = resolveHostelKey(store, hostelName);
+  store[key] = updatedRooms;
+  if (key !== hostelName) store[hostelName] = updatedRooms;
   saveStoredData(store);
   return updatedRooms;
 }

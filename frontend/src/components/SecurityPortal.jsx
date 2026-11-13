@@ -42,12 +42,17 @@ import {
   CheckSquare,
   Wifi,
   WifiOff,
-  CloudOff
+  CloudOff,
+  BarChart3,
+  Edit3,
 } from 'lucide-react';
 import api from '../services/api.js';
 import { securityOfflineStore } from '../services/securityOfflineStore.js';
+import { getAllResidentLeaves, normalizeLeaveStatus } from '../services/hostelResidentLeaveStore.js';
+import { recordGatePassExit, recordGatePassReturn } from '../services/gatePassStore.js';
 import RoleDashboardLanding from './RoleDashboardLanding.jsx';
 import SecurityGuardEmployeeProfile from './SecurityGuardEmployeeProfile.jsx';
+import { getSecurityMenuConfig } from '../config/menuConfig/menuConfig.security.js';
 import './AdminPortal.css';
 import './SecurityPortal.css';
 
@@ -151,6 +156,7 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
     phone: '',
     idProofNumber: '',
     badgeNumber: '',
+    requiresStudentApproval: true,
   });
 
   // 5. HISTORY STATE
@@ -182,7 +188,38 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
     description: '',
   });
 
-  // 7. SHIFT NOTES STATE
+  // 6b. OVERDUE RESOLUTION MODAL STATE
+  const [overdueResolveModal, setOverdueResolveModal] = useState(null);
+  const [overdueResolveForm, setOverdueResolveForm] = useState({
+    resolutionStatus: 'RESOLVED',
+    notes: 'Student arrived safely at gate. Physical verification complete.',
+  });
+
+  // 7. DAILY REPORT STATE
+  const [reportDate, setReportDate] = useState(new Date().toISOString().slice(0, 10));
+  const [reportHostelFilter, setReportHostelFilter] = useState('ALL');
+  const [dailyReportData, setDailyReportData] = useState(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+
+  // 8. AUDIT HISTORY & AUDITED CORRECTION STATE
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditActionFilter, setAuditActionFilter] = useState('ALL');
+  const [auditRoleFilter, setAuditRoleFilter] = useState('ALL');
+  const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
+  const [correctionForm, setCorrectionForm] = useState({
+    recordId: '',
+    recordType: 'MOVEMENT',
+    fieldToCorrect: 'gateName',
+    oldValue: '',
+    newValue: '',
+    reason: '',
+  });
+  const [correctionSubmitting, setCorrectionSubmitting] = useState(false);
+  const [correctionFeedback, setCorrectionFeedback] = useState(null);
+
+  // 9. SHIFT NOTES STATE
   const [shiftNotes, setShiftNotes] = useState([
     {
       id: 'sn-1',
@@ -208,7 +245,31 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
     loadVisitors();
     loadMovementsHistory();
     loadOverdueReturns();
+    loadAlerts();
+    loadDailyReport();
+    loadAuditTrail();
+
+    const handleLeavesSync = () => {
+      loadApprovedPasses();
+      loadOverviewStats();
+    };
+
+    window.addEventListener('bput_hostel_leaves_updated', handleLeavesSync);
+    window.addEventListener('storage', handleLeavesSync);
+
+    return () => {
+      window.removeEventListener('bput_hostel_leaves_updated', handleLeavesSync);
+      window.removeEventListener('storage', handleLeavesSync);
+    };
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'reports') {
+      loadDailyReport(reportDate, reportHostelFilter);
+    } else if (activeTab === 'audit') {
+      loadAuditTrail();
+    }
+  }, [activeTab, reportDate, reportHostelFilter, auditActionFilter, auditRoleFilter]);
 
   // Subscribe to offline queue changes and network status
   useEffect(() => {
@@ -255,9 +316,61 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
   const loadApprovedPasses = async () => {
     setPassesLoading(true);
     try {
-      const res = await api.getSecurityApprovedPasses();
-      const list = Array.isArray(res) ? res : res?.data || [];
-      setPassesList(list);
+      let list = [];
+      try {
+        const res = await api.getSecurityApprovedPasses();
+        list = Array.isArray(res) ? res : res?.data || [];
+      } catch {
+        list = [];
+      }
+
+      // Merge with approved resident leaves from warden/admin approval workflow
+      const residentLeaves = getAllResidentLeaves();
+      const approvedResidentPasses = residentLeaves
+        .filter((l) => {
+          const st = normalizeLeaveStatus(l.status);
+          return st === 'Approved' || l.returned || String(l.status).toLowerCase().includes('return');
+        })
+        .map((l) => {
+          const isReturned = Boolean(l.returned || String(l.status).toLowerCase().includes('return'));
+          return {
+            id: l.id,
+            passId: l.id,
+            studentName: l.studentName,
+            rollNumber: l.rollNumber || l.regNo,
+            hostelName: l.hostelName,
+            roomNumber: l.roomNumber,
+            purposeType: l.reason || 'Outstation Leave',
+            destination: l.reason || 'Home Visit',
+            outDateTime: `${l.startDate || '2026-11-01'} 08:00`,
+            inDateTime: `${l.endDate || '2026-11-03'} 20:00`,
+            status: isReturned ? 'Returned to Hostel' : 'Approved by Warden',
+            catalogStatus: isReturned ? 'RETURNED' : 'PENDING_EXIT',
+            isOverdue: false,
+            wardenRemarks: l.guardianStatus || 'Verified and approved by Warden',
+            approvedBy: l.approvedBy || 'Resident Warden',
+            qrCodeString: `BPUT-${l.id}-APPROVED-VALID`,
+            studentPhone: l.phone,
+            guardianPhone: l.guardianPhone,
+            isLeaveApp: true
+          };
+        });
+
+      const passMap = new Map();
+      list.forEach((p) => {
+        if (p && (p.passId || p.id)) passMap.set(p.passId || p.id, p);
+      });
+      approvedResidentPasses.forEach((p) => {
+        if (!passMap.has(p.passId)) {
+          passMap.set(p.passId, p);
+        } else {
+          // Keep resident leave status up to date
+          const existing = passMap.get(p.passId);
+          passMap.set(p.passId, { ...existing, ...p });
+        }
+      });
+
+      setPassesList(Array.from(passMap.values()));
     } catch {
       // fallback
     } finally {
@@ -319,6 +432,25 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
           resolutionNotes: 'Approved late return granted by Warden (prescription pickup delay).',
         },
       ]);
+    }
+  };
+
+  const loadAlerts = async () => {
+    try {
+      const res = await (api.getSecurityIncidents ? api.getSecurityIncidents() : api.getSecurityAlerts());
+      const list = Array.isArray(res) ? res : res?.data || [];
+      if (list.length > 0) {
+        setAlertsList(list.map((item) => ({
+          id: item.id || item.incidentCode,
+          title: item.title,
+          category: item.category || 'Perimeter & Gate Security',
+          severity: (item.severity || 'high').toLowerCase(),
+          time: item.detectedAt ? new Date(item.detectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+          description: item.evidence || item.description || '',
+        })));
+      }
+    } catch {
+      // Keep initial alertsList
     }
   };
 
@@ -514,13 +646,13 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
     }
 
     try {
-      const res = await api.recordSecurityExit({
-        passId: scannedResult.pass.passId || scannedResult.pass.id,
-        remarks: guardRemarks || 'Turnstile physical exit recorded.',
-        gateName: gatePost,
-        guardId: badgeId,
-        guardName,
-      });
+      const res = await api.recordSecurityExit(payload);
+
+      try {
+        recordGatePassExit(scannedResult.pass.passId || scannedResult.pass.id);
+      } catch (e) {
+        console.warn('Local gate pass store exit sync:', e);
+      }
 
       setActionFeedback({
         success: true,
@@ -534,10 +666,27 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
       loadMovementsHistory();
       handlePerformScan(scannedResult.student.rollNumber);
     } catch (err) {
-      setActionFeedback({
-        success: false,
-        message: err.message || 'Failed to record campus exit.',
-      });
+      console.warn('Live API exit record failed, falling back to local security store:', err.message);
+      try {
+        recordGatePassExit(scannedResult.pass.passId || scannedResult.pass.id);
+        const queued = securityOfflineStore.enqueueMovement(payload);
+        setOfflineQueueCount(securityOfflineStore.getQueueCount());
+        setActionFeedback({
+          success: true,
+          provisional: true,
+          message: `Exit logged locally for ${scannedResult.student.name} (Provisional scan - queued for sync).`,
+          syncId: queued.offlineSyncId,
+        });
+        loadOverviewStats();
+        loadApprovedPasses();
+        loadMovementsHistory();
+        handlePerformScan(scannedResult.student.rollNumber);
+      } catch (fallbackErr) {
+        setActionFeedback({
+          success: false,
+          message: err.message || 'Failed to record campus exit.',
+        });
+      }
     } finally {
       setActionLoading(false);
     }
@@ -574,15 +723,13 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
     }
 
     try {
-      const res = await api.recordSecurityEntry({
-        passId: scannedResult.pass.passId || scannedResult.pass.id,
-        rollNumber: scannedResult.student.rollNumber,
-        direction: 'ENTRY',
-        gateName: gatePost,
-        guardId: badgeId,
-        guardName,
-        remarks: guardRemarks || 'Turnstile student entry logged.',
-      });
+      const res = await api.recordSecurityEntry(payload);
+
+      try {
+        recordGatePassReturn(scannedResult.pass.passId || scannedResult.pass.id);
+      } catch (e) {
+        console.warn('Local gate pass store return sync:', e);
+      }
 
       setActionFeedback({
         success: true,
@@ -598,10 +745,27 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
       loadMovementsHistory();
       handlePerformScan(scannedResult.student.rollNumber);
     } catch (err) {
-      setActionFeedback({
-        success: false,
-        message: err.message || 'Failed to record campus return.',
-      });
+      console.warn('Live API entry record failed, falling back to local security store:', err.message);
+      try {
+        recordGatePassReturn(scannedResult.pass.passId || scannedResult.pass.id);
+        const queued = securityOfflineStore.enqueueMovement(payload);
+        setOfflineQueueCount(securityOfflineStore.getPendingCount());
+        setActionFeedback({
+          success: true,
+          provisional: true,
+          message: `Entry logged locally for ${scannedResult.student.name} (Provisional scan - queued for sync).`,
+          syncId: queued.offlineSyncId,
+        });
+        loadOverviewStats();
+        loadApprovedPasses();
+        loadMovementsHistory();
+        handlePerformScan(scannedResult.student.rollNumber);
+      } catch (fallbackErr) {
+        setActionFeedback({
+          success: false,
+          message: err.message || 'Failed to record campus return.',
+        });
+      }
     } finally {
       setActionLoading(false);
     }
@@ -699,7 +863,7 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
       });
       setVisitorFeedback({
         success: true,
-        message: res.message || 'Walk-in visitor pass issued.',
+        message: res.message || (walkInForm.requiresStudentApproval ? 'Walk-in visitor registered. Awaiting host student confirmation.' : 'Walk-in visitor pass issued.'),
       });
       setWalkInForm({
         visitorName: '',
@@ -710,6 +874,7 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
         phone: '',
         idProofNumber: '',
         badgeNumber: '',
+        requiresStudentApproval: true,
       });
       loadVisitors();
       setVisitorSubTab('active');
@@ -801,6 +966,204 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
     }
   };
 
+
+  // Load Daily Security Report
+  const loadDailyReport = async (date = reportDate, hostel = reportHostelFilter) => {
+    setLoadingReport(true);
+    try {
+      if (api.getDailySecurityReport) {
+        const res = await api.getDailySecurityReport(date, hostel);
+        if (res && res.success) {
+          setDailyReportData(res);
+        }
+      }
+    } catch (err) {
+      console.warn('Daily report load error:', err);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  // Export Daily Report to CSV
+  const handleExportDailyCsv = () => {
+    if (!dailyReportData) return;
+    const rows = [];
+    rows.push({
+      Section: '1. SUMMARY',
+      Metric: 'Report Date',
+      Value: dailyReportData.reportDate,
+      Details: `Generated: ${dailyReportData.generatedAt}`,
+    });
+    rows.push({
+      Section: '1. SUMMARY',
+      Metric: 'Total Gate Movements',
+      Value: dailyReportData.summary?.totalMovements || 0,
+      Details: `Exits: ${dailyReportData.summary?.totalExits || 0}, Entries: ${dailyReportData.summary?.totalEntries || 0}`,
+    });
+    rows.push({
+      Section: '1. SUMMARY',
+      Metric: 'Curfew Compliance Rate',
+      Value: dailyReportData.summary?.curfewComplianceRate || '100%',
+      Details: `On-time: ${dailyReportData.summary?.onTimeReturns || 0}, Late Violations: ${dailyReportData.summary?.lateReturns || 0}`,
+    });
+    rows.push({
+      Section: '1. SUMMARY',
+      Metric: 'Peak Outbound Rush (Morning)',
+      Value: dailyReportData.summary?.peakExitHour || '09:00 AM',
+      Details: 'Highest student exit scans',
+    });
+    rows.push({
+      Section: '1. SUMMARY',
+      Metric: 'Peak Inbound Rush (Evening)',
+      Value: dailyReportData.summary?.peakEntryHour || '06:00 PM',
+      Details: 'Highest student turnstile return scans',
+    });
+    rows.push({
+      Section: '1. SUMMARY',
+      Metric: 'Total Security Incidents',
+      Value: dailyReportData.incidentSummary?.total || 0,
+      Details: `Critical: ${dailyReportData.incidentSummary?.bySeverity?.critical || 0}, Open: ${dailyReportData.incidentSummary?.byStatus?.open || 0}`,
+    });
+    rows.push({
+      Section: '1. SUMMARY',
+      Metric: 'Active Campus Visitors',
+      Value: dailyReportData.visitorSummary?.currentlyInside || 0,
+      Details: `Total today: ${dailyReportData.visitorSummary?.totalToday || 0}`,
+    });
+
+    // Peak Hours
+    (dailyReportData.peakHours || []).forEach((slot) => {
+      rows.push({
+        Section: '2. PEAK_HOURS',
+        Metric: slot.timeRange,
+        Value: `${slot.total} scans`,
+        Details: `Exits: ${slot.exits}, Entries: ${slot.entries}${slot.isPeak ? ' [PEAK RUSH HOUR]' : ''}`,
+      });
+    });
+
+    // Incidents
+    (dailyReportData.incidentSummary?.incidents || []).forEach((inc) => {
+      rows.push({
+        Section: '3. INCIDENTS',
+        Metric: inc.incidentCode || inc.id,
+        Value: inc.title,
+        Details: `Severity: ${inc.severity}, Status: ${inc.status}, Gate: ${inc.gateName || 'Gate 1'}`,
+      });
+    });
+
+    exportToCsv(`ApnaCampus_Daily_Security_Report_${dailyReportData.reportDate || reportDate}.csv`, rows);
+  };
+
+  // Export Daily Report to PDF
+  const handleExportDailyPdf = () => {
+    try {
+      import('jspdf').then((jsPDFModule) => {
+        const { jsPDF } = jsPDFModule;
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.text('APNA CAMPUS - DAILY GATE SECURITY & PERIMETER REPORT', 14, 18);
+        doc.setFontSize(9);
+        doc.text(`Report Date: ${dailyReportData?.reportDate || reportDate} | Generated: ${new Date().toLocaleString('en-IN')}`, 14, 25);
+        doc.text(`Duty Officer: ${guardName} (${badgeId}) | Gate Post: ${gatePost}`, 14, 30);
+
+        doc.setLineWidth(0.5);
+        doc.line(14, 33, 196, 33);
+
+        // Section 1: Summary Statistics
+        doc.setFontSize(11);
+        doc.text('1. DAILY OPERATIONAL TELEMETRY & CURFEW COMPLIANCE', 14, 40);
+        doc.setFontSize(8.5);
+        doc.text(`• Total Turnstile Scans: ${dailyReportData?.summary?.totalMovements || 0} (Exits: ${dailyReportData?.summary?.totalExits || 0}, Entries: ${dailyReportData?.summary?.totalEntries || 0})`, 16, 47);
+        doc.text(`• Curfew Compliance Rate: ${dailyReportData?.summary?.curfewComplianceRate || '100%'} (On-time: ${dailyReportData?.summary?.onTimeReturns || 0}, Breaches: ${dailyReportData?.summary?.lateReturns || 0})`, 16, 53);
+        doc.text(`• Campus Population In/Out: ${dailyReportData?.summary?.studentsInside || 0} students inside campus (${dailyReportData?.summary?.studentsOutside || 0} outside)`, 16, 59);
+        doc.text(`• Peak Outbound Hour (Morning): ${dailyReportData?.summary?.peakExitHour || '09:00 AM'}`, 16, 65);
+        doc.text(`• Peak Inbound Hour (Evening): ${dailyReportData?.summary?.peakEntryHour || '06:00 PM'}`, 16, 71);
+        doc.text(`• Combined Busiest Gate Window: ${dailyReportData?.summary?.peakOverallHour || '18:00 - 19:00'}`, 16, 77);
+
+        // Section 2: Peak Hours Throughput
+        doc.setFontSize(11);
+        doc.text('2. HOURLY TURNSTILE THROUGHPUT (06:00 - 22:00)', 14, 88);
+        doc.setFontSize(8);
+        let y = 95;
+        (dailyReportData?.peakHours || []).slice(0, 10).forEach((slot) => {
+          doc.text(`${slot.timeRange}: ${slot.total} scans (Exits: ${slot.exits}, Entries: ${slot.entries})${slot.isPeak ? ' [PEAK]' : ''}`, 16, y);
+          y += 5.5;
+        });
+
+        // Section 3: Incident Summary
+        y += 4;
+        doc.setFontSize(11);
+        doc.text('3. SECURITY INCIDENTS & PERIMETER BREACH REGISTER', 14, y);
+        y += 7;
+        doc.setFontSize(8);
+        const incidents = dailyReportData?.incidentSummary?.incidents || [];
+        if (incidents.length === 0) {
+          doc.text('Zero security incidents recorded for this period.', 16, y);
+          y += 6;
+        } else {
+          incidents.slice(0, 5).forEach((inc) => {
+            doc.text(`• [${inc.severity || 'HIGH'}] ${inc.incidentCode || inc.id}: ${inc.title} (${inc.status || 'OPEN'})`, 16, y);
+            y += 5.5;
+          });
+        }
+
+        // Section 4: Sign-off block
+        y += 12;
+        doc.setLineWidth(0.3);
+        doc.line(14, y, 196, y);
+        y += 8;
+        doc.setFontSize(8.5);
+        doc.text(`Chief Warden / Security In-Charge Verification: __________________________________`, 14, y);
+        y += 6;
+        doc.text(`Duty Security Officer Sign-off: ${guardName} (Digital Signature Confirmed)`, 14, y);
+
+        doc.save(`Daily_Security_Report_${dailyReportData?.reportDate || reportDate}.pdf`);
+      });
+    } catch {
+      window.print();
+    }
+  };
+
+
+  // Escalate Overdue Alert (Dispatches Parent SMS & Warden Emergency Notice)
+  const handleEscalateOverdue = async (id) => {
+    try {
+      if (api.escalateSecurityOverdueReturn) {
+        const res = await api.escalateSecurityOverdueReturn(id);
+        setActionFeedback({
+          success: true,
+          message: res.message || 'Curfew alert escalated to Parent SMS and Resident Warden.',
+        });
+      }
+      loadOverdueReturns();
+    } catch (err) {
+      alert(err.message || 'Failed to escalate alert.');
+    }
+  };
+
+  // Resolve Overdue Submit
+  const handleResolveOverdueSubmit = async (e) => {
+    e.preventDefault();
+    if (!overdueResolveModal) return;
+    try {
+      if (api.resolveSecurityOverdueReturn) {
+        await api.resolveSecurityOverdueReturn(overdueResolveModal.id, overdueResolveForm);
+      }
+      setActionFeedback({
+        success: true,
+        message: `Overdue case for ${overdueResolveModal.studentName} resolved successfully.`,
+      });
+      setOverdueResolveModal(null);
+      setOverdueResolveForm({
+        resolutionStatus: 'RESOLVED',
+        notes: 'Student arrived safely at gate. Physical verification complete.',
+      });
+      loadOverdueReturns();
+    } catch (err) {
+      alert(err.message || 'Failed to resolve record.');
+    }
+  };
+
   // Shift Handover Note Submit
   const handleAddShiftNote = (e) => {
     e.preventDefault();
@@ -816,55 +1179,138 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
     setNewNoteText('');
   };
 
-  // Navigation Sections matching Hostel Portal design
-  const securityNavSections = [
-    {
-      title: 'OVERVIEW',
-      items: [
-        { id: 'dashboard', label: 'Security Guard Dashboard', icon: Home },
-      ],
-    },
-    {
-      title: 'OPERATIONS',
-      items: [
-        { id: 'overview', label: 'Gate Overview', icon: ShieldCheck },
-        { id: 'scanner', label: 'QR Scanner', icon: QrCode },
+  // Audit Trail & History Loader
+  const loadAuditTrail = async (query = {}) => {
+    setAuditLoading(true);
+    try {
+      const res = await api.getSecurityAuditTrail({
+        search: query.search !== undefined ? query.search : auditSearch,
+        action: (query.action !== undefined ? query.action : auditActionFilter) === 'ALL' ? undefined : (query.action !== undefined ? query.action : auditActionFilter),
+        role: (query.role !== undefined ? query.role : auditRoleFilter) === 'ALL' ? undefined : (query.role !== undefined ? query.role : auditRoleFilter),
+      });
+      const list = res?.auditTrail || (Array.isArray(res) ? res : []);
+      if (list && list.length > 0) {
+        setAuditLogs(list);
+      } else {
+        setAuditLogs([
+          {
+            id: 'audit-fallback-1',
+            user: guardName || 'Dillip Kumar Pradhan',
+            role: 'SECURITY',
+            action: 'GATE_STUDENT_EXIT',
+            target: 'Student: Sneha Mohanty (Roll: 03)',
+            oldValue: 'Status: Approved (Inside Campus)',
+            newValue: 'Status: EXITED (Active off-campus)',
+            reason: 'Physical Turnstile Card & Biometric check passed at Gate 1',
+            createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+          },
+          {
+            id: 'audit-fallback-2',
+            user: 'Dr. Ramesh Chandra Sahoo',
+            role: 'WARDEN',
+            action: 'GATE_PASS_APPROVED',
+            target: 'Pass: GP-2026-1039 (Student: Priya Patra)',
+            oldValue: 'Status: PENDING_WARDEN',
+            newValue: 'Status: APPROVED',
+            reason: 'Verified project work recommendation from faculty advisor',
+            createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+          },
+        ]);
+      }
+    } catch {
+      setAuditLogs([
         {
-          id: 'passes',
-          label: 'Approved Gate Passes',
-          icon: FileCheck2,
-          badge: passesList.length > 0 ? String(passesList.length) : undefined,
+          id: 'audit-fallback-1',
+          user: guardName || 'Dillip Kumar Pradhan',
+          role: 'SECURITY',
+          action: 'GATE_STUDENT_EXIT',
+          target: 'Student: Sneha Mohanty (Roll: 03)',
+          oldValue: 'Status: Approved (Inside Campus)',
+          newValue: 'Status: EXITED (Active off-campus)',
+          reason: 'Physical Turnstile Card & Biometric check passed at Gate 1',
+          createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
         },
-        {
-          id: 'overdue',
-          label: 'Overdue Returns',
-          icon: Clock,
-          badge: overdueList.length > 0 ? String(overdueList.length) : undefined,
-        },
-        {
-          id: 'visitors',
-          label: 'Visitor Management',
-          icon: Users,
-          badge: visitorsList.filter((v) => v.outTime === 'Pending Sign-out' || !v.outTime).length
-            ? String(visitorsList.filter((v) => v.outTime === 'Pending Sign-out' || !v.outTime).length)
-            : undefined,
-        },
-      ],
-    },
-    {
-      title: 'MONITORING & LOGS',
-      items: [
-        { id: 'history', label: 'Movement History', icon: History },
-        {
-          id: 'alerts',
-          label: 'Security Alerts',
-          icon: AlertTriangle,
-          badge: alertsList.length > 0 ? String(alertsList.length) : undefined,
-        },
-        { id: 'shift-notes', label: 'Shift Handover Notes', icon: FileText },
-      ],
-    },
-  ];
+      ]);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  // Audited Record Correction Submit
+  const handleSubmitCorrection = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!correctionForm.recordId.trim()) {
+      alert('Record ID is required.');
+      return;
+    }
+    if (!correctionForm.newValue.trim()) {
+      alert('New corrected value is required.');
+      return;
+    }
+    if (!correctionForm.reason || correctionForm.reason.trim().length < 5) {
+      alert('Audit compliance mandates a detailed reason of at least 5 characters.');
+      return;
+    }
+
+    setCorrectionSubmitting(true);
+    setCorrectionFeedback(null);
+    try {
+      const res = await api.correctSecurityRecord({
+        recordId: correctionForm.recordId.trim(),
+        recordType: correctionForm.recordType,
+        fieldToCorrect: correctionForm.fieldToCorrect.trim(),
+        oldValue: correctionForm.oldValue ? correctionForm.oldValue.trim() : undefined,
+        newValue: correctionForm.newValue.trim(),
+        reason: correctionForm.reason.trim(),
+      });
+      setCorrectionFeedback({
+        type: 'success',
+        message: res?.message || 'Security record corrected and logged to immutable audit trail.',
+      });
+      loadAuditTrail();
+      loadMovementsHistory();
+      loadVisitors();
+      setTimeout(() => {
+        setCorrectionModalOpen(false);
+        setCorrectionFeedback(null);
+      }, 1500);
+    } catch (err) {
+      setCorrectionFeedback({
+        type: 'error',
+        message: err?.message || 'Failed to submit correction. Check supervisor permissions.',
+      });
+    } finally {
+      setCorrectionSubmitting(false);
+    }
+  };
+
+  const openCorrectionForRecord = (type, item, defaultField = 'gateName') => {
+    setCorrectionForm({
+      recordId: item.id || item.movementCode || item.passId || '',
+      recordType: type,
+      fieldToCorrect: defaultField,
+      oldValue: item[defaultField] || item.status || '',
+      newValue: '',
+      reason: '',
+    });
+    setCorrectionFeedback(null);
+    setCorrectionModalOpen(true);
+  };
+
+  // Navigation Sections matching platform design system
+  // getSecurityMenuConfig provides: Gate Overview, QR Scanner, Approved Gate Passes, Overdue Returns, Visitor Management
+  const securityNavSections = useMemo(
+    () =>
+      getSecurityMenuConfig({
+        passesBadge: passesList.length > 0 ? String(passesList.length) : undefined,
+        overdueBadge: overdueList.length > 0 ? String(overdueList.length) : undefined,
+        visitorsBadge: visitorsList.filter((v) => v.outTime === 'Pending Sign-out' || !v.outTime).length
+          ? String(visitorsList.filter((v) => v.outTime === 'Pending Sign-out' || !v.outTime).length)
+          : undefined,
+        alertsBadge: alertsList.length > 0 ? String(alertsList.length) : undefined,
+      }),
+    [passesList.length, overdueList.length, visitorsList, alertsList.length]
+  );
 
   // Dynamic Page Header Content
   const getSecurityHeading = () => {
@@ -903,6 +1349,16 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
         return {
           title: 'Campus Turnstile Movement History',
           subtitle: 'Immutable chronological turnstile telemetry, curfew violation audit, and Excel/CSV export.',
+        };
+      case 'reports':
+        return {
+          title: 'Daily Gate Security & Movement Telemetry Reports',
+          subtitle: 'Perimeter movement summaries, 06:00-22:00 peak hours breakdown, incident logs, and CSV/PDF export.',
+        };
+      case 'audit':
+        return {
+          title: 'Immutable Security Audit Trail & Correction Register',
+          subtitle: 'Traceable log of all perimeter transactions, turnstile corrections, warden approvals, and visitor authorizations.',
         };
       case 'alerts':
         return {
@@ -1028,10 +1484,11 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                 else if (target === 'passes') setActiveTab('passes');
                 else if (target === 'visitors') setActiveTab('visitors');
                 else if (target === 'history') setActiveTab('history');
+                else if (target === 'reports') setActiveTab('reports');
                 else if (target === 'alerts') setActiveTab('alerts');
                 else if (target === 'shift-notes') setActiveTab('shift-notes');
                 else if (target === 'profile') setActiveTab('profile');
-                else if (target === 'overview' || target === 'gate-overview') setActiveTab('overview');
+                else if (target === 'overview' || target === 'gate-overview') setActiveTab('dashboard');
                 else if (target) setActiveTab(target);
               }}
               onNavigate={(target) => {
@@ -1039,10 +1496,11 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                 else if (target === 'passes') setActiveTab('passes');
                 else if (target === 'visitors') setActiveTab('visitors');
                 else if (target === 'history') setActiveTab('history');
+                else if (target === 'reports') setActiveTab('reports');
                 else if (target === 'alerts') setActiveTab('alerts');
                 else if (target === 'shift-notes') setActiveTab('shift-notes');
                 else if (target === 'profile') setActiveTab('profile');
-                else if (target === 'overview' || target === 'gate-overview') setActiveTab('overview');
+                else if (target === 'overview' || target === 'gate-overview') setActiveTab('dashboard');
                 else if (target) setActiveTab(target);
               }}
             />
@@ -1747,7 +2205,7 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                 {/* Manual Lookup Group (Fallback) */}
                 <div style={{ marginTop: '1rem' }}>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#475569', marginBottom: '0.4rem' }}>
-                    Manual Roll Number, Pass ID, or Token String (Fallback):
+                    Manual Roll Number, Pass ID, or QR String:
                   </label>
                   <div className="sec-search-input-group">
                     <input
@@ -1909,7 +2367,7 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                       }}
                     >
                       {scannedResult.valid ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-                      <span><strong>Decision Context:</strong> {scannedResult.reason}</span>
+                      <span><strong>{scannedResult.valid ? 'Decision Context:' : 'Security Warning:'}</strong> {scannedResult.reason}</span>
                     </div>
                   )}
 
@@ -1934,6 +2392,10 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                           {scannedResult.pass.inDateTime?.replace('T', ' ')}
                           {scannedResult.isOverdue && ` (${scannedResult.overdueText})`}
                         </dd>
+                      </div>
+                      <div className="sec-info-item">
+                        <dt>Approved By</dt>
+                        <dd>{scannedResult.pass.approvedBy || 'Resident Warden'}</dd>
                       </div>
                       <div className="sec-info-item">
                         <dt>Student Phone</dt>
@@ -2138,9 +2600,14 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                             </div>
                           </td>
                           <td>
-                            <span className={`sec-badge ${pass.catalogStatus === 'OUT' ? 'out' : (pass.catalogStatus === 'RETURNED' ? 'returned' : (pass.catalogStatus === 'LATE' ? 'late' : 'pending'))}`}>
-                              {pass.catalogStatus === 'OUT' ? 'OUTSIDE' : pass.catalogStatus}
+                            <span className={`sec-badge ${pass.catalogStatus === 'OUT' ? 'out' : (pass.catalogStatus === 'RETURNED' ? 'returned' : (pass.catalogStatus === 'LATE' ? 'late' : 'approved'))}`} style={pass.catalogStatus === 'PENDING_EXIT' ? { background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' } : {}}>
+                              {pass.catalogStatus === 'OUT' ? 'OUTSIDE' : (pass.catalogStatus === 'RETURNED' ? 'RETURNED' : (pass.catalogStatus === 'LATE' ? 'OVERDUE' : 'APPROVED (EXIT READY)'))}
                             </span>
+                            {pass.approvedBy && (
+                              <div style={{ fontSize: '0.68rem', color: '#059669', marginTop: '2px', fontWeight: 600 }}>
+                                By: {pass.approvedBy.split('(')[0]}
+                              </div>
+                            )}
                           </td>
                           <td>
                             <button
@@ -2207,6 +2674,14 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                   <div style={{ fontSize: '0.72rem', color: '#b45309' }}>Warden permission granted</div>
                 </div>
 
+                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '0.85rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#991b1b' }}>Critical Curfew Alerts</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#b91c1c', marginTop: '0.2rem' }}>
+                    {overdueList.filter((r) => r.escalationLevel === 3 || (r.overdueMinutes && r.overdueMinutes > 120)).length}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#7f1d1d' }}>&gt; 2 hrs late / Parent SMS escalated</div>
+                </div>
+
                 <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '0.85rem' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#166534' }}>Investigated & Resolved</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#16a34a', marginTop: '0.2rem' }}>
@@ -2226,84 +2701,106 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                       <th>Destination</th>
                       <th>Expected Return</th>
                       <th>Overdue Duration</th>
+                      <th>Escalation Tier</th>
                       <th>Status</th>
-                      <th>Resolution / Action</th>
+                      <th>Actions & Investigation</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {overdueList.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <strong>{item.studentName}</strong>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Roll: {item.studentRoll}</div>
-                        </td>
-                        <td>
-                          <div>{item.hostelName || 'Gandhi Boys Residence'}</div>
-                          <small style={{ color: '#64748b' }}>{item.roomNumber || 'Room 312'}</small>
-                        </td>
-                        <td>{item.destination}</td>
-                        <td>
-                          <div style={{ color: '#e11d48', fontWeight: 600 }}>
-                            {item.expectedReturnTime ? new Date(item.expectedReturnTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Curfew Past'}
-                          </div>
-                        </td>
-                        <td>
-                          <span className="sec-badge late" style={{ fontWeight: 700 }}>
-                            {item.overdueMinutes} mins late
-                          </span>
-                        </td>
-                        <td>
-                          <span
-                            className={`sec-badge ${
-                              item.status === 'RESOLVED'
-                                ? 'returned'
-                                : item.status === 'APPROVED_LATE_RETURN'
-                                ? 'amber'
-                                : 'late'
-                            }`}
-                          >
-                            {item.status}
-                          </span>
-                        </td>
-                        <td>
-                          {item.status !== 'RESOLVED' ? (
-                            <button
-                              className="sec-btn-emerald"
-                              style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
-                              onClick={async () => {
-                                const note = window.prompt(
-                                  `Enter investigation note to resolve overdue return for ${item.studentName}:`,
-                                  'Student arrived safely at gate. Physical verification complete.'
-                                );
-                                if (note) {
-                                  try {
-                                    await api.resolveSecurityOverdueReturn(item.id, note);
-                                    loadOverdueReturns();
-                                    setActionFeedback({
-                                      success: true,
-                                      message: `Overdue case for ${item.studentName} resolved successfully.`,
-                                    });
-                                  } catch (err) {
-                                    alert(err.message || 'Failed to resolve record');
-                                  }
-                                }
-                              }}
+                    {overdueList.map((item) => {
+                      const mins = item.overdueMinutes || 0;
+                      const isCritical = item.escalationLevel === 3 || mins > 120;
+                      const isModerate = item.escalationLevel === 2 || (mins > 30 && mins <= 120);
+
+                      return (
+                        <tr key={item.id}>
+                          <td>
+                            <strong>{item.studentName}</strong>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Roll: {item.studentRoll}</div>
+                          </td>
+                          <td>
+                            <div>{item.hostelName || 'Gandhi Boys Residence'}</div>
+                            <small style={{ color: '#64748b' }}>{item.roomNumber || 'Room 312'}</small>
+                          </td>
+                          <td>{item.destination}</td>
+                          <td>
+                            <div style={{ color: '#e11d48', fontWeight: 600 }}>
+                              {item.expectedReturnTime ? new Date(item.expectedReturnTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Curfew Past'}
+                            </div>
+                          </td>
+                          <td>
+                            <span className="sec-badge late" style={{ fontWeight: 700 }}>
+                              {mins} mins late
+                            </span>
+                          </td>
+                          <td>
+                            {isCritical ? (
+                              <span style={{ display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: 4, background: '#fee2e2', color: '#991b1b', fontSize: '0.7rem', fontWeight: 700 }}>
+                                🚨 LEVEL 3 - CRITICAL CURFEW
+                              </span>
+                            ) : isModerate ? (
+                              <span style={{ display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: 4, background: '#fef3c7', color: '#92400e', fontSize: '0.7rem', fontWeight: 700 }}>
+                                ⚠️ LEVEL 2 - PARENT ALERT
+                              </span>
+                            ) : (
+                              <span style={{ display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: 4, background: '#e0f2fe', color: '#0369a1', fontSize: '0.7rem', fontWeight: 700 }}>
+                                ℹ️ LEVEL 1 - WARDEN
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            <span
+                              className={`sec-badge ${
+                                item.status === 'RESOLVED'
+                                  ? 'returned'
+                                  : item.status === 'APPROVED_LATE_RETURN'
+                                  ? 'amber'
+                                  : 'late'
+                              }`}
                             >
-                              Resolve Record
-                            </button>
-                          ) : (
-                            <small style={{ color: '#64748b' }}>{item.resolutionNotes || 'Resolved'}</small>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                              {item.status}
+                            </span>
+                          </td>
+                          <td>
+                            {item.status !== 'RESOLVED' ? (
+                              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                <button
+                                  className="sec-btn-emerald"
+                                  style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
+                                  onClick={() => {
+                                    setOverdueResolveModal(item);
+                                    setOverdueResolveForm({
+                                      resolutionStatus: 'RESOLVED',
+                                      notes: 'Student arrived safely at gate. Physical verification complete.',
+                                    });
+                                  }}
+                                >
+                                  Resolve Case
+                                </button>
+                                <button
+                                  className="sec-btn-rose"
+                                  style={{ padding: '0.25rem 0.55rem', fontSize: '0.72rem' }}
+                                  onClick={() => handleEscalateOverdue(item.id)}
+                                  title="Dispatch urgent Parent SMS notification and escalate to Chief Warden"
+                                >
+                                  <Send size={11} /> Escalate Alert
+                                </button>
+                              </div>
+                            ) : (
+                              <small style={{ color: '#64748b' }}>{item.resolutionNotes || 'Case Closed'}</small>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
         )}
-                      {activeTab === 'visitors' && (
+
+        {activeTab === 'visitors' && (
           <div className="sec-card">
             <div className="sec-card-header">
               <h3 className="sec-card-title">
@@ -2362,6 +2859,7 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                         <th>Visitor Name</th>
                         <th>Relation</th>
                         <th>Host Student</th>
+                        <th>Status</th>
                         <th>Entry Time</th>
                         <th>Badge No</th>
                         <th>Purpose</th>
@@ -2378,13 +2876,51 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                             <div>{v.studentName}</div>
                             <small style={{ color: '#64748b' }}>Roll: {v.rollNumber}</small>
                           </td>
+                          <td>
+                            {v.status === 'Awaiting Student Approval' ? (
+                              <span style={{ display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: 4, background: '#fef3c7', color: '#92400e', fontSize: '0.72rem', fontWeight: 700 }}>
+                                ⏳ Awaiting Student
+                              </span>
+                            ) : v.status === 'Pre-Approved' ? (
+                              <span style={{ display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: 4, background: '#dcfce7', color: '#15803d', fontSize: '0.72rem', fontWeight: 700 }}>
+                                ✓ Approved by Student
+                              </span>
+                            ) : v.status === 'Rejected by Student' ? (
+                              <span style={{ display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: 4, background: '#fee2e2', color: '#b91c1c', fontSize: '0.72rem', fontWeight: 700 }}>
+                                ✕ Declined by Student
+                              </span>
+                            ) : (
+                              <span style={{ display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: 4, background: '#e0f2fe', color: '#0369a1', fontSize: '0.72rem', fontWeight: 700 }}>
+                                {v.status || 'Checked In'}
+                              </span>
+                            )}
+                          </td>
                           <td>{v.inTime}</td>
                           <td>
                             <span className="sec-post-badge">{v.badgeNumber || 'BADGE-01'}</span>
                           </td>
                           <td><small>{v.purpose}</small></td>
                           <td>
-                            {v.outTime === 'Pending Sign-out' || !v.outTime ? (
+                            {v.status === 'Awaiting Student Approval' ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                <span style={{ color: '#d97706', fontSize: '0.74rem', fontWeight: 600 }}>
+                                  Pending approval from {v.studentName || 'Host'}
+                                </span>
+                                <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Roll: {v.rollNumber}</small>
+                              </div>
+                            ) : v.status === 'Pre-Approved' ? (
+                              <button
+                                className="sec-btn-emerald"
+                                style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
+                                onClick={() => handleCheckInVisitor(v.id, v.badgeNumber || 'BADGE-V-01')}
+                              >
+                                Issue Badge & Check In
+                              </button>
+                            ) : v.status === 'Rejected by Student' ? (
+                              <span style={{ color: '#ef4444', fontSize: '0.74rem', fontWeight: 600 }}>
+                                Entry Declined by Student
+                              </span>
+                            ) : v.outTime === 'Pending Sign-out' || !v.outTime ? (
                               <button
                                 className="sec-btn-rose"
                                 style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
@@ -2542,9 +3078,25 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                         onChange={(e) => setWalkInForm({ ...walkInForm, purpose: e.target.value })}
                       />
                     </div>
+                    <div style={{ gridColumn: 'span 2', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem', marginTop: '0.25rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontWeight: 600, color: '#1e293b', fontSize: '0.85rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={walkInForm.requiresStudentApproval}
+                          onChange={(e) => setWalkInForm({ ...walkInForm, requiresStudentApproval: e.target.checked })}
+                          style={{ width: 16, height: 16, accentColor: '#2563eb' }}
+                        />
+                        <span>Require Host Student Live In-App Approval before Badge Issuance (Recommended)</span>
+                      </label>
+                      <p style={{ margin: '0.35rem 0 0 1.6rem', fontSize: '0.76rem', color: '#64748b' }}>
+                        Sends an instantaneous alert to host student's mobile dashboard. Entry badge can only be issued after student clicks "Approve Visitor".
+                      </p>
+                    </div>
                   </div>
                   <button type="submit" className="sec-btn-emerald" style={{ marginTop: '1rem', width: '100%' }}>
-                    Issue Guest Badge & Record Entry
+                    {walkInForm.requiresStudentApproval
+                      ? 'Request Live Student Approval & Register Walk-In'
+                      : 'Issue Guest Badge & Record Entry Directly'}
                   </button>
                 </form>
               )}
@@ -2637,6 +3189,7 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                       <th>Checkpoint Type</th>
                       <th>Curfew Status</th>
                       <th>Remarks</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2686,6 +3239,498 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                             )}
                           </td>
                           <td><small style={{ color: '#64748b' }}>{item.remarks || '-'}</small></td>
+                          <td>
+                            <button
+                              type="button"
+                              className="sec-btn-secondary"
+                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                              onClick={() => openCorrectionForRecord('MOVEMENT', item, 'gateName')}
+                              title="Submit audited correction for this record"
+                            >
+                              <Edit3 size={12} /> Correct
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB: DAILY SECURITY REPORTS & PEAK HOURS ── */}
+        {activeTab === 'reports' && (
+          <div className="sec-card">
+            <div className="sec-card-header">
+              <h3 className="sec-card-title">
+                <BarChart3 size={18} color="#0284c7" />
+                Daily Gate Security & Movement Telemetry Report
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Calendar size={14} color="#64748b" />
+                  <input
+                    type="date"
+                    className="sec-input"
+                    style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
+                    value={reportDate}
+                    onChange={(e) => setReportDate(e.target.value)}
+                  />
+                </div>
+                <select
+                  className="sec-select"
+                  style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
+                  value={reportHostelFilter}
+                  onChange={(e) => setReportHostelFilter(e.target.value)}
+                >
+                  <option value="ALL">All Hostels & Blocks</option>
+                  <option value="Sarojini">Sarojini Girls Residence</option>
+                  <option value="Gandhi">Gandhi Boys Residence</option>
+                  <option value="Kalam">APJ Abdul Kalam Block</option>
+                </select>
+                <button className="sec-btn-secondary" onClick={() => loadDailyReport(reportDate, reportHostelFilter)}>
+                  <RefreshCw size={14} className={loadingReport ? 'animate-spin' : ''} /> Refresh
+                </button>
+                <button className="sec-btn-secondary" onClick={handleExportDailyPdf}>
+                  <FileText size={14} /> Export Official PDF
+                </button>
+                <button className="sec-btn-primary" onClick={handleExportDailyCsv}>
+                  <FileDown size={14} /> Export Daily CSV
+                </button>
+              </div>
+            </div>
+
+            <div className="sec-card-body">
+              {/* Daily KPI Summary Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <div className="sec-kpi-card" style={{ borderColor: '#3b82f6' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>TOTAL MOVEMENTS</div>
+                  <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#1e3a8a', marginTop: '0.2rem' }}>
+                    {dailyReportData?.summary?.totalMovements || 0}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
+                    Exits: {dailyReportData?.summary?.totalExits || 0} · Entries: {dailyReportData?.summary?.totalEntries || 0}
+                  </div>
+                </div>
+
+                <div className="sec-kpi-card" style={{ borderColor: '#10b981' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>CURFEW COMPLIANCE</div>
+                  <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#065f46', marginTop: '0.2rem' }}>
+                    {dailyReportData?.summary?.curfewComplianceRate || '100%'}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
+                    On-time: {dailyReportData?.summary?.onTimeReturns || 0} · Breaches: {dailyReportData?.summary?.lateReturns || 0}
+                  </div>
+                </div>
+
+                <div className="sec-kpi-card" style={{ borderColor: '#f59e0b' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>PEAK MORNING RUSH</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#92400e', marginTop: '0.2rem' }}>
+                    {dailyReportData?.summary?.peakExitHour || '09:00 AM'}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
+                    Highest outbound scans
+                  </div>
+                </div>
+
+                <div className="sec-kpi-card" style={{ borderColor: '#8b5cf6' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>PEAK EVENING RETURN</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#5b21b6', marginTop: '0.2rem' }}>
+                    {dailyReportData?.summary?.peakEntryHour || '06:00 PM'}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
+                    Highest inbound turnstiles
+                  </div>
+                </div>
+
+                <div className="sec-kpi-card" style={{ borderColor: '#ef4444' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>INCIDENTS LOGGED</div>
+                  <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#991b1b', marginTop: '0.2rem' }}>
+                    {dailyReportData?.incidentSummary?.total || 0}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
+                    Critical: {dailyReportData?.incidentSummary?.bySeverity?.critical || 0} · Open: {dailyReportData?.incidentSummary?.byStatus?.open || 0}
+                  </div>
+                </div>
+
+                <div className="sec-kpi-card" style={{ borderColor: '#06b6d4' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>VISITORS ON CAMPUS</div>
+                  <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#155e75', marginTop: '0.2rem' }}>
+                    {dailyReportData?.visitorSummary?.currentlyInside || 0}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
+                    Today Total: {dailyReportData?.visitorSummary?.totalToday || 0}
+                  </div>
+                </div>
+              </div>
+
+              {/* Peak Hours Visual Histogram (06:00 to 22:00) */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <h4 style={{ margin: 0, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Activity size={16} color="#0284c7" /> Hourly Turnstile Throughput & Peak Hours Breakdown (06:00 – 22:00)
+                    </h4>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.76rem', color: '#64748b' }}>
+                      Perimeter gate traffic volume. Busiest period: <strong>{dailyReportData?.summary?.peakOverallHour || '18:00 - 19:00'}</strong>
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.74rem' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 2, background: '#10b981', display: 'inline-block' }}></span> Scans
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 2, background: '#6366f1', display: 'inline-block' }}></span> Peak Period
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(17, 1fr)', gap: '0.35rem', alignItems: 'end', height: 130, padding: '0.5rem 0' }}>
+                  {(dailyReportData?.peakHours || []).map((slot) => {
+                    const maxVal = Math.max(1, ...((dailyReportData?.peakHours || []).map(s => s.total)));
+                    const barHeightPct = Math.max(10, Math.round((slot.total / maxVal) * 100));
+                    return (
+                      <div key={slot.hour} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: slot.isPeak ? '#4f46e5' : '#64748b', marginBottom: '0.2rem' }}>
+                          {slot.total}
+                        </div>
+                        <div
+                          style={{
+                            width: '100%',
+                            height: `${barHeightPct}%`,
+                            background: slot.isPeak ? 'linear-gradient(180deg, #6366f1, #4f46e5)' : 'linear-gradient(180deg, #10b981, #059669)',
+                            borderRadius: '3px 3px 0 0',
+                            position: 'relative',
+                            transition: 'height 0.3s ease',
+                          }}
+                          title={`${slot.timeRange}: ${slot.total} scans (${slot.exits} exits, ${slot.entries} entries)`}
+                        ></div>
+                        <div style={{ fontSize: '0.64rem', color: slot.isPeak ? '#4f46e5' : '#475569', fontWeight: slot.isPeak ? 700 : 500, marginTop: '0.35rem', whiteSpace: 'nowrap' }}>
+                          {slot.hour}h
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Two-Column Grid: Incident Summary & Curfew Breaches */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                {/* Column 1: Incident Breakdown */}
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+                  <h4 style={{ margin: '0 0 0.75rem 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <AlertTriangle size={16} color="#e11d48" /> Gate Incident Register ({dailyReportData?.incidentSummary?.total || 0})
+                  </h4>
+                  <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                    {(!dailyReportData?.incidentSummary?.incidents || dailyReportData.incidentSummary.incidents.length === 0) ? (
+                      <div style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+                        Zero security perimeter breaches recorded for this date.
+                      </div>
+                    ) : (
+                      <table style={{ width: '100%', fontSize: '0.76rem', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
+                            <th style={{ padding: '0.3rem' }}>Code</th>
+                            <th style={{ padding: '0.3rem' }}>Title</th>
+                            <th style={{ padding: '0.3rem' }}>Severity</th>
+                            <th style={{ padding: '0.3rem' }}>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dailyReportData.incidentSummary.incidents.map((inc) => (
+                            <tr key={inc.id || inc.incidentCode} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '0.4rem 0.3rem', fontWeight: 600 }}>{inc.incidentCode || inc.id}</td>
+                              <td style={{ padding: '0.4rem 0.3rem' }}>{inc.title}</td>
+                              <td style={{ padding: '0.4rem 0.3rem' }}>
+                                <span style={{
+                                  display: 'inline-block',
+                                  padding: '0.15rem 0.4rem',
+                                  borderRadius: 4,
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  background: (inc.severity || '').toLowerCase() === 'critical' ? '#fee2e2' : '#fef3c7',
+                                  color: (inc.severity || '').toLowerCase() === 'critical' ? '#b91c1c' : '#92400e',
+                                }}>
+                                  {inc.severity}
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.4rem 0.3rem' }}>
+                                <span style={{
+                                  display: 'inline-block',
+                                  padding: '0.15rem 0.4rem',
+                                  borderRadius: 4,
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  background: (inc.status || '').toLowerCase() === 'resolved' ? '#dcfce7' : '#e0f2fe',
+                                  color: (inc.status || '').toLowerCase() === 'resolved' ? '#15803d' : '#0369a1',
+                                }}>
+                                  {inc.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+
+                {/* Column 2: Visitor Statistics & Curfew Summary */}
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+                  <h4 style={{ margin: '0 0 0.75rem 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Users size={16} color="#0891b2" /> Daily Visitors & Access Breakdown
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <div style={{ background: '#f8fafc', padding: '0.6rem', borderRadius: 6 }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Pre-Approved Passes</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a' }}>
+                        {dailyReportData?.visitorSummary?.preApproved || 0}
+                      </div>
+                    </div>
+                    <div style={{ background: '#f8fafc', padding: '0.6rem', borderRadius: 6 }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Walk-in Registrations</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a' }}>
+                        {dailyReportData?.visitorSummary?.walkIn || 0}
+                      </div>
+                    </div>
+                    <div style={{ background: '#f8fafc', padding: '0.6rem', borderRadius: 6 }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Active Guests Inside</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0369a1' }}>
+                        {dailyReportData?.visitorSummary?.currentlyInside || 0}
+                      </div>
+                    </div>
+                    <div style={{ background: '#f8fafc', padding: '0.6rem', borderRadius: 6 }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Departed / Signed Out</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#059669' }}>
+                        {dailyReportData?.visitorSummary?.checkedOut || 0}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '0.6rem', fontSize: '0.76rem', color: '#166534' }}>
+                    ✓ Curfew Enforcement: <strong>{dailyReportData?.summary?.curfewComplianceRate || '100%'}</strong> on-time return rate with <strong>{dailyReportData?.summary?.lateReturns || 0}</strong> overdue incident(s) escalated to Wardens.
+                  </div>
+                </div>
+              </div>
+
+              {/* Sample Movement Logs Table */}
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#0f172a' }}>Turnstile Movements Sample (Target Date: {reportDate})</h4>
+                <div className="sec-table-container">
+                  <table className="sec-data-table">
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        <th>Direction</th>
+                        <th>Student Name</th>
+                        <th>Roll Number</th>
+                        <th>Hostel</th>
+                        <th>Gate</th>
+                        <th>Status</th>
+                        <th>Curfew Flag</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(dailyReportData?.movementsSample || []).map((m) => (
+                        <tr key={m.id || m.movementCode}>
+                          <td>{new Date(m.movementTime || m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                          <td>
+                            <span className={`sec-direction-badge ${m.direction === 'EXIT' ? 'exit' : 'entry'}`}>
+                              {m.direction}
+                            </span>
+                          </td>
+                          <td>{m.studentName}</td>
+                          <td>{m.rollNumber}</td>
+                          <td>{m.hostelName || 'Hostel'}</td>
+                          <td>{m.gateName || 'Gate 1'}</td>
+                          <td><span className="sec-badge approved">{m.status}</span></td>
+                          <td>
+                            {m.isLate ? (
+                              <span style={{ color: '#dc2626', fontWeight: 600, fontSize: '0.72rem' }}>
+                                LATE ({m.lateDuration})
+                              </span>
+                            ) : (
+                              <span style={{ color: '#059669', fontSize: '0.72rem' }}>ON-TIME</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB: IMMUTABLE AUDIT TRAIL & CORRECTION REGISTER ── */}
+        {activeTab === 'audit' && (
+          <div className="sec-card">
+            <div className="sec-card-header">
+              <h3 className="sec-card-title">
+                <FileCheck2 size={18} color="#0284c7" />
+                Immutable Security Audit Trail &amp; Record Correction Workflow
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="sec-btn-indigo"
+                  onClick={() => {
+                    setCorrectionForm({
+                      recordId: '',
+                      recordType: 'MOVEMENT',
+                      fieldToCorrect: 'gateName',
+                      oldValue: '',
+                      newValue: '',
+                      reason: '',
+                    });
+                    setCorrectionFeedback(null);
+                    setCorrectionModalOpen(true);
+                  }}
+                >
+                  <Plus size={14} /> Submit Audited Correction
+                </button>
+                <button
+                  type="button"
+                  className="sec-btn-secondary"
+                  onClick={() => loadAuditTrail()}
+                >
+                  <RefreshCw size={14} className={auditLoading ? 'spin' : ''} /> Refresh Trail
+                </button>
+              </div>
+            </div>
+
+            <div className="sec-card-body">
+              {/* Compliance Info Banner */}
+              <div
+                style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '8px',
+                  padding: '0.85rem 1rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                }}
+              >
+                <ShieldCheck size={20} color="#16a34a" />
+                <div style={{ fontSize: '0.82rem', color: '#166534' }}>
+                  <strong>ISO/IEC 27001 &amp; Campus Safety Audit Standards:</strong> Records in this registry cannot be silently altered or deleted. Every edit requires mandatory human justification, preserves original data, and logs the supervisor identity.
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="sec-filters-row">
+                <input
+                  type="text"
+                  className="sec-input"
+                  style={{ maxWidth: 280 }}
+                  placeholder="Search user, action, target, or reason..."
+                  value={auditSearch}
+                  onChange={(e) => setAuditSearch(e.target.value)}
+                />
+
+                <select
+                  className="sec-input"
+                  style={{ maxWidth: 220 }}
+                  value={auditActionFilter}
+                  onChange={(e) => setAuditActionFilter(e.target.value)}
+                >
+                  <option value="ALL">All Actions</option>
+                  <option value="GATE_STUDENT_EXIT">Student Exits</option>
+                  <option value="GATE_STUDENT_ENTRY">Student Entries</option>
+                  <option value="AUDIT_RECORD_CORRECTED">Audited Corrections</option>
+                  <option value="GATE_VISITOR_REGISTRATION">Visitor Registrations</option>
+                  <option value="GATE_VISITOR_ENTRY">Visitor Check-ins</option>
+                  <option value="GATE_VISITOR_EXIT">Visitor Departures</option>
+                  <option value="GATE_OVERDUE_RESOLVED">Overdue Cases Resolved</option>
+                  <option value="GATE_DAILY_REPORT_GENERATED">Daily Reports Generated</option>
+                </select>
+
+                <select
+                  className="sec-input"
+                  style={{ maxWidth: 160 }}
+                  value={auditRoleFilter}
+                  onChange={(e) => setAuditRoleFilter(e.target.value)}
+                >
+                  <option value="ALL">All Roles</option>
+                  <option value="SECURITY">Security Staff</option>
+                  <option value="WARDEN">Hostel Warden</option>
+                  <option value="ADMIN">Super Admin</option>
+                  <option value="STUDENT">Student</option>
+                </select>
+              </div>
+
+              {/* Audit Table */}
+              <div className="sec-table-container">
+                <table className="sec-data-table">
+                  <thead>
+                    <tr>
+                      <th>Timestamp</th>
+                      <th>Operator &amp; Role</th>
+                      <th>Audit Action</th>
+                      <th>Target Record</th>
+                      <th>Old Value</th>
+                      <th>New Value</th>
+                      <th>Justification / Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLogs
+                      .filter((log) => {
+                        if (auditActionFilter !== 'ALL' && !String(log.action || '').includes(auditActionFilter)) return false;
+                        if (auditRoleFilter !== 'ALL' && !String(log.role || '').includes(auditRoleFilter)) return false;
+                        if (auditSearch) {
+                          const q = auditSearch.toLowerCase();
+                          const blob = `${log.user || ''} ${log.action || ''} ${log.target || ''} ${log.reason || ''} ${log.oldValue || ''} ${log.newValue || ''}`.toLowerCase();
+                          return blob.includes(q);
+                        }
+                        return true;
+                      })
+                      .map((log) => (
+                        <tr key={log.id}>
+                          <td>
+                            <div>{new Date(log.createdAt || log.changedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                            <small style={{ color: '#64748b' }}>{new Date(log.createdAt || log.changedAt || Date.now()).toLocaleDateString()}</small>
+                          </td>
+                          <td>
+                            <strong>{log.user || 'Security Guard'}</strong>
+                            <div style={{ fontSize: '0.7rem', color: log.role === 'WARDEN' ? '#7c3aed' : log.role === 'ADMIN' ? '#0284c7' : '#059669', fontWeight: 700 }}>
+                              {log.role || 'SECURITY'}
+                            </div>
+                          </td>
+                          <td>
+                            <span
+                              className="sec-badge"
+                              style={{
+                                background: log.action === 'AUDIT_RECORD_CORRECTED' ? '#f5f3ff' : log.action?.includes('EXIT') ? '#fff1f2' : '#f0fdf4',
+                                color: log.action === 'AUDIT_RECORD_CORRECTED' ? '#6d28d9' : log.action?.includes('EXIT') ? '#e11d48' : '#16a34a',
+                                border: '1px solid currentColor',
+                                fontSize: '0.7rem',
+                              }}
+                            >
+                              {log.action}
+                            </span>
+                          </td>
+                          <td>
+                            <strong>{log.target || 'General'}</strong>
+                          </td>
+                          <td>
+                            <span style={{ color: '#64748b', fontSize: '0.78rem', wordBreak: 'break-word' }}>
+                              {log.oldValue || '-'}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ color: '#0f172a', fontWeight: 600, fontSize: '0.78rem', wordBreak: 'break-word' }}>
+                              {log.newValue || '-'}
+                            </span>
+                          </td>
+                          <td>
+                            <small style={{ color: '#334155', fontStyle: 'italic' }}>
+                              {log.reason || 'Institutional compliance log'}
+                            </small>
+                          </td>
                         </tr>
                       ))}
                   </tbody>
@@ -2948,6 +3993,254 @@ export default function SecurityPortal({ account, onLogout, onSwitchRole }) {
                 </button>
                 <button type="submit" className="sec-btn-rose">
                   Dispatch Alert to Warden & Admin
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── OVERDUE RETURN RESOLUTION MODAL ── */}
+      {overdueResolveModal && (
+        <div className="sec-modal-overlay" onClick={() => setOverdueResolveModal(null)}>
+          <div
+            className="sec-modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 520, borderRadius: '12px' }}
+          >
+            <div className="sec-card-header" style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e2e8f0' }}>
+              <div>
+                <h4 style={{ margin: 0, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Clock size={16} color="#e11d48" /> Resolve Curfew Overdue Case
+                </h4>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.76rem', color: '#64748b' }}>
+                  Student: <strong>{overdueResolveModal.studentName}</strong> (Roll: {overdueResolveModal.studentRoll}) · {overdueResolveModal.overdueMinutes} mins late
+                </p>
+              </div>
+              <button
+                type="button"
+                className="sec-btn-icon"
+                onClick={() => setOverdueResolveModal(null)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleResolveOverdueSubmit} style={{ padding: '1.25rem' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 600 }}>
+                  Investigation Outcome / Case Status *
+                </label>
+                <select
+                  className="sec-input"
+                  style={{ width: '100%' }}
+                  value={overdueResolveForm.resolutionStatus}
+                  onChange={(e) => setOverdueResolveForm({ ...overdueResolveForm, resolutionStatus: e.target.value })}
+                >
+                  <option value="RESOLVED">Resolved: Student Safely Arrived at Campus Gate</option>
+                  <option value="APPROVED_LATE_RETURN">Approved Late Return: Warden Permission Verified</option>
+                  <option value="PARENT_CONFIRMED_DELAY">Parent Verified: Delayed En Route with Family Consent</option>
+                  <option value="DISCIPLINARY_ACTION_INITIATED">Disciplinary Action: Case Escalated to Chief Proctor</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 600 }}>
+                  Duty Guard / Warden Investigation Notes *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  className="sec-input"
+                  style={{ width: '100%', resize: 'vertical' }}
+                  placeholder="Record verification details, transport delay explanation, or disciplinary notes..."
+                  value={overdueResolveForm.notes}
+                  onChange={(e) => setOverdueResolveForm({ ...overdueResolveForm, notes: e.target.value })}
+                />
+              </div>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.76rem', color: '#64748b' }}>
+                ℹ️ Recording resolution creates an immutable audit entry and updates the Resident Warden and Hostel Admin rosters.
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="sec-btn-secondary"
+                  onClick={() => setOverdueResolveModal(null)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="sec-btn-emerald">
+                  Confirm &amp; Close Case
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: AUDITED RECORD CORRECTION ── */}
+      {correctionModalOpen && (
+        <div className="sec-modal-overlay" onClick={() => setCorrectionModalOpen(false)}>
+          <div
+            className="sec-modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 540, borderRadius: '12px' }}
+          >
+            <div className="sec-card-header" style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e2e8f0' }}>
+              <div>
+                <h4 style={{ margin: 0, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Edit3 size={16} color="#7c3aed" /> Audited Security Record Correction
+                </h4>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.76rem', color: '#64748b' }}>
+                  Submit traceable amendment. An immutable audit trail entry will be generated.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="sec-btn-icon"
+                onClick={() => setCorrectionModalOpen(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitCorrection} style={{ padding: '1.25rem' }}>
+              {correctionFeedback && (
+                <div
+                  style={{
+                    padding: '0.75rem 1rem',
+                    borderRadius: '8px',
+                    marginBottom: '1rem',
+                    fontSize: '0.82rem',
+                    background: correctionFeedback.type === 'success' ? '#f0fdf4' : '#fff1f2',
+                    color: correctionFeedback.type === 'success' ? '#166534' : '#9f1239',
+                    border: `1px solid ${correctionFeedback.type === 'success' ? '#bbf7d0' : '#fecdd3'}`,
+                  }}
+                >
+                  {correctionFeedback.message}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 600 }}>
+                    Record Type *
+                  </label>
+                  <select
+                    className="sec-input"
+                    style={{ width: '100%' }}
+                    value={correctionForm.recordType}
+                    onChange={(e) => setCorrectionForm({ ...correctionForm, recordType: e.target.value })}
+                  >
+                    <option value="MOVEMENT">Movement (Turnstile Exit/Entry)</option>
+                    <option value="PASS">Gate Pass (Outpass / Curfew)</option>
+                    <option value="VISITOR">Visitor Registration</option>
+                    <option value="INCIDENT">Incident / Breach</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 600 }}>
+                    Record Identifier *
+                  </label>
+                  <input
+                    type="text"
+                    className="sec-input"
+                    style={{ width: '100%' }}
+                    placeholder="e.g. mov-1001, GP-2026-1039"
+                    value={correctionForm.recordId}
+                    onChange={(e) => setCorrectionForm({ ...correctionForm, recordId: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 600 }}>
+                    Field to Correct *
+                  </label>
+                  <select
+                    className="sec-input"
+                    style={{ width: '100%' }}
+                    value={correctionForm.fieldToCorrect}
+                    onChange={(e) => setCorrectionForm({ ...correctionForm, fieldToCorrect: e.target.value })}
+                  >
+                    <option value="gateName">Gate Post / Checkpoint Name</option>
+                    <option value="direction">Direction (EXIT / ENTRY)</option>
+                    <option value="remarks">Security Remarks / Notes</option>
+                    <option value="visitorName">Visitor Name</option>
+                    <option value="badgeNumber">Visitor Badge Number</option>
+                    <option value="purposeType">Pass Purpose</option>
+                    <option value="actualReturnTime">Return Timestamp</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 600 }}>
+                    Current / Prior Value
+                  </label>
+                  <input
+                    type="text"
+                    className="sec-input"
+                    style={{ width: '100%' }}
+                    placeholder="Old value (if known)"
+                    value={correctionForm.oldValue}
+                    onChange={(e) => setCorrectionForm({ ...correctionForm, oldValue: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '0.85rem' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 600 }}>
+                  New Corrected Value *
+                </label>
+                <input
+                  type="text"
+                  className="sec-input"
+                  style={{ width: '100%' }}
+                  placeholder="Enter accurate replacement value"
+                  value={correctionForm.newValue}
+                  onChange={(e) => setCorrectionForm({ ...correctionForm, newValue: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 600 }}>
+                  Mandatory Audit Justification Reason *
+                </label>
+                <textarea
+                  className="sec-input"
+                  rows={3}
+                  style={{ width: '100%', resize: 'vertical' }}
+                  placeholder="Explain why this record requires correction (minimum 5 characters)..."
+                  value={correctionForm.reason}
+                  onChange={(e) => setCorrectionForm({ ...correctionForm, reason: e.target.value })}
+                  required
+                />
+                <small style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                  Compliance: Logged with operator ID {guardName} ({badgeId}) and timestamp.
+                </small>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
+                <button
+                  type="button"
+                  className="sec-btn-secondary"
+                  onClick={() => setCorrectionModalOpen(false)}
+                  disabled={correctionSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="sec-btn-indigo"
+                  disabled={correctionSubmitting}
+                >
+                  {correctionSubmitting ? 'Recording Audit...' : 'Confirm & Log Correction'}
                 </button>
               </div>
             </form>

@@ -1,5 +1,6 @@
 import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -20,9 +21,18 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
           path.includes('/complexes') ||
           path.includes('/permissions') ||
           path.includes('/admin') ||
-          path.includes('/rules')
+          path.includes('/rules') ||
+          path.includes('/rooms') ||
+          path.includes('/floors') ||
+          path.includes('/beds')
         ) {
           demoRole = 'admin';
+        } else if (
+          path.includes('/security') ||
+          path.includes('/movement') ||
+          path.includes('/checkpoint')
+        ) {
+          demoRole = Role.SECURITY;
         } else if (
           path.includes('/attendance') ||
           path.includes('/roster') ||
@@ -38,11 +48,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         }
       }
       const isAdm = demoRole === 'admissions' || demoRole === 'admission';
+      const isSec = demoRole === 'security' || demoRole === Role.SECURITY;
       return {
-        id: isAdm ? 'ADM-OFF-01' : (demoRole === 'student' ? 'usr-student-01' : (demoRole === 'hostel' ? 'WRD-101' : 'usr-admin-01')),
-        role: demoRole,
-        name: isAdm ? 'Ms. Sasmita Mohapatra' : (demoRole === 'student' ? 'Rakesh Das' : (demoRole === 'hostel' ? 'Mr. Rajesh Jena' : 'Institutional Administrator')),
-        identifier: isAdm ? 'ADM-OFF-01' : (demoRole === 'student' ? '01' : 'WRD-101'),
+        id: isAdm ? 'ADM-OFF-01' : (isSec ? 'SEC-101' : (demoRole === 'student' ? 'usr-student-01' : (demoRole === 'hostel' ? 'WRD-101' : 'usr-admin-01'))),
+        role: isSec ? Role.SECURITY : demoRole,
+        name: isAdm ? 'Ms. Sasmita Mohapatra' : (isSec ? 'Dillip Kumar Pradhan' : (demoRole === 'student' ? 'Rakesh Das' : (demoRole === 'hostel' ? 'Mr. Rajesh Jena' : 'Institutional Administrator'))),
+        identifier: isAdm ? 'ADM-OFF-01' : (isSec ? 'SEC-101' : (demoRole === 'student' ? '01' : 'WRD-101')),
         student: {
           id: 'std-01',
           name: 'Rakesh Das',

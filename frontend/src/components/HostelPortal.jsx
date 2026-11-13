@@ -10,6 +10,7 @@ import {
   Clock,
   Layers,
   FileText,
+  FileDown,
   LogOut,
   Search,
   Plus,
@@ -165,7 +166,16 @@ export default function HostelPortal({ account, onLogout }) {
   }, [isHostelAdmin, activeTab]);
   const [hostels, setHostels] = useState(initialHostels);
   const [rooms, setRooms] = useState(initialHostelRooms);
-  const [complaints, setComplaints] = useState(initialHostelComplaints);
+  const [complaints, setComplaints] = useState(() => {
+    try {
+      const raw = localStorage.getItem('bput_hostel_complaints_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialHostelComplaints;
+  });
   const [visitors, setVisitors] = useState(initialHostelVisitors);
   const [students] = useState(() => getAllStudents());
 
@@ -408,9 +418,15 @@ export default function HostelPortal({ account, onLogout }) {
     });
   }, [gatePasses, gatePassStatusFilter, gatePassHostelFilter, gatePassSearch]);
 
-  const handleApproveGatePass = (passId) => {
+  const handleApproveGatePass = async (passId) => {
     const wardenName = account?.name ? `${account.name} (Resident Warden)` : 'Mr. Rajesh Jena (Resident Warden)';
-    const approved = approveGatePass(passId, wardenName, wardenReviewRemarks || 'Application and mentor verification reviewed. Outstation gate pass granted.');
+    const remarks = wardenReviewRemarks || 'Application and mentor verification reviewed. Outstation gate pass granted.';
+    const approved = approveGatePass(passId, wardenName, remarks);
+    try {
+      await api.approveStudentMovementRequest(passId, remarks);
+    } catch (e) {
+      console.warn('Backend movement pass approve sync:', e);
+    }
     setGatePasses(getAllGatePasses());
     if (selectedGatePassModal && selectedGatePassModal.id === passId) {
       setSelectedGatePassModal(approved);
@@ -418,9 +434,15 @@ export default function HostelPortal({ account, onLogout }) {
     showToast(`✓ Gate Pass ${passId} Approved! Status updated automatically for student.`);
   };
 
-  const handleRejectGatePass = (passId) => {
+  const handleRejectGatePass = async (passId) => {
     const wardenName = account?.name ? `${account.name} (Resident Warden)` : 'Mr. Rajesh Jena (Resident Warden)';
-    const rejected = rejectGatePass(passId, wardenName, wardenReviewRemarks || 'Application rejected.');
+    const remarks = wardenReviewRemarks || 'Application rejected.';
+    const rejected = rejectGatePass(passId, wardenName, remarks);
+    try {
+      await api.rejectStudentMovementRequest(passId, remarks);
+    } catch (e) {
+      console.warn('Backend movement pass reject sync:', e);
+    }
     setGatePasses(getAllGatePasses());
     if (selectedGatePassModal && selectedGatePassModal.id === passId) {
       setSelectedGatePassModal(rejected);
@@ -465,7 +487,90 @@ export default function HostelPortal({ account, onLogout }) {
   useEffect(() => {
     refreshComplaints();
     api.checkComplaintEscalations().catch(() => { });
+
+    const handleComplaintsSync = () => {
+      try {
+        const raw = localStorage.getItem('bput_hostel_complaints_v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setComplaints(parsed);
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener('bput_hostel_complaints_updated', handleComplaintsSync);
+    window.addEventListener('bput_complaint_created', handleComplaintsSync);
+    window.addEventListener('storage', handleComplaintsSync);
+    return () => {
+      window.removeEventListener('bput_hostel_complaints_updated', handleComplaintsSync);
+      window.removeEventListener('bput_complaint_created', handleComplaintsSync);
+      window.removeEventListener('storage', handleComplaintsSync);
+    };
   }, []);
+
+  const handleWardenApproveComplaint = (complaint) => {
+    const category = (complaint.category || '').toLowerCase();
+    let staffName = 'Mr. Suresh Mahapatra';
+    let staffRole = 'Plumber & Water Works';
+    let staffPhone = '+91 94379 11231';
+    if (category.includes('elect')) {
+      staffName = 'Mr. Pramod Panda';
+      staffRole = 'Electrician & Power Maintenance';
+      staffPhone = '+91 94370 99000';
+    } else if (category.includes('civil') || category.includes('carp')) {
+      staffName = 'Mr. Manoj Kumar Barik';
+      staffRole = 'Carpentry & Metal Works';
+      staffPhone = '+91 94379 77210';
+    } else if (category.includes('clean')) {
+      staffName = 'Mr. Bipin Sethi';
+      staffRole = 'Housekeeping Lead';
+      staffPhone = '+91 94370 44556';
+    }
+
+    const wardenName = account?.name || 'Mrs. Nibedita Das';
+    const note = `Approved by Resident Warden ${wardenName}. Assigned to ${staffName} (${staffRole}). 72h SLA active.`;
+    const timestamp = new Date().toISOString();
+
+    const updatedComplaints = complaints.map(item => {
+      if (item.id === complaint.id) {
+        return {
+          ...item,
+          status: 'Assigned',
+          assignedStaffName: staffName,
+          assignedStaffRole: staffRole,
+          assignedStaffPhone: staffPhone,
+          assignedWardenName: wardenName,
+          resolutionNotes: note,
+          statusHistory: [
+            ...(item.statusHistory || []),
+            {
+              id: `hist-${Date.now()}`,
+              status: 'Assigned',
+              changedBy: wardenName,
+              role: isHostelAdmin ? 'ADMIN' : 'WARDEN',
+              timestamp,
+              note
+            }
+          ]
+        };
+      }
+      return item;
+    });
+
+    setComplaints(updatedComplaints);
+    try {
+      localStorage.setItem('bput_hostel_complaints_v1', JSON.stringify(updatedComplaints));
+      window.dispatchEvent(new CustomEvent('bput_hostel_complaints_updated', { detail: updatedComplaints }));
+      window.dispatchEvent(new Event('storage'));
+    } catch {}
+
+    try {
+      api.updateComplaintStatus(complaint.id, 'Assigned', staffName, note).catch(() => {});
+    } catch {}
+
+    showToast(`✓ Complaint #${complaint.id} APPROVED by Warden & assigned to ${staffName}!`);
+  };
 
   const getComplaintDeadlineInfo = (c) => {
     if (c.status === 'Resolved') {
@@ -3084,8 +3189,20 @@ export default function HostelPortal({ account, onLogout }) {
                           </td>
                           <td style={{ textAlign: 'right' }}>
                             <div style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                              {/* Warden Approval button for pending / submitted complaints */}
+                              {(c.status === 'Submitted' || c.status === 'Pending' || c.status === 'Pending Warden Approval') && (
+                                <button
+                                  className="admin-action-btn-primary"
+                                  style={{ padding: '0.25rem 0.65rem', fontSize: '0.74rem', background: '#4f46e5', borderColor: '#4f46e5', fontWeight: 700 }}
+                                  onClick={() => handleWardenApproveComplaint(c)}
+                                  title="Approve complaint and assign technician"
+                                >
+                                  <CheckCircle2 size={12} /> Approve &amp; Assign
+                                </button>
+                              )}
+
                               {/* Mark Work as Completed button for active complaints */}
-                              {(c.status === 'In Progress' || c.status === 'Assigned' || c.status === 'Submitted' || c.status === 'Reopened') && (
+                              {(c.status === 'In Progress' || c.status === 'Assigned' || c.status === 'Reopened') && (
                                 <button
                                   className="admin-action-btn-primary"
                                   style={{ padding: '0.25rem 0.55rem', fontSize: '0.73rem', background: '#059669', borderColor: '#059669' }}
@@ -3260,6 +3377,41 @@ export default function HostelPortal({ account, onLogout }) {
                     Review student leave requests verified by academic mentors. Approve digital passes, record physical departures, and log campus returns.
                   </p>
                 </div>
+                <button
+                  className="admin-action-btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem' }}
+                  onClick={async () => {
+                    try {
+                      const res = await api.getDailySecurityReport();
+                      if (res && res.success) {
+                        const rows = [
+                          { Metric: 'Report Date', Value: res.reportDate },
+                          { Metric: 'Total Gate Movements', Value: res.summary.totalMovements },
+                          { Metric: 'Curfew Compliance Rate', Value: res.summary.curfewComplianceRate },
+                          { Metric: 'Late Curfew Violations', Value: res.summary.lateReturns },
+                          { Metric: 'Peak Outbound Rush', Value: res.summary.peakExitHour },
+                          { Metric: 'Peak Inbound Return', Value: res.summary.peakEntryHour },
+                          { Metric: 'Security Incidents', Value: res.incidentSummary.total },
+                          { Metric: 'Visitors On Campus', Value: res.visitorSummary.currentlyInside },
+                        ];
+                        const csvContent = 'Metric,Value\n' + rows.map(r => `"${r.Metric}","${r.Value}"`).join('\n');
+                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `Warden_Daily_Gate_Security_Report_${res.reportDate}.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        showToast('Daily Gate Security Report exported.');
+                      }
+                    } catch (e) {
+                      showToast('Failed to export daily gate report.');
+                    }
+                  }}
+                >
+                  <FileDown size={14} /> Export Daily Gate Report (CSV)
+                </button>
               </div>
 
               {/* Stats row */}

@@ -632,13 +632,6 @@ export default function StudentFoodFeedbackSection({ account }) {
         >
           <AlertTriangle size={15} /> Food Complaints &amp; Grievances ({studentComplaints.length})
         </button>
-        <button
-          type="button"
-          className={`hostel-tab-pill ${activeMainTab === 'notices' ? 'active' : ''}`}
-          onClick={() => setActiveMainTab('notices')}
-        >
-          <Bell size={15} /> Mess Notices &amp; Circulars ({studentNotices.length})
-        </button>
       </div>
 
       {/* TAB 1: DAILY FOOD MENU */}

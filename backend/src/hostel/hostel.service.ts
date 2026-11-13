@@ -462,6 +462,72 @@ export class HostelService {
     return { success: true, deleted: query };
   }
 
+  async addHostelBed(data: { hostelName?: string; roomNumber?: string; bedNumber?: string; capacity?: number }) {
+    const rawNo = data.roomNumber ? String(data.roomNumber).replace(/^room\s*/i, '').trim() : '101';
+    const hostelName = data.hostelName || 'Gandhi Boys Residence';
+
+    // 1. Prisma update
+    try {
+      const existing = await this.prisma.hostelRoom.findFirst({
+        where: {
+          roomNumber: rawNo,
+          hostelName: { contains: hostelName, mode: 'insensitive' },
+        },
+      });
+      if (existing) {
+        await this.prisma.hostelRoom.update({
+          where: { id: existing.id },
+          data: { capacity: existing.capacity + 1 },
+        });
+      }
+    } catch (err: any) {
+      this.logger.warn(`Prisma addHostelBed fallback: ${err.message}`);
+    }
+
+    // 2. In-memory update
+    const room = this.inMemoryRooms.find(
+      (r) => r.roomNumber === rawNo && (r.hostelName && r.hostelName.toLowerCase().includes(hostelName.toLowerCase()))
+    );
+    if (room) {
+      room.capacity = (room.capacity || 4) + 1;
+    }
+
+    return { success: true, hostelName, roomNumber: rawNo, bedNumber: data.bedNumber, newCapacity: room ? room.capacity : undefined };
+  }
+
+  async deleteHostelBed(query: { hostelName?: string; roomNumber?: string; bedNumber?: string }) {
+    const rawNo = query.roomNumber ? String(query.roomNumber).replace(/^room\s*/i, '').trim() : '101';
+    const hostelName = query.hostelName || 'Gandhi Boys Residence';
+
+    // 1. Prisma update
+    try {
+      const existing = await this.prisma.hostelRoom.findFirst({
+        where: {
+          roomNumber: rawNo,
+          hostelName: { contains: hostelName, mode: 'insensitive' },
+        },
+      });
+      if (existing) {
+        await this.prisma.hostelRoom.update({
+          where: { id: existing.id },
+          data: { capacity: Math.max(1, existing.capacity - 1) },
+        });
+      }
+    } catch (err: any) {
+      this.logger.warn(`Prisma deleteHostelBed fallback: ${err.message}`);
+    }
+
+    // 2. In-memory update
+    const room = this.inMemoryRooms.find(
+      (r) => r.roomNumber === rawNo && (r.hostelName && r.hostelName.toLowerCase().includes(hostelName.toLowerCase()))
+    );
+    if (room) {
+      room.capacity = Math.max(1, (room.capacity || 4) - 1);
+    }
+
+    return { success: true, hostelName, roomNumber: rawNo, bedNumber: query.bedNumber, newCapacity: room ? room.capacity : undefined };
+  }
+
   async addHostelFloor(data: any) {
     const hostelName = data.hostelName || 'Gandhi Boys Residence';
     const floor = data.floor || data.floorName || 'Floor 3';

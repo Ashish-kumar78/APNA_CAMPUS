@@ -33,7 +33,6 @@ import {
   BarChart2,
   Heart,
   Fingerprint,
-  Utensils,
   FileText,
   Sparkles,
   Megaphone,
@@ -145,7 +144,6 @@ const studentNavSections = [
     title: 'CAMPUS',
     items: [
       { label: 'Hostel Residence', icon: Building2, page: 'hostel' },
-      { label: 'Mess & Food Menu', icon: Utensils, page: 'food-feedback' },
       { label: 'Library', icon: LibraryBig, page: 'library' },
       { label: 'Self Development & Placement', icon: TrendingUp, page: 'placement' },
       { label: 'Internship', icon: Briefcase, page: 'internship' },
@@ -936,7 +934,7 @@ function StudentPortal({ account, onLogout }) {
                 )}
               {activePage === 'class-notes' && <ClassNotesPage account={studentAccount || account} />}
               {activePage === 'marks' && <MarksPage initialRole="student" account={studentAccount || account} />}
-              {activePage === 'hostel' && <StudentHostelPage defaultTab="gate-pass" account={studentAccount || account} />}
+              {activePage === 'hostel' && <StudentHostelPage defaultTab="room-maintenance" account={studentAccount || account} />}
               {activePage === 'gate-pass' && <StudentHostelPage defaultTab="gate-pass" account={studentAccount || account} />}
               {activePage === 'food-feedback' && <StudentHostelPage defaultTab="food-feedback" account={studentAccount || account} />}
               {activePage === 'cleanliness-complaints' && <StudentHostelPage defaultTab="cleanliness" account={studentAccount || account} />}
@@ -1537,7 +1535,21 @@ function StudentPortal({ account, onLogout }) {
       <UniversalDigitalIdModal
         isOpen={digitalIdOpen}
         onClose={() => setDigitalIdOpen(false)}
-        user={studentAccount}
+        user={useMemo(() => ({
+          ...studentAccount,
+          id: studentAccount?.id || studentAccount?.studentId || 'std-21010101',
+          name: studentAccount?.name || 'Sneha Mohanty',
+          role: 'STUDENT',
+          identityType: 'STUDENT',
+          rollNumber: studentAccount?.rollNumber || studentAccount?.registrationNumber || '21010101',
+          registrationNumber: studentAccount?.registrationNumber || studentAccount?.rollNumber || '21010101',
+          identifier: studentAccount?.registrationNumber || studentAccount?.rollNumber || studentAccount?.studentId || '21010101',
+          department: studentAccount?.department || studentAccount?.branch || 'Computer Science & Engineering',
+          designation: 'Undergraduate Scholar · B.Tech CSE',
+          avatar: studentPhoto || studentAccount?.avatar || studentAccount?.photo,
+          hostelName: studentAccount?.hostelName || 'Sarojini Girls Residence (Hostel 1)',
+          roomNumber: studentAccount?.roomNumber || 'Room 103',
+        }), [studentAccount, studentPhoto])}
       />
     </div>
   )

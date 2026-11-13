@@ -1968,8 +1968,10 @@ export default function RoleDashboardLanding({
                 border: 'none',
               }}
               onClick={() => setDigitalIdModalOpen(true)}
+              title="My Digital ID & 10s Dynamic Pass"
+              aria-label="Open My Digital ID & 10s Dynamic Pass"
             >
-              <QrCode size={15} /> My Digital ID & 10s Dynamic Pass
+              <QrCode size={15} /> My Digital ID & Dynamic Pass
             </button>
           </aside>
 
@@ -2084,7 +2086,7 @@ export default function RoleDashboardLanding({
         {/* ==========================================================
             D. DASHBOARD OVERVIEW: Dual Cards Grid (Overview + Notices)
             ========================================================== */}
-        {config.roleKey !== 'warden' && config.roleKey !== 'hostel_admin' && config.roleKey !== 'mess_manager' && !isMessRole && (
+        {config.roleKey !== 'warden' && config.roleKey !== 'hostel_admin' && config.roleKey !== 'mess_manager' && !isMessRole && config.roleKey !== 'security' && resolvedKey !== 'security' && (
           <div className="dash-grid-duo">
             {/* Left Card: Operational Summary Table */}
             <section className="dash-card" aria-label="Operational Summary">
@@ -2458,14 +2460,49 @@ export default function RoleDashboardLanding({
       <UniversalDigitalIdModal
         isOpen={digitalIdModalOpen}
         onClose={() => setDigitalIdModalOpen(false)}
-        user={{
-          id: officer.id || account?.id || 'emp-user',
-          name: officerDisplayName,
-          role: (resolvedKey || 'STAFF').toUpperCase(),
-          identityType: (resolvedKey || 'STAFF').toUpperCase(),
-          identifier: officer.id || account?.identity || 'SG-OD-4421',
-          department: officer.department || account?.department || 'Campus Security & Access Control',
-        }}
+        user={useMemo(() => {
+          const roleCode = (account?.role || resolvedKey || 'STAFF').toUpperCase();
+          const ident =
+            account?.employeeId ||
+            account?.identifier ||
+            account?.identity ||
+            account?.rollNumber ||
+            account?.registrationNumber ||
+            account?.id ||
+            officer?.id ||
+            officer?.employeeCode ||
+            'ID-001';
+          const displayName = account?.name || officerDisplayName || officer?.name || 'Campus Member';
+          const dept = account?.department || officer?.department || 'Administration';
+          const desig = account?.designation || officer?.designation || config?.roleTitle || roleCode;
+          const photo =
+            account?.avatar ||
+            account?.photo ||
+            (resolvedKey === 'mess_manager' ? messAvatar : resolvedKey === 'security' ? securityAvatar : officer?.photo);
+
+          return {
+            id: account?.id || officer?.id || `usr-${ident}`,
+            name: displayName,
+            role: roleCode,
+            identityType: roleCode,
+            identifier: ident,
+            department: dept,
+            designation: desig,
+            avatar: photo,
+            email: account?.email || officer?.email,
+            phone: account?.phone || officer?.phone,
+            hostelName: account?.hostelName || (roleCode === 'WARDEN' ? 'Sarojini Girls Residence' : undefined),
+            roomNumber: account?.roomNumber,
+          };
+        }, [
+          account,
+          officer,
+          resolvedKey,
+          config,
+          officerDisplayName,
+          messAvatar,
+          securityAvatar,
+        ])}
       />
     </div>
   );

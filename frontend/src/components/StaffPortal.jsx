@@ -78,6 +78,7 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
   const consumables = storeState.consumables;
   const maintenanceOrders = storeState.maintenanceOrders;
   const requisitions = storeState.requisitions;
+  const complaints = storeState.complaints || [];
   const safetyInspections = storeState.safetyInspections;
   const notifications = storeState.notifications;
   const issueReturn = storeState.issueReturn;
@@ -93,6 +94,7 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
   const unreadNotifs = notifications.filter(n => n.unread).length;
   const lowStockCount = consumables.filter(c => c.department === currentBranch && (c.status === 'Low Stock' || c.status === 'Critical / Out of Stock')).length;
   const openTicketsCount = maintenanceOrders.filter(m => m.department === currentBranch && (m.status === 'Open' || m.status === 'Assigned')).length;
+  const pendingComplaintsCount = complaints.filter(c => c.department === currentBranch && (c.status === 'Submitted' || c.status === 'Pending Admin Approval')).length;
   const pendingReqsCount = requisitions.filter(r => r.department === currentBranch && (r.status === 'Pending Approval' || r.status === 'Submitted')).length;
 
   const triggerToast = (msg) => {
@@ -173,6 +175,7 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
       collapsible: true,
       defaultCollapsed: true,
       items: [
+        { id: 'complaints', label: 'Equipment Complaints', icon: AlertTriangle, badge: pendingComplaintsCount > 0 ? pendingComplaintsCount : null, badgeType: 'apna-badge-danger' },
         { id: 'maintenance', label: 'Maintenance Work Orders', icon: Wrench, badge: openTicketsCount > 0 ? openTicketsCount : null, badgeType: 'apna-badge-warning' },
         { id: 'preventive_maint', label: 'Preventive Maintenance', icon: Clock },
         { id: 'inspection', label: 'Lab Inspection Checklist', icon: ShieldCheck },
@@ -589,9 +592,10 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
           {/* ========================================================================= */}
           {/* SECTION E: MAINTENANCE & SAFETY */}
           {/* ========================================================================= */}
-          {(activeTab === 'maintenance' || activeTab === 'tickets' || activeTab === 'preventive_maint' || activeTab === 'inspection' || activeTab === 'safety' || activeTab === 'incidents') && (
+          {(activeTab === 'complaints' || activeTab === 'maintenance' || activeTab === 'tickets' || activeTab === 'preventive_maint' || activeTab === 'inspection' || activeTab === 'safety' || activeTab === 'incidents') && (
             <MaintenanceSafetyTab
               subTab={
+                activeTab === 'complaints' ? 'complaints' :
                 (activeTab === 'maintenance' || activeTab === 'tickets') ? 'work-orders' :
                 activeTab === 'preventive_maint' ? 'preventive' :
                 (activeTab === 'inspection' || activeTab === 'safety') ? 'safety-compliance' : 'incidents'
@@ -599,6 +603,7 @@ export default function StaffPortal({ account, onLogout, onSwitchRole }) {
               currentBranch={currentBranch}
               activeLabId={activeLabId}
               profile={profile}
+              complaints={complaints}
               maintenanceOrders={maintenanceOrders}
               preventiveSchedule={preventiveSchedule}
               safetyInspections={safetyInspections}
